@@ -1,26 +1,117 @@
 @import "tailwindcss";
 
+/* Brand Colors - Spectrum Legal Services */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --deep-navy: #0C1A2A;
+  --royal-blue: #1C4CBD;
+  --teal-accent: #1CB5A3;
+  --soft-gray: #F4F6F8;
+  --charcoal: #30343A;
+  --white: #FFFFFF;
+
+  /* Component colors */
+  --background: var(--white);
+  --foreground: var(--charcoal);
+  --primary: var(--royal-blue);
+  --accent: var(--teal-accent);
+  --dark: var(--deep-navy);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-deep-navy: var(--deep-navy);
+  --color-royal-blue: var(--royal-blue);
+  --color-teal-accent: var(--teal-accent);
+  --color-soft-gray: var(--soft-gray);
+  --color-charcoal: var(--charcoal);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base styles */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--deep-navy);
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-teal-accent text-white font-semibold px-6 py-3 rounded-md shadow-md;
+  @apply hover:shadow-lg hover:brightness-110 transition-all duration-200;
+}
+
+.btn-secondary {
+  @apply bg-royal-blue text-white font-semibold px-6 py-3 rounded-md shadow-md;
+  @apply hover:shadow-lg hover:brightness-110 transition-all duration-200;
+}
+
+.btn-outline {
+  @apply border-2 border-white text-white font-semibold px-6 py-3 rounded-md;
+  @apply hover:bg-white hover:text-deep-navy transition-all duration-200;
+}
+
+/* Section padding */
+.section-padding {
+  @apply py-16 md:py-24 px-4 md:px-8;
+}
+
+/* Container */
+.container-custom {
+  @apply max-w-7xl mx-auto px-4 md:px-8;
+}
+
+/* Gradient overlays */
+.gradient-overlay {
+  background: linear-gradient(135deg, rgba(12, 26, 42, 0.95) 0%, rgba(28, 76, 189, 0.85) 100%);
+}
+
+/* Subtle animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Form styles */
+.form-input {
+  @apply w-full px-4 py-3 border border-gray-300 rounded-md;
+  @apply focus:outline-none focus:ring-2 focus:ring-teal-accent focus:border-transparent;
+  @apply transition-all duration-200;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-lg shadow-md p-6;
+  @apply hover:shadow-lg transition-shadow duration-300;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-teal-accent;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  @apply absolute -top-10 left-4 bg-teal-accent text-white px-4 py-2 rounded z-[100];
+  @apply focus:top-4 transition-all;
 }
