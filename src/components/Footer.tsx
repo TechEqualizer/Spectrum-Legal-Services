@@ -131,7 +131,7 @@ export default function Footer() {
 
           {/* Practice Areas */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Practice Areas</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Practice Areas</h3>
             <ul className="space-y-2" role="list">
               {practiceAreasLinks.map((link, index) => (
                 <li key={index}>
@@ -148,7 +148,7 @@ export default function Footer() {
 
           {/* Important Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Important Links</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Important Links</h3>
             <ul className="space-y-2" role="list">
               {importantLinks.map((link, index) => (
                 <li key={index}>
@@ -165,7 +165,7 @@ export default function Footer() {
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white">Contact Us</h3>
             <address className="not-italic space-y-3 text-sm text-gray-300">
               <p>
                 123 Legal Center Drive
