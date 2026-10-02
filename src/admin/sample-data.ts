@@ -6,8 +6,6 @@
 import type { AdminBusiness } from "@/admin/business";
 import type { Funnel, Reel } from "@/data/funnel-types";
 
-export type { DripCampaign, DripStep } from "@/admin/business";
-
 export const SAMPLE_DAYS = 180;
 
 export type DailyReelStats = {
@@ -135,7 +133,6 @@ export type SampleLead = {
   sourceTag?: string;
   referringReelId?: string;
   watchedReelIds: string[];
-  campaignId?: string;
   status: string;
 };
 
@@ -173,7 +170,6 @@ function buildLeads(business: AdminBusiness): SampleLead[] {
       sourceTag,
       referringReelId: fromVideo ? reel.id : undefined,
       watchedReelIds: watched,
-      campaignId: business.campaignForTopic[reel.practiceArea],
       status: i < 5 ? "New" : pick(statuses),
     });
   }

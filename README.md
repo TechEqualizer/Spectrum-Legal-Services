@@ -105,6 +105,9 @@ each reel decides which one comes next.
   seconds like a story). Reels without media show "Video coming soon".
   TikTok, Instagram and Facebook videos can't be embedded; download and
   upload them instead.
+- **Preparing clips**: `scripts/prepare-reel.sh <clip> <output-name> [start]
+  [length]` (needs ffmpeg) turns any clip into a reel: 720x1280 center crop,
+  H.264 MP4 with fast start, and a JPEG cover from the first second.
 - **Layout**: like YouTube Shorts: full-bleed media, a back arrow and sound
   controls at the top, a rail of plain icons (Like, the main action in the
   brand color, the other action, Text me, Share) ending in the business's
@@ -112,7 +115,10 @@ each reel decides which one comes next.
   Call) pill where Shorts has "Join". The title is one line; tapping it
   shows the summary, topic and price chips, and the disclaimer. A thin
   progress line runs along the bottom. Tap to pause, double-tap to like.
-  It pads for phone safe areas (notch, home bar). The rail shows labels,
+  Sizes follow Shorts: about 28px rail icons roughly 62px apart, a 32px
+  channel avatar, 15px handle and title, a 2px progress line. On desktop
+  the video is a 9:16 card with the rail beside it as round buttons, as
+  on YouTube's site. It pads for phone safe areas (notch, home bar). The rail shows labels,
   not counts: there are no made-up like or comment numbers.
 - **Events** (`viewed`, `completed`, `skipped`, `exited`, `cta_clicked` for
   Book, `call_clicked`, `text_later_clicked`, `shared`, `liked`) are sent to
@@ -156,12 +162,10 @@ from the public site and is marked `noindex`.
 - **Funnel map**: the live paths from `src/data/reels.ts` as a diagram.
   Selecting a reel shows its numbers; changing where it leads redraws the map
   (preview only).
-- **Drip campaigns**: email sequences that each feature a reel, with a
-  trigger, send days, subject lines, and an email preview.
 - **Leads**: sample leads with the videos each one watched before booking.
 
 Next steps to make it real: an admin login (Supabase Auth), reading the
-tables with the secret key on the server, storing funnels and campaigns in
+tables with the secret key on the server, storing funnels in
 Supabase, and sending email through Resend.
 
 ## Database (Supabase)

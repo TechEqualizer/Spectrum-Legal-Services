@@ -1,28 +1,10 @@
 // The businesses the admin preview can show, with their sample content:
-// the words they use, how their reels tend to perform, their drip
-// campaigns, and their email look. All of it is SAMPLE data.
+// the words they use and how their reels tend to perform. All of it is
+// SAMPLE data.
 
 import { medspaFunnel } from "@/data/medspa";
 import { defaultFunnel } from "@/data/reels";
 import type { Funnel } from "@/data/funnel-types";
-import { site } from "@/config/site";
-
-export type DripStep = {
-  id: string;
-  /** Days after the trigger. */
-  delayDays: number;
-  reelId: string;
-  subject: string;
-};
-
-export type DripCampaign = {
-  id: string;
-  name: string;
-  trigger: string;
-  active: boolean;
-  steps: DripStep[];
-  stats: { enrolled: number; opened: number; watched: number; booked: number };
-};
 
 /** How a reel tends to do: daily views as an entry reel, watch-through, and booking rate. */
 export type ReelProfile = { entryViews: number; watch: number; book: number };
@@ -45,11 +27,6 @@ export type AdminBusiness = {
   funnelName: string;
   /** Order of the live funnel in the reel editor. */
   editorOrder: string[];
-  campaigns: DripCampaign[];
-  campaignTriggers: string[];
-  /** Which campaign a new lead joins, by topic. */
-  campaignForTopic: Record<string, string>;
-  email: { from: string; intro: string; cta: string; footer: string; defaultSubject: string };
 };
 
 const jlf: AdminBusiness = {
@@ -83,56 +60,6 @@ const jlf: AdminBusiness = {
     "slip-and-fall-documentation",
     "dog-bite-california-law",
   ],
-  campaigns: [
-    {
-      id: "car-accident-nurture",
-      name: "Car accident follow-up",
-      trigger: "New lead with case type Car Accident",
-      active: true,
-      steps: [
-        { id: "s1", delayDays: 0, reelId: "car-accident-first-steps", subject: "What to do in the first days after your crash" },
-        { id: "s2", delayDays: 2, reelId: "car-accident-recorded-statement", subject: "Before you talk to the insurance company" },
-        { id: "s3", delayDays: 5, reelId: "injury-claim-deadlines", subject: "How long you have to file in California" },
-      ],
-      stats: { enrolled: 64, opened: 41, watched: 27, booked: 9 },
-    },
-    {
-      id: "watched-not-booked",
-      name: "Watched but didn't book",
-      trigger: "Visitor finished a video, left an email, but didn't book within 2 days",
-      active: true,
-      steps: [
-        { id: "s1", delayDays: 2, reelId: "injury-claim-deadlines", subject: "A quick note on filing deadlines" },
-        { id: "s2", delayDays: 6, reelId: "rideshare-accident-insurance", subject: "Questions we hear every week" },
-      ],
-      stats: { enrolled: 38, opened: 22, watched: 13, booked: 4 },
-    },
-    {
-      id: "motorcycle-nurture",
-      name: "Motorcycle accident follow-up",
-      trigger: "New lead with case type Motorcycle Accident",
-      active: false,
-      steps: [
-        { id: "s1", delayDays: 0, reelId: "motorcycle-accident-claims", subject: "How we push back on rider bias" },
-      ],
-      stats: { enrolled: 0, opened: 0, watched: 0, booked: 0 },
-    },
-  ],
-  campaignTriggers: [
-    "New lead with case type Car Accident",
-    "New lead with case type Motorcycle Accident",
-    "New lead with case type Truck Accident",
-    "New lead with case type Uber / Lyft Accident",
-    "Visitor finished a video, left an email, but didn't book within 2 days",
-  ],
-  campaignForTopic: { "Car Accident": "car-accident-nurture" },
-  email: {
-    from: `Attorney Jeff, ${site.name}`,
-    intro: "Here's a short video that answers a question we hear a lot.",
-    cta: "Book your free case evaluation",
-    footer: `Attorney Advertising. General information, not legal advice. You're getting this because you asked ${site.name} about your case. Unsubscribe anytime.`,
-    defaultSubject: "A short video from Attorney Jeff",
-  },
 };
 
 const medspa: AdminBusiness = {
@@ -157,56 +84,6 @@ const medspa: AdminBusiness = {
   },
   funnelName: "Skin Notes",
   editorOrder: medspaFunnel.reels.map((r) => r.id),
-  campaigns: [
-    {
-      id: "lip-filler-nurture",
-      name: "Lip filler follow-up",
-      trigger: "New lead asking about Lip Filler",
-      active: true,
-      steps: [
-        { id: "s1", delayDays: 0, reelId: "ms-lip-filler", subject: "Thinking about lip filler? Start here" },
-        { id: "s2", delayDays: 2, reelId: "ms-filler-aftercare", subject: "What the first few days really look like" },
-        { id: "s3", delayDays: 5, reelId: "ms-pricing", subject: "How pricing works, with no surprises" },
-      ],
-      stats: { enrolled: 48, opened: 31, watched: 22, booked: 11 },
-    },
-    {
-      id: "texted-not-booked",
-      name: "Asked for a text, didn't book",
-      trigger: "Asked to be texted, but didn't book within 2 days",
-      active: true,
-      steps: [
-        { id: "s1", delayDays: 2, reelId: "ms-consultation", subject: "What happens at a free consultation" },
-        { id: "s2", delayDays: 6, reelId: "ms-natural-results", subject: "Will I look frozen? Our answer" },
-      ],
-      stats: { enrolled: 36, opened: 21, watched: 14, booked: 5 },
-    },
-    {
-      id: "laser-follow-up",
-      name: "Laser hair removal follow-up",
-      trigger: "New lead asking about Laser Hair Removal",
-      active: false,
-      steps: [
-        { id: "s1", delayDays: 0, reelId: "ms-laser-hair", subject: "Why laser takes several sessions" },
-      ],
-      stats: { enrolled: 0, opened: 0, watched: 0, booked: 0 },
-    },
-  ],
-  campaignTriggers: [
-    "New lead asking about Wrinkle Relaxers",
-    "New lead asking about Lip Filler",
-    "New lead asking about Laser Hair Removal",
-    "Asked to be texted, but didn't book within 2 days",
-  ],
-  campaignForTopic: { "Lip Filler": "lip-filler-nurture" },
-  email: {
-    from: "Aurelia Med Spa",
-    intro: "Here's a short video that answers a question we hear a lot.",
-    cta: "Book a free consultation",
-    footer:
-      "General information, not medical advice. You're getting this because you asked Aurelia Med Spa about a treatment. Unsubscribe anytime.",
-    defaultSubject: "A short video from Aurelia",
-  },
 };
 
 export const businesses: AdminBusiness[] = [jlf, medspa];
