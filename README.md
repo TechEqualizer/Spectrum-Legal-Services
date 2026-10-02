@@ -51,6 +51,26 @@ each reel decides which one comes next.
   them with the visitor id and the reel that led to the booking, then
   optionally emails the firm through Resend.
 
+## Admin preview (`/admin`)
+
+A UI/UX preview of the reel funnel admin, with **sample data only**
+(`src/admin/sample-data.ts`). There is no login yet, so it never reads the
+real Supabase tables, and nothing on it saves or sends. It is not linked
+from the public site and is marked `noindex`.
+
+- **Overview**: views, watch-through and booking rates, a daily views chart,
+  and what viewers did with each reel, for the last 7, 30 or 90 days.
+- **Funnel map**: the live paths from `src/data/reels.ts` as a diagram.
+  Selecting a reel shows its numbers; changing where it leads redraws the map
+  (preview only).
+- **Drip campaigns**: email sequences that each feature a reel, with a
+  trigger, send days, subject lines, and an email preview.
+- **Leads**: sample leads with the videos each one watched before booking.
+
+Next steps to make it real: an admin login (Supabase Auth), reading the
+tables with the secret key on the server, storing funnels and campaigns in
+Supabase, and sending email through Resend.
+
 ## Database (Supabase)
 
 `supabase/migrations/` holds the schema: `reel_events`, `leads`, and two
