@@ -33,7 +33,7 @@ export default function CtaBreaker() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="#contact"
+            href="#case-evaluation"
             className="inline-flex items-center justify-center text-center bg-teal-accent text-white font-semibold px-6 sm:px-10 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
           >
             Free Case Evaluation

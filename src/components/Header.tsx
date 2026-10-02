@@ -6,10 +6,7 @@ import { site } from "@/config/site";
 
 const navLinks = [
   { href: "#videos", label: "Videos" },
-  { href: "#practice-areas", label: "Practice Areas" },
-  { href: "#about", label: "About Us" },
-  { href: "#testimonials", label: "Reviews" },
-  { href: "#contact", label: "Contact Us" },
+  { href: "#case-evaluation", label: "Free Case Evaluation" },
 ];
 
 export default function Header() {
@@ -167,7 +164,7 @@ export default function Header() {
             ))}
             <li className="px-6 pt-4">
               <a
-                href="#contact"
+                href="#case-evaluation"
                 className="block rounded-md bg-teal-accent px-5 py-3 text-center text-sm font-bold uppercase tracking-widest text-white transition-all hover:brightness-110"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

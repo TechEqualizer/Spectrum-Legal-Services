@@ -1,5 +1,5 @@
-// Lets any section send a visitor to the contact form with a case type
-// already selected. Contact listens for this event.
+// Lets any section send a visitor to the case evaluation form with a case
+// type already selected. The hero form listens for this event.
 export const CONSULTATION_REQUEST_EVENT = "spectrum:request-consultation";
 
 export type ConsultationRequestDetail = {

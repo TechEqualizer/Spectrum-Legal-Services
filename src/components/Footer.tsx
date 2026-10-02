@@ -2,12 +2,12 @@ import { JlfLogo } from "@/components/Brand";
 import { site } from "@/config/site";
 
 const practiceAreasLinks = [
-  { href: "#practice-areas", label: "Car Accidents" },
-  { href: "#practice-areas", label: "Truck Accidents" },
-  { href: "#practice-areas", label: "Motorcycle Accidents" },
-  { href: "#practice-areas", label: "Uber & Lyft Accidents" },
-  { href: "#practice-areas", label: "Slip, Trip & Fall" },
-  { href: "#practice-areas", label: "Wrongful Death" },
+  { href: "#case-evaluation", label: "Car Accidents" },
+  { href: "#case-evaluation", label: "Truck Accidents" },
+  { href: "#case-evaluation", label: "Motorcycle Accidents" },
+  { href: "#case-evaluation", label: "Uber & Lyft Accidents" },
+  { href: "#case-evaluation", label: "Slip, Trip & Fall" },
+  { href: "#case-evaluation", label: "Wrongful Death" },
 ];
 
 const importantLinks = [
