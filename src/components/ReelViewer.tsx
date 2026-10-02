@@ -241,6 +241,56 @@ export default function ReelViewer({
       ? Math.min(progress.fraction, 1) * 100
       : 0;
 
+  // The action rail: over the video on phones, beside it on desktop.
+  const renderRail = (placement: "overlay" | "side") => (
+    <div
+      className={
+        placement === "overlay"
+          ? "absolute bottom-[calc(0.875rem+env(safe-area-inset-bottom))] right-1.5 z-30 flex flex-col items-center gap-3 short:gap-1 tall:hidden"
+          : "hidden flex-col items-center gap-4 pb-1 tall:flex"
+      }
+      inert={sheet !== null}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <RailButton placement={placement} label={liked ? "Liked" : "Like"} pressed={liked} onClick={toggleLike}>
+        <path d={HEART} fill={liked ? "currentColor" : "none"} />
+      </RailButton>
+      {funnel.primaryCta === "book" ? (
+        <>
+          <RailButton placement={placement} label="Book" highlight onClick={ctas.onBook}>
+            <path d={CALENDAR} />
+          </RailButton>
+          <RailButton placement={placement} label="Call" href={brand.phone.href} onClick={ctas.onCall}>
+            <path d={PHONE} />
+          </RailButton>
+        </>
+      ) : (
+        <>
+          <RailButton placement={placement} label="Call" highlight href={brand.phone.href} onClick={ctas.onCall}>
+            <path d={PHONE} />
+          </RailButton>
+          <RailButton placement={placement} label="Call back" onClick={ctas.onBook}>
+            <path d={CALENDAR} />
+          </RailButton>
+        </>
+      )}
+      <RailButton placement={placement} label="Text me" onClick={ctas.onTextLater}>
+        <path d={MESSAGE} />
+      </RailButton>
+      <RailButton placement={placement} label={copied ? "Copied" : "Share"} onClick={share}>
+        <path d={SHARE} />
+      </RailButton>
+      <span
+        className={`mt-1 flex items-center justify-center bg-teal-accent text-sm font-bold text-white ring-2 ring-white short:hidden ${
+          placement === "overlay" ? "h-[34px] w-[34px] rounded-[7px]" : "h-10 w-10 rounded-lg"
+        }`}
+        aria-hidden="true"
+      >
+        {initial}
+      </span>
+    </div>
+  );
+
   return (
     <div
       className={`fixed inset-0 z-[100] flex items-center justify-center ${
@@ -248,17 +298,19 @@ export default function ReelViewer({
       }`}
       onClick={isModal ? close : undefined}
     >
+      {/* The dialog: the video, plus the rail beside it on desktop as on YouTube's site */}
       <div
         ref={dialogRef}
         role={isModal ? "dialog" : "region"}
         aria-modal={isModal ? "true" : undefined}
         aria-label={ended ? brand.copy.endHeading : `Video: ${reel.title}`}
         tabIndex={-1}
-        className="relative flex h-full w-full flex-col overflow-hidden bg-deep-navy outline-none tall:h-[85vh] tall:max-w-md tall:rounded-2xl tall:border tall:border-white/10 tall:shadow-2xl"
+        className="flex h-full w-full items-end justify-center outline-none tall:h-auto tall:w-auto tall:gap-3"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
+      <div className="relative flex h-full w-full flex-col overflow-hidden bg-deep-navy tall:aspect-[9/16] tall:h-[min(88vh,calc(100vh-3rem))] tall:w-auto tall:rounded-xl">
         {/* Everything behind the form is inert while it is open. */}
         <div className="contents" inert={sheet !== null}>
           {ended ? (
@@ -302,7 +354,7 @@ export default function ReelViewer({
           )}
 
           {/* Top: back on the left, sound and pause on the right, as in Shorts */}
-          <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between bg-gradient-to-b from-black/45 to-transparent px-1 pb-8 pt-[max(0.25rem,env(safe-area-inset-top))] short:pb-2">
+          <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between bg-gradient-to-b from-black/35 to-transparent px-1 pb-10 pt-[max(0.25rem,env(safe-area-inset-top))] short:pb-2">
             <IconButton label={isModal ? "Close" : "Back to topics"} onClick={close}>
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </IconButton>
@@ -333,48 +385,16 @@ export default function ReelViewer({
 
           {!ended && (
             <>
-              {/* Action rail: plain icons with labels, the main action in the brand color */}
-              <div className="absolute bottom-[calc(7.25rem+env(safe-area-inset-bottom))] right-1 z-30 flex flex-col items-center gap-[18px] short:bottom-[calc(4rem+env(safe-area-inset-bottom))] short:gap-1">
-                <RailButton label={liked ? "Liked" : "Like"} pressed={liked} onClick={toggleLike}>
-                  <path d={HEART} fill={liked ? "currentColor" : "none"} />
-                </RailButton>
-                {funnel.primaryCta === "book" ? (
-                  <>
-                    <RailButton label="Book" highlight onClick={ctas.onBook}>
-                      <path d={CALENDAR} />
-                    </RailButton>
-                    <RailButton label="Call" href={brand.phone.href} onClick={ctas.onCall}>
-                      <path d={PHONE} />
-                    </RailButton>
-                  </>
-                ) : (
-                  <>
-                    <RailButton label="Call" highlight href={brand.phone.href} onClick={ctas.onCall}>
-                      <path d={PHONE} />
-                    </RailButton>
-                    <RailButton label="Call back" onClick={ctas.onBook}>
-                      <path d={CALENDAR} />
-                    </RailButton>
-                  </>
-                )}
-                <RailButton label="Text me" onClick={ctas.onTextLater}>
-                  <path d={MESSAGE} />
-                </RailButton>
-                <RailButton label={copied ? "Copied" : "Share"} onClick={share}>
-                  <path d={SHARE} />
-                </RailButton>
-                <span className="mt-1 flex h-10 w-10 items-center justify-center rounded-lg bg-teal-accent text-sm font-bold text-white ring-2 ring-white short:hidden" aria-hidden="true">
-                  {initial}
-                </span>
-              </div>
+              {/* Phones: the rail floats over the video, as in the Shorts app */}
+              {renderRail("overlay")}
 
               {/* Channel row, then the title; tapping the title shows the rest */}
               <div
-                className={`absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t px-3 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))] pt-20 short:pb-2 short:pt-8 ${
+                className={`absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t pb-[calc(0.875rem+env(safe-area-inset-bottom))] pl-3 pr-[76px] pt-24 short:pb-2 short:pt-8 tall:pr-3 ${
                   expanded ? "from-black/90 via-black/75 to-transparent" : "from-black/70 via-black/30 to-transparent"
                 }`}
               >
-                <div className="pr-16">
+                <div>
                   <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-white ring-1 ring-white/70" aria-hidden="true">
                       {initial}
@@ -388,7 +408,7 @@ export default function ReelViewer({
                     type="button"
                     onClick={() => setExpandedKey(expanded ? null : slideKey)}
                     aria-expanded={expanded}
-                    className="mt-2 block w-full text-left text-[15px] leading-snug text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]"
+                    className="mt-2.5 block w-full text-left text-[15px] leading-5 text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]"
                   >
                     <span className={expanded ? "font-semibold" : "line-clamp-1"}>{reel.title}</span>
                     <span className="sr-only">{expanded ? ", show less" : ", show more"}</span>
@@ -429,8 +449,10 @@ export default function ReelViewer({
           />
         )}
       </div>
+      {!ended && renderRail("side")}
+      </div>
 
-      {/* Desktop: up and down beside the video, as on TikTok's site */}
+      {/* Desktop: up and down at the edge of the screen */}
       <div
         className="absolute right-6 top-1/2 z-[101] hidden -translate-y-1/2 flex-col gap-3 tall:flex"
         onClick={(e) => e.stopPropagation()}
@@ -591,7 +613,12 @@ function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
   );
 }
 
-/** One button on the right-hand rail: a round icon with its label under it. */
+/**
+ * One button on the action rail. Over the video (phones) it's a plain white
+ * icon with a shadow, as in the Shorts app; beside the video (desktop) it's a
+ * round button, as on YouTube's site. The main action is filled with the
+ * brand color in both.
+ */
 function RailButton({
   label,
   children,
@@ -599,6 +626,7 @@ function RailButton({
   href,
   highlight = false,
   pressed,
+  placement = "overlay",
 }: {
   label: string;
   children: React.ReactNode;
@@ -606,21 +634,26 @@ function RailButton({
   href?: string;
   highlight?: boolean;
   pressed?: boolean;
+  placement?: "overlay" | "side";
 }) {
+  const side = placement === "side";
+  const circle = highlight
+    ? "rounded-full bg-teal-accent shadow-md"
+    : side
+      ? "rounded-full bg-white/10 hover:bg-white/20"
+      : "[filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.6))]";
   const inner = (
     <>
       <span
         className={`flex items-center justify-center transition-transform active:scale-90 ${
-          highlight
-            ? "h-12 w-12 rounded-full bg-teal-accent shadow-lg short:h-10 short:w-10"
-            : "h-10 w-10 [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.55))] short:h-9 short:w-9"
-        } ${pressed ? "text-rose-500" : ""}`}
+          side || highlight ? "h-12 w-12" : "h-9 w-9"
+        } short:h-9 short:w-9 ${circle} ${pressed ? "text-rose-500" : ""}`}
       >
         <svg
-          className={highlight ? "h-6 w-6" : "h-[30px] w-[30px] short:h-6 short:w-6"}
+          className={side || highlight ? "h-6 w-6" : "h-7 w-7 short:h-6 short:w-6"}
           fill="none"
           stroke="currentColor"
-          strokeWidth={highlight ? 2 : 1.8}
+          strokeWidth={side || highlight ? 2 : 1.75}
           strokeLinecap="round"
           strokeLinejoin="round"
           viewBox="0 0 24 24"
@@ -629,12 +662,16 @@ function RailButton({
           {children}
         </svg>
       </span>
-      <span className="text-xs font-semibold [text-shadow:0_1px_3px_rgb(0_0_0/0.7)] short:sr-only">
+      <span
+        className={`text-[13px] font-medium leading-[15px] short:sr-only ${
+          side ? "" : "[text-shadow:0_1px_2px_rgb(0_0_0/0.7)]"
+        }`}
+      >
         {label}
       </span>
     </>
   );
-  const className = "flex min-w-14 flex-col items-center gap-0.5 text-white";
+  const className = "flex min-w-12 flex-col items-center gap-1 text-white";
   return href ? (
     <a href={href} onClick={onClick} className={className}>
       {inner}
@@ -654,7 +691,7 @@ function ChannelPill({
   onBook,
 }: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"] }) {
   const className =
-    "flex-shrink-0 rounded-full bg-teal-accent px-3.5 py-1.5 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110";
+    "flex h-7 flex-shrink-0 items-center rounded-full bg-teal-accent px-3 text-sm font-semibold text-white transition-all hover:brightness-110";
   return primary === "call" ? (
     <a
       href={brand.phone.href}

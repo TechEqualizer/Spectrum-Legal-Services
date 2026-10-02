@@ -115,7 +115,10 @@ each reel decides which one comes next.
   Call) pill where Shorts has "Join". The title is one line; tapping it
   shows the summary, topic and price chips, and the disclaimer. A thin
   progress line runs along the bottom. Tap to pause, double-tap to like.
-  It pads for phone safe areas (notch, home bar). The rail shows labels,
+  Sizes follow Shorts: about 28px rail icons roughly 62px apart, a 32px
+  channel avatar, 15px handle and title, a 2px progress line. On desktop
+  the video is a 9:16 card with the rail beside it as round buttons, as
+  on YouTube's site. It pads for phone safe areas (notch, home bar). The rail shows labels,
   not counts: there are no made-up like or comment numbers.
 - **Events** (`viewed`, `completed`, `skipped`, `exited`, `cta_clicked` for
   Book, `call_clicked`, `text_later_clicked`, `shared`, `liked`) are sent to
