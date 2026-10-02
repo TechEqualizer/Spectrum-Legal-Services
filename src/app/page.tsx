@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ValueProposition from "@/components/ValueProposition";
 import PracticeAreas from "@/components/PracticeAreas";
+import Reels from "@/components/Reels";
 import About from "@/components/About";
 import Testimonials from "@/components/Testimonials";
 import CtaBreaker from "@/components/CtaBreaker";
@@ -16,6 +17,7 @@ export default function Home() {
         <Hero />
         <ValueProposition />
         <PracticeAreas />
+        <Reels />
         <About />
         <Testimonials />
         <CtaBreaker />

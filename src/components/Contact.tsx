@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  CONSULTATION_REQUEST_EVENT,
+  type ConsultationRequestDetail,
+} from "@/lib/consultation";
 
 const caseTypes = [
   "Select Case Type",
@@ -49,6 +53,33 @@ export default function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Another section (e.g. a video's "Book" button) asked for a consultation:
+  // preselect its case type and bring the visitor to the form.
+  useEffect(() => {
+    const onRequest = (e: Event) => {
+      const { caseType } = (e as CustomEvent<ConsultationRequestDetail>).detail;
+      if (!caseTypes.includes(caseType)) return;
+      setIsSubmitted(false);
+      setFormData((prev) => ({ ...prev, caseType }));
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.caseType;
+        return next;
+      });
+      document
+        .getElementById("contact")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      requestAnimationFrame(() =>
+        document
+          .getElementById("contact-name")
+          ?.focus({ preventScroll: true })
+      );
+    };
+    window.addEventListener(CONSULTATION_REQUEST_EVENT, onRequest);
+    return () =>
+      window.removeEventListener(CONSULTATION_REQUEST_EVENT, onRequest);
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
