@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import BrandLogo from "@/components/BrandLogo";
+import CinematicHero from "@/components/CinematicHero";
 import ReelViewer from "@/components/ReelViewer";
 import { site } from "@/config/site";
 import type { Funnel } from "@/data/funnel-types";
@@ -41,17 +41,69 @@ export default function FunnelExperience({ slug }: { slug: string }) {
       })
     : undefined;
   const onSale = isEvents ? nextOnSale(funnel, now) : undefined;
+  const hero = funnel.cover.hero;
+
+  // The scene names the next date on sale, with a live dot.
+  let eyebrow: React.ReactNode = brand.seriesLabel;
+  if (onSale) {
+    const chip = eventChip(onSale, now);
+    const date = formatEventDate(onSale);
+    const when = chip.text.startsWith(date) ? chip.text : `${date} \u00b7 ${chip.text}`;
+    eyebrow = (
+      <span className="inline-flex items-center gap-2">
+        <span className="cine-live h-1.5 w-1.5 rounded-full bg-sky-accent" />
+        Next up &middot; {when}
+      </span>
+    );
+  }
+
+  const startAt = (reelId: string) => setVisit((v) => ({ reelId, key: (v?.key ?? 0) + 1 }));
+
+  // A full opening scene carries the two main buttons; a shorter one leaves them to the choices.
+  const actions = hero && (
+    <>
+      <button
+        type="button"
+        onClick={() => startAt(onSale ? reelFor(onSale.id) : entries[0])}
+        className="flex min-h-12 items-center gap-2 rounded-full bg-white pl-4 pr-5 font-semibold text-deep-navy shadow-lg shadow-black/30 transition hover:bg-white/90"
+      >
+        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
+        {hero.watchLabel ?? "Watch"}
+      </button>
+      {onSale ? (
+        <a
+          href={ticketHref(funnel, onSale, { sourceTag: getSourceTag() })}
+          target="_blank"
+          rel="noopener"
+          onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
+          className="flex min-h-12 items-center rounded-full border border-white/25 bg-white/10 px-5 font-semibold text-white backdrop-blur-md transition hover:bg-white/20"
+        >
+          {brand.copy.ticketsPrimary ?? "Get tickets"}
+        </a>
+      ) : (
+        brand.phone && (
+          <a
+            href={brand.phone.href}
+            onClick={() => trackReelEvent(funnel, entries[0], "call_clicked")}
+            className="flex min-h-12 items-center rounded-full border border-white/25 bg-white/10 px-5 font-semibold text-white backdrop-blur-md transition hover:bg-white/20"
+          >
+            {brand.copy.callNow}
+          </a>
+        )
+      )}
+    </>
+  );
 
   return (
     <FunnelShell funnel={funnel}>
-      <FunnelCover funnel={funnel}>
-        <div className="mt-8">
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white">
-            {funnel.cover.heading}
-          </h1>
-          <p className="mt-2 text-gray-200">{funnel.cover.intro}</p>
-        </div>
-        <ul className="mt-6 grid gap-2" role="list">
+      <FunnelCover funnel={funnel} revealed eyebrow={eyebrow} actions={actions} paused={Boolean(visit)}>
+        {hero && (
+          <div className="mt-2">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-white">{funnel.cover.heading}</h2>
+            <p className="mt-1.5 text-gray-200">{funnel.cover.intro}</p>
+          </div>
+        )}
+        <ul className={`${hero ? "mt-5" : "mt-1"} grid gap-2`} role="list">
           {isEvents
             ? upcoming.map((event) => {
                 const chip = eventChip(event, now);
@@ -162,7 +214,7 @@ export function FunnelSplash({ slug }: { slug: string }) {
   const funnel = getFunnelBySlug(slug)!;
   return (
     <FunnelShell funnel={funnel}>
-      <FunnelCover funnel={funnel} />
+      <FunnelCover funnel={funnel} revealed={false} />
     </FunnelShell>
   );
 }
@@ -180,7 +232,18 @@ function FunnelShell({ funnel, children }: { funnel: Funnel; children: React.Rea
   );
 }
 
-function FunnelCover({ funnel, children }: { funnel: Funnel; children?: React.ReactNode }) {
+function FunnelCover({
+  funnel,
+  children,
+  ...scene
+}: {
+  funnel: Funnel;
+  children?: React.ReactNode;
+  revealed: boolean;
+  eyebrow?: React.ReactNode;
+  actions?: React.ReactNode;
+  paused?: boolean;
+}) {
   const { brand } = funnel;
   // A sample business is always labeled; the JLF concept is labeled in demo mode.
   const notice =
@@ -195,17 +258,8 @@ function FunnelCover({ funnel, children }: { funnel: Funnel; children?: React.Re
           {notice}
         </p>
       )}
-      <div className="mx-auto flex max-w-md flex-col px-5 pb-10 pt-6">
-        <div className="flex items-center justify-between gap-4">
-          <BrandLogo brand={brand} eager />
-          {brand.byline && (
-            <p className="text-right text-xs leading-snug text-gray-300">
-              {brand.byline[0]}
-              <br />
-              {brand.byline[1]}
-            </p>
-          )}
-        </div>
+      <CinematicHero funnel={funnel} {...scene} />
+      <div className="mx-auto flex max-w-md flex-col px-5 pb-10">
         {children}
         <p className="mt-8 text-[11px] leading-snug text-gray-400">{brand.footer}</p>
       </div>

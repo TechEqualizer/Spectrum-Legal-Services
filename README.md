@@ -53,6 +53,16 @@ the reels at that topic.
   Twilio) and a job that texts each request the link to its next reel.
 - **Share**: the end card's "Send to someone who got hurt" shares the link
   tagged `src=share`.
+- **Opening scene**: the top of the opening screen plays like the start of
+  a trailer: black bars open, then the title comes up out of a soft blur
+  over film grain and a vignette. Behind it plays the funnel's first reel
+  with a video (or photo), muted and slowly zooming; until there is one, a
+  low sun and lens flare drawn in the brand's own colors. Set
+  `cover.hero` (title, tagline, Watch label, optional `media`) for a
+  full-height scene with Watch and Get tickets (or Call) buttons; without
+  it, the heading sits over a shorter scene and the choices follow. People
+  who turn on "reduce motion" get a still scene
+  (`src/components/CinematicHero.tsx`).
 - Funnels are listed in `src/data/funnels.ts`; each one's `slug` is its
   link. Any other `/f/...` path is a 404. Each funnel gets its own link
   preview image (`src/app/f/[slug]/opengraph-image.tsx`).
@@ -93,7 +103,8 @@ node scripts/new-demo.mjs prospect.json               # prints /f/<name>-<random
 git add -A && git commit -m "demo: <name>" && git push
 ```
 
-Clips (`"clip"`) are cropped and compressed with `scripts/prepare-reel.sh`
+The opening scene plays the first clip behind the organizer's name (or
+`"heroTitle"` and `"heroTagline"` if set). Clips (`"clip"`) are cropped and compressed with `scripts/prepare-reel.sh`
 into `public/demos/<slug>/`; reels can also use `"youtube"` links or
 `"photo"` files. The link has a random suffix, says "Private preview
 prepared for ...", is never indexed, and sends nothing (it's a sample), but

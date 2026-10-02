@@ -140,8 +140,13 @@ export const eventsFunnel: Funnel = {
   primaryCta: "tickets",
   cover: {
     heading: "Which Sunday?",
-    intro: "Watch the vibe, then grab tickets in one tap.",
+    intro: "Tap a date to watch the vibe, then grab tickets in one tap.",
     entryLabels: {},
+    hero: {
+      title: "Sundays, on the roof.",
+      tagline: "Afro-house and amapiano from 3pm until the sun goes down.",
+      watchLabel: "Watch the vibe",
+    },
   },
   entryReelIds: ["gh-this-sunday", "gh-sold-out", "gh-late-night", "gh-last-time"],
   links: {

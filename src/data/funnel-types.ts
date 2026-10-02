@@ -145,6 +145,20 @@ export type Funnel = {
     intro: string;
     /** Short labels for the entry reels, shown as "What happened?" choices. */
     entryLabels: Record<string, string>;
+    /**
+     * A full-height opening scene above the choices, like a film's title
+     * card: the title and tagline over footage, with Watch and Get tickets
+     * (or Call) buttons. Without it, the heading and intro sit over a
+     * shorter scene and the choices come right after.
+     */
+    hero?: {
+      title: string;
+      tagline?: string;
+      /** Label on the Watch button (default "Watch"). */
+      watchLabel?: string;
+      /** What plays behind the title. Defaults to the first reel with a video or photo; without one, a moving glow in the brand colors. */
+      media?: Extract<ReelMedia, { kind: "video" | "image" }>;
+    };
   };
   /** Reels offered on the opening screen, in order. Every visit starts at one of these. */
   entryReelIds: string[];

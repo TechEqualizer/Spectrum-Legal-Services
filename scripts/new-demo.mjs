@@ -178,8 +178,14 @@ const funnel = {
   reels,
   cover: {
     heading: spec.coverHeading ?? "Which night?",
-    intro: spec.coverIntro ?? "Watch the vibe, then grab tickets in one tap.",
+    intro: spec.coverIntro ?? "Tap a date to watch the vibe, then grab tickets in one tap.",
     entryLabels: {},
+    // The opening scene plays the first clip behind this title.
+    hero: {
+      title: spec.heroTitle ?? name,
+      ...(spec.heroTagline ?? spec.byline?.[0] ? { tagline: spec.heroTagline ?? spec.byline[0] } : {}),
+      watchLabel: "Watch the vibe",
+    },
   },
   entryReelIds,
   links,

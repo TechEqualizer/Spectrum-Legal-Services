@@ -3,7 +3,7 @@ import Image from "next/image";
 import type { FunnelBrand } from "@/data/funnel-types";
 
 // For text wordmarks (businesses without a logo image).
-const wordmarkFont = Cormorant_Garamond({ subsets: ["latin"], weight: ["600"], display: "swap" });
+export const wordmarkFont = Cormorant_Garamond({ subsets: ["latin"], weight: ["600"], display: "swap" });
 
 /** A funnel's logo for dark backgrounds: its image, or its name as a wordmark. */
 export default function BrandLogo({
@@ -31,7 +31,7 @@ export default function BrandLogo({
   }
   return (
     <span className="block leading-none" aria-label={brand.name} role="img">
-      <span className={`${wordmarkFont.className} block text-white ${size === "sm" ? "text-3xl" : "text-4xl"}`}>
+      <span className={`${wordmarkFont.className} block whitespace-nowrap text-white ${size === "sm" ? "text-3xl" : "text-4xl"}`}>
         {logo.text}
       </span>
       {logo.tagline && (

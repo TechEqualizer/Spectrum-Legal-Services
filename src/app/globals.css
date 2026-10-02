@@ -125,6 +125,147 @@
   animation: fadeInUp 0.6s ease-out forwards;
 }
 
+/* Cinematic opening scene (CinematicHero). Every color comes from the
+   funnel's theme, so each brand gets its own light. */
+.cine-glow {
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in oklab, var(--sky-accent) 85%, white) 0%,
+    var(--sky-accent) 14%,
+    color-mix(in oklab, var(--teal-accent) 70%, transparent) 38%,
+    transparent 68%
+  );
+  filter: blur(8px);
+  animation: cine-breathe 9s ease-in-out infinite alternate, cine-sink 26s ease-in-out infinite alternate;
+}
+.cine-wash {
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    color-mix(in oklab, var(--royal-blue) 90%, transparent) 0%,
+    transparent 70%
+  );
+  animation: cine-drift 22s ease-in-out infinite alternate;
+}
+/* The thin horizontal streak of an anamorphic lens. */
+.cine-flare {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--sky-accent) 60%, transparent) 30%,
+    color-mix(in oklab, var(--sky-accent) 40%, white) 50%,
+    color-mix(in oklab, var(--sky-accent) 60%, transparent) 70%,
+    transparent
+  );
+  filter: blur(1.5px);
+  animation: cine-flare 9s ease-in-out infinite alternate;
+}
+.cine-leak {
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in oklab, var(--sky-accent) 22%, transparent) 45%,
+    color-mix(in oklab, var(--teal-accent) 18%, transparent) 55%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+  animation: cine-leak 16s ease-in-out infinite;
+}
+.cine-mote {
+  background: color-mix(in oklab, var(--sky-accent) 70%, white);
+  box-shadow: 0 0 12px 2px color-mix(in oklab, var(--sky-accent) 60%, transparent);
+  animation: cine-float linear infinite;
+}
+.cine-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  animation: cine-grain 0.9s steps(5) infinite;
+}
+.cine-kenburns {
+  animation: cine-kenburns 24s ease-in-out infinite alternate;
+}
+/* Black bars that open like a widescreen frame. */
+.cine-bar-open {
+  animation: cine-bar 1.6s cubic-bezier(0.7, 0, 0.2, 1) 0.15s forwards;
+}
+/* Title card: each line comes up out of a soft blur, one after another. */
+.cine-reveal {
+  opacity: 0;
+  animation: cine-reveal 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.cine-title {
+  opacity: 0;
+  animation: cine-title 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.cine-live {
+  animation: cine-live 2s ease-out infinite;
+}
+
+@keyframes cine-breathe {
+  from { opacity: 0.75; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1.06); }
+}
+@keyframes cine-sink {
+  from { translate: 0 -4%; }
+  to { translate: -3% 6%; }
+}
+@keyframes cine-drift {
+  from { transform: translate(-6%, 0) scale(1); }
+  to { transform: translate(8%, -6%) scale(1.15); }
+}
+@keyframes cine-flare {
+  from { opacity: 0.45; transform: scaleX(0.85); }
+  to { opacity: 0.9; transform: scaleX(1.1); }
+}
+@keyframes cine-leak {
+  0%, 100% { transform: translateX(-60%); opacity: 0; }
+  40%, 60% { opacity: 1; }
+  50% { transform: translateX(10%); }
+}
+@keyframes cine-float {
+  from { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.9; }
+  85% { opacity: 0.6; }
+  to { transform: translateY(-38vh) translateX(3vw); opacity: 0; }
+}
+@keyframes cine-grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-6%, 4%); }
+  40% { transform: translate(5%, -7%); }
+  60% { transform: translate(-3%, -4%); }
+  80% { transform: translate(7%, 6%); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes cine-kenburns {
+  from { transform: scale(1.06) translate(0, 0); }
+  to { transform: scale(1.18) translate(-2%, -2%); }
+}
+@keyframes cine-bar {
+  to { transform: scaleY(0); }
+}
+@keyframes cine-reveal {
+  from { opacity: 0; transform: translateY(14px); filter: blur(8px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes cine-title {
+  from { opacity: 0; transform: translateY(10px) scale(1.04); filter: blur(14px); letter-spacing: 0.12em; }
+  to { opacity: 1; transform: none; filter: none; letter-spacing: normal; }
+}
+@keyframes cine-live {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--sky-accent) 70%, transparent); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* Still for people who ask for less motion: the scene shows its first frame
+   and the words are simply there. */
+@media (prefers-reduced-motion: reduce) {
+  .cine-glow, .cine-wash, .cine-flare, .cine-leak, .cine-grain, .cine-kenburns, .cine-live {
+    animation: none;
+  }
+  .cine-leak, .cine-mote { display: none; }
+  .cine-bar-open { animation: none; transform: scaleY(0); }
+  .cine-reveal, .cine-title { animation: none; opacity: 1; }
+}
+
 /* Form styles */
 .form-input {
   @apply w-full px-4 py-3 border border-gray-300 rounded-md;
