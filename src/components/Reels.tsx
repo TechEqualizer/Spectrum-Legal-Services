@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReelViewer from "@/components/ReelViewer";
-import { defaultFunnel, getReel, type Reel } from "@/data/reels";
+import { defaultFunnel, getReel, reels, type Reel } from "@/data/reels";
 import { requestConsultation } from "@/lib/consultation";
 
-// Only entry reels appear as cards; follow-up reels show up inside the funnel.
+const ALL = "All";
+
+// "All" shows the funnel's entry reels; a practice area shows every reel in
+// it, follow-ups included. Opening any tile starts the funnel from that reel.
 const entryReels = defaultFunnel.entryReelIds
   .map((id) => getReel(id))
   .filter((reel): reel is Reel => Boolean(reel));
 
+const categories = [ALL, ...new Set(entryReels.map((r) => r.practiceArea))];
+
+function reelsFor(category: string) {
+  return category === ALL
+    ? entryReels
+    : reels.filter((r) => r.practiceArea === category);
+}
+
 export default function Reels() {
+  const [category, setCategory] = useState(ALL);
   // Each open gets a new key, so the viewer starts a fresh path every visit.
   const [visit, setVisit] = useState<{ reelId: string; key: number } | null>(
     null
@@ -22,84 +34,53 @@ export default function Reels() {
     setTimeout(() => requestConsultation(reel.practiceArea, reel.id), 0);
   };
 
+  const visible = reelsFor(category);
+
   return (
     <section
       id="videos"
-      className="section-padding bg-deep-navy"
+      className="section-padding bg-white"
       aria-labelledby="videos-heading"
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Section Header */}
-        <div className="text-center mb-10 md:mb-12">
+        <div className="text-center max-w-2xl mx-auto mb-10 md:mb-12">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-accent mb-3">
+            Knowledge Center
+          </p>
           <h2
             id="videos-heading"
-            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4"
+            className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-deep-navy mb-4"
           >
-            Know Your Rights
+            Legal Insights &amp; Know Your Rights
           </h2>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            Short videos from our attorneys explaining the questions clients
-            ask us most.
+          <p className="text-lg text-charcoal">
+            Watch short videos from our attorneys to understand your rights and
+            what to expect from the legal process.
           </p>
         </div>
 
-        {/* Reel cards: a swipeable row on mobile, a grid on larger screens */}
+        <CategoryTabs value={category} onChange={setCategory} />
+
+        {/* Reel grid: three square tiles per row at every size */}
         <ul
-          className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 lg:grid-cols-6"
+          className="mx-auto mt-6 grid max-w-4xl grid-cols-3 gap-1 md:mt-8 md:gap-4"
           role="list"
+          aria-label={
+            category === ALL ? "All videos" : `${category} videos`
+          }
         >
-          {entryReels.map((reel) => (
-            <li key={reel.id} className="w-40 flex-shrink-0 snap-start md:w-auto">
-              <button
-                type="button"
-                onClick={() => setVisit({ reelId: reel.id, key: Date.now() })}
-                className="group relative block aspect-[9/16] w-full overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-deep-navy to-royal-blue text-left shadow-md transition-shadow duration-300 hover:shadow-xl"
-                aria-label={`Watch: ${reel.title}`}
-              >
-                {reel.video?.poster && (
-                  // eslint-disable-next-line @next/next/no-img-element -- poster is a plain thumbnail, sized by its card
-                  <img
-                    src={reel.video.poster}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                <span className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110">
-                  <svg
-                    className="ml-0.5 h-5 w-5 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path d="M6 4l14 8-14 8V4z" />
-                  </svg>
-                </span>
-
-                {!reel.video && (
-                  <span className="absolute right-2 top-2 rounded-sm bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
-                    Coming soon
-                  </span>
-                )}
-
-                <div className="absolute inset-x-0 bottom-0 p-3">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-teal-accent">
-                    {reel.practiceArea}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold leading-snug text-white">
-                    {reel.title}
-                  </p>
-                  {reel.duration && (
-                    <p className="mt-1 text-xs text-gray-300">{reel.duration}</p>
-                  )}
-                </div>
-              </button>
+          {visible.map((reel) => (
+            <li key={reel.id}>
+              <ReelTile
+                reel={reel}
+                onOpen={() => setVisit({ reelId: reel.id, key: Date.now() })}
+              />
             </li>
           ))}
         </ul>
 
-        <p className="mt-6 text-center text-xs text-gray-400">
+        <p className="mt-6 text-center text-xs text-gray-500">
           These videos are general information, not legal advice. Every case is
           different, so talk to an attorney about yours.
         </p>
@@ -115,5 +96,140 @@ export default function Reels() {
         />
       )}
     </section>
+  );
+}
+
+// Filter row: swipeable on phones, with a bar showing how far it has scrolled.
+function CategoryTabs({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (category: string) => void;
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<{ left: number; width: number } | null>(
+    null
+  );
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const update = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = row;
+      setThumb(
+        scrollWidth > clientWidth + 1
+          ? {
+              left: (scrollLeft / scrollWidth) * 100,
+              width: (clientWidth / scrollWidth) * 100,
+            }
+          : null
+      );
+    };
+    update();
+    row.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(row);
+    return () => {
+      row.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div>
+      <div
+        ref={rowRef}
+        className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:justify-center md:px-0 [&::-webkit-scrollbar]:hidden"
+        role="group"
+        aria-label="Filter videos by practice area"
+      >
+        {categories.map((cat) => {
+          const active = cat === value;
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => onChange(cat)}
+              aria-pressed={active}
+              className={`flex-shrink-0 whitespace-nowrap border px-4 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
+                active
+                  ? "border-deep-navy bg-deep-navy text-white"
+                  : "border-gray-300 bg-transparent text-gray-600 hover:border-deep-navy hover:text-deep-navy"
+              }`}
+            >
+              {cat}
+            </button>
+          );
+        })}
+      </div>
+      {thumb && (
+        <div className="mt-3 h-1 bg-gray-200 md:hidden" aria-hidden="true">
+          <div
+            className="h-full bg-gray-400"
+            style={{ marginLeft: `${thumb.left}%`, width: `${thumb.width}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReelTile({ reel, onOpen }: { reel: Reel; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group relative block aspect-square w-full overflow-hidden bg-gradient-to-br from-deep-navy to-royal-blue text-left"
+      aria-label={`Watch: ${reel.title}`}
+    >
+      {reel.video?.poster ? (
+        // eslint-disable-next-line @next/next/no-img-element -- poster is a plain thumbnail, sized by its tile
+        <img
+          src={reel.video.poster}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover grayscale transition duration-500 group-hover:scale-110 group-hover:grayscale-0"
+        />
+      ) : reel.video ? (
+        // No poster yet: show the video's first frame as the thumbnail.
+        <video
+          src={`${reel.video.src}#t=0.1`}
+          muted
+          playsInline
+          preload="metadata"
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover grayscale transition duration-500 group-hover:scale-110 group-hover:grayscale-0"
+        />
+      ) : null}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+
+      <span className="absolute left-1/2 top-[38%] flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110 md:h-12 md:w-12">
+        <svg
+          className="ml-0.5 h-4 w-4 text-white md:h-5 md:w-5"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M6 4l14 8-14 8V4z" />
+        </svg>
+      </span>
+
+      {!reel.video && (
+        <span className="absolute right-2 top-2 hidden rounded-sm bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm sm:inline">
+          Coming soon
+        </span>
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 p-2 md:p-4">
+        <p className="hidden text-[11px] font-bold uppercase tracking-wider text-teal-accent sm:block">
+          {reel.practiceArea}
+        </p>
+        <p className="line-clamp-3 text-[11px] font-semibold leading-tight text-white sm:mt-1 sm:line-clamp-2 sm:text-sm md:text-base">
+          {reel.title}
+        </p>
+      </div>
+    </button>
   );
 }

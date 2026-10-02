@@ -15,9 +15,9 @@ export default function Home() {
       <Header />
       <main id="main-content">
         <Hero />
+        <Reels />
         <ValueProposition />
         <PracticeAreas />
-        <Reels />
         <About />
         <Testimonials />
         <CtaBreaker />
