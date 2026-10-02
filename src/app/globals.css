@@ -17,6 +17,11 @@
   --dark: var(--deep-navy);
 }
 
+/* Reel viewer layouts: a floating card only on screens tall enough for it;
+   a compact caption on short screens such as phones in landscape. */
+@custom-variant tall (@media (min-width: 768px) and (min-height: 600px));
+@custom-variant short (@media (max-height: 520px));
+
 @theme inline {
   --color-deep-navy: var(--deep-navy);
   --color-royal-blue: var(--royal-blue);
@@ -30,6 +35,8 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Keeps section headings clear of the fixed header after anchor jumps. */
+    scroll-padding-top: 5rem;
   }
 
   body {
@@ -64,8 +71,9 @@
 }
 
 /* Section padding */
+/* Vertical only: every section has an inner container with the side padding. */
 .section-padding {
-  @apply py-16 md:py-24 px-4 md:px-8;
+  @apply py-16 md:py-24;
 }
 
 /* Container */
@@ -114,6 +122,6 @@
 
 /* Skip link for accessibility */
 .skip-link {
-  @apply absolute -top-10 left-4 bg-teal-accent text-white px-4 py-2 rounded z-[100];
+  @apply absolute -top-16 left-4 bg-teal-accent text-white px-4 py-2 rounded z-[100];
   @apply focus:top-4 transition-all;
 }

@@ -31,7 +31,7 @@ export default function CtaBreaker() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
             href="#contact"
-            className="inline-flex items-center justify-center bg-teal-accent text-white font-semibold px-10 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
+            className="inline-flex items-center justify-center text-center bg-teal-accent text-white font-semibold px-6 sm:px-10 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
           >
             Request Consultation
             <svg
@@ -51,7 +51,7 @@ export default function CtaBreaker() {
           </a>
           <a
             href="tel:+1-800-555-0199"
-            className="inline-flex items-center justify-center border-2 border-white text-white font-semibold px-10 py-4 rounded-md hover:bg-white hover:text-deep-navy transition-all duration-200 text-lg"
+            className="inline-flex items-center justify-center text-center border-2 border-white text-white font-semibold px-6 sm:px-10 py-4 rounded-md hover:bg-white hover:text-deep-navy transition-all duration-200 text-lg"
           >
             <svg
               className="w-5 h-5 mr-2"

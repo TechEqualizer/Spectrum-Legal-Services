@@ -132,12 +132,12 @@ export default function Footer() {
           {/* Practice Areas */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-white">Practice Areas</h3>
-            <ul className="space-y-2" role="list">
+            <ul role="list">
               {practiceAreasLinks.map((link, index) => (
                 <li key={index}>
                   <a
                     href={link.href}
-                    className="text-gray-300 hover:text-teal-accent transition-colors text-sm"
+                    className="inline-block py-3 md:py-1.5 text-gray-300 hover:text-teal-accent transition-colors text-sm"
                   >
                     {link.label}
                   </a>
@@ -149,12 +149,12 @@ export default function Footer() {
           {/* Important Links */}
           <div>
             <h3 className="text-lg font-semibold mb-4 text-white">Important Links</h3>
-            <ul className="space-y-2" role="list">
+            <ul role="list">
               {importantLinks.map((link, index) => (
                 <li key={index}>
                   <a
                     href={link.href}
-                    className="text-gray-300 hover:text-teal-accent transition-colors text-sm"
+                    className="inline-block py-3 md:py-1.5 text-gray-300 hover:text-teal-accent transition-colors text-sm"
                   >
                     {link.label}
                   </a>
@@ -177,7 +177,7 @@ export default function Footer() {
               <p>
                 <a
                   href="tel:+1-800-555-0199"
-                  className="hover:text-teal-accent transition-colors"
+                  className="inline-block py-2 hover:text-teal-accent transition-colors"
                 >
                   (800) 555-0199
                 </a>
@@ -185,7 +185,7 @@ export default function Footer() {
               <p>
                 <a
                   href="mailto:info@spectrumlegal.com"
-                  className="hover:text-teal-accent transition-colors"
+                  className="inline-block py-2 hover:text-teal-accent transition-colors"
                 >
                   info@spectrumlegal.com
                 </a>
@@ -202,12 +202,12 @@ export default function Footer() {
             <p className="text-gray-400 text-sm text-center md:text-left">
               &copy; {currentYear} Spectrum Legal Services. All rights reserved.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="-mx-3 flex items-center">
               {socialLinks.map((social) => (
                 <a
                   key={social.name}
                   href={social.href}
-                  className="text-gray-400 hover:text-teal-accent transition-colors"
+                  className="p-3 text-gray-400 hover:text-teal-accent transition-colors"
                   aria-label={`Follow us on ${social.name}`}
                 >
                   {social.icon}

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { CASE_TYPES } from "@/lib/leads";
+import { submitLead } from "@/lib/submit-lead";
 
 const trustBadges = [
   { text: "20+ Years Combined Experience", icon: "award" },
@@ -8,16 +10,7 @@ const trustBadges = [
   { text: "A+ Rated", icon: "star" },
 ];
 
-const caseTypes = [
-  "Select Case Type",
-  "Family Law",
-  "Criminal Defense",
-  "Business & Contract Law",
-  "Estate Planning",
-  "Immigration",
-  "Civil Litigation",
-  "Other",
-];
+const caseTypes = ["Select Case Type", ...CASE_TYPES];
 
 export default function Hero() {
   const [formData, setFormData] = useState({
@@ -27,13 +20,20 @@ export default function Hero() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  // Hidden spam trap; people never see or fill it.
+  const [website, setWebsite] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setSubmitError("");
+    const result = await submitLead({ source: "hero", ...formData, website });
     setIsSubmitting(false);
+    if (!result.ok) {
+      setSubmitError(result.error);
+      return;
+    }
     setIsSubmitted(true);
     setFormData({ name: "", email: "", caseType: "" });
   };
@@ -60,7 +60,7 @@ export default function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left Content */}
           <div className="text-white animate-fade-in-up">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-white">
+            <h1 className="text-[2rem] leading-tight sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white">
               Powerful Legal Representation You Can Trust
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl">
@@ -72,7 +72,7 @@ export default function Hero() {
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
               <a
                 href="#contact"
-                className="inline-flex items-center justify-center bg-teal-accent text-white font-semibold px-8 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
+                className="inline-flex items-center justify-center text-center bg-teal-accent text-white font-semibold px-6 sm:px-8 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
               >
                 Book Your Free Consultation
               </a>
@@ -254,6 +254,28 @@ export default function Hero() {
                 >
                   {isSubmitting ? "Submitting..." : "Request Free Consultation"}
                 </button>
+
+                {submitError && (
+                  <p
+                    role="alert"
+                    className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                  >
+                    {submitError}
+                  </p>
+                )}
+
+                <div className="hidden" aria-hidden="true">
+                  <label htmlFor="hero-website">Website</label>
+                  <input
+                    type="text"
+                    id="hero-website"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                  />
+                </div>
 
                 <p className="text-xs text-gray-500 text-center mt-4">
                   By submitting this form, you agree to our{" "}
