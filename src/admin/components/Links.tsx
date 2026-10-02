@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { sourceTotals } from "@/admin/sample-data";
+import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { sampleFor } from "@/admin/sample-data";
 import { formatNumber, viz } from "@/admin/viz";
-import { defaultFunnel, getReel, reels } from "@/data/reels";
+import { funnelReel } from "@/data/reels";
 import { normalizeSourceTag, SOURCE_PRESETS, sourceLabel } from "@/lib/source-tag";
 
 const ranges = [
@@ -23,6 +24,8 @@ const useOrigin = () =>
   );
 
 export default function Links() {
+  const business = useAdminBusiness();
+  const { funnel } = business;
   const origin = useOrigin();
   const [preset, setPreset] = useState<string>(SOURCE_PRESETS[0].tag);
   const [custom, setCustom] = useState("");
@@ -35,7 +38,7 @@ export default function Links() {
   const query = new URLSearchParams();
   if (tag) query.set("src", tag);
   if (start) query.set("start", start);
-  const path = `/f/${defaultFunnel.slug}${query.size ? `?${query}` : ""}`;
+  const path = `/f/${funnel.slug}${query.size ? `?${query}` : ""}`;
   const url = `${origin}${path}`;
 
   const copy = async () => {
@@ -48,7 +51,7 @@ export default function Links() {
     }
   };
 
-  const rows = sourceTotals(range.days)
+  const rows = sampleFor(business).sourceTotals(range.days)
     .map((r) => ({ ...r, per100: ((r.calls + r.bookings) / r.visitors) * 100 }))
     .sort((a, b) => b.per100 - a.per100);
   const maxPer100 = Math.max(...rows.map((r) => r.per100));
@@ -67,7 +70,7 @@ export default function Links() {
       <div>
         <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Share links</h1>
         <p className="text-sm text-gray-600">
-          The reel funnel as its own link. Give each place you share it its own tag, so you can see which one brings calls.
+          The reel funnel as its own link. Give each place you share it its own tag, so you can see which one brings calls and bookings.
         </p>
       </div>
 
@@ -109,8 +112,8 @@ export default function Links() {
               Opens on
             </label>
             <select id="link-start" className="form-input text-sm" value={start} onChange={(e) => { setStart(e.target.value); setCopied(false); }}>
-              <option value="">&ldquo;What happened?&rdquo; topic choices</option>
-              {reels.map((r) => (
+              <option value="">&ldquo;{funnel.cover.heading}&rdquo; topic choices</option>
+              {funnel.reels.map((r) => (
                 <option key={r.id} value={r.id}>Video: {r.title}</option>
               ))}
             </select>
@@ -135,7 +138,7 @@ export default function Links() {
         </div>
         {start && (
           <p className="mt-2 text-xs text-gray-600">
-            Opens on &ldquo;{getReel(start)?.title}&rdquo;, then follows the funnel&apos;s paths from there.
+            Opens on &ldquo;{funnelReel(funnel, start)?.title}&rdquo;, then follows the funnel&apos;s paths from there.
           </p>
         )}
       </section>
@@ -143,9 +146,9 @@ export default function Links() {
       <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="sources-title">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="sources-title" className="text-base font-bold text-deep-navy">Which links bring calls</h2>
+            <h2 id="sources-title" className="text-base font-bold text-deep-navy">Which links bring calls and bookings</h2>
             <p className="text-sm text-gray-600">
-              Calls and call-back requests per 100 visitors, by where the link was shared. Sample data.
+              Calls and booking requests per 100 visitors, by where the link was shared. Sample data.
             </p>
           </div>
           <div className="flex rounded-md border border-gray-300 bg-white p-1" role="group" aria-label="Date range">
@@ -169,9 +172,9 @@ export default function Links() {
                 <th className="py-2 pr-4 font-semibold">Source</th>
                 <th className="py-2 pr-4 text-right font-semibold">Visitors</th>
                 <th className="py-2 pr-4 text-right font-semibold">Calls</th>
-                <th className="py-2 pr-4 text-right font-semibold">Call-backs</th>
+                <th className="py-2 pr-4 text-right font-semibold">Booking requests</th>
                 <th className="py-2 pr-4 text-right font-semibold">Text me later</th>
-                <th className="w-64 py-2 font-semibold">Calls + call-backs per 100</th>
+                <th className="w-64 py-2 font-semibold">Calls + bookings per 100</th>
               </tr>
             </thead>
             <tbody style={{ fontVariantNumeric: "tabular-nums" }}>

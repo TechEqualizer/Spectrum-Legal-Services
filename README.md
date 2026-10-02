@@ -97,10 +97,21 @@ each reel decides which one comes next.
   `skipped` link (swiped or tapped next, usually another practice area).
   `null` ends on a "talk to an attorney" card. Bump `defaultFunnel.id`
   whenever the paths change, so results from different versions stay apart.
-- **Videos**: put files in `public/reels/` and add a `video` entry to the
-  reel. Reels without one show a "Video coming soon" slide for 8 seconds.
+- **Media**: each reel's `media` is a video file (`{ kind: "video", src,
+  poster?, captions? }`, e.g. from `public/reels/`), a YouTube video or
+  Short (`{ kind: "youtube", id }`, played in the privacy-enhanced
+  youtube-nocookie player, driven by the reel so it pauses, mutes and
+  advances like a file), or a photo (`{ kind: "image", src }`, shown for 8
+  seconds like a story). Reels without media show "Video coming soon".
+  TikTok, Instagram and Facebook videos can't be embedded; download and
+  upload them instead.
+- **Layout**: like Reels and TikTok: progress segments for the path ahead,
+  the business's name at the top, tap to pause, double-tap to like, and a
+  rail with Like, the main action, the other action, Text me and Share.
+  The rail shows labels, not counts: there are no made-up like or comment
+  numbers. The main action also sits under the caption as a slim bar.
 - **Events** (`viewed`, `completed`, `skipped`, `exited`, `cta_clicked` for
-  Book, `call_clicked`, `text_later_clicked`, `shared`) are sent to
+  Book, `call_clicked`, `text_later_clicked`, `shared`, `liked`) are sent to
   `/api/reel-events` with an anonymous visitor id stored in the browser and
   the link's source tag. Visitors sending Global Privacy Control or Do Not
   Track are not tracked.
@@ -111,7 +122,10 @@ each reel decides which one comes next.
 ## Admin preview (`/admin`)
 
 A UI/UX preview of the reel funnel admin, with **sample data only**
-(`src/admin/sample-data.ts`). There is no login yet, so it never reads the
+(`src/admin/sample-data.ts`, generated per business from
+`src/admin/business.ts`). The business picker in the sidebar switches every
+page between The JLF Firm and the Aurelia Med Spa sample, in that
+business's colors; the choice is remembered in the browser. There is no login yet, so it never reads the
 real Supabase tables, and nothing on it saves or sends. It is not linked
 from the public site and is marked `noindex`.
 
@@ -121,8 +135,14 @@ from the public site and is marked `noindex`.
   button, topic choice, missing video, broken cover image, any reel no path
   reaches, and its results. Funnels have a "shown to" trigger (any visitor,
   returning visitor, a link's source tag...) and one is the default. The edit
-  dialog covers content (title, case type, video, captions, cover image),
-  the reel's main button, and its paths. The model is
+  dialog covers content (title, topic, summary), media, the reel's main
+  button, and its paths. **Media**: upload a video (MP4, MOV, WebM, up to
+  500 MB) or photo (JPEG, PNG, WebP, GIF, up to 25 MB) by dragging or
+  choosing a file, or paste a link (YouTube watch, Shorts and youtu.be
+  links, or a direct video or photo link). Videos can add a cover image
+  and WebVTT captions. **Preview edits** (or a row's thumbnail) plays the
+  edited funnel in the real reel viewer, with nothing tracked or sent.
+  Uploads stay in the browser until the admin has storage and a login. The model is
   `src/admin/editor-model.ts`; it starts from the live funnel in
   `src/data/reels.ts`, and edits stay in the page.
 - **Overview** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,

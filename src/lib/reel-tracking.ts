@@ -16,7 +16,9 @@ export type ReelEvent =
   | "cta_clicked"
   | "call_clicked"
   | "text_later_clicked"
-  | "shared";
+  | "shared"
+  /** Tapped the heart (or double-tapped the video). */
+  | "liked";
 
 const VISITOR_KEY = "spectrum_visitor_id";
 const SOURCE_KEY = "spectrum_source";

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ReelViewer from "@/components/ReelViewer";
+import { thumbnailOf } from "@/lib/media";
 import { defaultFunnel, getReel, reels, type Reel } from "@/data/reels";
 import { Eyebrow, headingClass, Swoosh } from "@/components/Brand";
 
@@ -175,17 +176,17 @@ function ReelTile({ reel, onOpen }: { reel: Reel; onOpen: () => void }) {
       className="group relative block aspect-square w-full overflow-hidden bg-gradient-to-br from-deep-navy to-royal-blue text-left"
       aria-label={`Watch: ${reel.title}`}
     >
-      {reel.video?.poster ? (
-        // eslint-disable-next-line @next/next/no-img-element -- poster is a plain thumbnail, sized by its tile
+      {thumbnailOf(reel.media) ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a plain thumbnail, sized by its tile
         <img
-          src={reel.video.poster}
+          src={thumbnailOf(reel.media)}
           alt=""
           className="absolute inset-0 h-full w-full object-cover grayscale transition duration-500 group-hover:scale-110 group-hover:grayscale-0"
         />
-      ) : reel.video ? (
-        // No poster yet: show the video's first frame as the thumbnail.
+      ) : reel.media?.kind === "video" ? (
+        // No cover image yet: show the video's first frame as the thumbnail.
         <video
-          src={`${reel.video.src}#t=0.1`}
+          src={`${reel.media.src}#t=0.1`}
           muted
           playsInline
           preload="metadata"
@@ -208,7 +209,7 @@ function ReelTile({ reel, onOpen }: { reel: Reel; onOpen: () => void }) {
         </svg>
       </span>
 
-      {!reel.video && (
+      {!reel.media && (
         <span className="absolute right-2 top-2 hidden rounded-sm bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm sm:inline">
           Coming soon
         </span>

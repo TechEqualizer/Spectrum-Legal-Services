@@ -4,13 +4,8 @@
 // order unless an override says otherwise, so a simple funnel needs no
 // setup beyond its order, and branching is added only where it helps.
 
-import {
-  defaultFunnel,
-  reels as liveReels,
-  type FunnelCta,
-  type FunnelTrigger,
-  type Reel,
-} from "@/data/reels";
+import type { AdminBusiness } from "@/admin/business";
+import type { Funnel, FunnelCta, FunnelTrigger, Reel } from "@/data/reels";
 
 /** Where a reel leads: the next one in order, the end card, or a reel id. */
 export type PathTarget = "next" | "end" | (string & {});
@@ -90,56 +85,51 @@ function fromLinks(
   return paths;
 }
 
-// Order chosen so most live links are simply "next in order".
-const liveOrder = [
-  "car-accident-first-steps",
-  "car-accident-recorded-statement",
-  "injury-claim-deadlines",
-  "rideshare-accident-insurance",
-  "truck-accident-evidence",
-  "motorcycle-accident-claims",
-  "slip-and-fall-documentation",
-  "dog-bite-california-law",
-];
-
-export const initialReels: EditorReel[] = liveReels.map((reel) => ({
-  ...reel,
-  cta: "funnel",
-}));
-
-export const initialFunnels: EditorFunnel[] = [
-  {
-    id: defaultFunnel.id,
-    name: "Injury Insights",
-    isDefault: true,
-    entry: "any",
-    primaryCta: defaultFunnel.primaryCta,
-    order: liveOrder,
-    topics: { ...defaultFunnel.cover.entryLabels },
-    paths: fromLinks(liveOrder, defaultFunnel.links),
-  },
-  // Sample funnels showing entry triggers; not live.
-  {
-    id: "instagram-first-visit",
-    name: "Instagram first visit",
-    isDefault: false,
-    entry: "src:instagram",
-    primaryCta: "book",
-    order: ["car-accident-first-steps", "rideshare-accident-insurance", "injury-claim-deadlines"],
-    topics: {},
-    paths: { "car-accident-first-steps": { skipped: "injury-claim-deadlines" } },
-  },
-  {
-    id: "follow-up-texts",
-    name: "Follow-up texts",
-    isDefault: false,
-    entry: "src:sms",
-    primaryCta: "call",
-    order: ["injury-claim-deadlines", "car-accident-recorded-statement"],
-    topics: {},
-    paths: {},
-  },
-];
+/** The editor's starting point for a business: its live funnel, plus sample funnels with other entry triggers. */
+export function initialEditorState(business: AdminBusiness): {
+  reels: EditorReel[];
+  funnels: EditorFunnel[];
+} {
+  const { funnel, editorOrder } = business;
+  const reels = funnel.reels.map((reel) => ({ ...reel, cta: "funnel" as const }));
+  const [first, second, third] = editorOrder;
+  return {
+    reels,
+    funnels: [
+      {
+        id: funnel.id,
+        name: business.funnelName,
+        isDefault: true,
+        entry: "any",
+        primaryCta: funnel.primaryCta,
+        order: editorOrder,
+        topics: { ...funnel.cover.entryLabels },
+        paths: fromLinks(editorOrder, funnel.links),
+      },
+      // Sample funnels showing entry triggers; not live.
+      {
+        id: `${funnel.id}-instagram`,
+        name: "Instagram first visit",
+        isDefault: false,
+        entry: "src:instagram",
+        primaryCta: "book",
+        order: [first, second, third].filter(Boolean),
+        topics: {},
+        paths: {},
+      },
+      {
+        id: `${funnel.id}-texts`,
+        name: "Follow-up texts",
+        isDefault: false,
+        entry: "src:sms",
+        primaryCta: funnel.primaryCta,
+        order: editorOrder.slice(-2),
+        topics: {},
+        paths: {},
+      },
+    ],
+  };
+}
 
 /** Removes a reel from a funnel, sending anything that pointed at it to "next". */
 export function removeFromFunnel(funnel: EditorFunnel, reelId: string): EditorFunnel {
@@ -156,12 +146,30 @@ export function removeFromFunnel(funnel: EditorFunnel, reelId: string): EditorFu
   return { ...funnel, order: funnel.order.filter((id) => id !== reelId), paths, topics };
 }
 
-/** Basic check for media links: https:// or a path on this site. */
-export function isMediaUrl(value: string) {
-  if (value.startsWith("/")) return !value.startsWith("//");
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
+/**
+ * The editor's funnel as a playable funnel, for previewing edits in the real
+ * reel viewer. Marked as a sample, so nothing is tracked or sent.
+ */
+export function toPreviewFunnel(live: Funnel, editor: EditorFunnel, library: EditorReel[]): Funnel {
+  const reels = editor.order
+    .map((id) => library.find((r) => r.id === id))
+    .filter((r): r is EditorReel => Boolean(r));
+  const links: Funnel["links"] = {};
+  for (const reel of reels) {
+    links[reel.id] = {
+      completed: resolveNext(editor, reel.id, "completed"),
+      skipped: resolveNext(editor, reel.id, "skipped"),
+    };
   }
+  const topics = Object.keys(editor.topics).filter((id) => editor.order.includes(id));
+  return {
+    ...live,
+    id: `${live.id}-preview`,
+    sample: { notice: "Admin preview: nothing is tracked or sent." },
+    primaryCta: editor.primaryCta,
+    reels,
+    links,
+    entryReelIds: topics.length ? topics : editor.order.slice(0, 1),
+    cover: { ...live.cover, entryLabels: editor.topics },
+  };
 }

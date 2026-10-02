@@ -2,23 +2,24 @@
 
 import { useState } from "react";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
+import ReelViewer from "@/components/ReelViewer";
 import {
   CTA_LABELS,
   ENTRY_TRIGGERS,
-  initialFunnels,
-  initialReels,
+  initialEditorState,
   removeFromFunnel,
+  toPreviewFunnel,
   resolveNext,
   type EditorFunnel,
   type EditorReel,
   type PathTarget,
 } from "@/admin/editor-model";
-import { reelTotals } from "@/admin/sample-data";
+import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { sampleFor, type ReelTotals } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
-import { defaultFunnel, type FunnelTrigger } from "@/data/reels";
+import type { FunnelTrigger } from "@/data/reels";
+import { thumbnailOf } from "@/lib/media";
 
-// Sample results for the last 30 days, keyed by reel.
-const stats = new Map(reelTotals(30).map((t) => [t.reel.id, t]));
 
 const blankReel: EditorReel = {
   id: "",
@@ -55,10 +56,18 @@ function reachable(funnel: EditorFunnel) {
 }
 
 export default function ReelsEditor() {
-  const [library, setLibrary] = useState(initialReels);
-  const [funnels, setFunnels] = useState(initialFunnels);
-  const [activeId, setActiveId] = useState(initialFunnels[0].id);
+  const business = useAdminBusiness();
+  const liveFunnel = business.funnel;
+  // The admin remounts this page when the business changes, so this runs once per business.
+  const [initial] = useState(() => initialEditorState(business));
+  const [library, setLibrary] = useState(initial.reels);
+  const [funnels, setFunnels] = useState(initial.funnels);
+  const [activeId, setActiveId] = useState(initial.funnels[0].id);
+  // Sample results for the last 30 days, keyed by reel.
+  const stats = new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t]));
   const [editing, setEditing] = useState<EditorReel | null>(null);
+  // Plays the funnel as edited, from one of its reels.
+  const [preview, setPreview] = useState<{ reelId: string; key: number } | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [addId, setAddId] = useState("");
   // Read out after a move, for keyboard and screen reader users.
@@ -138,16 +147,24 @@ export default function ReelsEditor() {
         </div>
         <div className="flex flex-wrap gap-2">
           <a
-            href={`/f/${defaultFunnel.slug}`}
+            href={`/f/${liveFunnel.slug}`}
             target="_blank"
             rel="noopener"
             className="flex min-h-11 items-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50"
           >
-            Preview live link
+            Open live link
           </a>
           <button
             type="button"
-            onClick={() => setEditing(blankReel)}
+            disabled={funnel.order.length === 0}
+            onClick={() => setPreview({ reelId: funnel.order[0], key: Date.now() })}
+            className="min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50 disabled:opacity-40"
+          >
+            Preview edits
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
             className="min-h-11 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
           >
             + Add reel
@@ -180,7 +197,7 @@ export default function ReelsEditor() {
                   </span>
                   <span className="mt-2 block text-xs font-semibold text-gray-700">
                     {f.order.length} {f.order.length === 1 ? "reel" : "reels"} &middot; {CTA_LABELS[f.primaryCta]} first
-                    {f.id === defaultFunnel.id && <span className="ml-1 font-normal text-teal-accent">&middot; live</span>}
+                    {f.id === liveFunnel.id && <span className="ml-1 font-normal text-teal-accent">&middot; live</span>}
                   </span>
                 </button>
               </li>
@@ -247,6 +264,7 @@ export default function ReelsEditor() {
               if (!reel) return null;
               return (
                 <ReelRow
+                  stats={stats.get(id)}
                   key={id}
                   reel={reel}
                   index={i}
@@ -260,6 +278,7 @@ export default function ReelsEditor() {
                   onDropHere={() => dragId && dragId !== id && moveTo(dragId, i)}
                   onMove={(by) => moveTo(id, i + by)}
                   onEdit={() => setEditing(reel)}
+                  onPlay={() => setPreview({ reelId: id, key: Date.now() })}
                   onRemove={() => updateFunnel((f) => removeFromFunnel(f, id))}
                 />
               );
@@ -294,12 +313,23 @@ export default function ReelsEditor() {
         </div>
       </section>
 
+      {preview && (
+        <ReelViewer
+          key={preview.key}
+          funnel={toPreviewFunnel(liveFunnel, funnel, library)}
+          startReelId={preview.reelId}
+          onClose={() => setPreview(null)}
+        />
+      )}
+
       {editing && (
         <ReelEditDialog
           key={editing.id || "new"}
           reel={editing}
           funnel={funnel}
           library={library}
+          services={liveFunnel.brand.services}
+          topicLabel={business.terms.topic}
           onSave={save}
           onClose={() => setEditing(null)}
         />
@@ -309,6 +339,7 @@ export default function ReelsEditor() {
 }
 
 type ReelRowProps = {
+  stats: ReelTotals | undefined;
   reel: EditorReel;
   index: number;
   count: number;
@@ -321,6 +352,7 @@ type ReelRowProps = {
   onDropHere: () => void;
   onMove: (by: -1 | 1) => void;
   onEdit: () => void;
+  onPlay: () => void;
   onRemove: () => void;
 };
 
@@ -329,9 +361,8 @@ const TRIGGER_LABELS: Record<FunnelTrigger, string> = {
   skipped: "Skipped",
 };
 
-function ReelRow({ reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onRemove }: ReelRowProps) {
+function ReelRow({ stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
   const [over, setOver] = useState(false);
-  const s = stats.get(reel.id);
   const overrides = Object.entries(funnel.paths[reel.id] ?? {}) as [FunnelTrigger, PathTarget][];
   const cta = reel.cta === "funnel" ? funnel.primaryCta : reel.cta;
   const topic = funnel.topics[reel.id];
@@ -366,14 +397,18 @@ function ReelRow({ reel, index, count, funnel, unreachable, dragging, pathLabel,
         <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-soft-gray text-sm font-bold text-deep-navy" style={{ fontVariantNumeric: "tabular-nums" }}>
           {index + 1}
         </span>
-        <Thumb reel={reel} />
+        <button type="button" onClick={onPlay} aria-label={`Preview ${reel.title}`} className="flex-shrink-0 rounded-md focus-visible:outline-2">
+          <Thumb reel={reel} />
+        </button>
         <div className="min-w-0">
           <p className="font-bold leading-snug text-deep-navy">{reel.title}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <Chip>{reel.practiceArea}</Chip>
             <Chip tone="teal">{CTA_LABELS[cta]}</Chip>
             {topic && <Chip tone="navy">Topic: {topic}</Chip>}
-            {!reel.video && <Chip tone="amber">No video yet</Chip>}
+            {!reel.media && <Chip tone="amber">No video yet</Chip>}
+            {reel.media?.kind === "youtube" && <Chip>YouTube</Chip>}
+            {reel.media?.kind === "image" && <Chip>Photo</Chip>}
             {unreachable && <Chip tone="red">No path leads here</Chip>}
           </div>
           <p className="mt-1.5 text-xs text-gray-600">
@@ -417,7 +452,7 @@ function ReelRow({ reel, index, count, funnel, unreachable, dragging, pathLabel,
 
 function Thumb({ reel }: { reel: EditorReel }) {
   const [broken, setBroken] = useState<string | null>(null);
-  const poster = reel.video?.poster;
+  const poster = thumbnailOf(reel.media);
   const show = poster && broken !== poster;
   return (
     <div className="relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-deep-navy to-royal-blue">

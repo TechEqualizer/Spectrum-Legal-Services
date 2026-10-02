@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { JlfLogo } from "@/components/Brand";
+import { selectAdminBusiness, useAdminBusiness } from "@/admin/AdminBusiness";
+import { businesses } from "@/admin/business";
+import BrandLogo from "@/components/BrandLogo";
 
 const links = [
   { href: "/admin", label: "Reels", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zM10 9l5 3-5 3V9z" },
@@ -15,18 +17,38 @@ const links = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const { funnel } = useAdminBusiness();
   return (
     <nav
       className="bg-deep-navy text-white lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:flex-shrink-0"
       aria-label="Admin"
     >
       <div className="flex items-center justify-between gap-4 px-4 py-3 lg:block lg:px-5 lg:py-6">
-        <Link href="/" aria-label="Back to the site" className="inline-flex">
-          <JlfLogo className="h-10 w-auto lg:h-12" />
+        <Link
+          href={funnel.sample ? `/f/${funnel.slug}` : "/"}
+          aria-label={funnel.sample ? "Open the funnel link" : "Back to the site"}
+          className="inline-flex"
+        >
+          <BrandLogo brand={funnel.brand} size="sm" />
         </Link>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-sky-accent lg:mt-4">
-          Reel funnel admin
-        </p>
+        <div className="lg:mt-5">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-sky-accent">
+            Reel funnel admin
+          </p>
+          <label htmlFor="admin-business" className="sr-only">Business</label>
+          <select
+            id="admin-business"
+            value={funnel.slug}
+            onChange={(e) => selectAdminBusiness(e.target.value)}
+            className="mt-1 w-full max-w-48 rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-sky-accent lg:max-w-none [&>option]:text-charcoal"
+          >
+            {businesses.map((b) => (
+              <option key={b.funnel.slug} value={b.funnel.slug}>
+                {b.funnel.brand.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <ul
         className="flex gap-1 overflow-x-auto px-2 pb-2 [scrollbar-width:none] lg:flex-col lg:px-3 lg:pb-0 [&::-webkit-scrollbar]:hidden"

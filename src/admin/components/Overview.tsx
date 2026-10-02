@@ -4,7 +4,8 @@ import { useState } from "react";
 import OutcomeBars from "@/admin/components/OutcomeBars";
 import StatTile from "@/admin/components/StatTile";
 import ViewsChart from "@/admin/components/ViewsChart";
-import { dailyViews, periodTotals, reelTotals } from "@/admin/sample-data";
+import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { sampleFor } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
 
 const ranges = [
@@ -17,6 +18,8 @@ const change = (now: number, before: number) => (before ? now / before - 1 : 0);
 
 export default function Overview() {
   const [range, setRange] = useState(ranges[1]);
+  const business = useAdminBusiness();
+  const { periodTotals, dailyViews, reelTotals } = sampleFor(business);
   const { current, previous } = periodTotals(range.days);
   const watchRate = current.completed / current.views;
   const prevWatchRate = previous.completed / previous.views;
@@ -32,7 +35,7 @@ export default function Overview() {
             Overview
           </h1>
           <p className="text-sm text-gray-600">
-            How visitors move through the Knowledge Center reels.
+            How visitors move through {business.funnel.brand.name}&apos;s reels.
           </p>
         </div>
         {/* Date range: one row, above everything it scopes */}
@@ -58,7 +61,7 @@ export default function Overview() {
       <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         <StatTile label="Reel views" value={formatNumber(current.views)} delta={change(current.views, previous.views)} periodLabel={range.short} />
         <StatTile label="Watch-through rate" value={formatPercent(watchRate)} delta={change(watchRate, prevWatchRate)} periodLabel={range.short} />
-        <StatTile label="Consultations booked from reels" value={formatNumber(current.booked)} delta={change(current.booked, previous.booked)} periodLabel={range.short} />
+        <StatTile label="Bookings from reels" value={formatNumber(current.booked)} delta={change(current.booked, previous.booked)} periodLabel={range.short} />
         <StatTile label="Booking rate" value={`${(bookRate * 100).toFixed(1)}%`} delta={change(bookRate, prevBookRate)} periodLabel={range.short} />
       </div>
 
@@ -89,7 +92,7 @@ export default function Overview() {
             <thead className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-600">
               <tr>
                 <th className="py-2 pr-4 font-semibold">Reel</th>
-                <th className="py-2 pr-4 font-semibold">Case type</th>
+                <th className="py-2 pr-4 font-semibold">{business.terms.topic}</th>
                 <th className="py-2 pr-4 text-right font-semibold">Views</th>
                 <th className="py-2 pr-4 text-right font-semibold">Watched</th>
                 <th className="py-2 pr-4 text-right font-semibold">Booked</th>
