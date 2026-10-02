@@ -105,6 +105,9 @@ each reel decides which one comes next.
   seconds like a story). Reels without media show "Video coming soon".
   TikTok, Instagram and Facebook videos can't be embedded; download and
   upload them instead.
+- **Preparing clips**: `scripts/prepare-reel.sh <clip> <output-name> [start]
+  [length]` (needs ffmpeg) turns any clip into a reel: 720x1280 center crop,
+  H.264 MP4 with fast start, and a JPEG cover from the first second.
 - **Layout**: like YouTube Shorts: full-bleed media, a back arrow and sound
   controls at the top, a rail of plain icons (Like, the main action in the
   brand color, the other action, Text me, Share) ending in the business's
