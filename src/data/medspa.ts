@@ -81,6 +81,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-natural-results",
+    emphasis: "quiet",
     badge: "From $12/unit",
     practiceArea: "Wrinkle Relaxers",
     title: "Will I look frozen? How we keep it natural",
@@ -97,6 +98,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-filler-aftercare",
+    emphasis: "quiet",
     badge: "Aftercare",
     practiceArea: "Lip Filler",
     title: "Swelling, bruising and aftercare: the honest version",
@@ -129,6 +131,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-pricing",
+    emphasis: "bold",
     badge: "Free consult",
     practiceArea: "Consultation",
     title: "How pricing works, with no surprises",
@@ -137,6 +140,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-consultation",
+    emphasis: "bold",
     badge: "Free",
     practiceArea: "Consultation",
     title: "What happens at your free consultation",
