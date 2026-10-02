@@ -7,52 +7,24 @@
 //   skipped    swiped or tapped next -> a different type of accident
 // `null` ends the funnel on the "talk to an attorney" card.
 //
+// This file is The JLF Firm's funnel; other businesses' funnels live beside
+// it and are listed in src/data/funnels.ts.
+//
 // PLACEHOLDER CONTENT: no videos have been recorded yet. Until a `video` is
 // added, a reel shows a "Video coming soon" slide. Have an attorney review
 // every title and summary before launch.
 
-export type Reel = {
-  id: string;
-  /** Must match one of the intake form case types. */
-  practiceArea: string;
-  title: string;
-  summary: string;
-  duration?: string;
-  /** Self-hosted video, e.g. { src: "/reels/criminal-defense.mp4", poster: "/reels/criminal-defense.jpg", captions: "/reels/criminal-defense.vtt" }. */
-  video?: {
-    src: string;
-    poster?: string;
-    /** WebVTT captions file. */
-    captions?: string;
-  };
-};
+import { site } from "@/config/site";
+import type { Funnel, FunnelBrand, FunnelTrigger, Reel } from "@/data/funnel-types";
+import { CASE_TYPES } from "@/lib/leads";
 
-export type FunnelTrigger = "completed" | "skipped";
-
-/**
- * The main button on every reel. "call" suits urgent needs (an accident just
- * happened); "book" suits people weighing their options. The other one and
- * "Text me later" always sit beside it.
- */
-export type FunnelCta = "call" | "book";
-
-export type Funnel = {
-  /** Stored with every event; bump it when the paths change so results stay comparable. */
-  id: string;
-  /** The shareable link: /f/<slug>. Keep it short and never change it once shared. */
-  slug: string;
-  primaryCta: FunnelCta;
-  /** The opening screen of the shareable link. */
-  cover: {
-    heading: string;
-    intro: string;
-    /** Short labels for the entry reels, shown as "What happened?" choices. */
-    entryLabels: Record<string, string>;
-  };
-  /** Reels shown as cards on the page, in order. Every funnel visit starts at one of these. */
-  entryReelIds: string[];
-  links: Record<string, Record<FunnelTrigger, string | null>>;
-};
+export type {
+  Funnel,
+  FunnelBrand,
+  FunnelCta,
+  FunnelTrigger,
+  Reel,
+} from "@/data/funnel-types";
 
 export const reels: Reel[] = [
   {
@@ -113,9 +85,58 @@ export const reels: Reel[] = [
   },
 ];
 
+const jlfBrand: FunnelBrand = {
+  name: site.name,
+  logo: {
+    kind: "image",
+    src: "/brand/jlf-logo-white.png",
+    width: 450,
+    height: 204,
+    alt: `${site.name}, Car Accident Lawyer`,
+  },
+  byline: [site.attorney.name, site.attorney.title],
+  phone: site.phone,
+  services: CASE_TYPES,
+  smsConsent: `I agree that ${site.name} may text me at this number about my question, including links to short videos. Up to 4 messages. Msg & data rates may apply. Reply STOP to opt out. Consent is not required to hire the firm.`,
+  seriesLabel: "Injury Insights \u00b7 Attorney Jeff",
+  disclaimer:
+    "General information only, not legal advice. Watching this video does not create an attorney-client relationship.",
+  footer: `Attorney Advertising. General information only, not legal advice. Watching these videos does not create an attorney-client relationship. Main office: ${site.mainOffice.street}, ${site.mainOffice.city}.`,
+  copy: {
+    bookPrimary: "Book a free case review",
+    callBack: "Request a call back",
+    callNow: "Call now",
+    coverCallPrompt: "Rather talk to someone now?",
+    coverCall: `Call 24/7: ${site.phone.display}`,
+    book: {
+      heading: "Get a free case review",
+      intro: "Leave your number and Attorney Jeff's team will call you back.",
+      submit: "Request my call back",
+    },
+    bookDone: (name, phone) =>
+      `Thanks, ${name}. Attorney Jeff's team will call you at ${phone}.`,
+    textLater: {
+      heading: "Not ready to talk?",
+      intro: "We'll text you the next video, so you can keep watching when it suits you.",
+      submit: "Text me the next video",
+    },
+    textLaterDone: (name, phone) =>
+      `Thanks, ${name}. The next video is on its way to ${phone}. Reply STOP any time to opt out.`,
+    formFinePrint:
+      "Your case review is free. Sending this does not create an attorney-client relationship.",
+    endHeading: "Have a question about your situation?",
+    endBody:
+      "Every case is different. Talk it through with one of our attorneys. The case review is free.",
+    shareButton: "Send to someone who got hurt",
+    shareText: "Short videos from Attorney Jeff on what to do after an accident.",
+  },
+};
+
 export const defaultFunnel: Funnel = {
   id: "jlf-injury-v1",
   slug: "jlf",
+  brand: jlfBrand,
+  reels,
   primaryCta: "call",
   cover: {
     heading: "What happened?",
@@ -174,16 +195,16 @@ export const defaultFunnel: Funnel = {
   },
 };
 
-export const funnels: Funnel[] = [defaultFunnel];
-
-export function getFunnelBySlug(slug: string) {
-  return funnels.find((funnel) => funnel.slug === slug);
-}
-
 const reelsById = new Map(reels.map((reel) => [reel.id, reel]));
 
+/** A reel on The JLF Firm's site and admin. In a funnel, use funnelReel. */
 export function getReel(id: string) {
   return reelsById.get(id);
+}
+
+/** A reel within one funnel. */
+export function funnelReel(funnel: Funnel, id: string) {
+  return funnel.reels.find((reel) => reel.id === id);
 }
 
 /** The reel to show after `reelId`, or null for the end of the funnel. */

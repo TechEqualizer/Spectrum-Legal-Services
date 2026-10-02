@@ -1,7 +1,5 @@
 // Shared by the intake forms and /api/leads so both validate the same way.
 
-import { site } from "@/config/site";
-
 export const CASE_TYPES = [
   "Car Accident",
   "Truck Accident",
@@ -27,6 +25,7 @@ export type LeadInput = {
   /** Required on the website forms; optional in the funnel, which asks for a phone number. */
   email?: string;
   phone?: string;
+  /** One of CASE_TYPES on the website; one of the funnel's brand.services in a funnel. */
   caseType: string;
   message?: string;
   /** Anonymous id from the reel funnel, linking the lead to the videos watched. */
@@ -35,17 +34,11 @@ export type LeadInput = {
   referringReelId?: string;
   /** Where the funnel link was shared, from its ?src= tag. */
   sourceTag?: string;
+  /** The funnel link the lead came from (source "funnel" only). */
+  funnelId?: string;
   /** Ticked the SMS consent box (required for "text me later"). */
   smsConsent?: boolean;
 };
-
-/**
- * Shown next to the consent box and saved with each "text me later" request,
- * so there is a record of what the person agreed to. Have the firm's counsel
- * approve the wording before texts are sent.
- */
-export const SMS_CONSENT_TEXT =
-  `I agree that ${site.name} may text me at this number about my question, including links to short videos. Up to 4 messages. Msg & data rates may apply. Reply STOP to opt out. Consent is not required to hire the firm.`;
 
 export const LEAD_LIMITS = {
   name: 200,

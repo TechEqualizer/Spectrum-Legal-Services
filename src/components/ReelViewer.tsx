@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  getReel,
+  funnelReel,
   nextReelId,
   type Funnel,
+  type FunnelBrand,
   type FunnelTrigger,
   type Reel,
 } from "@/data/reels";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
-import { site } from "@/config/site";
 import type { LeadIntent } from "@/lib/leads";
 import { trackReelEvent } from "@/lib/reel-tracking";
 
@@ -53,12 +53,13 @@ export default function ReelViewer({
   // The booking or "text me later" form, open over the reel.
   const [sheet, setSheet] = useState<LeadIntent | null>(null);
   const isModal = variant === "modal";
+  const brand = funnel.brand;
   // Progress of the reel on screen, from 0 to 1, tagged with its step so a
   // new step starts empty without a reset.
   const [progress, setProgress] = useState({ step: -1, fraction: 0 });
 
   const step = path.length - 1;
-  const reel = getReel(path[step]);
+  const reel = funnelReel(funnel, path[step]);
 
   // Log a view each time a reel comes on screen. The ref stops React's
   // development double-run of effects from logging it twice.
@@ -68,14 +69,14 @@ export default function ReelViewer({
     const key = `${step}:${reel.id}`;
     if (lastViewed.current === key) return;
     lastViewed.current = key;
-    trackReelEvent(reel.id, "viewed");
-  }, [ended, reel, step]);
+    trackReelEvent(funnel, reel.id, "viewed");
+  }, [ended, funnel, reel, step]);
 
   const advance = (trigger: FunnelTrigger) => {
     if (!reel) return;
-    trackReelEvent(reel.id, trigger);
+    trackReelEvent(funnel, reel.id, trigger);
     const next = nextReelId(funnel, reel.id, trigger);
-    if (next && getReel(next)) setPath((p) => [...p, next]);
+    if (next && funnelReel(funnel, next)) setPath((p) => [...p, next]);
     else setEnded(true);
   };
 
@@ -90,20 +91,20 @@ export default function ReelViewer({
   };
 
   const close = () => {
-    if (!ended && reel) trackReelEvent(reel.id, "exited");
+    if (!ended && reel) trackReelEvent(funnel, reel.id, "exited");
     onClose();
   };
 
   const ctas: CtaHandlers = {
-    onCall: () => reel && trackReelEvent(reel.id, "call_clicked"),
+    onCall: () => reel && trackReelEvent(funnel, reel.id, "call_clicked"),
     onBook: () => {
       if (!reel) return;
-      trackReelEvent(reel.id, "cta_clicked");
+      trackReelEvent(funnel, reel.id, "cta_clicked");
       setSheet("book");
     },
     onTextLater: () => {
       if (!reel) return;
-      trackReelEvent(reel.id, "text_later_clicked");
+      trackReelEvent(funnel, reel.id, "text_later_clicked");
       setSheet("text_later");
     },
   };
@@ -192,7 +193,7 @@ export default function ReelViewer({
         ref={dialogRef}
         role={isModal ? "dialog" : "region"}
         aria-modal={isModal ? "true" : undefined}
-        aria-label={ended ? "Talk to an attorney" : `Video: ${reel.title}`}
+        aria-label={ended ? brand.copy.endHeading : `Video: ${reel.title}`}
         tabIndex={-1}
         className="relative flex h-full w-full flex-col overflow-hidden bg-deep-navy outline-none tall:h-[85vh] tall:max-w-md tall:rounded-2xl tall:border tall:border-white/10 tall:shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -234,7 +235,7 @@ export default function ReelViewer({
             </div>
             <div className="mt-2 flex items-center justify-between">
               <span className="text-xs font-medium text-white/80">
-                Injury Insights &middot; Attorney Jeff
+                {brand.seriesLabel}
               </span>
               <div className="flex items-center gap-1">
                 {reel.video && !ended && (
@@ -308,8 +309,8 @@ export default function ReelViewer({
                 <p className="mt-1 text-sm text-gray-200 short:hidden">
                   {reel.summary}
                 </p>
-                <CtaButtons primary={funnel.primaryCta} {...ctas} />
-                <Disclaimer />
+                <CtaButtons brand={brand} primary={funnel.primaryCta} {...ctas} />
+                <Disclaimer text={brand.disclaimer} />
               </div>
             </div>
           )}
@@ -318,6 +319,7 @@ export default function ReelViewer({
         {sheet && (
           <FunnelLeadSheet
             key={sheet}
+            funnel={funnel}
             intent={sheet}
             reel={reel}
             onClose={() => {
@@ -347,13 +349,14 @@ const secondaryClass =
  * big button, the other two beside each other under it.
  */
 function CtaButtons({
+  brand,
   primary,
   onCall,
   onBook,
   onTextLater,
-}: CtaHandlers & { primary: Funnel["primaryCta"] }) {
+}: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"] }) {
   const call = (className: string, label: string) => (
-    <a href={site.phone.href} onClick={onCall} className={className}>
+    <a href={brand.phone.href} onClick={onCall} className={className}>
       {label}
     </a>
   );
@@ -365,12 +368,12 @@ function CtaButtons({
   return (
     <div className="mt-4 space-y-2 short:mt-2">
       {primary === "call"
-        ? call(primaryClass, `Call now: ${site.phone.display}`)
-        : book(primaryClass, "Book a free case review")}
+        ? call(primaryClass, `${brand.copy.callNow}: ${brand.phone.display}`)
+        : book(primaryClass, brand.copy.bookPrimary)}
       <div className="flex gap-2">
         {primary === "call"
-          ? book(secondaryClass, "Request a call back")
-          : call(secondaryClass, "Call now")}
+          ? book(secondaryClass, brand.copy.callBack)
+          : call(secondaryClass, brand.copy.callNow)}
         <button type="button" onClick={onTextLater} className={secondaryClass}>
           Text me later
         </button>
@@ -400,14 +403,13 @@ function EndCard({
           {reel.practiceArea}
         </span>
         <h2 className="mt-4 text-2xl font-bold text-white short:mt-2 short:text-xl">
-          Have a question about your situation?
+          {funnel.brand.copy.endHeading}
         </h2>
         <p className="mt-3 text-gray-200 short:mt-1 short:text-sm">
-          Every case is different. Talk it through with one of our attorneys.
-          The case review is free.
+          {funnel.brand.copy.endBody}
         </p>
         <div className="mt-6 text-left short:mt-3">
-          <CtaButtons primary={funnel.primaryCta} {...ctas} />
+          <CtaButtons brand={funnel.brand} primary={funnel.primaryCta} {...ctas} />
         </div>
         <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-5 short:mt-3 short:flex-row short:pt-3">
           <ShareButton funnel={funnel} reel={reel} />
@@ -419,13 +421,13 @@ function EndCard({
             {closeLabel}
           </button>
         </div>
-        <Disclaimer />
+        <Disclaimer text={funnel.brand.disclaimer} />
       </div>
     </div>
   );
 }
 
-/** "Know someone who got hurt?": passes the funnel link on, tagged as a share. */
+/** Passes the funnel link on to someone else, tagged as a share. */
 function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
   const [copied, setCopied] = useState(false);
   const share = async () => {
@@ -433,15 +435,15 @@ function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `${site.name}: Injury Insights`,
-          text: "Short videos from Attorney Jeff on what to do after an accident.",
+          title: funnel.brand.name,
+          text: funnel.brand.copy.shareText,
           url,
         });
       } else {
         await navigator.clipboard.writeText(url);
         setCopied(true);
       }
-      trackReelEvent(reel.id, "shared");
+      trackReelEvent(funnel, reel.id, "shared");
     } catch {
       // Closed the share sheet, or the clipboard is blocked: nothing to do.
     }
@@ -453,18 +455,15 @@ function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
       className="min-h-11 w-full rounded-md border border-white/30 px-5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
     >
       <span aria-live="polite">
-        {copied ? "Link copied" : "Send to someone who got hurt"}
+        {copied ? "Link copied" : funnel.brand.copy.shareButton}
       </span>
     </button>
   );
 }
 
-function Disclaimer() {
+function Disclaimer({ text }: { text: string }) {
   return (
-    <p className="mt-3 text-[11px] leading-snug text-gray-400">
-      General information only, not legal advice. Watching this video does not
-      create an attorney-client relationship.
-    </p>
+    <p className="mt-3 text-[11px] leading-snug text-gray-400">{text}</p>
   );
 }
 

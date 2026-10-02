@@ -2,35 +2,23 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { site } from "@/config/site";
-import type { Reel } from "@/data/reels";
-import { isValidPhone, SMS_CONSENT_TEXT, type LeadIntent } from "@/lib/leads";
+import type { Funnel, Reel } from "@/data/reels";
+import { isValidPhone, type LeadIntent } from "@/lib/leads";
 import { submitLead } from "@/lib/submit-lead";
 
 type FunnelLeadSheetProps = {
+  funnel: Funnel;
   intent: LeadIntent;
   /** The reel on screen when the visitor tapped the button. */
   reel: Reel;
   onClose: () => void;
 };
 
-const copy: Record<LeadIntent, { heading: string; intro: string; submit: string }> = {
-  book: {
-    heading: "Get a free case review",
-    intro: "Leave your number and Attorney Jeff's team will call you back.",
-    submit: "Request my call back",
-  },
-  text_later: {
-    heading: "Not ready to talk?",
-    intro: "We'll text you the next video, so you can keep watching when it suits you.",
-    submit: "Text me the next video",
-  },
-};
-
 /**
  * The booking step inside the funnel: a short sheet over the reel, so
  * visitors never leave the videos to fill in a website form.
  */
-export default function FunnelLeadSheet({ intent, reel, onClose }: FunnelLeadSheetProps) {
+export default function FunnelLeadSheet({ funnel, intent, reel, onClose }: FunnelLeadSheetProps) {
   const id = useId();
   const firstField = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -47,8 +35,11 @@ export default function FunnelLeadSheet({ intent, reel, onClose }: FunnelLeadShe
     firstField.current?.focus();
   }, []);
 
-  const text = copy[intent];
+  const { brand } = funnel;
   const textLater = intent === "text_later";
+  const text = textLater ? brand.copy.textLater : brand.copy.book;
+  // Nothing is sent from the concept site or a sample funnel.
+  const simulated = site.demoMode || Boolean(funnel.sample);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +51,7 @@ export default function FunnelLeadSheet({ intent, reel, onClose }: FunnelLeadShe
     setError("");
     const result = await submitLead({
       source: "funnel",
+      funnelId: funnel.id,
       intent,
       name,
       phone,
@@ -68,7 +60,7 @@ export default function FunnelLeadSheet({ intent, reel, onClose }: FunnelLeadShe
       referringReelId: reel.id,
       smsConsent: textLater ? consent : undefined,
       website,
-    });
+    }, { simulate: simulated });
     setIsSubmitting(false);
     if (result.ok) setSent(true);
     else setError(result.error);
@@ -112,17 +104,17 @@ export default function FunnelLeadSheet({ intent, reel, onClose }: FunnelLeadShe
           {sent ? (
             <div role="status" className="mt-3 space-y-4">
               <p className="text-sm text-gray-700">
-                {site.demoMode
-                  ? "Demo: nothing was sent. On the live link, this request goes straight to the firm."
+                {simulated
+                  ? "Demo: nothing was sent. On a live link, this request goes straight to the business."
                   : textLater
-                    ? `Thanks, ${name.trim()}. The next video is on its way to ${phone.trim()}. Reply STOP any time to opt out.`
-                    : `Thanks, ${name.trim()}. Attorney Jeff's team will call you at ${phone.trim()}.`}
+                    ? brand.copy.textLaterDone(name.trim(), phone.trim())
+                    : brand.copy.bookDone(name.trim(), phone.trim())}
               </p>
               <a
-                href={site.phone.href}
+                href={brand.phone.href}
                 className="flex min-h-11 w-full items-center justify-center rounded-md border border-deep-navy/20 px-4 font-semibold text-deep-navy hover:bg-soft-gray"
               >
-                Can&apos;t wait? Call {site.phone.display}
+                Can&apos;t wait? Call {brand.phone.display}
               </a>
               <button
                 type="button"
@@ -191,7 +183,7 @@ export default function FunnelLeadSheet({ intent, reel, onClose }: FunnelLeadShe
                     onChange={(e) => setConsent(e.target.checked)}
                     className="mt-0.5 h-5 w-5 flex-shrink-0 accent-teal-accent"
                   />
-                  <span>{SMS_CONSENT_TEXT}</span>
+                  <span>{brand.smsConsent}</span>
                 </label>
               )}
               <div className="absolute -left-[9999px]" aria-hidden="true">
@@ -217,9 +209,8 @@ export default function FunnelLeadSheet({ intent, reel, onClose }: FunnelLeadShe
                 {isSubmitting ? "Sending..." : text.submit}
               </button>
               <p className="text-[11px] leading-snug text-gray-500">
-                Your case review is free. Sending this does not create an
-                attorney-client relationship.
-                {site.demoMode && " Demo: nothing you enter is sent."}
+                {brand.copy.formFinePrint}
+                {simulated && " Demo: nothing you enter is sent."}
               </p>
             </form>
           )}

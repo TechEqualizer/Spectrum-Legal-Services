@@ -1,6 +1,6 @@
 // Server-only access to the Reel Funnels Supabase project.
 //
-// The site calls two database functions (log_reel_event_v2, submit_lead_v2) with the
+// The site calls two database functions (log_reel_event_v2, submit_lead_v3) with the
 // project's publishable key. The tables themselves are locked: see
 // supabase/migrations/.
 
@@ -16,7 +16,7 @@ type RpcResult<T> =
   | { ok: false; status: number; error: string };
 
 export async function callRpc<T = unknown>(
-  fn: "log_reel_event_v2" | "submit_lead_v2",
+  fn: "log_reel_event_v2" | "submit_lead_v3",
   args: Record<string, unknown>
 ): Promise<RpcResult<T>> {
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {

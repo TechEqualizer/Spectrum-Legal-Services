@@ -48,15 +48,43 @@ the reels at that topic.
   texts use this to send someone the next video, e.g.
   `/f/jlf?start=injury-claim-deadlines&src=sms`.
 - **Text me later** saves a lead with `intent = 'text_later'`, the visitor's
-  mobile number, and the exact consent wording they agreed to
-  (`SMS_CONSENT_TEXT` in `src/lib/leads.ts`, which the firm's counsel should
-  approve). **Texts are not sent yet**: that needs an SMS provider (e.g.
+  mobile number, and the exact consent wording they agreed to (the
+  funnel's `brand.smsConsent`, which the business's counsel should approve). **Texts are not sent yet**: that needs an SMS provider (e.g.
   Twilio) and a job that texts each request the link to its next reel.
 - **Share**: the end card's "Send to someone who got hurt" shares the link
   tagged `src=share`.
-- Funnels live in `src/data/reels.ts` (`funnels`); each one's `slug` is its
-  link. Any other `/f/...` path is a 404. The link preview image is
-  `src/app/f/[slug]/opengraph-image.tsx`.
+- Funnels are listed in `src/data/funnels.ts`; each one's `slug` is its
+  link. Any other `/f/...` path is a 404. Each funnel gets its own link
+  preview image (`src/app/f/[slug]/opengraph-image.tsx`).
+
+### More than one business
+
+Each funnel carries its own reels, paths and **brand**
+(`src/data/funnel-types.ts`): name, logo image or text wordmark, phone,
+colors, the services a lead can ask about, SMS consent wording,
+disclaimers, and every button and form label. The colors override the
+tokens in `globals.css` on the funnel's pages only, so the reel viewer and
+forms re-skin without code changes.
+
+| Link | Business | Main button |
+| --- | --- | --- |
+| `/f/jlf` | The JLF Firm (concept) | Call |
+| `/f/medspa` | Aurelia Med Spa (**sample**, made up) | Book |
+
+**`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
+Spa doesn't exist: the page always says so, is never indexed, uses a
+555-01xx phone number reserved for fiction, and its forms and tracking send
+nothing (the API refuses its funnel id too). Its nine reels walk from a
+topic (wrinkle relaxers, lip filler, facials, microneedling, laser hair
+removal) to pricing and "what happens at your consultation", then the end
+card. Scripts are placeholders written to avoid outcome claims; a real
+clinic's medical director should review its own.
+
+To add a business: copy `src/data/medspa.ts`, change the brand, reels and
+links, remove `sample` for a real client, and add it to
+`src/data/funnels.ts`. Lead emails go to `LEAD_NOTIFY_EMAIL` for every
+funnel for now, with the funnel's name in the message; per-business
+routing comes with the admin login.
 
 ## Reel funnel
 
@@ -115,12 +143,14 @@ Supabase, and sending email through Resend.
 ## Database (Supabase)
 
 `supabase/migrations/` holds the schema: `reel_events`, `leads`, and the
-functions the site writes through, `log_reel_event_v2` and `submit_lead_v2`.
+functions the site writes through, `log_reel_event_v2` and `submit_lead_v3`
+(which also records the lead's `funnel_id`).
 The tables have row-level security with no policies, so the publishable key
 cannot read or write them directly; it can only call the functions, which
-validate their input. The original `log_reel_event` and `submit_lead` are
-kept for deploys made before the funnel link; drop them once every deploy
-uses v2 (the SQL is at the top of `20261003000000_funnel_links.sql`).
+validate their input. Older versions (`log_reel_event`, `submit_lead`,
+`submit_lead_v2`) are kept for earlier deploys; drop them once every deploy
+uses the current ones (the SQL is at the top of
+`20261003000000_funnel_links.sql`).
 Read the data in the Supabase dashboard (SQL editor or Table editor).
 
 Useful queries:
