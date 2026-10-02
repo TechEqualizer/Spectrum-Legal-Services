@@ -47,7 +47,7 @@ each reel decides which one comes next.
   sent to `/api/reel-events` with an anonymous visitor id stored in the
   browser. Visitors sending Global Privacy Control or Do Not Track are not
   tracked.
-- **Leads** from the hero and contact forms go to `/api/leads`, which saves
+- **Leads** from the hero case evaluation form go to `/api/leads`, which saves
   them with the visitor id and the reel that led to the booking, then
   optionally emails the firm through Resend.
 
