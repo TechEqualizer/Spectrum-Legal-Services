@@ -87,7 +87,17 @@ A UI/UX preview of the reel funnel admin, with **sample data only**
 real Supabase tables, and nothing on it saves or sends. It is not linked
 from the public site and is marked `noindex`.
 
-- **Overview**: views, watch-through and booking rates, a daily views chart,
+- **Reels** (the admin home): each funnel as an ordered list. Every reel goes
+  to the next one unless it has its own path for "watched to the end" or
+  "skipped", so branching is added only where it helps. Rows show the reel's
+  button, topic choice, missing video, broken cover image, any reel no path
+  reaches, and its results. Funnels have a "shown to" trigger (any visitor,
+  returning visitor, a link's source tag...) and one is the default. The edit
+  dialog covers content (title, case type, video, captions, cover image),
+  the reel's main button, and its paths. The model is
+  `src/admin/editor-model.ts`; it starts from the live funnel in
+  `src/data/reels.ts`, and edits stay in the page.
+- **Overview** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,
   and what viewers did with each reel, for the last 7, 30 or 90 days.
 - **Share links**: a builder for tagged funnel links, and which sources bring
   calls and call-back requests per 100 visitors.
