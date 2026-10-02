@@ -105,11 +105,15 @@ each reel decides which one comes next.
   seconds like a story). Reels without media show "Video coming soon".
   TikTok, Instagram and Facebook videos can't be embedded; download and
   upload them instead.
-- **Layout**: like Reels and TikTok: progress segments for the path ahead,
-  the business's name at the top, tap to pause, double-tap to like, and a
-  rail with Like, the main action, the other action, Text me and Share.
-  The rail shows labels, not counts: there are no made-up like or comment
-  numbers. The main action also sits under the caption as a slim bar.
+- **Layout**: like YouTube Shorts: full-bleed media, a back arrow and sound
+  controls at the top, a rail of plain icons (Like, the main action in the
+  brand color, the other action, Text me, Share) ending in the business's
+  avatar, and at the bottom left the avatar, `brand.handle` and a Book (or
+  Call) pill where Shorts has "Join". The title is one line; tapping it
+  shows the summary, topic and price chips, and the disclaimer. A thin
+  progress line runs along the bottom. Tap to pause, double-tap to like.
+  It pads for phone safe areas (notch, home bar). The rail shows labels,
+  not counts: there are no made-up like or comment numbers.
 - **Events** (`viewed`, `completed`, `skipped`, `exited`, `cta_clicked` for
   Book, `call_clicked`, `text_later_clicked`, `shared`, `liked`) are sent to
   `/api/reel-events` with an anonymous visitor id stored in the browser and

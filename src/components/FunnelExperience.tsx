@@ -93,7 +93,7 @@ function FunnelShell({ funnel, children }: { funnel: Funnel; children: React.Rea
   return (
     <main
       id="main-content"
-      className="min-h-dvh bg-deep-navy text-white"
+      className="min-h-dvh bg-deep-navy pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white"
       style={funnel.brand.theme as React.CSSProperties}
     >
       {children}

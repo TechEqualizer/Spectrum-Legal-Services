@@ -77,7 +77,7 @@ export default function FunnelLeadSheet({ funnel, intent, reel, onClose }: Funne
       />
       <section
         aria-labelledby={`${id}-heading`}
-        className="relative max-h-full w-full overflow-y-auto rounded-t-2xl bg-white px-5 pb-6 pt-5 text-charcoal shadow-2xl"
+        className="relative max-h-full w-full overflow-y-auto rounded-t-2xl bg-white px-5 pb-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.75rem))] pt-5 text-charcoal shadow-2xl"
       >
         <div className="mx-auto max-w-sm">
           <div className="flex items-start justify-between gap-4">
