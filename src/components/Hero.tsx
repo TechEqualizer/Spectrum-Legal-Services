@@ -3,11 +3,16 @@
 import { useState } from "react";
 import { CASE_TYPES } from "@/lib/leads";
 import { submitLead } from "@/lib/submit-lead";
+import { Eyebrow, headingClass, Swoosh } from "@/components/Brand";
+import { site } from "@/config/site";
 
-const trustBadges = [
-  { text: "20+ Years Combined Experience", icon: "award" },
-  { text: "Trusted by 500+ Clients", icon: "users" },
-  { text: "A+ Rated", icon: "star" },
+// Selling points and rating as shown on jlffirm.com. Confirm with the firm
+// before launch; the fee note keeps the "no fee" claim accurate.
+const sellingPoints = [
+  "5 Locations to Serve You",
+  "Zero Fees Until We Win*",
+  "We'll Evaluate Your Case for Free",
+  "We'll Come to You",
 ];
 
 const caseTypes = ["Select Case Type", ...CASE_TYPES];
@@ -41,7 +46,7 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center pt-20 pb-16"
+      className="relative min-h-screen flex items-center overflow-hidden pt-36 pb-16 lg:pt-40"
       aria-label="Hero section"
     >
       {/* Background with gradient overlay */}
@@ -60,85 +65,72 @@ export default function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left Content */}
           <div className="text-white animate-fade-in-up">
-            <h1 className="text-[2rem] leading-tight sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white">
-              Powerful Legal Representation You Can Trust
+            <Eyebrow onDark className="mb-3">
+              California Personal Injury Lawyers
+            </Eyebrow>
+            <h1 className={`${headingClass} text-[2rem] sm:text-5xl lg:text-6xl text-white`}>
+              Award Winning{" "}
+              <span className="relative inline-block">
+                Car
+                <Swoosh className="absolute -bottom-1 left-0 h-3 w-[260%] text-sky-accent sm:w-[300%]" />
+              </span>{" "}
+              &ndash; Motorcycle Accident Attorneys
             </h1>
-            <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl">
-              Spectrum Legal Services delivers clarity, protection, and reliable
-              results for individuals and businesses.
+            <p className="mt-5 text-sm font-medium text-gray-200 md:text-base">
+              {[site.mainOffice.name, ...site.otherOffices].join(" | ")}
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-10">
+            <ul className="mt-6 grid gap-3 sm:grid-cols-2" role="list">
+              {sellingPoints.map((point) => (
+                <li key={point} className="flex items-center gap-2 text-base md:text-lg">
+                  <svg
+                    className="h-6 w-6 flex-shrink-0 text-sky-accent"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12 2a10 10 0 100 20 10 10 0 000-20zm4.7 7.7a1 1 0 00-1.4-1.4L11 12.6l-2.3-2.3a1 1 0 00-1.4 1.4l3 3a1 1 0 001.4 0l5-5z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {point}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 flex flex-col gap-5 sm:flex-row sm:items-center">
               <a
                 href="#contact"
-                className="inline-flex items-center justify-center text-center bg-teal-accent text-white font-semibold px-6 sm:px-8 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
+                className="inline-flex items-center justify-center gap-3 bg-teal-accent px-7 py-4 text-sm font-bold uppercase tracking-widest text-white shadow-lg transition-all hover:brightness-110"
               >
-                Book Your Free Consultation
-              </a>
-              <a
-                href="tel:+1-800-555-0199"
-                className="inline-flex items-center justify-center border-2 border-white text-white font-semibold px-8 py-4 rounded-md hover:bg-white hover:text-deep-navy transition-all duration-200 text-lg"
-              >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
+                Free Case Evaluation
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                Call Now
               </a>
+              <div className="text-sm">
+                <p className="flex items-center gap-1 font-semibold">
+                  <span className="text-yellow-400" aria-hidden="true">
+                    &#9733;&#9733;&#9733;&#9733;&#9733;
+                  </span>
+                  <span>495+</span>
+                </p>
+                <p className="font-bold">5.0 Google Rated</p>
+              </div>
             </div>
-
-            {/* Trust Badges */}
-            <div className="flex flex-wrap gap-4 md:gap-6">
-              {trustBadges.map((badge, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg"
-                >
-                  {badge.icon === "award" && (
-                    <svg
-                      className="w-5 h-5 text-teal-accent"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      aria-hidden="true"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  )}
-                  {badge.icon === "users" && (
-                    <svg
-                      className="w-5 h-5 text-teal-accent"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      aria-hidden="true"
-                    >
-                      <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                    </svg>
-                  )}
-                  {badge.icon === "star" && (
-                    <svg
-                      className="w-5 h-5 text-teal-accent"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      aria-hidden="true"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  )}
-                  <span className="text-sm font-medium">{badge.text}</span>
-                </div>
-              ))}
-            </div>
+            <p className="mt-4 flex items-center gap-2 text-sm text-gray-200">
+              <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 1.94l7 3.11v4.45c0 4.18-2.94 8.07-7 9-4.06-.93-7-4.82-7-9V5.05l7-3.11zm3.7 6.36a1 1 0 00-1.4-1.42L9 10.18 7.7 8.88a1 1 0 00-1.4 1.42l2 2a1 1 0 001.4 0l4-4z" clipRule="evenodd" />
+              </svg>
+              100% Secure &amp; Confidential
+            </p>
+            <p className="mt-6 max-w-xl text-xs text-gray-400">
+              *No attorney fees unless we recover compensation for you. You may
+              still be responsible for case costs; ask us how fees and costs
+              work in your case.
+            </p>
           </div>
 
           {/* Right Content - Quick Contact Form */}
@@ -146,11 +138,12 @@ export default function Hero() {
             className="bg-white rounded-xl shadow-2xl p-6 md:p-8 animate-fade-in-up"
             style={{ animationDelay: "0.2s" }}
           >
-            <h2 className="text-2xl font-bold text-deep-navy mb-2">
-              Get Started Today
+            <h2 className={`${headingClass} text-2xl text-deep-navy mb-2`}>
+              Free Case Evaluation
             </h2>
             <p className="text-charcoal mb-6">
-              Fill out the form below and we&apos;ll contact you within 24 hours.
+              Tell us what happened. It&apos;s free, and there&apos;s no
+              obligation.
             </p>
 
             {isSubmitted ? (
@@ -172,10 +165,12 @@ export default function Hero() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-deep-navy mb-2">
-                  Thank You!
+                  {site.demoMode ? "Demo: request not sent" : "Thank You!"}
                 </h3>
                 <p className="text-charcoal">
-                  We&apos;ve received your request and will be in touch soon.
+                  {site.demoMode
+                    ? `This concept site doesn't send or store form details. On the live site, this request would go straight to ${site.name}.`
+                    : "We've received your request and will be in touch soon."}
                 </p>
               </div>
             ) : (
@@ -197,7 +192,7 @@ export default function Hero() {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     className="form-input"
-                    placeholder="John Smith"
+                    placeholder="Your name"
                   />
                 </div>
 
@@ -218,7 +213,7 @@ export default function Hero() {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     className="form-input"
-                    placeholder="john@example.com"
+                    placeholder="you@example.com"
                   />
                 </div>
 
@@ -250,9 +245,9 @@ export default function Hero() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-teal-accent text-white font-semibold px-6 py-4 rounded-md shadow-md hover:shadow-lg hover:brightness-110 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-teal-accent text-white font-bold uppercase tracking-widest text-sm px-6 py-4 rounded-md shadow-md hover:shadow-lg hover:brightness-110 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? "Submitting..." : "Request Free Consultation"}
+                  {isSubmitting ? "Submitting..." : "Get My Free Case Review"}
                 </button>
 
                 {submitError && (

@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { site } from "@/config/site";
 import { getReel } from "@/data/reels";
 import {
   isCaseType,
@@ -113,6 +114,14 @@ async function notifyFirm(lead: LeadInput) {
 }
 
 export async function POST(request: Request) {
+  // The concept site must not collect anyone's details, even if called directly.
+  if (site.demoMode) {
+    return Response.json(
+      { error: "This concept site doesn't accept submissions." },
+      { status: 403 }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

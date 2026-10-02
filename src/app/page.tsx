@@ -1,6 +1,6 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
-import ValueProposition from "@/components/ValueProposition";
+import Awards from "@/components/Awards";
 import PracticeAreas from "@/components/PracticeAreas";
 import Reels from "@/components/Reels";
 import About from "@/components/About";
@@ -16,7 +16,7 @@ export default function Home() {
       <main id="main-content">
         <Hero />
         <Reels />
-        <ValueProposition />
+        <Awards />
         <PracticeAreas />
         <About />
         <Testimonials />

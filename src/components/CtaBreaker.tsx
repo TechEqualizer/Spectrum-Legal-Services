@@ -1,3 +1,5 @@
+import { site } from "@/config/site";
+
 export default function CtaBreaker() {
   return (
     <section
@@ -20,20 +22,21 @@ export default function CtaBreaker() {
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-royal-blue/20 rounded-full blur-3xl"></div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-8 text-center">
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-          Your Case Deserves Expert Attention.
-          <span className="block mt-2 text-teal-accent">Let&apos;s Talk.</span>
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tight leading-[1.05] text-white mb-6">
+          Injured in an Accident?
+          <span className="block mt-2 text-sky-accent">Don&apos;t Wait. Call Us Today.</span>
         </h2>
         <p className="text-lg md:text-xl text-gray-200 mb-10 max-w-2xl mx-auto">
-          Don&apos;t navigate legal challenges alone. Our experienced attorneys are
-          ready to fight for your rights and protect your interests.
+          Evidence fades and insurance companies move fast. Talk to Attorney
+          Jeff&apos;s team now: your case evaluation is free, and we&apos;ll come
+          to you.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
             href="#contact"
             className="inline-flex items-center justify-center text-center bg-teal-accent text-white font-semibold px-6 sm:px-10 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
           >
-            Request Consultation
+            Free Case Evaluation
             <svg
               className="w-5 h-5 ml-2"
               fill="none"
@@ -50,7 +53,7 @@ export default function CtaBreaker() {
             </svg>
           </a>
           <a
-            href="tel:+1-800-555-0199"
+            href={site.phone.href}
             className="inline-flex items-center justify-center text-center border-2 border-white text-white font-semibold px-6 sm:px-10 py-4 rounded-md hover:bg-white hover:text-deep-navy transition-all duration-200 text-lg"
           >
             <svg
@@ -67,7 +70,7 @@ export default function CtaBreaker() {
                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
               />
             </svg>
-            Call (800) 555-0199
+            Call {site.phone.display}
           </a>
         </div>
       </div>

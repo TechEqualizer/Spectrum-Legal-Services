@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import ReelViewer from "@/components/ReelViewer";
 import { defaultFunnel, getReel, reels, type Reel } from "@/data/reels";
 import { requestConsultation } from "@/lib/consultation";
+import { Eyebrow, headingClass, Swoosh } from "@/components/Brand";
 
 const ALL = "All";
 
@@ -45,18 +46,17 @@ export default function Reels() {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-10 md:mb-12">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-accent mb-3">
-            Knowledge Center
-          </p>
+          <Eyebrow className="mb-2">Knowledge Center</Eyebrow>
           <h2
             id="videos-heading"
-            className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-deep-navy mb-4"
+            className={`${headingClass} text-3xl md:text-4xl lg:text-5xl text-deep-navy`}
           >
-            Legal Insights &amp; Know Your Rights
+            Injury Insights from Attorney Jeff
           </h2>
+          <Swoosh className="mx-auto mt-2 mb-5 h-3 w-48 text-teal-accent md:w-64" />
           <p className="text-lg text-charcoal">
-            Watch short videos from our attorneys to understand your rights and
-            what to expect from the legal process.
+            Short videos on what to do after an accident, how insurance
+            companies handle claims, and how to protect your case.
           </p>
         </div>
 
@@ -223,7 +223,7 @@ function ReelTile({ reel, onOpen }: { reel: Reel; onOpen: () => void }) {
       )}
 
       <div className="absolute inset-x-0 bottom-0 p-2 md:p-4">
-        <p className="hidden text-[11px] font-bold uppercase tracking-wider text-teal-accent sm:block">
+        <p className="hidden text-[11px] font-bold uppercase tracking-wider text-sky-accent sm:block">
           {reel.practiceArea}
         </p>
         <p className="line-clamp-3 text-[11px] font-semibold leading-tight text-white sm:mt-1 sm:line-clamp-2 sm:text-sm md:text-base">

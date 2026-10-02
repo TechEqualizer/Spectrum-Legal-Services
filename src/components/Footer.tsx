@@ -1,10 +1,13 @@
+import { JlfLogo } from "@/components/Brand";
+import { site } from "@/config/site";
+
 const practiceAreasLinks = [
-  { href: "#practice-areas", label: "Family Law" },
-  { href: "#practice-areas", label: "Criminal Defense" },
-  { href: "#practice-areas", label: "Business Law" },
-  { href: "#practice-areas", label: "Estate Planning" },
-  { href: "#practice-areas", label: "Immigration" },
-  { href: "#practice-areas", label: "Civil Litigation" },
+  { href: "#practice-areas", label: "Car Accidents" },
+  { href: "#practice-areas", label: "Truck Accidents" },
+  { href: "#practice-areas", label: "Motorcycle Accidents" },
+  { href: "#practice-areas", label: "Uber & Lyft Accidents" },
+  { href: "#practice-areas", label: "Slip, Trip & Fall" },
+  { href: "#practice-areas", label: "Wrongful Death" },
 ];
 
 const importantLinks = [
@@ -100,32 +103,15 @@ export default function Footer() {
           <div className="lg:col-span-1">
             <a
               href="#home"
-              className="flex items-center gap-2 text-white font-bold text-xl mb-4"
-              aria-label="Spectrum Legal Services - Home"
+              className="mb-4 inline-flex text-white"
+              aria-label={`${site.name} - Home`}
             >
-              <svg
-                className="w-10 h-10"
-                viewBox="0 0 40 40"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <rect width="40" height="40" rx="8" fill="#1C4CBD" />
-                <path
-                  d="M10 28V12L20 8L30 12V28L20 32L10 28Z"
-                  stroke="#1CB5A3"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                <path d="M20 8V32" stroke="white" strokeWidth="2" />
-                <circle cx="20" cy="18" r="4" fill="#1CB5A3" />
-              </svg>
-              <span>Spectrum Legal</span>
+              <JlfLogo />
             </a>
             <p className="text-gray-300 text-sm leading-relaxed">
-              Delivering clarity, protection, and reliable legal results for
-              individuals and businesses. Founded on integrity and dedicated to
-              your success.
+              California personal injury lawyers for car, truck, motorcycle,
+              and rideshare accidents. Led by {site.attorney.name}, known as
+              Attorney Jeff.
             </p>
           </div>
 
@@ -137,7 +123,7 @@ export default function Footer() {
                 <li key={index}>
                   <a
                     href={link.href}
-                    className="inline-block py-3 md:py-1.5 text-gray-300 hover:text-teal-accent transition-colors text-sm"
+                    className="inline-block py-3 md:py-1.5 text-gray-300 hover:text-sky-accent transition-colors text-sm"
                   >
                     {link.label}
                   </a>
@@ -154,7 +140,7 @@ export default function Footer() {
                 <li key={index}>
                   <a
                     href={link.href}
-                    className="inline-block py-3 md:py-1.5 text-gray-300 hover:text-teal-accent transition-colors text-sm"
+                    className="inline-block py-3 md:py-1.5 text-gray-300 hover:text-sky-accent transition-colors text-sm"
                   >
                     {link.label}
                   </a>
@@ -168,28 +154,21 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4 text-white">Contact Us</h3>
             <address className="not-italic space-y-3 text-sm text-gray-300">
               <p>
-                123 Legal Center Drive
+                <a
+                  href={site.phone.href}
+                  className="inline-block py-2 text-lg font-bold text-white hover:text-sky-accent transition-colors"
+                >
+                  {site.phone.display}
+                </a>
                 <br />
-                Suite 500
-                <br />
-                Metropolis, ST 12345
+                Available 24/7
               </p>
               <p>
-                <a
-                  href="tel:+1-800-555-0199"
-                  className="inline-block py-2 hover:text-teal-accent transition-colors"
-                >
-                  (800) 555-0199
-                </a>
+                {site.mainOffice.street}
+                <br />
+                {site.mainOffice.city}
               </p>
-              <p>
-                <a
-                  href="mailto:info@spectrumlegal.com"
-                  className="inline-block py-2 hover:text-teal-accent transition-colors"
-                >
-                  info@spectrumlegal.com
-                </a>
-              </p>
+              <p>Also serving {site.otherOffices.join(", ")}</p>
             </address>
           </div>
         </div>
@@ -200,14 +179,15 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm text-center md:text-left">
-              &copy; {currentYear} Spectrum Legal Services. All rights reserved.
+              &copy; {currentYear} {site.name}. Attorney Advertising.
+              {site.demoMode && " Concept preview, not the firm's official website."}
             </p>
             <div className="-mx-3 flex items-center">
               {socialLinks.map((social) => (
                 <a
                   key={social.name}
                   href={social.href}
-                  className="p-3 text-gray-400 hover:text-teal-accent transition-colors"
+                  className="p-3 text-gray-400 hover:text-sky-accent transition-colors"
                   aria-label={`Follow us on ${social.name}`}
                 >
                   {social.icon}

@@ -1,9 +1,14 @@
-const accomplishments = [
-  "20+ Years of Combined Legal Experience",
-  "Recognized in State Legal Associations",
-  "Client Satisfaction Above 95%",
-  "Hundreds of Successful Case Outcomes",
-  "Community Legal Education Advocates",
+import { Eyebrow, headingClass } from "@/components/Brand";
+import { site } from "@/config/site";
+
+// From the firm's site and the attorney's public profiles (Justia, LawCrossing).
+// Confirm with the firm before launch.
+const credentials = [
+  "Whittier Law School; admitted to the California Bar before graduation",
+  "CALI awards for the highest grades in Evidence and Criminal Procedure",
+  "Orange County Trial Lawyers Association",
+  "Orange County Bar Association",
+  "Consumer Attorneys Association of Los Angeles",
 ];
 
 export default function About() {
@@ -15,112 +20,90 @@ export default function About() {
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Image Column */}
-          <div className="relative">
-            <div className="aspect-[4/3] bg-gradient-to-br from-deep-navy to-royal-blue rounded-2xl overflow-hidden shadow-2xl">
-              {/* Placeholder for attorney/team image */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-white p-8">
-                  <svg
-                    className="w-24 h-24 mx-auto mb-4 opacity-50"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                  <p className="text-lg font-medium opacity-70">
-                    Our Legal Team
-                  </p>
-                </div>
+          {/* Photo placeholder: the firm's portrait goes here */}
+          <div className="relative mx-auto w-full max-w-md">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-gradient-to-br from-royal-blue to-deep-navy shadow-2xl">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center text-white">
+                <svg
+                  className="mb-4 h-20 w-20 opacity-40"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+                <p className="text-sm font-semibold uppercase tracking-widest opacity-70">
+                  Attorney photo
+                </p>
               </div>
             </div>
-            {/* Decorative elements */}
-            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-teal-accent/20 rounded-full blur-2xl"></div>
-            <div className="absolute -top-6 -left-6 w-24 h-24 bg-royal-blue/20 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-6 -right-6 h-32 w-32 rounded-full bg-sky-accent/30 blur-2xl" />
           </div>
 
-          {/* Content Column */}
           <div>
+            <Eyebrow className="text-2xl md:text-3xl">Meet</Eyebrow>
             <h2
               id="about-heading"
-              className="text-3xl md:text-4xl lg:text-5xl font-bold text-deep-navy mb-6"
+              className={`${headingClass} text-4xl text-deep-navy md:text-5xl`}
             >
-              Meet Spectrum Legal Services
+              Attorney Jeff
             </h2>
+            <hr className="my-6 border-gray-300" />
 
-            <div className="space-y-4 text-charcoal text-lg mb-8">
+            <div className="space-y-4 text-charcoal text-lg">
               <p>
-                At Spectrum Legal Services, we believe that exceptional legal
-                representation should be accessible to everyone. Our team of
-                dedicated attorneys combines decades of experience with a
-                client-first approach that puts your needs at the center of
-                everything we do.
+                {site.attorney.name} is the founder and lead attorney at{" "}
+                {site.name}, also known as{" "}
+                <strong className="text-teal-accent">Attorney Jeff</strong>,
+                where he brings extensive legal experience and a commitment to
+                achieving the best outcomes for his clients.
               </p>
               <p>
-                Founded on the principles of integrity, clarity, and protection,
-                we have built a reputation for delivering results while
-                maintaining the highest ethical standards. Whether you&apos;re facing
-                a complex legal challenge or planning for the future, we provide
-                the guidance and advocacy you deserve.
+                Operating under both the JLF Firm brand and the well-recognized
+                &ldquo;Attorney Jeff&rdquo; name, Jeff and his team offer
+                personalized, results-oriented legal services with a focus on
+                client satisfaction and accessibility.
               </p>
               <p>
-                Our commitment extends beyond the courtroom. We take pride in
-                educating our clients, empowering them to make informed decisions,
-                and standing by their side through every step of the legal
-                process.
+                Jeff always knew he wanted to fight for injured victims. During
+                law school he worked at several personal injury firms, building
+                the experience he now uses to take on insurance companies.
               </p>
             </div>
 
-            {/* Accomplishments */}
-            <ul className="space-y-3 mb-8" role="list">
-              {accomplishments.map((item, index) => (
-                <li key={index} className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 bg-teal-accent rounded-full flex items-center justify-center">
+            <ul className="mt-8 space-y-3" role="list">
+              {credentials.map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent">
                     <svg
-                      className="w-4 h-4 text-white"
+                      className="h-4 w-4 text-white"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                       aria-hidden="true"
                     >
                       <path
                         fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z"
                         clipRule="evenodd"
                       />
                     </svg>
-                  </div>
-                  <span className="text-charcoal font-medium">{item}</span>
+                  </span>
+                  <span className="font-medium text-charcoal">{item}</span>
                 </li>
               ))}
             </ul>
 
-            {/* CTA */}
             <a
               href="#contact"
-              className="inline-flex items-center justify-center bg-teal-accent text-white font-semibold px-8 py-4 rounded-md shadow-md hover:shadow-lg hover:brightness-110 transition-all duration-200"
+              className="mt-8 inline-flex items-center justify-center bg-teal-accent px-8 py-4 text-sm font-bold uppercase tracking-widest text-white shadow-md transition-all hover:brightness-110"
             >
-              Schedule a Consultation
-              <svg
-                className="w-5 h-5 ml-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 8l4 4m0 0l-4 4m4-4H3"
-                />
-              </svg>
+              Talk to Attorney Jeff
             </a>
           </div>
         </div>

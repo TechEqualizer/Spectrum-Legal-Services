@@ -418,7 +418,7 @@ function ReelSlide({
       <div className="short:hidden">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
           <svg
-            className="h-8 w-8 text-teal-accent"
+            className="h-8 w-8 text-sky-accent"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -432,7 +432,7 @@ function ReelSlide({
             />
           </svg>
         </div>
-        <p className="text-sm font-semibold uppercase tracking-wider text-teal-accent">
+        <p className="text-sm font-semibold uppercase tracking-wider text-sky-accent">
           Video coming soon
         </p>
       </div>
