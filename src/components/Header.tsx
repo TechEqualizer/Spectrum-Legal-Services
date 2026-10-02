@@ -52,10 +52,10 @@ export default function Header() {
         {/* Logo */}
         <a
           href="#home"
-          className="flex min-h-11 flex-shrink-0 items-center px-4 py-3 md:px-6"
+          className="flex min-h-11 flex-shrink-0 items-center px-4 py-2 md:px-6"
           aria-label={`${site.name} - Home`}
         >
-          <JlfLogo />
+          <JlfLogo eager />
         </a>
 
         {/* Desktop Navigation */}

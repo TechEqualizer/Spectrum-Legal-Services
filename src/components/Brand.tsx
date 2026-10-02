@@ -1,20 +1,28 @@
+import Image from "next/image";
 import { site } from "@/config/site";
 
-/** "THE [JLF] FIRM" word mark with the "Car Accident Lawyer" line, after the firm's logo. */
-export function JlfLogo({ className = "" }: { className?: string }) {
+/**
+ * The firm's logo: white artwork on a transparent background, so it only
+ * belongs on dark backgrounds (the header and footer are navy).
+ */
+export function JlfLogo({
+  className = "h-12 w-auto sm:h-14 lg:h-16",
+  eager = false,
+}: {
+  className?: string;
+  /** Load immediately; use for the always-visible header copy. */
+  eager?: boolean;
+}) {
   return (
-    <span className={`inline-flex flex-col items-center leading-none ${className}`}>
-      <span className="flex items-center gap-1.5 text-lg tracking-wide sm:text-xl">
-        <span className="font-medium">THE</span>
-        <span className="border-2 border-current px-1.5 py-0.5 font-black tracking-tight">
-          {site.shortName}
-        </span>
-        <span className="font-medium">FIRM</span>
-      </span>
-      <span className="mt-1 text-[9px] font-semibold tracking-[0.25em]">
-        CAR ACCIDENT LAWYER
-      </span>
-    </span>
+    <Image
+      src="/brand/jlf-logo-white.png"
+      alt={`${site.name}, Car Accident Lawyer`}
+      width={450}
+      height={204}
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={eager ? "high" : "auto"}
+      className={className}
+    />
   );
 }
 
