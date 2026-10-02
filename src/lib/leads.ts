@@ -1,13 +1,16 @@
 // Shared by the intake forms and /api/leads so both validate the same way.
 
 export const CASE_TYPES = [
-  "Family Law",
-  "Criminal Defense",
-  "Business & Contract Law",
-  "Estate Planning",
-  "Immigration",
-  "Civil Litigation",
-  "Other",
+  "Car Accident",
+  "Truck Accident",
+  "Motorcycle Accident",
+  "Uber / Lyft Accident",
+  "Pedestrian Accident",
+  "Bicycle Accident",
+  "Slip, Trip & Fall",
+  "Dog Bite",
+  "Wrongful Death",
+  "Other Injury",
 ] as const;
 
 export type LeadSource = "hero" | "contact";

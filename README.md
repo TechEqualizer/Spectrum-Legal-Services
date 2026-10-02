@@ -1,6 +1,23 @@
-# Spectrum Legal Services
+# The JLF Firm (concept site)
 
-Landing page for Spectrum Legal Services: Next.js 16 (App Router), React 19, Tailwind CSS 4.
+Concept landing page for The JLF Firm, a California personal injury firm:
+Next.js 16 (App Router), React 19, Tailwind CSS 4.
+
+**This is a sales mock-up, not the firm's official website** (that is
+jlffirm.com). Firm details live in `src/config/site.ts` and come from the
+firm's public directory listings and website; confirm each one with the firm.
+
+### Demo mode (on by default)
+
+While `NEXT_PUBLIC_DEMO_MODE` is anything other than `false`:
+
+- a banner says the site is a concept and links to jlffirm.com,
+- pages send `noindex, nofollow` (meta tag and `X-Robots-Tag` header),
+- the intake forms show a "demo, not sent" message and `/api/leads`
+  returns 403, so nobody's details are collected.
+
+Set `NEXT_PUBLIC_DEMO_MODE=false` only after the firm has approved the site
+and wants leads delivered.
 
 ## Running locally
 

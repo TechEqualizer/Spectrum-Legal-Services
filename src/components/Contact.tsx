@@ -7,31 +7,38 @@ import {
 } from "@/lib/consultation";
 import { CASE_TYPES, isCaseType, isValidEmail } from "@/lib/leads";
 import { submitLead } from "@/lib/submit-lead";
+import { Eyebrow, headingClass } from "@/components/Brand";
+import { site } from "@/config/site";
 
 const caseTypes = ["Select Case Type", ...CASE_TYPES];
 
 const contactInfo = [
   {
+    icon: "phone",
+    title: "Call 24/7",
+    content: site.phone.display,
+    href: site.phone.href,
+  },
+  {
     icon: "location",
-    title: "Office Address",
-    content: "123 Legal Center Drive\nSuite 500\nMetropolis, ST 12345",
+    title: `${site.mainOffice.name} Office`,
+    content: `${site.mainOffice.street}\n${site.mainOffice.city}`,
   },
   {
     icon: "phone",
-    title: "Phone",
-    content: "(800) 555-0199",
-    href: "tel:+1-800-555-0199",
+    title: `${site.mainOffice.name} Office Phone`,
+    content: site.mainOffice.phone.display,
+    href: site.mainOffice.phone.href,
   },
   {
-    icon: "email",
-    title: "Email",
-    content: "info@spectrumlegal.com",
-    href: "mailto:info@spectrumlegal.com",
+    icon: "location",
+    title: "Also Serving",
+    content: site.otherOffices.join(" \u00b7 "),
   },
   {
     icon: "clock",
-    title: "Office Hours",
-    content: "Monday - Friday: 8:00 AM - 6:00 PM\nSaturday: 9:00 AM - 1:00 PM\nSunday: Closed",
+    title: "Availability",
+    content: "Available 24/7\nWe'll come to you",
   },
 ];
 
@@ -148,15 +155,16 @@ export default function Contact() {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Section Header */}
         <div className="text-center mb-12 md:mb-16">
+          <Eyebrow>Contact Us</Eyebrow>
           <h2
             id="contact-heading"
-            className="text-3xl md:text-4xl lg:text-5xl font-bold text-deep-navy mb-4"
+            className={`${headingClass} mt-1 text-4xl md:text-5xl text-deep-navy mb-4`}
           >
-            Get in Touch
+            Free Case Evaluation
           </h2>
           <p className="text-lg text-charcoal max-w-2xl mx-auto">
-            Reach out and our team will respond promptly. We&apos;re here to help with
-            your legal needs.
+            Tell us about your accident. We&apos;ll evaluate your case for free,
+            and you pay no attorney fees unless we win.*
           </p>
         </div>
 
@@ -183,11 +191,12 @@ export default function Contact() {
                     </svg>
                   </div>
                   <h3 className="text-2xl font-bold text-deep-navy mb-3">
-                    Message Sent Successfully!
+                    {site.demoMode ? "Demo: message not sent" : "Message Sent Successfully!"}
                   </h3>
                   <p className="text-charcoal mb-6">
-                    Thank you for reaching out. Our team will review your message
-                    and get back to you within 24 hours.
+                    {site.demoMode
+                      ? `This concept site doesn't send or store form details. On the live site, this message would go straight to ${site.name}.`
+                      : "Thank you for reaching out. Our team will review your message and get back to you shortly."}
                   </p>
                   <button
                     onClick={() => setIsSubmitted(false)}
@@ -217,7 +226,7 @@ export default function Contact() {
                         className={`form-input ${
                           errors.name ? "border-red-500" : ""
                         }`}
-                        placeholder="John Smith"
+                        placeholder="Your name"
                         aria-describedby={errors.name ? "name-error" : undefined}
                       />
                       {errors.name && (
@@ -245,7 +254,7 @@ export default function Contact() {
                         className={`form-input ${
                           errors.email ? "border-red-500" : ""
                         }`}
-                        placeholder="john@example.com"
+                        placeholder="you@example.com"
                         aria-describedby={errors.email ? "email-error" : undefined}
                       />
                       {errors.email && (
@@ -275,7 +284,7 @@ export default function Contact() {
                         className={`form-input ${
                           errors.phone ? "border-red-500" : ""
                         }`}
-                        placeholder="(555) 123-4567"
+                        placeholder="Your phone number"
                         aria-describedby={errors.phone ? "phone-error" : undefined}
                       />
                       {errors.phone && (
@@ -341,7 +350,7 @@ export default function Contact() {
                       className={`form-input resize-none ${
                         errors.message ? "border-red-500" : ""
                       }`}
-                      placeholder="Please describe your legal matter..."
+                      placeholder="Tell us what happened and when..."
                       aria-describedby={
                         errors.message ? "message-error" : undefined
                       }

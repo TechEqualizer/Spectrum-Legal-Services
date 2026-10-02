@@ -1,15 +1,17 @@
+import { site } from "@/config/site";
 import type { LeadInput } from "@/lib/leads";
 import { getVisitorId } from "@/lib/reel-tracking";
 
 export type SubmitLeadResult = { ok: true } | { ok: false; error: string };
 
-const FALLBACK_ERROR =
-  "We couldn't send your request. Please call us at (800) 555-0199.";
+const FALLBACK_ERROR = `We couldn't send your request. Please call us at ${site.phone.display}.`;
 
 /** Sends an intake form to /api/leads, attaching the reel-funnel visitor id. */
 export async function submitLead(
   lead: Omit<LeadInput, "visitorId"> & { website?: string }
 ): Promise<SubmitLeadResult> {
+  // The concept site never sends or stores what people type.
+  if (site.demoMode) return { ok: true };
   try {
     const res = await fetch("/api/leads", {
       method: "POST",

@@ -4,7 +4,7 @@
 // decides the next one.
 //   completed  watched to the end   -> usually a deeper reel on the same topic,
 //                                       or the end card offering a consultation
-//   skipped    swiped or tapped next -> a different practice area
+//   skipped    swiped or tapped next -> a different type of accident
 // `null` ends the funnel on the "talk to an attorney" card.
 //
 // PLACEHOLDER CONTENT: no videos have been recorded yet. Until a `video` is
@@ -39,103 +39,103 @@ export type Funnel = {
 
 export const reels: Reel[] = [
   {
-    id: "criminal-defense-police-stop",
-    practiceArea: "Criminal Defense",
-    title: "Stopped by the police? Know your rights",
+    id: "car-accident-first-steps",
+    practiceArea: "Car Accident",
+    title: "Just had a car accident? Do these first",
     summary:
-      "You have the right to stay silent and to ask for a lawyer. How to use those rights calmly and respectfully.",
+      "Get medical care, document the scene, and be careful what you tell insurers. The steps that protect your claim.",
   },
   {
-    id: "criminal-defense-after-arrest",
-    practiceArea: "Criminal Defense",
-    title: "Arrested: what happens next",
+    id: "car-accident-recorded-statement",
+    practiceArea: "Car Accident",
+    title: "Should you give the insurer a recorded statement?",
     summary:
-      "Booking, bail, and your first court date. What the process usually looks like, and when to call a lawyer.",
+      "Why the other driver's insurance company asks for one, and what to consider before you agree.",
   },
   {
-    id: "family-law-custody",
-    practiceArea: "Family Law",
-    title: "How courts decide custody",
+    id: "injury-claim-deadlines",
+    practiceArea: "Car Accident",
+    title: "How long you have to file in California",
     summary:
-      "Courts focus on the child's best interests. A look at the factors judges commonly weigh.",
+      "Most California injury claims must be filed within two years. Claims against a government agency can have a much shorter deadline.",
   },
   {
-    id: "family-law-divorce-steps",
-    practiceArea: "Family Law",
-    title: "The divorce process, step by step",
+    id: "rideshare-accident-insurance",
+    practiceArea: "Uber / Lyft Accident",
+    title: "Hurt in an Uber or Lyft: whose insurance pays?",
     summary:
-      "From filing to final decree: the usual stages of a divorce and the decisions you will face along the way.",
+      "Rideshare coverage depends on what the driver was doing at the time of the crash. How it usually works.",
   },
   {
-    id: "business-contract-clauses",
-    practiceArea: "Business & Contract Law",
-    title: "Three clauses every contract needs",
+    id: "truck-accident-evidence",
+    practiceArea: "Truck Accident",
+    title: "Why truck accident evidence disappears fast",
     summary:
-      "Scope, payment terms, and how disputes get resolved: the clauses that prevent most business disagreements.",
+      "Driver logs, black-box data, and maintenance records can be lost if no one asks for them early.",
   },
   {
-    id: "estate-planning-will-vs-trust",
-    practiceArea: "Estate Planning",
-    title: "Will or trust: what's the difference?",
+    id: "motorcycle-accident-claims",
+    practiceArea: "Motorcycle Accident",
+    title: "Motorcycle crash claims and rider bias",
     summary:
-      "Both pass on what you own, but they work differently. When each one tends to make sense.",
+      "Insurers sometimes assume the rider was at fault. How evidence helps tell what really happened.",
   },
   {
-    id: "immigration-interview-prep",
-    practiceArea: "Immigration",
-    title: "Preparing for your immigration interview",
+    id: "slip-and-fall-documentation",
+    practiceArea: "Slip, Trip & Fall",
+    title: "Slip and fall: what to document",
     summary:
-      "What to bring, what officers typically ask, and how to prepare so the day goes smoothly.",
+      "Photos, witnesses, and incident reports: what to gather when a hazard on someone's property hurts you.",
   },
   {
-    id: "civil-litigation-deposition",
-    practiceArea: "Civil Litigation",
-    title: "What happens at a deposition",
+    id: "dog-bite-california-law",
+    practiceArea: "Dog Bite",
+    title: "Bitten by a dog in California?",
     summary:
-      "A deposition is sworn testimony taken before trial. How the process works and how to prepare.",
+      "California has a strict dog-bite law that makes owners responsible for most bites. What that means for you.",
   },
 ];
 
 export const defaultFunnel: Funnel = {
-  id: "know-your-rights-v1",
+  id: "jlf-injury-v1",
   entryReelIds: [
-    "criminal-defense-police-stop",
-    "family-law-custody",
-    "business-contract-clauses",
-    "estate-planning-will-vs-trust",
-    "immigration-interview-prep",
-    "civil-litigation-deposition",
+    "car-accident-first-steps",
+    "rideshare-accident-insurance",
+    "truck-accident-evidence",
+    "motorcycle-accident-claims",
+    "slip-and-fall-documentation",
+    "dog-bite-california-law",
   ],
   links: {
-    "criminal-defense-police-stop": {
-      completed: "criminal-defense-after-arrest",
-      skipped: "family-law-custody",
+    "car-accident-first-steps": {
+      completed: "car-accident-recorded-statement",
+      skipped: "rideshare-accident-insurance",
     },
-    "criminal-defense-after-arrest": {
+    "car-accident-recorded-statement": {
+      completed: "injury-claim-deadlines",
+      skipped: "rideshare-accident-insurance",
+    },
+    "injury-claim-deadlines": {
       completed: null,
-      skipped: "family-law-custody",
+      skipped: "rideshare-accident-insurance",
     },
-    "family-law-custody": {
-      completed: "family-law-divorce-steps",
-      skipped: "business-contract-clauses",
+    "rideshare-accident-insurance": {
+      completed: "injury-claim-deadlines",
+      skipped: "truck-accident-evidence",
     },
-    "family-law-divorce-steps": {
+    "truck-accident-evidence": {
+      completed: "injury-claim-deadlines",
+      skipped: "motorcycle-accident-claims",
+    },
+    "motorcycle-accident-claims": {
+      completed: "injury-claim-deadlines",
+      skipped: "slip-and-fall-documentation",
+    },
+    "slip-and-fall-documentation": {
       completed: null,
-      skipped: "business-contract-clauses",
+      skipped: "dog-bite-california-law",
     },
-    "business-contract-clauses": {
-      completed: null,
-      skipped: "estate-planning-will-vs-trust",
-    },
-    "estate-planning-will-vs-trust": {
-      completed: null,
-      skipped: "immigration-interview-prep",
-    },
-    "immigration-interview-prep": {
-      completed: null,
-      skipped: "civil-litigation-deposition",
-    },
-    "civil-litigation-deposition": {
+    "dog-bite-california-law": {
       completed: null,
       skipped: null,
     },

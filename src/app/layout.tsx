@@ -1,39 +1,47 @@
 import type { Metadata, Viewport } from "next";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
+import { site } from "@/config/site";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
 };
 
+const title = site.demoMode
+  ? `${site.name} | Personal Injury Attorneys (Concept Preview)`
+  : `${site.name} | Personal Injury Attorneys in Southern California`;
+const description = `${site.name} represents people hurt in car, truck, motorcycle, and rideshare accidents across Southern California, with offices in Downey, ${site.otherOffices.join(", ")}.`;
+
 export const metadata: Metadata = {
-  title: "Spectrum Legal Services | Trusted Legal Representation",
-  description:
-    "Spectrum Legal Services delivers clarity, protection, and reliable results. Experienced attorneys specializing in Family Law, Criminal Defense, Business Law, Estate Planning, Immigration, and Civil Litigation.",
+  title,
+  description,
   keywords: [
-    "attorney",
-    "lawyer",
-    "legal services",
-    "family law",
-    "criminal defense",
-    "business law",
-    "estate planning",
-    "immigration law",
-    "civil litigation",
+    "personal injury lawyer",
+    "car accident attorney",
+    "truck accident lawyer",
+    "motorcycle accident lawyer",
+    "Uber accident lawyer",
+    "Downey personal injury",
   ],
-  authors: [{ name: "Spectrum Legal Services" }],
+  authors: [{ name: site.name }],
   openGraph: {
-    title: "Spectrum Legal Services | Trusted Legal Representation",
-    description:
-      "Spectrum Legal Services delivers clarity, protection, and reliable results for individuals and businesses.",
+    title,
+    description,
     type: "website",
     locale: "en_US",
-    siteName: "Spectrum Legal Services",
+    siteName: site.name,
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  // The concept preview must not show up in search results as the firm's site.
+  robots: site.demoMode
+    ? { index: false, follow: false }
+    : { index: true, follow: true },
 };
 
 export default function RootLayout({
@@ -42,7 +50,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className={`scroll-smooth ${montserrat.variable}`}>
       <body className="font-sans antialiased">
         <a href="#main-content" className="skip-link">
           Skip to main content
