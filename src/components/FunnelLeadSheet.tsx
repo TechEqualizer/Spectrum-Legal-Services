@@ -110,12 +110,14 @@ export default function FunnelLeadSheet({ funnel, intent, reel, onClose }: Funne
                     ? brand.copy.textLaterDone(name.trim(), phone.trim())
                     : brand.copy.bookDone(name.trim(), phone.trim())}
               </p>
-              <a
-                href={brand.phone.href}
-                className="flex min-h-11 w-full items-center justify-center rounded-md border border-deep-navy/20 px-4 font-semibold text-deep-navy hover:bg-soft-gray"
-              >
-                Can&apos;t wait? Call {brand.phone.display}
-              </a>
+              {brand.phone && (
+                <a
+                  href={brand.phone.href}
+                  className="flex min-h-11 w-full items-center justify-center rounded-md border border-deep-navy/20 px-4 font-semibold text-deep-navy hover:bg-soft-gray"
+                >
+                  Can&apos;t wait? Call {brand.phone.display}
+                </a>
+              )}
               <button
                 type="button"
                 onClick={onClose}

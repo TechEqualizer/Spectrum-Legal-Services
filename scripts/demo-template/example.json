@@ -1,0 +1,39 @@
+{
+  "name": "Golden Hour Sundays",
+  "preparedFor": "Golden Hour",
+  "handle": "@goldenhour.sundays",
+  "tagline": "Sundays",
+  "byline": ["Rooftop day parties", "Every Sunday, 3pm to sunset"],
+  "colors": { "background": "#1A120D", "accent": "#B4461A", "highlight": "#F5B85A" },
+  "ticketing": "eventbrite",
+  "disclaimer": "21+ with ID. Lineups can change.",
+  "events": [
+    {
+      "id": "oct-12",
+      "name": "Golden Hour",
+      "startsAt": "2026-10-12T15:00:00-07:00",
+      "venue": "The Rooftop",
+      "price": "From $25",
+      "ticketUrl": "https://www.eventbrite.com/e/your-event-id"
+    }
+  ],
+  "reels": [
+    {
+      "clip": "~/Downloads/last-sunday-recap.mp4",
+      "start": 2,
+      "length": 20,
+      "title": "Last Sunday, in 30 seconds",
+      "summary": "The crowd, the views and the moment the sun went down.",
+      "topic": "Recap",
+      "event": "oct-12"
+    },
+    {
+      "youtube": "https://youtube.com/shorts/VIDEO_ID",
+      "title": "This Sunday on the roof",
+      "summary": "Doors at 2:30. Early tickets are the cheapest.",
+      "topic": "Day party",
+      "event": "oct-12",
+      "badge": "From $25"
+    }
+  ]
+}

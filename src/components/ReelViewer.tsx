@@ -11,9 +11,10 @@ import {
 } from "@/data/reels";
 import type { ReelMedia } from "@/data/funnel-types";
 import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
+import { eventChip, eventOf, ticketHref, ticketTarget } from "@/lib/events";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import type { LeadIntent } from "@/lib/leads";
-import { trackReelEvent } from "@/lib/reel-tracking";
+import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
 type ReelViewerProps = {
   funnel: Funnel;
@@ -40,6 +41,8 @@ const CALENDAR = "M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 
 const PHONE =
   "M5 4h3l2 5-2.5 1.5a11 11 0 006 6L15 14l5 2v3a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z";
 const MESSAGE = "M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z";
+const TICKET =
+  "M4 7a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4V7zM14 5v2M14 11v2M14 17v2";
 const SHARE = "M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13";
 
 // How long a reel without a video stays on screen.
@@ -113,7 +116,18 @@ export default function ReelViewer({
     onClose();
   };
 
+  // Ticket funnels: what this reel's Tickets button sells (its own event, or
+  // the next one on sale for recaps and sold-out dates), with tracking.
+  const [now] = useState(() => Date.now());
+  const ticketEvent = funnel.primaryCta === "tickets" ? ticketTarget(funnel, reel, now) : undefined;
+  const ticketUrl = ticketEvent
+    ? ticketHref(funnel, ticketEvent, { reelId: reel?.id, sourceTag: getSourceTag() })
+    : undefined;
+  const reelEvent = reel ? eventOf(funnel, reel) : undefined;
+
   const ctas: CtaHandlers = {
+    ticketUrl,
+    onTickets: () => reel && trackReelEvent(funnel, reel.id, "cta_clicked"),
     onCall: () => reel && trackReelEvent(funnel, reel.id, "call_clicked"),
     onBook: () => {
       if (!reel) return;
@@ -265,26 +279,40 @@ export default function ReelViewer({
       <RailButton placement={placement} label={liked ? "Liked" : "Like"} pressed={liked} onClick={toggleLike}>
         <path d={HEART} fill={liked ? "currentColor" : "none"} />
       </RailButton>
-      {funnel.primaryCta === "book" ? (
+      {funnel.primaryCta === "tickets" ? (
+        ticketUrl ? (
+          <RailButton placement={placement} label="Tickets" primary highlight={ctaRevealed} href={ticketUrl} onClick={ctas.onTickets}>
+            <path d={TICKET} />
+          </RailButton>
+        ) : (
+          <RailButton placement={placement} label="Waitlist" primary highlight={ctaRevealed} onClick={ctas.onTextLater}>
+            <path d={TICKET} />
+          </RailButton>
+        )
+      ) : funnel.primaryCta === "book" ? (
         <>
           <RailButton placement={placement} label="Book" primary highlight={ctaRevealed} onClick={ctas.onBook}>
             <path d={CALENDAR} />
           </RailButton>
-          <RailButton placement={placement} label="Call" href={brand.phone.href} onClick={ctas.onCall}>
-            <path d={PHONE} />
-          </RailButton>
+          {brand.phone && (
+            <RailButton placement={placement} label="Call" href={brand.phone.href} onClick={ctas.onCall}>
+              <path d={PHONE} />
+            </RailButton>
+          )}
         </>
       ) : (
         <>
-          <RailButton placement={placement} label="Call" primary highlight={ctaRevealed} href={brand.phone.href} onClick={ctas.onCall}>
-            <path d={PHONE} />
-          </RailButton>
+          {brand.phone && (
+            <RailButton placement={placement} label="Call" primary highlight={ctaRevealed} href={brand.phone.href} onClick={ctas.onCall}>
+              <path d={PHONE} />
+            </RailButton>
+          )}
           <RailButton placement={placement} label="Call back" onClick={ctas.onBook}>
             <path d={CALENDAR} />
           </RailButton>
         </>
       )}
-      <RailButton placement={placement} label="Text me" onClick={ctas.onTextLater}>
+      <RailButton placement={placement} label={brand.copy.textLaterButton ?? "Text me"} onClick={ctas.onTextLater}>
         <path d={MESSAGE} />
       </RailButton>
       <RailButton placement={placement} label={copied ? "Copied" : "Share"} onClick={share}>
@@ -405,6 +433,7 @@ export default function ReelViewer({
                 }`}
               >
                 <div>
+                  {reelEvent && <EventChip chip={eventChip(reelEvent, now)} />}
                   <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-white ring-1 ring-white/70" aria-hidden="true">
                       {initial}
@@ -432,6 +461,9 @@ export default function ReelViewer({
                         <span className="rounded-sm bg-white/15 px-2 py-0.5 text-xs font-semibold">{reel.practiceArea}</span>
                         {reel.badge && (
                           <span className="rounded-sm bg-white/15 px-2 py-0.5 text-xs font-semibold">{reel.badge}</span>
+                        )}
+                        {reelEvent?.venue && (
+                          <span className="rounded-sm bg-white/15 px-2 py-0.5 text-xs font-semibold">{reelEvent.venue}</span>
                         )}
                       </p>
                       <p className="text-[11px] leading-snug text-gray-300">{brand.disclaimer}</p>
@@ -492,6 +524,9 @@ export default function ReelViewer({
 }
 
 type CtaHandlers = {
+  /** The ticket link (with tracking), for ticket funnels with an event on sale. */
+  ticketUrl?: string;
+  onTickets: () => void;
   onCall: () => void;
   onBook: () => void;
   onTextLater: () => void;
@@ -503,39 +538,64 @@ const secondaryClass =
   "flex min-h-11 flex-1 items-center justify-center rounded-md border border-white/30 bg-white/5 px-3 text-sm font-semibold text-white transition-colors hover:bg-white/15";
 
 /**
- * Call, Book and Text me later on every reel: the funnel's main action as a
- * big button, the other two beside each other under it.
+ * The end card's actions: the funnel's main action as a big button, and the
+ * others beside each other under it. Call only shows when there's a phone.
  */
 function CtaButtons({
   brand,
   primary,
+  ticketUrl,
+  onTickets,
   onCall,
   onBook,
   onTextLater,
 }: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"] }) {
-  const call = (className: string, label: string) => (
-    <a href={brand.phone.href} onClick={onCall} className={className}>
-      {label}
-    </a>
-  );
+  const phone = brand.phone;
+  const call = (className: string, label: string) =>
+    phone && (
+      <a href={phone.href} onClick={onCall} className={className}>
+        {label}
+      </a>
+    );
   const book = (className: string, label: string) => (
     <button type="button" onClick={onBook} className={className}>
       {label}
     </button>
   );
+  const textLater = (className: string) => (
+    <button type="button" onClick={onTextLater} className={className}>
+      {brand.copy.textLaterButton ?? "Text me later"}
+    </button>
+  );
+  const main =
+    primary === "tickets"
+      ? ticketUrl
+        ? (
+            <a href={ticketUrl} target="_blank" rel="noopener" onClick={onTickets} className={primaryClass}>
+              {brand.copy.ticketsPrimary ?? "Get tickets"}
+            </a>
+          )
+        : textLater(primaryClass)
+      : primary === "call" && phone
+        ? call(primaryClass, `${brand.copy.callNow}: ${phone.display}`)
+        : book(primaryClass, brand.copy.bookPrimary);
+  const others =
+    primary === "tickets"
+      ? [ticketUrl ? textLater(secondaryClass) : null, call(secondaryClass, brand.copy.callNow)]
+      : primary === "call" && phone
+        ? [book(secondaryClass, brand.copy.callBack), textLater(secondaryClass)]
+        : [call(secondaryClass, brand.copy.callNow), textLater(secondaryClass)];
+  const shown = others.filter(Boolean);
   return (
     <div className="mt-4 space-y-2 short:mt-2">
-      {primary === "call"
-        ? call(primaryClass, `${brand.copy.callNow}: ${brand.phone.display}`)
-        : book(primaryClass, brand.copy.bookPrimary)}
-      <div className="flex gap-2">
-        {primary === "call"
-          ? book(secondaryClass, brand.copy.callBack)
-          : call(secondaryClass, brand.copy.callNow)}
-        <button type="button" onClick={onTextLater} className={secondaryClass}>
-          Text me later
-        </button>
-      </div>
+      {main}
+      {shown.length > 0 && (
+        <div className="flex gap-2">
+          {shown.map((el, i) => (
+            <span key={i} className="contents">{el}</span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -689,7 +749,12 @@ function RailButton({
   );
   const className = "flex min-w-12 flex-col items-center gap-1 text-white";
   return href ? (
-    <a href={href} onClick={onClick} className={className}>
+    <a
+      href={href}
+      onClick={onClick}
+      className={className}
+      {...(href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}
+    >
       {inner}
     </a>
   ) : (
@@ -704,26 +769,49 @@ function ChannelPill({
   brand,
   primary,
   revealed,
+  ticketUrl,
+  onTickets,
   onCall,
   onBook,
+  onTextLater,
 }: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"]; revealed: boolean }) {
   // Quiet at first (an outline), then filled with the brand color.
   const className = `flex h-7 flex-shrink-0 items-center rounded-full px-3 text-sm font-semibold text-white transition-colors duration-700 hover:brightness-110 ${
     revealed ? "bg-teal-accent" : "bg-white/15 ring-1 ring-inset ring-white/40"
   }`;
-  return primary === "call" ? (
-    <a
-      href={brand.phone.href}
-      onClick={onCall}
-      aria-label={`${brand.copy.callNow}: ${brand.phone.display}`}
-      className={className}
-    >
-      Call
-    </a>
-  ) : (
+  if (primary === "tickets") {
+    return ticketUrl ? (
+      <a href={ticketUrl} target="_blank" rel="noopener" onClick={onTickets} aria-label={brand.copy.ticketsPrimary ?? "Get tickets"} className={className}>
+        Tickets
+      </a>
+    ) : (
+      <button type="button" onClick={onTextLater} aria-label="Join the waitlist" className={className}>
+        Waitlist
+      </button>
+    );
+  }
+  if (primary === "call" && brand.phone) {
+    return (
+      <a href={brand.phone.href} onClick={onCall} aria-label={`${brand.copy.callNow}: ${brand.phone.display}`} className={className}>
+        Call
+      </a>
+    );
+  }
+  return (
     <button type="button" onClick={onBook} aria-label={brand.copy.bookPrimary} className={className}>
       Book
     </button>
+  );
+}
+
+/** Countdown or status for a reel's event: Tonight, In 3 days, Sold out, Recap... */
+function EventChip({ chip }: { chip: ReturnType<typeof eventChip> }) {
+  const tone =
+    chip.tone === "hot" ? "bg-teal-accent text-white" : chip.tone === "muted" ? "bg-black/40 text-white/85" : "bg-white/20 text-white";
+  return (
+    <span className={`mb-2 inline-flex rounded-md px-2 py-0.5 text-xs font-semibold backdrop-blur-sm ${tone}`}>
+      {chip.text}
+    </span>
   );
 }
 

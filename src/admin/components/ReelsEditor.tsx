@@ -234,6 +234,7 @@ export default function ReelsEditor() {
             <select className="form-input text-sm" value={funnel.primaryCta} onChange={(e) => updateFunnel({ primaryCta: e.target.value as EditorFunnel["primaryCta"] })}>
               <option value="call">Call</option>
               <option value="book">Book</option>
+              <option value="tickets">Tickets</option>
             </select>
           </label>
         </div>

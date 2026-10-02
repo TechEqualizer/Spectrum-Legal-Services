@@ -57,6 +57,52 @@ the reels at that topic.
   link. Any other `/f/...` path is a 404. Each funnel gets its own link
   preview image (`src/app/f/[slug]/opengraph-image.tsx`).
 
+### Event funnels (`/f/events`)
+
+For event organizers, a funnel sells tickets instead of booking calls
+(`primaryCta: "tickets"`):
+
+- **Event dates** live in `funnel.events` (name, start time, venue, price,
+  ticket link, `on_sale` / `few_left` / `sold_out`). Reels point at one with
+  `eventId`.
+- **"Which night?"**: the opening screen lists upcoming dates with a
+  countdown (Tonight, Tomorrow, In 3 days), price and status, plus "Watch
+  last time" for the latest recap.
+- **Recaps happen on their own**: once a date is over, its reels show
+  "Recap" and their Tickets button sells the next date on sale. Sold-out
+  dates do the same; if nothing is on sale, Tickets becomes **Waitlist**.
+- **Tickets** opens the organizer's own ticket page (Eventbrite, Posh,
+  Dice...) in a new tab, with tracking added so their ticketing report shows
+  which source sold each ticket: Eventbrite's `aff=reels_<source>` code, or
+  UTM tags for other platforms. Logged as `cta_clicked`.
+- **Presale** (the "Text me later" form) collects numbers for the next
+  ticket drop, with SMS consent.
+- `brand.phone` is optional; without it, Call buttons are hidden.
+
+`/f/events` is a sample: Golden Hour Sundays is made up, its dates are
+always relative to today, and its ticket links go to example.com.
+
+### DM demos ("Prepared for ...")
+
+To pitch an organizer, build them a private preview from their own clips:
+
+```bash
+cp scripts/demo-template/example.json prospect.json   # edit: name, colors,
+                                                      # events, ticket links, clips
+node scripts/new-demo.mjs prospect.json               # prints /f/<name>-<random>
+git add -A && git commit -m "demo: <name>" && git push
+```
+
+Clips (`"clip"`) are cropped and compressed with `scripts/prepare-reel.sh`
+into `public/demos/<slug>/`; reels can also use `"youtube"` links or
+`"photo"` files. The link has a random suffix, says "Private preview
+prepared for ...", is never indexed, and sends nothing (it's a sample), but
+its Tickets buttons go to the organizer's real ticket page. The script
+refuses an accent color too light for white text. Remove a demo with
+`node scripts/new-demo.mjs --remove <slug>` (and `--list` shows them all).
+Only use a prospect's content for the private pitch, and take it down if
+they say no.
+
 ### More than one business
 
 Each funnel carries its own reels, paths and **brand**
@@ -70,6 +116,7 @@ forms re-skin without code changes.
 | --- | --- | --- |
 | `/f/jlf` | The JLF Firm (concept) | Call |
 | `/f/medspa` | Aurelia Med Spa (**sample**, made up) | Book |
+| `/f/events` | Golden Hour Sundays (**sample**, made up) | Tickets |
 
 **`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
 Spa doesn't exist: the page always says so, is never indexed, uses a

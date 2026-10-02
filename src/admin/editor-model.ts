@@ -40,6 +40,7 @@ export const CTA_LABELS: Record<ReelCta, string> = {
   funnel: "Funnel default",
   call: "Call",
   book: "Book",
+  tickets: "Tickets",
   text_later: "Text me later",
 };
 
