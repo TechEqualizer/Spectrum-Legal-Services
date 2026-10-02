@@ -78,13 +78,13 @@ export default function Reels() {
                 </span>
 
                 {!reel.video && (
-                  <span className="absolute right-2 top-2 rounded-sm bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
+                  <span className="absolute right-2 top-2 rounded-sm bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
                     Coming soon
                   </span>
                 )}
 
                 <div className="absolute inset-x-0 bottom-0 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-teal-accent">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-teal-accent">
                     {reel.practiceArea}
                   </p>
                   <p className="mt-1 text-sm font-semibold leading-snug text-white">

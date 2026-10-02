@@ -60,7 +60,7 @@ export default function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left Content */}
           <div className="text-white animate-fade-in-up">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-white">
+            <h1 className="text-[2rem] leading-tight sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white">
               Powerful Legal Representation You Can Trust
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl">
@@ -72,7 +72,7 @@ export default function Hero() {
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
               <a
                 href="#contact"
-                className="inline-flex items-center justify-center bg-teal-accent text-white font-semibold px-8 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
+                className="inline-flex items-center justify-center text-center bg-teal-accent text-white font-semibold px-6 sm:px-8 py-4 rounded-md shadow-lg hover:shadow-xl hover:brightness-110 transition-all duration-200 text-lg"
               >
                 Book Your Free Consultation
               </a>

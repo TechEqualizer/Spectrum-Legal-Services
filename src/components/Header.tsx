@@ -34,18 +34,18 @@ export default function Header() {
       role="banner"
     >
       <nav
-        className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between"
+        className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between gap-4"
         role="navigation"
         aria-label="Main navigation"
       >
         {/* Logo */}
         <a
           href="#home"
-          className="flex items-center gap-2 text-deep-navy font-bold text-xl md:text-2xl"
+          className="flex min-h-11 min-w-0 lg:flex-shrink-0 items-center gap-2 text-deep-navy font-bold text-lg sm:text-xl md:text-2xl"
           aria-label="Spectrum Legal Services - Home"
         >
           <svg
-            className="w-8 h-8 md:w-10 md:h-10"
+            className="w-8 h-8 flex-shrink-0 md:w-10 md:h-10"
             viewBox="0 0 40 40"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -61,18 +61,27 @@ export default function Header() {
             <path d="M20 8V32" stroke="#1C4CBD" strokeWidth="2" />
             <circle cx="20" cy="18" r="4" fill="#1CB5A3" />
           </svg>
-          <span className="hidden sm:inline">Spectrum Legal Services</span>
-          <span className="sm:hidden">Spectrum Legal</span>
+          {/* The short name also fits beside the full desktop nav at lg. */}
+          <span className="hidden whitespace-nowrap sm:inline lg:hidden xl:inline">
+            Spectrum Legal Services
+          </span>
+          <span className="whitespace-nowrap sm:hidden lg:inline xl:hidden">
+            Spectrum Legal
+          </span>
         </a>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-8">
-          <ul className="flex items-center gap-6" role="list">
+        <div className="hidden lg:flex items-center gap-4 xl:gap-8">
+          <ul className="flex items-center gap-3 xl:gap-6" role="list">
             {navLinks.map((link) => (
-              <li key={link.href}>
+              // The logo links home, so "Home" only appears once there is room.
+              <li
+                key={link.href}
+                className={link.href === "#home" ? "hidden xl:list-item" : undefined}
+              >
                 <a
                   href={link.href}
-                  className="text-charcoal hover:text-royal-blue font-medium transition-colors duration-200"
+                  className="whitespace-nowrap text-charcoal hover:text-royal-blue font-medium transition-colors duration-200"
                 >
                   {link.label}
                 </a>
@@ -81,7 +90,7 @@ export default function Header() {
           </ul>
           <a
             href="#contact"
-            className="bg-teal-accent text-white font-semibold px-5 py-2.5 rounded-md shadow-sm hover:shadow-md hover:brightness-110 transition-all duration-200"
+            className="whitespace-nowrap bg-teal-accent text-white font-semibold px-4 xl:px-5 py-2.5 rounded-md shadow-sm hover:shadow-md hover:brightness-110 transition-all duration-200"
           >
             Request Consultation
           </a>
@@ -89,7 +98,7 @@ export default function Header() {
 
         {/* Mobile Menu Button */}
         <button
-          className="lg:hidden p-2 text-deep-navy"
+          className="lg:hidden -mr-2 flex h-11 w-11 flex-shrink-0 items-center justify-center text-deep-navy"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-menu"

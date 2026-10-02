@@ -162,7 +162,7 @@ export default function Contact() {
 
         <div className="grid lg:grid-cols-3 gap-8 lg:gap-12">
           {/* Contact Form */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
               {isSubmitted ? (
                 <div className="text-center py-12">
@@ -422,7 +422,7 @@ export default function Contact() {
           </div>
 
           {/* Contact Sidebar */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             {contactInfo.map((info, index) => (
               <div key={index} className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-start gap-4">
@@ -505,7 +505,7 @@ export default function Contact() {
                     {info.href ? (
                       <a
                         href={info.href}
-                        className="text-charcoal hover:text-royal-blue transition-colors whitespace-pre-line"
+                        className="inline-block py-2 text-charcoal hover:text-royal-blue transition-colors whitespace-pre-line [overflow-wrap:anywhere]"
                       >
                         {info.content}
                       </a>

@@ -169,7 +169,7 @@ export default function ReelViewer({
         aria-modal="true"
         aria-label={ended ? "Talk to an attorney" : `Video: ${reel.title}`}
         tabIndex={-1}
-        className="relative flex h-full w-full flex-col overflow-hidden bg-deep-navy outline-none md:h-[85vh] md:max-w-md md:rounded-2xl md:border md:border-white/10 md:shadow-2xl"
+        className="relative flex h-full w-full flex-col overflow-hidden bg-deep-navy outline-none tall:h-[85vh] tall:max-w-md tall:rounded-2xl tall:border tall:border-white/10 tall:shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -188,7 +188,7 @@ export default function ReelViewer({
         )}
 
         {/* Top bar: progress and controls */}
-        <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8">
+        <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8 short:pb-2">
           <div
             className="h-1 overflow-hidden rounded-full bg-white/25"
             aria-hidden="true"
@@ -199,7 +199,7 @@ export default function ReelViewer({
               style={{ width: `${barWidth}%` }}
             />
           </div>
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-2 flex items-center justify-between">
             <span className="text-xs font-medium text-white/80">
               Know Your Rights
             </span>
@@ -241,7 +241,7 @@ export default function ReelViewer({
           onClick={goPrev}
           disabled={step === 0 && !ended}
           aria-label="Previous video"
-          className="absolute left-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0 md:flex"
+          className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0 tall:flex"
         >
           <Chevron d="M15 19l-7-7 7-7" />
         </button>
@@ -250,7 +250,7 @@ export default function ReelViewer({
             type="button"
             onClick={goNext}
             aria-label="Skip to next video"
-            className="absolute right-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 md:flex"
+            className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 tall:flex"
           >
             <Chevron d="M9 5l7 7-7 7" />
           </button>
@@ -258,20 +258,26 @@ export default function ReelViewer({
 
         {/* Caption and call to action */}
         {!ended && (
-          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-5 pt-16">
-            <span className="inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
-              {reel.practiceArea}
-            </span>
-            <h2 className="mt-2 text-xl font-bold text-white">{reel.title}</h2>
-            <p className="mt-1 text-sm text-gray-200">{reel.summary}</p>
-            <button
-              type="button"
-              onClick={book}
-              className="mt-4 w-full rounded-md bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
-            >
-              Book a Consultation
-            </button>
-            <Disclaimer />
+          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-5 pt-16 short:px-5 short:pb-3 short:pt-10">
+            <div className="mx-auto max-w-lg">
+              <span className="inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+                {reel.practiceArea}
+              </span>
+              <h2 className="mt-2 text-xl font-bold text-white short:mt-1 short:text-base">
+                {reel.title}
+              </h2>
+              <p className="mt-1 text-sm text-gray-200 short:hidden">
+                {reel.summary}
+              </p>
+              <button
+                type="button"
+                onClick={book}
+                className="mt-4 w-full rounded-md short:mt-2 short:py-2.5 bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
+              >
+                Book a Consultation
+              </button>
+              <Disclaimer />
+            </div>
           </div>
         )}
       </div>
@@ -290,31 +296,35 @@ function EndCard({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute inset-0 flex flex-col justify-center bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-6 text-center">
-      <span className="mx-auto inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
-        {reel.practiceArea}
-      </span>
-      <h2 className="mt-4 text-2xl font-bold text-white">
-        Have a question about your situation?
-      </h2>
-      <p className="mt-3 text-gray-200">
-        Every case is different. Talk it through with one of our attorneys.
-      </p>
-      <button
-        type="button"
-        onClick={onBook}
-        className="mt-8 w-full rounded-md bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
-      >
-        Book a Consultation
-      </button>
-      <button
-        type="button"
-        onClick={onClose}
-        className="mt-3 w-full rounded-md border border-white/30 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
-      >
-        Back to the site
-      </button>
-      <Disclaimer />
+    <div className="absolute inset-0 overflow-y-auto bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-6 py-16 text-center short:py-12">
+      <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center">
+        <span className="mx-auto inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+          {reel.practiceArea}
+        </span>
+        <h2 className="mt-4 text-2xl font-bold text-white short:mt-2 short:text-xl">
+          Have a question about your situation?
+        </h2>
+        <p className="mt-3 text-gray-200 short:mt-1 short:text-sm">
+          Every case is different. Talk it through with one of our attorneys.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 short:mt-4 short:flex-row">
+          <button
+            type="button"
+            onClick={onBook}
+            className="w-full rounded-md bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
+          >
+            Book a Consultation
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-md border border-white/30 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+          >
+            Back to the site
+          </button>
+        </div>
+        <Disclaimer />
+      </div>
     </div>
   );
 }
@@ -405,7 +415,7 @@ function ReelSlide({
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-8 pb-48 text-center">
-      <div>
+      <div className="short:hidden">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
           <svg
             className="h-8 w-8 text-teal-accent"
@@ -444,7 +454,7 @@ function IconButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+      className="flex h-11 w-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
     >
       <svg
         className="h-5 w-5"
