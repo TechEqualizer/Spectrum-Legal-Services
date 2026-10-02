@@ -1,65 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import ReelViewer, { type Reel } from "@/components/ReelViewer";
+import ReelViewer from "@/components/ReelViewer";
+import { defaultFunnel, getReel, type Reel } from "@/data/reels";
 import { requestConsultation } from "@/lib/consultation";
 
-// PLACEHOLDER CONTENT: no videos have been recorded yet. Each reel shows a
-// "Video coming soon" slide until a `video` is added, for example:
-//   video: { src: "/reels/criminal-defense.mp4", poster: "/reels/criminal-defense.jpg", captions: "/reels/criminal-defense.vtt" },
-// Have an attorney review every title and summary before launch.
-const reels: Reel[] = [
-  {
-    id: "criminal-defense-police-stop",
-    practiceArea: "Criminal Defense",
-    title: "Stopped by the police? Know your rights",
-    summary:
-      "You have the right to stay silent and to ask for a lawyer. How to use those rights calmly and respectfully.",
-  },
-  {
-    id: "family-law-custody",
-    practiceArea: "Family Law",
-    title: "How courts decide custody",
-    summary:
-      "Courts focus on the child's best interests. A look at the factors judges commonly weigh.",
-  },
-  {
-    id: "business-contract-clauses",
-    practiceArea: "Business & Contract Law",
-    title: "Three clauses every contract needs",
-    summary:
-      "Scope, payment terms, and how disputes get resolved: the clauses that prevent most business disagreements.",
-  },
-  {
-    id: "estate-planning-will-vs-trust",
-    practiceArea: "Estate Planning",
-    title: "Will or trust: what's the difference?",
-    summary:
-      "Both pass on what you own, but they work differently. When each one tends to make sense.",
-  },
-  {
-    id: "immigration-interview-prep",
-    practiceArea: "Immigration",
-    title: "Preparing for your immigration interview",
-    summary:
-      "What to bring, what officers typically ask, and how to prepare so the day goes smoothly.",
-  },
-  {
-    id: "civil-litigation-deposition",
-    practiceArea: "Civil Litigation",
-    title: "What happens at a deposition",
-    summary:
-      "A deposition is sworn testimony taken before trial. How the process works and how to prepare.",
-  },
-];
+// Only entry reels appear as cards; follow-up reels show up inside the funnel.
+const entryReels = defaultFunnel.entryReelIds
+  .map((id) => getReel(id))
+  .filter((reel): reel is Reel => Boolean(reel));
 
 export default function Reels() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  // Each open gets a new key, so the viewer starts a fresh path every visit.
+  const [visit, setVisit] = useState<{ reelId: string; key: number } | null>(
+    null
+  );
 
   const handleBook = (reel: Reel) => {
-    setOpenIndex(null);
+    setVisit(null);
     // Wait for the viewer to close and hand focus back before moving to the form.
-    setTimeout(() => requestConsultation(reel.practiceArea), 0);
+    setTimeout(() => requestConsultation(reel.practiceArea, reel.id), 0);
   };
 
   return (
@@ -88,11 +48,11 @@ export default function Reels() {
           className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 lg:grid-cols-6"
           role="list"
         >
-          {reels.map((reel, index) => (
+          {entryReels.map((reel) => (
             <li key={reel.id} className="w-40 flex-shrink-0 snap-start md:w-auto">
               <button
                 type="button"
-                onClick={() => setOpenIndex(index)}
+                onClick={() => setVisit({ reelId: reel.id, key: Date.now() })}
                 className="group relative block aspect-[9/16] w-full overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-deep-navy to-royal-blue text-left shadow-md transition-shadow duration-300 hover:shadow-xl"
                 aria-label={`Watch: ${reel.title}`}
               >
@@ -145,13 +105,15 @@ export default function Reels() {
         </p>
       </div>
 
-      <ReelViewer
-        reels={reels}
-        index={openIndex}
-        onIndexChange={setOpenIndex}
-        onClose={() => setOpenIndex(null)}
-        onBook={handleBook}
-      />
+      {visit && (
+        <ReelViewer
+          key={visit.key}
+          funnel={defaultFunnel}
+          startReelId={visit.reelId}
+          onClose={() => setVisit(null)}
+          onBook={handleBook}
+        />
+      )}
     </section>
   );
 }

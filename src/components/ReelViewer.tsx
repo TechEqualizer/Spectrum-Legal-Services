@@ -1,28 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
-export type Reel = {
-  id: string;
-  /** Must match one of the contact form's case types. */
-  practiceArea: string;
-  title: string;
-  summary: string;
-  duration?: string;
-  /** Self-hosted MP4 (e.g. /reels/criminal-defense.mp4). Omit until the video exists. */
-  video?: {
-    src: string;
-    poster?: string;
-    /** WebVTT captions file. */
-    captions?: string;
-  };
-};
+import {
+  getReel,
+  nextReelId,
+  type Funnel,
+  type FunnelTrigger,
+  type Reel,
+} from "@/data/reels";
+import { trackReelEvent } from "@/lib/reel-tracking";
 
 type ReelViewerProps = {
-  reels: Reel[];
-  /** Index of the open reel, or null when the viewer is closed. */
-  index: number | null;
-  onIndexChange: (index: number) => void;
+  funnel: Funnel;
+  /** The entry reel the visitor tapped. Mount a fresh viewer for each visit. */
+  startReelId: string;
   onClose: () => void;
   onBook: (reel: Reel) => void;
 };
@@ -36,46 +27,77 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export default function ReelViewer({
-  reels,
-  index,
-  onIndexChange,
+  funnel,
+  startReelId,
   onClose,
   onBook,
 }: ReelViewerProps) {
-  const isOpen = index !== null;
   const dialogRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
+  // Reels visited this visit, in order. Previous walks back along this path.
+  const [path, setPath] = useState<string[]>([startReelId]);
+  // True once the funnel runs out of reels and shows the consultation card.
+  const [ended, setEnded] = useState(false);
   // Reduced-motion users start paused, so nothing advances until they press play.
-  const [isPaused, setIsPaused] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  const [isPaused, setIsPaused] = useState(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
   const [isMuted, setIsMuted] = useState(true);
-  // Progress of the reel on screen, from 0 to 1. Tagged with the reel id so a
-  // newly opened reel starts empty without a reset.
-  const [progress, setProgress] = useState({ id: "", fraction: 0 });
+  // Progress of the reel on screen, from 0 to 1, tagged with its step so a
+  // new step starts empty without a reset.
+  const [progress, setProgress] = useState({ step: -1, fraction: 0 });
+
+  const step = path.length - 1;
+  const reel = getReel(path[step]);
+
+  // Log a view each time a reel comes on screen. The ref stops React's
+  // development double-run of effects from logging it twice.
+  const lastViewed = useRef("");
+  useEffect(() => {
+    if (ended || !reel) return;
+    const key = `${step}:${reel.id}`;
+    if (lastViewed.current === key) return;
+    lastViewed.current = key;
+    trackReelEvent(reel.id, "viewed");
+  }, [ended, reel, step]);
+
+  const advance = (trigger: FunnelTrigger) => {
+    if (!reel) return;
+    trackReelEvent(reel.id, trigger);
+    const next = nextReelId(funnel, reel.id, trigger);
+    if (next && getReel(next)) setPath((p) => [...p, next]);
+    else setEnded(true);
+  };
 
   const goNext = () => {
-    if (index === null) return;
-    if (index < reels.length - 1) onIndexChange(index + 1);
-    else onClose();
+    if (ended) onClose();
+    else advance("skipped");
   };
 
   const goPrev = () => {
-    if (index === null) return;
-    if (index > 0) onIndexChange(index - 1);
+    if (ended) setEnded(false);
+    else if (path.length > 1) setPath((p) => p.slice(0, -1));
   };
 
-  // Latest handlers for listeners registered once per open.
-  const handlers = useRef({ goNext, goPrev, onClose });
+  const close = () => {
+    if (!ended && reel) trackReelEvent(reel.id, "exited");
+    onClose();
+  };
+
+  const book = () => {
+    if (!reel) return;
+    trackReelEvent(reel.id, "cta_clicked");
+    onBook(reel);
+  };
+
+  // Latest handlers for listeners registered once per visit.
+  const handlers = useRef({ goNext, goPrev, close });
   useEffect(() => {
-    handlers.current = { goNext, goPrev, onClose };
+    handlers.current = { goNext, goPrev, close };
   });
 
   // Lock page scroll, move focus into the dialog, and restore both on close.
   useEffect(() => {
-    if (!isOpen) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -84,7 +106,7 @@ export default function ReelViewer({
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        handlers.current.onClose();
+        handlers.current.close();
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault();
         handlers.current.goNext();
@@ -114,10 +136,9 @@ export default function ReelViewer({
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus({ preventScroll: true });
     };
-  }, [isOpen]);
+  }, []);
 
-  if (index === null) return null;
-  const reel = reels[index];
+  if (!reel) return null;
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -131,59 +152,59 @@ export default function ReelViewer({
     else if (distance < -SWIPE_THRESHOLD) goPrev();
   };
 
+  const barWidth = ended
+    ? 100
+    : progress.step === step
+      ? Math.min(progress.fraction, 1) * 100
+      : 0;
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95"
-      onClick={onClose}
+      onClick={close}
     >
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={`Video: ${reel.title}`}
+        aria-label={ended ? "Talk to an attorney" : `Video: ${reel.title}`}
         tabIndex={-1}
         className="relative flex h-full w-full flex-col overflow-hidden bg-deep-navy outline-none md:h-[85vh] md:max-w-md md:rounded-2xl md:border md:border-white/10 md:shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <ReelSlide
-          key={reel.id}
-          reel={reel}
-          isPaused={isPaused}
-          isMuted={isMuted}
-          onProgress={(fraction) => setProgress({ id: reel.id, fraction })}
-          onFinished={goNext}
-        />
+        {ended ? (
+          <EndCard reel={reel} onBook={book} onClose={close} />
+        ) : (
+          <ReelSlide
+            key={`${step}:${reel.id}`}
+            reel={reel}
+            isPaused={isPaused}
+            isMuted={isMuted}
+            onProgress={(fraction) => setProgress({ step, fraction })}
+            onFinished={() => advance("completed")}
+          />
+        )}
 
-        {/* Top bar: progress segments and controls */}
+        {/* Top bar: progress and controls */}
         <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8">
-          <div className="flex gap-1" aria-hidden="true">
-            {reels.map((r, i) => (
-              <div
-                key={r.id}
-                className="h-1 flex-1 overflow-hidden rounded-full bg-white/25"
-              >
-                <div
-                  className="h-full bg-white"
-                  style={{
-                    width:
-                      i < index
-                        ? "100%"
-                        : i === index && progress.id === r.id
-                          ? `${Math.min(progress.fraction, 1) * 100}%`
-                          : "0%",
-                  }}
-                />
-              </div>
-            ))}
+          <div
+            className="h-1 overflow-hidden rounded-full bg-white/25"
+            aria-hidden="true"
+          >
+            <div
+              data-testid="reel-progress"
+              className="h-full bg-white"
+              style={{ width: `${barWidth}%` }}
+            />
           </div>
           <div className="mt-3 flex items-center justify-between">
             <span className="text-xs font-medium text-white/80">
-              {index + 1} of {reels.length}
+              Know Your Rights
             </span>
             <div className="flex items-center gap-1">
-              {reel.video && (
+              {reel.video && !ended && (
                 <IconButton
                   label={isMuted ? "Unmute" : "Mute"}
                   onClick={() => setIsMuted((m) => !m)}
@@ -195,17 +216,19 @@ export default function ReelViewer({
                   )}
                 </IconButton>
               )}
-              <IconButton
-                label={isPaused ? "Play" : "Pause"}
-                onClick={() => setIsPaused((p) => !p)}
-              >
-                {isPaused ? (
-                  <path d="M6 4l14 8-14 8V4z" />
-                ) : (
-                  <path d="M7 4h3v16H7zM14 4h3v16h-3z" />
-                )}
-              </IconButton>
-              <IconButton label="Close" onClick={onClose}>
+              {!ended && (
+                <IconButton
+                  label={isPaused ? "Play" : "Pause"}
+                  onClick={() => setIsPaused((p) => !p)}
+                >
+                  {isPaused ? (
+                    <path d="M6 4l14 8-14 8V4z" />
+                  ) : (
+                    <path d="M7 4h3v16H7zM14 4h3v16h-3z" />
+                  )}
+                </IconButton>
+              )}
+              <IconButton label="Close" onClick={close}>
                 <path d="M6 18L18 6M6 6l12 12" />
               </IconButton>
             </div>
@@ -216,42 +239,92 @@ export default function ReelViewer({
         <button
           type="button"
           onClick={goPrev}
-          disabled={index === 0}
+          disabled={step === 0 && !ended}
           aria-label="Previous video"
           className="absolute left-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0 md:flex"
         >
           <Chevron d="M15 19l-7-7 7-7" />
         </button>
-        <button
-          type="button"
-          onClick={goNext}
-          aria-label={index === reels.length - 1 ? "Close videos" : "Next video"}
-          className="absolute right-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 md:flex"
-        >
-          <Chevron d="M9 5l7 7-7 7" />
-        </button>
-
-        {/* Caption and call to action */}
-        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-5 pt-16">
-          <span className="inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
-            {reel.practiceArea}
-          </span>
-          <h2 className="mt-2 text-xl font-bold text-white">{reel.title}</h2>
-          <p className="mt-1 text-sm text-gray-200">{reel.summary}</p>
+        {!ended && (
           <button
             type="button"
-            onClick={() => onBook(reel)}
-            className="mt-4 w-full rounded-md bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
+            onClick={goNext}
+            aria-label="Skip to next video"
+            className="absolute right-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 md:flex"
           >
-            Book a Consultation
+            <Chevron d="M9 5l7 7-7 7" />
           </button>
-          <p className="mt-3 text-[11px] leading-snug text-gray-400">
-            General information only, not legal advice. Watching this video
-            does not create an attorney-client relationship.
-          </p>
-        </div>
+        )}
+
+        {/* Caption and call to action */}
+        {!ended && (
+          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-5 pt-16">
+            <span className="inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+              {reel.practiceArea}
+            </span>
+            <h2 className="mt-2 text-xl font-bold text-white">{reel.title}</h2>
+            <p className="mt-1 text-sm text-gray-200">{reel.summary}</p>
+            <button
+              type="button"
+              onClick={book}
+              className="mt-4 w-full rounded-md bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
+            >
+              Book a Consultation
+            </button>
+            <Disclaimer />
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+// Shown when the funnel runs out of reels: the conversion step.
+function EndCard({
+  reel,
+  onBook,
+  onClose,
+}: {
+  reel: Reel;
+  onBook: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 flex flex-col justify-center bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-6 text-center">
+      <span className="mx-auto inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+        {reel.practiceArea}
+      </span>
+      <h2 className="mt-4 text-2xl font-bold text-white">
+        Have a question about your situation?
+      </h2>
+      <p className="mt-3 text-gray-200">
+        Every case is different. Talk it through with one of our attorneys.
+      </p>
+      <button
+        type="button"
+        onClick={onBook}
+        className="mt-8 w-full rounded-md bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
+      >
+        Book a Consultation
+      </button>
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-3 w-full rounded-md border border-white/30 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+      >
+        Back to the site
+      </button>
+      <Disclaimer />
+    </div>
+  );
+}
+
+function Disclaimer() {
+  return (
+    <p className="mt-3 text-[11px] leading-snug text-gray-400">
+      General information only, not legal advice. Watching this video does not
+      create an attorney-client relationship.
+    </p>
   );
 }
 

@@ -5,17 +5,10 @@ import {
   CONSULTATION_REQUEST_EVENT,
   type ConsultationRequestDetail,
 } from "@/lib/consultation";
+import { CASE_TYPES, isCaseType, isValidEmail } from "@/lib/leads";
+import { submitLead } from "@/lib/submit-lead";
 
-const caseTypes = [
-  "Select Case Type",
-  "Family Law",
-  "Criminal Defense",
-  "Business & Contract Law",
-  "Estate Planning",
-  "Immigration",
-  "Civil Litigation",
-  "Other",
-];
+const caseTypes = ["Select Case Type", ...CASE_TYPES];
 
 const contactInfo = [
   {
@@ -53,14 +46,21 @@ export default function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
+  // Hidden spam trap; people never see or fill it.
+  const [website, setWebsite] = useState("");
+  // The video that sent the visitor here, saved with the lead.
+  const [referringReelId, setReferringReelId] = useState<string>();
 
   // Another section (e.g. a video's "Book" button) asked for a consultation:
   // preselect its case type and bring the visitor to the form.
   useEffect(() => {
     const onRequest = (e: Event) => {
-      const { caseType } = (e as CustomEvent<ConsultationRequestDetail>).detail;
-      if (!caseTypes.includes(caseType)) return;
+      const { caseType, reelId } = (e as CustomEvent<ConsultationRequestDetail>)
+        .detail;
+      if (!isCaseType(caseType)) return;
       setIsSubmitted(false);
+      setReferringReelId(reelId);
       setFormData((prev) => ({ ...prev, caseType }));
       setErrors((prev) => {
         const next = { ...prev };
@@ -90,7 +90,7 @@ export default function Contact() {
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    } else if (!isValidEmail(formData.email.trim())) {
       newErrors.email = "Please enter a valid email";
     }
 
@@ -116,10 +116,20 @@ export default function Contact() {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setSubmitError("");
+    const result = await submitLead({
+      source: "contact",
+      ...formData,
+      referringReelId,
+      website,
+    });
     setIsSubmitting(false);
+    if (!result.ok) {
+      setSubmitError(result.error);
+      return;
+    }
     setIsSubmitted(true);
+    setReferringReelId(undefined);
     setFormData({
       name: "",
       email: "",
@@ -377,6 +387,35 @@ export default function Contact() {
                       "Send Message"
                     )}
                   </button>
+
+                  {submitError && (
+                    <p
+                      role="alert"
+                      className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                    >
+                      {submitError}
+                    </p>
+                  )}
+
+                  <div className="hidden" aria-hidden="true">
+                    <label htmlFor="contact-website">Website</label>
+                    <input
+                      type="text"
+                      id="contact-website"
+                      name="website"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
+                  </div>
+
+                  <p className="text-xs text-gray-500">
+                    Please don&apos;t include confidential details. Contacting us
+                    doesn&apos;t create an attorney-client relationship. If you
+                    watched our videos, we include which ones with your request
+                    so we can follow up on the right topic.
+                  </p>
                 </form>
               )}
             </div>
