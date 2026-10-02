@@ -8,14 +8,21 @@ import {
   type FunnelTrigger,
   type Reel,
 } from "@/data/reels";
+import FunnelLeadSheet from "@/components/FunnelLeadSheet";
+import { site } from "@/config/site";
+import type { LeadIntent } from "@/lib/leads";
 import { trackReelEvent } from "@/lib/reel-tracking";
 
 type ReelViewerProps = {
   funnel: Funnel;
   /** The entry reel the visitor tapped. Mount a fresh viewer for each visit. */
   startReelId: string;
+  /**
+   * "modal" opens over the website; "page" is the whole screen of a
+   * shareable funnel link, where closing goes back to its topic choices.
+   */
+  variant?: "modal" | "page";
   onClose: () => void;
-  onBook: (reel: Reel) => void;
 };
 
 // How long a reel without a video stays on screen.
@@ -29,8 +36,8 @@ const FOCUSABLE =
 export default function ReelViewer({
   funnel,
   startReelId,
+  variant = "modal",
   onClose,
-  onBook,
 }: ReelViewerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
@@ -43,6 +50,9 @@ export default function ReelViewer({
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
   const [isMuted, setIsMuted] = useState(true);
+  // The booking or "text me later" form, open over the reel.
+  const [sheet, setSheet] = useState<LeadIntent | null>(null);
+  const isModal = variant === "modal";
   // Progress of the reel on screen, from 0 to 1, tagged with its step so a
   // new step starts empty without a reset.
   const [progress, setProgress] = useState({ step: -1, fraction: 0 });
@@ -84,16 +94,24 @@ export default function ReelViewer({
     onClose();
   };
 
-  const book = () => {
-    if (!reel) return;
-    trackReelEvent(reel.id, "cta_clicked");
-    onBook(reel);
+  const ctas: CtaHandlers = {
+    onCall: () => reel && trackReelEvent(reel.id, "call_clicked"),
+    onBook: () => {
+      if (!reel) return;
+      trackReelEvent(reel.id, "cta_clicked");
+      setSheet("book");
+    },
+    onTextLater: () => {
+      if (!reel) return;
+      trackReelEvent(reel.id, "text_later_clicked");
+      setSheet("text_later");
+    },
   };
 
   // Latest handlers for listeners registered once per visit.
-  const handlers = useRef({ goNext, goPrev, close });
+  const handlers = useRef({ goNext, goPrev, close, sheet });
   useEffect(() => {
-    handlers.current = { goNext, goPrev, close };
+    handlers.current = { goNext, goPrev, close, sheet };
   });
 
   // Lock page scroll, move focus into the dialog, and restore both on close.
@@ -104,9 +122,14 @@ export default function ReelViewer({
     dialogRef.current?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {
+      const formOpen = handlers.current.sheet !== null;
       if (e.key === "Escape") {
         e.preventDefault();
-        handlers.current.close();
+        if (formOpen) setSheet(null);
+        else handlers.current.close();
+      } else if (formOpen && e.key !== "Tab") {
+        // Arrow keys belong to the form's fields while it is open.
+        return;
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault();
         handlers.current.goNext();
@@ -141,7 +164,7 @@ export default function ReelViewer({
   if (!reel) return null;
 
   const onTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
+    touchStartY.current = sheet ? null : e.touches[0].clientY;
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -160,13 +183,15 @@ export default function ReelViewer({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95"
-      onClick={close}
+      className={`fixed inset-0 z-[100] flex items-center justify-center ${
+        isModal ? "bg-black/95" : "bg-deep-navy tall:bg-black"
+      }`}
+      onClick={isModal ? close : undefined}
     >
       <div
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
+        role={isModal ? "dialog" : "region"}
+        aria-modal={isModal ? "true" : undefined}
         aria-label={ended ? "Talk to an attorney" : `Video: ${reel.title}`}
         tabIndex={-1}
         className="relative flex h-full w-full flex-col overflow-hidden bg-deep-navy outline-none tall:h-[85vh] tall:max-w-md tall:rounded-2xl tall:border tall:border-white/10 tall:shadow-2xl"
@@ -174,112 +199,181 @@ export default function ReelViewer({
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {ended ? (
-          <EndCard reel={reel} onBook={book} onClose={close} />
-        ) : (
-          <ReelSlide
-            key={`${step}:${reel.id}`}
-            reel={reel}
-            isPaused={isPaused}
-            isMuted={isMuted}
-            onProgress={(fraction) => setProgress({ step, fraction })}
-            onFinished={() => advance("completed")}
-          />
-        )}
-
-        {/* Top bar: progress and controls */}
-        <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8 short:pb-2">
-          <div
-            className="h-1 overflow-hidden rounded-full bg-white/25"
-            aria-hidden="true"
-          >
-            <div
-              data-testid="reel-progress"
-              className="h-full bg-white"
-              style={{ width: `${barWidth}%` }}
+        {/* Everything behind the form is inert while it is open. */}
+        <div className="contents" inert={sheet !== null}>
+          {ended ? (
+            <EndCard
+              funnel={funnel}
+              reel={reel}
+              ctas={ctas}
+              closeLabel={isModal ? "Back to the site" : "Pick another topic"}
+              onClose={close}
             />
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-white/80">
-              Know Your Rights
-            </span>
-            <div className="flex items-center gap-1">
-              {reel.video && !ended && (
-                <IconButton
-                  label={isMuted ? "Unmute" : "Mute"}
-                  onClick={() => setIsMuted((m) => !m)}
-                >
-                  {isMuted ? (
-                    <path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" />
-                  ) : (
-                    <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
-                  )}
-                </IconButton>
-              )}
-              {!ended && (
-                <IconButton
-                  label={isPaused ? "Play" : "Pause"}
-                  onClick={() => setIsPaused((p) => !p)}
-                >
-                  {isPaused ? (
-                    <path d="M6 4l14 8-14 8V4z" />
-                  ) : (
-                    <path d="M7 4h3v16H7zM14 4h3v16h-3z" />
-                  )}
-                </IconButton>
-              )}
-              <IconButton label="Close" onClick={close}>
-                <path d="M6 18L18 6M6 6l12 12" />
-              </IconButton>
+          ) : (
+            <ReelSlide
+              key={`${step}:${reel.id}`}
+              reel={reel}
+              isPaused={isPaused || sheet !== null}
+              isMuted={isMuted}
+              onProgress={(fraction) => setProgress({ step, fraction })}
+              onFinished={() => advance("completed")}
+            />
+          )}
+
+          {/* Top bar: progress and controls */}
+          <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8 short:pb-2">
+            <div
+              className="h-1 overflow-hidden rounded-full bg-white/25"
+              aria-hidden="true"
+            >
+              <div
+                data-testid="reel-progress"
+                className="h-full bg-white"
+                style={{ width: `${barWidth}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-white/80">
+                Injury Insights &middot; Attorney Jeff
+              </span>
+              <div className="flex items-center gap-1">
+                {reel.video && !ended && (
+                  <IconButton
+                    label={isMuted ? "Unmute" : "Mute"}
+                    onClick={() => setIsMuted((m) => !m)}
+                  >
+                    {isMuted ? (
+                      <path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" />
+                    ) : (
+                      <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
+                    )}
+                  </IconButton>
+                )}
+                {!ended && (
+                  <IconButton
+                    label={isPaused ? "Play" : "Pause"}
+                    onClick={() => setIsPaused((p) => !p)}
+                  >
+                    {isPaused ? (
+                      <path d="M6 4l14 8-14 8V4z" />
+                    ) : (
+                      <path d="M7 4h3v16H7zM14 4h3v16h-3z" />
+                    )}
+                  </IconButton>
+                )}
+                {isModal ? (
+                  <IconButton label="Close" onClick={close}>
+                    <path d="M6 18L18 6M6 6l12 12" />
+                  </IconButton>
+                ) : (
+                  <IconButton label="Back to topics" onClick={close}>
+                    <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+                  </IconButton>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Desktop previous/next */}
-        <button
-          type="button"
-          onClick={goPrev}
-          disabled={step === 0 && !ended}
-          aria-label="Previous video"
-          className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0 tall:flex"
-        >
-          <Chevron d="M15 19l-7-7 7-7" />
-        </button>
-        {!ended && (
+          {/* Desktop previous/next */}
           <button
             type="button"
-            onClick={goNext}
-            aria-label="Skip to next video"
-            className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 tall:flex"
+            onClick={goPrev}
+            disabled={step === 0 && !ended}
+            aria-label="Previous video"
+            className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0 tall:flex"
           >
-            <Chevron d="M9 5l7 7-7 7" />
+            <Chevron d="M15 19l-7-7 7-7" />
           </button>
-        )}
+          {!ended && (
+            <button
+              type="button"
+              onClick={goNext}
+              aria-label="Skip to next video"
+              className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 tall:flex"
+            >
+              <Chevron d="M9 5l7 7-7 7" />
+            </button>
+          )}
 
-        {/* Caption and call to action */}
-        {!ended && (
-          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-5 pt-16 short:px-5 short:pb-3 short:pt-10">
-            <div className="mx-auto max-w-lg">
-              <span className="inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
-                {reel.practiceArea}
-              </span>
-              <h2 className="mt-2 text-xl font-bold text-white short:mt-1 short:text-base">
-                {reel.title}
-              </h2>
-              <p className="mt-1 text-sm text-gray-200 short:hidden">
-                {reel.summary}
-              </p>
-              <button
-                type="button"
-                onClick={book}
-                className="mt-4 w-full rounded-md short:mt-2 short:py-2.5 bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
-              >
-                Book a Consultation
-              </button>
-              <Disclaimer />
+          {/* Caption and call to action */}
+          {!ended && (
+            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-5 pt-16 short:px-5 short:pb-3 short:pt-10">
+              <div className="mx-auto max-w-lg">
+                <span className="inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+                  {reel.practiceArea}
+                </span>
+                <h2 className="mt-2 text-xl font-bold text-white short:mt-1 short:text-base">
+                  {reel.title}
+                </h2>
+                <p className="mt-1 text-sm text-gray-200 short:hidden">
+                  {reel.summary}
+                </p>
+                <CtaButtons primary={funnel.primaryCta} {...ctas} />
+                <Disclaimer />
+              </div>
             </div>
-          </div>
+          )}
+        </div>
+
+        {sheet && (
+          <FunnelLeadSheet
+            key={sheet}
+            intent={sheet}
+            reel={reel}
+            onClose={() => {
+              setSheet(null);
+              dialogRef.current?.focus();
+            }}
+          />
         )}
+      </div>
+    </div>
+  );
+}
+
+type CtaHandlers = {
+  onCall: () => void;
+  onBook: () => void;
+  onTextLater: () => void;
+};
+
+const primaryClass =
+  "flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-teal-accent px-5 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110 short:min-h-11";
+const secondaryClass =
+  "flex min-h-11 flex-1 items-center justify-center rounded-md border border-white/30 bg-white/5 px-3 text-sm font-semibold text-white transition-colors hover:bg-white/15";
+
+/**
+ * Call, Book and Text me later on every reel: the funnel's main action as a
+ * big button, the other two beside each other under it.
+ */
+function CtaButtons({
+  primary,
+  onCall,
+  onBook,
+  onTextLater,
+}: CtaHandlers & { primary: Funnel["primaryCta"] }) {
+  const call = (className: string, label: string) => (
+    <a href={site.phone.href} onClick={onCall} className={className}>
+      {label}
+    </a>
+  );
+  const book = (className: string, label: string) => (
+    <button type="button" onClick={onBook} className={className}>
+      {label}
+    </button>
+  );
+  return (
+    <div className="mt-4 space-y-2 short:mt-2">
+      {primary === "call"
+        ? call(primaryClass, `Call now: ${site.phone.display}`)
+        : book(primaryClass, "Book a free case review")}
+      <div className="flex gap-2">
+        {primary === "call"
+          ? book(secondaryClass, "Request a call back")
+          : call(secondaryClass, "Call now")}
+        <button type="button" onClick={onTextLater} className={secondaryClass}>
+          Text me later
+        </button>
       </div>
     </div>
   );
@@ -287,12 +381,16 @@ export default function ReelViewer({
 
 // Shown when the funnel runs out of reels: the conversion step.
 function EndCard({
+  funnel,
   reel,
-  onBook,
+  ctas,
+  closeLabel,
   onClose,
 }: {
+  funnel: Funnel;
   reel: Reel;
-  onBook: () => void;
+  ctas: CtaHandlers;
+  closeLabel: string;
   onClose: () => void;
 }) {
   return (
@@ -306,26 +404,58 @@ function EndCard({
         </h2>
         <p className="mt-3 text-gray-200 short:mt-1 short:text-sm">
           Every case is different. Talk it through with one of our attorneys.
+          The case review is free.
         </p>
-        <div className="mt-8 flex flex-col gap-3 short:mt-4 short:flex-row">
-          <button
-            type="button"
-            onClick={onBook}
-            className="w-full rounded-md bg-teal-accent px-5 py-3 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110"
-          >
-            Book a Consultation
-          </button>
+        <div className="mt-6 text-left short:mt-3">
+          <CtaButtons primary={funnel.primaryCta} {...ctas} />
+        </div>
+        <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-5 short:mt-3 short:flex-row short:pt-3">
+          <ShareButton funnel={funnel} reel={reel} />
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-md border border-white/30 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+            className="min-h-11 w-full rounded-md px-5 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10 hover:text-white"
           >
-            Back to the site
+            {closeLabel}
           </button>
         </div>
         <Disclaimer />
       </div>
     </div>
+  );
+}
+
+/** "Know someone who got hurt?": passes the funnel link on, tagged as a share. */
+function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
+  const [copied, setCopied] = useState(false);
+  const share = async () => {
+    const url = `${window.location.origin}/f/${funnel.slug}?src=share`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${site.name}: Injury Insights`,
+          text: "Short videos from Attorney Jeff on what to do after an accident.",
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+      }
+      trackReelEvent(reel.id, "shared");
+    } catch {
+      // Closed the share sheet, or the clipboard is blocked: nothing to do.
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="min-h-11 w-full rounded-md border border-white/30 px-5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+    >
+      <span aria-live="polite">
+        {copied ? "Link copied" : "Send to someone who got hurt"}
+      </span>
+    </button>
   );
 }
 

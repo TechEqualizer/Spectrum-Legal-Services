@@ -29,9 +29,26 @@ export type Reel = {
 
 export type FunnelTrigger = "completed" | "skipped";
 
+/**
+ * The main button on every reel. "call" suits urgent needs (an accident just
+ * happened); "book" suits people weighing their options. The other one and
+ * "Text me later" always sit beside it.
+ */
+export type FunnelCta = "call" | "book";
+
 export type Funnel = {
   /** Stored with every event; bump it when the paths change so results stay comparable. */
   id: string;
+  /** The shareable link: /f/<slug>. Keep it short and never change it once shared. */
+  slug: string;
+  primaryCta: FunnelCta;
+  /** The opening screen of the shareable link. */
+  cover: {
+    heading: string;
+    intro: string;
+    /** Short labels for the entry reels, shown as "What happened?" choices. */
+    entryLabels: Record<string, string>;
+  };
   /** Reels shown as cards on the page, in order. Every funnel visit starts at one of these. */
   entryReelIds: string[];
   links: Record<string, Record<FunnelTrigger, string | null>>;
@@ -98,6 +115,21 @@ export const reels: Reel[] = [
 
 export const defaultFunnel: Funnel = {
   id: "jlf-injury-v1",
+  slug: "jlf",
+  primaryCta: "call",
+  cover: {
+    heading: "What happened?",
+    intro:
+      "Pick one. Attorney Jeff explains what to do next in a few short videos.",
+    entryLabels: {
+      "car-accident-first-steps": "Car accident",
+      "rideshare-accident-insurance": "Uber or Lyft accident",
+      "truck-accident-evidence": "Truck accident",
+      "motorcycle-accident-claims": "Motorcycle crash",
+      "slip-and-fall-documentation": "Slip and fall",
+      "dog-bite-california-law": "Dog bite",
+    },
+  },
   entryReelIds: [
     "car-accident-first-steps",
     "rideshare-accident-insurance",
@@ -141,6 +173,12 @@ export const defaultFunnel: Funnel = {
     },
   },
 };
+
+export const funnels: Funnel[] = [defaultFunnel];
+
+export function getFunnelBySlug(slug: string) {
+  return funnels.find((funnel) => funnel.slug === slug);
+}
 
 const reelsById = new Map(reels.map((reel) => [reel.id, reel]));
 

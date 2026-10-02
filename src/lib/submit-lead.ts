@@ -1,14 +1,14 @@
 import { site } from "@/config/site";
 import type { LeadInput } from "@/lib/leads";
-import { getVisitorId } from "@/lib/reel-tracking";
+import { getSourceTag, getVisitorId } from "@/lib/reel-tracking";
 
 export type SubmitLeadResult = { ok: true } | { ok: false; error: string };
 
 const FALLBACK_ERROR = `We couldn't send your request. Please call us at ${site.phone.display}.`;
 
-/** Sends an intake form to /api/leads, attaching the reel-funnel visitor id. */
+/** Sends an intake form to /api/leads, attaching the visitor id and link source. */
 export async function submitLead(
-  lead: Omit<LeadInput, "visitorId"> & { website?: string }
+  lead: Omit<LeadInput, "visitorId" | "sourceTag"> & { website?: string }
 ): Promise<SubmitLeadResult> {
   // The concept site never sends or stores what people type.
   if (site.demoMode) return { ok: true };
@@ -16,7 +16,11 @@ export async function submitLead(
     const res = await fetch("/api/leads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...lead, visitorId: getVisitorId() ?? undefined }),
+      body: JSON.stringify({
+        ...lead,
+        visitorId: getVisitorId() ?? undefined,
+        sourceTag: getSourceTag(),
+      }),
     });
     if (res.ok) return { ok: true };
     const data = (await res.json().catch(() => null)) as { error?: string } | null;

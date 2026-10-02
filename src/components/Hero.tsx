@@ -1,11 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  CONSULTATION_REQUEST_EVENT,
-  type ConsultationRequestDetail,
-} from "@/lib/consultation";
-import { CASE_TYPES, isCaseType } from "@/lib/leads";
+import { useState } from "react";
+import { CASE_TYPES } from "@/lib/leads";
 import { submitLead } from "@/lib/submit-lead";
 import { Eyebrow, headingClass, Swoosh } from "@/components/Brand";
 import { site } from "@/config/site";
@@ -32,31 +28,6 @@ export default function Hero() {
   const [submitError, setSubmitError] = useState("");
   // Hidden spam trap; people never see or fill it.
   const [website, setWebsite] = useState("");
-  // The video that sent the visitor here, saved with the lead.
-  const [referringReelId, setReferringReelId] = useState<string>();
-
-  // A video's "Book" button (or a CTA) asked for a consultation: preselect
-  // its case type and bring the visitor to this form.
-  useEffect(() => {
-    const onRequest = (e: Event) => {
-      const { caseType, reelId } = (e as CustomEvent<ConsultationRequestDetail>)
-        .detail;
-      if (!isCaseType(caseType)) return;
-      setIsSubmitted(false);
-      setReferringReelId(reelId);
-      setFormData((prev) => ({ ...prev, caseType }));
-      document
-        .getElementById("case-evaluation")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      requestAnimationFrame(() =>
-        document.getElementById("hero-name")?.focus({ preventScroll: true })
-      );
-    };
-    window.addEventListener(CONSULTATION_REQUEST_EVENT, onRequest);
-    return () =>
-      window.removeEventListener(CONSULTATION_REQUEST_EVENT, onRequest);
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -64,7 +35,6 @@ export default function Hero() {
     const result = await submitLead({
       source: "hero",
       ...formData,
-      referringReelId,
       website,
     });
     setIsSubmitting(false);
@@ -73,7 +43,6 @@ export default function Hero() {
       return;
     }
     setIsSubmitted(true);
-    setReferringReelId(undefined);
     setFormData({ name: "", email: "", caseType: "" });
   };
 

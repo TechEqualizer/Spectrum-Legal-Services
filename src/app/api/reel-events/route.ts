@@ -1,13 +1,17 @@
 import { defaultFunnel, getReel } from "@/data/reels";
 import type { ReelEvent } from "@/lib/reel-tracking";
 import { callRpc } from "@/lib/server/supabase";
+import { normalizeSourceTag } from "@/lib/source-tag";
 
 const EVENTS: ReelEvent[] = [
   "viewed",
   "completed",
   "skipped",
-  "cta_clicked",
   "exited",
+  "cta_clicked",
+  "call_clicked",
+  "text_later_clicked",
+  "shared",
 ];
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,7 +24,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { visitorId, funnelId, reelId, event } = (body ?? {}) as Record<
+  const { visitorId, funnelId, reelId, event, sourceTag } = (body ?? {}) as Record<
     string,
     unknown
   >;
@@ -36,14 +40,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid event" }, { status: 400 });
   }
 
-  const result = await callRpc("log_reel_event", {
+  const result = await callRpc("log_reel_event_v2", {
     p_visitor_id: visitorId,
     p_funnel_id: funnelId,
     p_reel_id: reelId,
     p_event: event,
+    // An unusable tag is dropped rather than failing the event.
+    p_source_tag: normalizeSourceTag(sourceTag) ?? null,
   });
   if (!result.ok && result.status !== 503) {
-    console.error("log_reel_event failed", result.status, result.error);
+    console.error("log_reel_event_v2 failed", result.status, result.error);
   }
 
   // Analytics never blocks the visitor, so report success either way.
