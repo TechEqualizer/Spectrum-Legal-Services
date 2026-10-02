@@ -162,20 +162,11 @@ export default function ReelViewer({
   const { copied, share: shareLink } = useShareLink(funnel);
   const share = () => reel && shareLink(reel.id);
 
-  // Progress segments: the reels seen so far, this one, and the ones ahead
-  // if the visitor keeps watching to the end.
-  let ahead = 0;
-  if (reel && !ended) {
-    const seen = new Set(path);
-    for (let id = reel.id; ; ) {
-      const next = nextReelId(funnel, id, "completed");
-      if (!next || seen.has(next)) break;
-      seen.add(next);
-      ahead++;
-      id = next;
-    }
-  }
-  const segments = path.length + ahead;
+  // The title expands to show the description, for the reel on screen only.
+  const slideKey = `${step}:${reel?.id}`;
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const expanded = expandedKey === slideKey;
+  const initial = brand.name.replace(/^The\s+/i, "").charAt(0);
 
   // Latest handlers for listeners registered once per visit.
   const handlers = useRef({ goNext, goPrev, close, sheet });
@@ -310,40 +301,15 @@ export default function ReelViewer({
             </svg>
           )}
 
-          {/* Top: one segment per reel on this path, then the account row */}
-          <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent px-3 pb-8 pt-2 short:pb-2">
-            <div className="flex gap-1" aria-hidden="true">
-              {Array.from({ length: segments }, (_, i) => (
-                <div key={i} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30">
-                  <div
-                    data-testid={i === step && !ended ? "reel-progress" : undefined}
-                    className="h-full bg-white"
-                    style={{
-                      width: `${ended || i < step ? 100 : i === step ? barWidth : 0}%`,
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-white ring-2 ring-white/70"
-                  aria-hidden="true"
-                >
-                  {brand.name.replace(/^The\s+/i, "").charAt(0)}
-                </span>
-                <span className="min-w-0 leading-tight">
-                  <span className="block truncate text-sm font-semibold text-white">{brand.name}</span>
-                  <span className="block truncate text-[11px] text-white/75">{brand.seriesLabel}</span>
-                </span>
-              </div>
-              <div className="flex flex-shrink-0 items-center">
-                {(reel.media?.kind === "video" || reel.media?.kind === "youtube") && !ended && (
-                  <IconButton
-                    label={isMuted ? "Unmute" : "Mute"}
-                    onClick={() => setIsMuted((m) => !m)}
-                  >
+          {/* Top: back on the left, sound and pause on the right, as in Shorts */}
+          <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between bg-gradient-to-b from-black/45 to-transparent px-1 pb-8 pt-[max(0.25rem,env(safe-area-inset-top))] short:pb-2">
+            <IconButton label={isModal ? "Close" : "Back to topics"} onClick={close}>
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </IconButton>
+            {!ended && (
+              <div className="flex items-center">
+                {(reel.media?.kind === "video" || reel.media?.kind === "youtube") && (
+                  <IconButton label={isMuted ? "Unmute" : "Mute"} onClick={() => setIsMuted((m) => !m)}>
                     {isMuted ? (
                       <path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" />
                     ) : (
@@ -351,29 +317,11 @@ export default function ReelViewer({
                     )}
                   </IconButton>
                 )}
-                {!ended && (
-                  <IconButton
-                    label={isPaused ? "Play" : "Pause"}
-                    onClick={() => setIsPaused((p) => !p)}
-                  >
-                    {isPaused ? (
-                      <path d="M6 4l14 8-14 8V4z" />
-                    ) : (
-                      <path d="M7 4h3v16H7zM14 4h3v16h-3z" />
-                    )}
-                  </IconButton>
-                )}
-                {isModal ? (
-                  <IconButton label="Close" onClick={close}>
-                    <path d="M6 18L18 6M6 6l12 12" />
-                  </IconButton>
-                ) : (
-                  <IconButton label="Back to topics" onClick={close}>
-                    <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
-                  </IconButton>
-                )}
+                <IconButton label={isPaused ? "Play" : "Pause"} onClick={() => setIsPaused((p) => !p)}>
+                  {isPaused ? <path d="M6 4l14 8-14 8V4z" /> : <path d="M7 4h3v16H7zM14 4h3v16h-3z" />}
+                </IconButton>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Paused: a big play button, as in the apps */}
@@ -385,8 +333,8 @@ export default function ReelViewer({
 
           {!ended && (
             <>
-              {/* Action rail */}
-              <div className="absolute bottom-40 right-2 z-30 flex flex-col items-center gap-3 short:bottom-24 short:gap-1">
+              {/* Action rail: plain icons with labels, the main action in the brand color */}
+              <div className="absolute bottom-[calc(7.25rem+env(safe-area-inset-bottom))] right-1 z-30 flex flex-col items-center gap-[18px] short:bottom-[calc(4rem+env(safe-area-inset-bottom))] short:gap-1">
                 <RailButton label={liked ? "Liked" : "Like"} pressed={liked} onClick={toggleLike}>
                   <path d={HEART} fill={liked ? "currentColor" : "none"} />
                 </RailButton>
@@ -415,30 +363,54 @@ export default function ReelViewer({
                 <RailButton label={copied ? "Copied" : "Share"} onClick={share}>
                   <path d={SHARE} />
                 </RailButton>
+                <span className="mt-1 flex h-10 w-10 items-center justify-center rounded-lg bg-teal-accent text-sm font-bold text-white ring-2 ring-white short:hidden" aria-hidden="true">
+                  {initial}
+                </span>
               </div>
 
-              {/* Caption, then the main action as a slim bar */}
-              <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pb-4 pt-16 short:pb-2 short:pt-8">
+              {/* Channel row, then the title; tapping the title shows the rest */}
+              <div
+                className={`absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t px-3 pb-[max(1rem,calc(env(safe-area-inset-bottom)+0.5rem))] pt-20 short:pb-2 short:pt-8 ${
+                  expanded ? "from-black/90 via-black/75 to-transparent" : "from-black/70 via-black/30 to-transparent"
+                }`}
+              >
                 <div className="pr-16">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
-                      {reel.practiceArea}
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-white ring-1 ring-white/70" aria-hidden="true">
+                      {initial}
                     </span>
-                    {reel.badge && (
-                      <span className="rounded-sm bg-black/50 px-2 py-0.5 text-[11px] font-bold text-white ring-1 ring-white/20">
-                        {reel.badge}
-                      </span>
-                    )}
+                    <span className="min-w-0 truncate text-[15px] font-semibold text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
+                      {brand.handle ?? brand.name}
+                    </span>
+                    <ChannelPill brand={brand} primary={funnel.primaryCta} {...ctas} />
                   </div>
-                  <h2 className="mt-2 text-lg font-bold leading-snug text-white short:mt-1 short:text-base">
-                    {reel.title}
-                  </h2>
-                  <p className="mt-1 line-clamp-2 text-sm text-gray-200 short:hidden">
-                    {reel.summary}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedKey(expanded ? null : slideKey)}
+                    aria-expanded={expanded}
+                    className="mt-2 block w-full text-left text-[15px] leading-snug text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]"
+                  >
+                    <span className={expanded ? "font-semibold" : "line-clamp-1"}>{reel.title}</span>
+                    <span className="sr-only">{expanded ? ", show less" : ", show more"}</span>
+                  </button>
+                  {expanded && (
+                    <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto text-sm text-gray-100">
+                      <p>{reel.summary}</p>
+                      <p className="flex flex-wrap gap-1.5">
+                        <span className="rounded-sm bg-white/15 px-2 py-0.5 text-xs font-semibold">{reel.practiceArea}</span>
+                        {reel.badge && (
+                          <span className="rounded-sm bg-white/15 px-2 py-0.5 text-xs font-semibold">{reel.badge}</span>
+                        )}
+                      </p>
+                      <p className="text-[11px] leading-snug text-gray-300">{brand.disclaimer}</p>
+                    </div>
+                  )}
                 </div>
-                <PrimaryBar brand={brand} primary={funnel.primaryCta} {...ctas} />
-                <Disclaimer text={brand.disclaimer} />
+              </div>
+
+              {/* Progress: a thin line along the bottom edge */}
+              <div className="absolute inset-x-0 bottom-[env(safe-area-inset-bottom)] z-30 h-0.5 bg-white/25" aria-hidden="true">
+                <div data-testid="reel-progress" className="h-full bg-teal-accent" style={{ width: `${barWidth}%` }} />
               </div>
             </>
           )}
@@ -638,20 +610,31 @@ function RailButton({
   const inner = (
     <>
       <span
-        className={`flex h-12 w-12 items-center justify-center rounded-full transition-transform active:scale-90 short:h-10 short:w-10 ${
-          highlight ? "bg-teal-accent shadow-lg" : "bg-black/35 backdrop-blur-sm"
+        className={`flex items-center justify-center transition-transform active:scale-90 ${
+          highlight
+            ? "h-12 w-12 rounded-full bg-teal-accent shadow-lg short:h-10 short:w-10"
+            : "h-10 w-10 [filter:drop-shadow(0_1px_3px_rgb(0_0_0/0.55))] short:h-9 short:w-9"
         } ${pressed ? "text-rose-500" : ""}`}
       >
-        <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+        <svg
+          className={highlight ? "h-6 w-6" : "h-[30px] w-[30px] short:h-6 short:w-6"}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={highlight ? 2 : 1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
           {children}
         </svg>
       </span>
-      <span className="text-[11px] font-semibold [text-shadow:0_1px_2px_rgb(0_0_0/0.6)] short:sr-only">
+      <span className="text-xs font-semibold [text-shadow:0_1px_3px_rgb(0_0_0/0.7)] short:sr-only">
         {label}
       </span>
     </>
   );
-  const className = "flex min-w-14 flex-col items-center gap-1 text-white";
+  const className = "flex min-w-14 flex-col items-center gap-0.5 text-white";
   return href ? (
     <a href={href} onClick={onClick} className={className}>
       {inner}
@@ -663,29 +646,27 @@ function RailButton({
   );
 }
 
-/** The main action under the caption, like the call-to-action strip on a sponsored reel. */
-function PrimaryBar({
+/** The main action as a pill beside the business's name, where "Join" sits in Shorts. */
+function ChannelPill({
   brand,
   primary,
   onCall,
   onBook,
 }: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"] }) {
   const className =
-    "mt-3 flex min-h-11 w-full items-center justify-between rounded-md bg-teal-accent px-4 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110 short:mt-2 short:min-h-10";
-  const arrow = (
-    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-    </svg>
-  );
+    "flex-shrink-0 rounded-full bg-teal-accent px-3.5 py-1.5 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110";
   return primary === "call" ? (
-    <a href={brand.phone.href} onClick={onCall} className={className}>
-      {`${brand.copy.callNow}: ${brand.phone.display}`}
-      {arrow}
+    <a
+      href={brand.phone.href}
+      onClick={onCall}
+      aria-label={`${brand.copy.callNow}: ${brand.phone.display}`}
+      className={className}
+    >
+      Call
     </a>
   ) : (
-    <button type="button" onClick={onBook} className={className}>
-      {brand.copy.bookPrimary}
-      {arrow}
+    <button type="button" onClick={onBook} aria-label={brand.copy.bookPrimary} className={className}>
+      Book
     </button>
   );
 }
@@ -868,7 +849,7 @@ function TimedSlide({ reel, isPaused, onProgress, onFinished }: ReelSlideProps) 
   }
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-8 pb-48 text-center">
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-8 pb-24 text-center">
       <div className="short:hidden">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
           <svg className="h-8 w-8 text-sky-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

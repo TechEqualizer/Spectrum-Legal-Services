@@ -23,6 +23,7 @@ const phone = { display: "(310) 555-0148", href: "tel:+13105550148" };
 const brand: FunnelBrand = {
   name: "Aurelia Med Spa",
   logo: { kind: "wordmark", text: "Aurelia", tagline: "Med Spa" },
+  handle: "@aurelia.medspa",
   byline: ["Injectables · Skin · Laser", "Free consultations"],
   phone,
   theme: {
