@@ -4,6 +4,7 @@ import { useState } from "react";
 import { sampleCampaigns, sampleLeads, type LeadStatus } from "@/admin/sample-data";
 import { FIRM_TIME_ZONE } from "@/admin/viz";
 import { getReel } from "@/data/reels";
+import { sourceLabel } from "@/lib/source-tag";
 
 const statusStyle: Record<LeadStatus, string> = {
   New: "bg-sky-accent/20 text-deep-navy",
@@ -71,7 +72,10 @@ export default function Leads() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-gray-700">{formatWhen(l.receivedAt)}</td>
                   <td className="px-4 py-3 text-gray-700">{l.caseType}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-gray-700">{l.source}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-gray-700">
+                    {l.source}
+                    <span className="block text-xs text-gray-500">{sourceLabel(l.sourceTag)}</span>
+                  </td>
                   <td className="px-4 py-3 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>{l.watchedReelIds.length}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${statusStyle[l.status]}`}>{l.status}</span>
@@ -98,6 +102,12 @@ export default function Leads() {
               <div>
                 <h2 className="mb-3 text-sm font-bold text-deep-navy">Video journey before booking</h2>
                 <ol className="relative space-y-3 border-l-2 border-gray-200 pl-5">
+                  <li className="relative">
+                    <span className="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-gray-400 ring-4 ring-white" aria-hidden="true" />
+                    <p className="text-sm font-medium text-deep-navy">
+                      {lead.sourceTag ? `Opened the link from ${sourceLabel(lead.sourceTag)}` : "Opened the link directly"}
+                    </p>
+                  </li>
                   {lead.watchedReelIds.map((id, i) => {
                     const reel = getReel(id);
                     return (
@@ -110,7 +120,9 @@ export default function Leads() {
                   })}
                   <li className="relative">
                     <span className="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-deep-navy ring-4 ring-white" aria-hidden="true" />
-                    <p className="text-sm font-medium text-deep-navy">Requested a case evaluation</p>
+                    <p className="text-sm font-medium text-deep-navy">
+                      {lead.source === "Text me later" ? "Asked to be texted the next video" : "Requested a case evaluation"}
+                    </p>
                     <p className="text-xs text-gray-600">
                       {lead.referringReelId ? `From "${getReel(lead.referringReelId)?.title}"` : "From the hero form"}
                     </p>

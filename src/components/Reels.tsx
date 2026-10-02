@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import ReelViewer from "@/components/ReelViewer";
 import { defaultFunnel, getReel, reels, type Reel } from "@/data/reels";
-import { requestConsultation } from "@/lib/consultation";
 import { Eyebrow, headingClass, Swoosh } from "@/components/Brand";
 
 const ALL = "All";
@@ -28,12 +27,6 @@ export default function Reels() {
   const [visit, setVisit] = useState<{ reelId: string; key: number } | null>(
     null
   );
-
-  const handleBook = (reel: Reel) => {
-    setVisit(null);
-    // Wait for the viewer to close and hand focus back before moving to the form.
-    setTimeout(() => requestConsultation(reel.practiceArea, reel.id), 0);
-  };
 
   const visible = reelsFor(category);
 
@@ -92,7 +85,6 @@ export default function Reels() {
           funnel={defaultFunnel}
           startReelId={visit.reelId}
           onClose={() => setVisit(null)}
-          onBook={handleBook}
         />
       )}
     </section>

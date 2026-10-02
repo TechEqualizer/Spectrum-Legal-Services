@@ -143,7 +143,9 @@ export type SampleLead = {
   id: string;
   receivedAt: Date;
   caseType: string;
-  source: "Hero form" | "Video booking";
+  source: "Hero form" | "Video booking" | "Text me later";
+  /** Where their funnel link came from (the ?src= tag); undefined for direct visits. */
+  sourceTag?: string;
   referringReelId?: string;
   watchedReelIds: string[];
   campaignId?: string;
@@ -165,6 +167,8 @@ export const sampleLeads: SampleLead[] = (() => {
       if (current) watched.push(current);
     }
     const fromVideo = rand() < 0.6;
+    const textLater = fromVideo && rand() < 0.25;
+    const sourceTag = pick(["instagram", "instagram", "google", "tiktok", "sms", "referral", "share", undefined]);
     const reel = reels.find((r) => r.id === watched[watched.length - 1])!;
     const received = new Date(SAMPLE_END);
     received.setHours(received.getHours() - Math.round(i * 19 + rand() * 12));
@@ -172,7 +176,8 @@ export const sampleLeads: SampleLead[] = (() => {
       id: `L-${1042 - i}`,
       receivedAt: received,
       caseType: reel.practiceArea,
-      source: fromVideo ? "Video booking" : "Hero form",
+      source: textLater ? "Text me later" : fromVideo ? "Video booking" : "Hero form",
+      sourceTag,
       referringReelId: fromVideo ? reel.id : undefined,
       watchedReelIds: watched,
       campaignId: reel.practiceArea === "Car Accident" ? "car-accident-nurture" : undefined,
@@ -234,3 +239,56 @@ export const sampleCampaigns: DripCampaign[] = [
     stats: { enrolled: 0, opened: 0, watched: 0, booked: 0 },
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Results by link source (the ?src= tag on the funnel link)
+
+export type SourceTotals = {
+  /** undefined: opened without a tag (typed in, or an old link). */
+  tag: string | undefined;
+  visitors: number;
+  calls: number;
+  bookings: number;
+  textLater: number;
+};
+
+// Share of visitors and how often they act, per place the link was shared.
+// Search and texts bring fewer people who are readier to call; social bios
+// bring more people who are earlier on.
+const sourceProfile: {
+  tag: string | undefined;
+  share: number;
+  call: number;
+  book: number;
+  text: number;
+}[] = [
+  { tag: "instagram", share: 0.31, call: 0.016, book: 0.024, text: 0.034 },
+  { tag: "tiktok", share: 0.17, call: 0.007, book: 0.012, text: 0.027 },
+  { tag: "google", share: 0.15, call: 0.052, book: 0.028, text: 0.009 },
+  { tag: "facebook", share: 0.08, call: 0.019, book: 0.02, text: 0.021 },
+  { tag: "sms", share: 0.07, call: 0.061, book: 0.047, text: 0 },
+  { tag: "referral", share: 0.06, call: 0.072, book: 0.051, text: 0.012 },
+  { tag: "share", share: 0.05, call: 0.038, book: 0.03, text: 0.018 },
+  { tag: undefined, share: 0.11, call: 0.024, book: 0.019, text: 0.014 },
+];
+
+/** Visitors and actions per link source over the last `length` days. */
+export function sourceTotals(length: number): SourceTotals[] {
+  const range = days.slice(SAMPLE_DAYS - length);
+  // A visit starts at an entry reel, so entry-reel views stand in for visitors.
+  let visitors = 0;
+  for (const day of range) {
+    for (const id of defaultFunnel.entryReelIds) visitors += day.get(id)?.views ?? 0;
+  }
+  const rand = seeded(length * 7919);
+  return sourceProfile.map((p) => {
+    const v = Math.round(visitors * p.share * (0.9 + rand() * 0.2));
+    return {
+      tag: p.tag,
+      visitors: v,
+      calls: Math.round(v * p.call),
+      bookings: Math.round(v * p.book),
+      textLater: Math.round(v * p.text),
+    };
+  });
+}

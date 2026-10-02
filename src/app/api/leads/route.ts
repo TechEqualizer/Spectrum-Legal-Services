@@ -4,13 +4,24 @@ import { getReel } from "@/data/reels";
 import {
   isCaseType,
   isValidEmail,
+  isValidPhone,
   LEAD_LIMITS,
+  SMS_CONSENT_TEXT,
   type LeadInput,
+  type LeadIntent,
   type LeadSource,
 } from "@/lib/leads";
 import { callRpc } from "@/lib/server/supabase";
+import { normalizeSourceTag, sourceLabel } from "@/lib/source-tag";
 
-const SOURCES: LeadSource[] = ["hero", "contact"];
+const FORM_NAMES: Record<LeadSource, string> = {
+  hero: "hero form",
+  contact: "contact form",
+  funnel: "video funnel",
+};
+
+const SOURCES: LeadSource[] = ["hero", "contact", "funnel"];
+const INTENTS: LeadIntent[] = ["book", "text_later"];
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -21,10 +32,20 @@ function optionalString(value: unknown, max: number) {
 }
 
 // Returns the cleaned lead, or a message describing the first invalid field.
+// The website forms ask for an email; the funnel asks for a mobile number,
+// since its follow-ups are a call or a text.
 function parseLead(body: Record<string, unknown>): LeadInput | string {
-  const { source, name, email, caseType } = body;
+  const { source, name, caseType } = body;
   if (typeof source !== "string" || !SOURCES.includes(source as LeadSource)) {
     return "Unknown form";
+  }
+  const intent = body.intent ?? "book";
+  if (
+    typeof intent !== "string" ||
+    !INTENTS.includes(intent as LeadIntent) ||
+    (intent === "text_later" && source !== "funnel")
+  ) {
+    return "Unknown request";
   }
   if (
     typeof name !== "string" ||
@@ -33,13 +54,13 @@ function parseLead(body: Record<string, unknown>): LeadInput | string {
   ) {
     return "Name is required";
   }
-  if (
-    typeof email !== "string" ||
-    email.length > LEAD_LIMITS.email ||
-    !isValidEmail(email.trim())
-  ) {
+
+  const email = optionalString(body.email, LEAD_LIMITS.email);
+  if (email === null || (email && !isValidEmail(email))) {
     return "Please enter a valid email";
   }
+  if (!email && source !== "funnel") return "Please enter a valid email";
+
   if (typeof caseType !== "string" || !isCaseType(caseType)) {
     return "Please select a case type";
   }
@@ -50,6 +71,14 @@ function parseLead(body: Record<string, unknown>): LeadInput | string {
   if (message === null) return "Message is too long";
   if (source === "contact" && (!phone || !message)) {
     return "Phone number and message are required";
+  }
+  if (source === "funnel" && (!phone || !isValidPhone(phone))) {
+    return "Please enter a mobile number with area code";
+  }
+
+  const smsConsent = body.smsConsent === true;
+  if (intent === "text_later" && !smsConsent) {
+    return "Please agree to receive texts, or call us instead";
   }
 
   const visitorId =
@@ -63,13 +92,16 @@ function parseLead(body: Record<string, unknown>): LeadInput | string {
 
   return {
     source: source as LeadSource,
+    intent: intent as LeadIntent,
     name: name.trim(),
-    email: email.trim(),
+    email,
     phone,
     caseType,
     message,
     visitorId,
     referringReelId,
+    sourceTag: normalizeSourceTag(body.sourceTag),
+    smsConsent,
   };
 }
 
@@ -80,14 +112,18 @@ async function notifyFirm(lead: LeadInput) {
   if (!apiKey || !to || !from) return;
 
   const reel = lead.referringReelId ? getReel(lead.referringReelId) : undefined;
+  const textLater = lead.intent === "text_later";
   const text = [
-    `New consultation request (${lead.source === "hero" ? "hero form" : "contact form"})`,
+    textLater
+      ? `Asked to be texted the next video (${FORM_NAMES[lead.source]})`
+      : `New consultation request (${FORM_NAMES[lead.source]})`,
     "",
     `Name: ${lead.name}`,
-    `Email: ${lead.email}`,
+    `Email: ${lead.email ?? "not given"}`,
     `Phone: ${lead.phone ?? "not given"}`,
     `Case type: ${lead.caseType}`,
     reel ? `Came from video: ${reel.title}` : null,
+    lead.source === "funnel" ? `Link source: ${sourceLabel(lead.sourceTag)}` : null,
     "",
     lead.message ?? "(no message)",
   ]
@@ -103,8 +139,10 @@ async function notifyFirm(lead: LeadInput) {
     body: JSON.stringify({
       from,
       to: to.split(",").map((addr) => addr.trim()),
-      reply_to: lead.email,
-      subject: `New ${lead.caseType} consultation request`,
+      ...(lead.email ? { reply_to: lead.email } : {}),
+      subject: textLater
+        ? `${lead.caseType}: text-me-later request`
+        : `New ${lead.caseType} consultation request`,
       text,
     }),
   });
@@ -144,18 +182,22 @@ export async function POST(request: Request) {
     return Response.json({ error: lead }, { status: 400 });
   }
 
-  const result = await callRpc<string>("submit_lead", {
+  const result = await callRpc<string>("submit_lead_v2", {
     p_source: lead.source,
     p_name: lead.name,
-    p_email: lead.email,
+    p_email: lead.email ?? null,
     p_phone: lead.phone ?? null,
     p_case_type: lead.caseType,
     p_message: lead.message ?? null,
     p_visitor_id: lead.visitorId ?? null,
     p_referring_reel_id: lead.referringReelId ?? null,
+    p_intent: lead.intent ?? "book",
+    p_source_tag: lead.sourceTag ?? null,
+    // Saved word for word, as the record of what the person agreed to.
+    p_sms_consent_text: lead.smsConsent ? SMS_CONSENT_TEXT : null,
   });
   if (!result.ok) {
-    console.error("submit_lead failed", result.status, result.error);
+    console.error("submit_lead_v2 failed", result.status, result.error);
     return Response.json(
       { error: "We couldn't send your request. Please call us instead." },
       { status: 503 }

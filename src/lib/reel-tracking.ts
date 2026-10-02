@@ -5,15 +5,21 @@
 // Global Privacy Control or Do Not Track.
 
 import { defaultFunnel } from "@/data/reels";
+import { normalizeSourceTag } from "@/lib/source-tag";
 
 export type ReelEvent =
   | "viewed"
   | "completed"
   | "skipped"
+  | "exited"
+  /** Tapped "Book": opened the callback form. */
   | "cta_clicked"
-  | "exited";
+  | "call_clicked"
+  | "text_later_clicked"
+  | "shared";
 
 const VISITOR_KEY = "spectrum_visitor_id";
+const SOURCE_KEY = "spectrum_source";
 let memoryVisitorId: string | null = null;
 
 function trackingAllowed() {
@@ -39,6 +45,26 @@ export function getVisitorId(): string | null {
   }
 }
 
+/**
+ * Where the visitor's link came from: the ?src= tag (or utm_source) on this
+ * page, else the last one seen in this browser. The most recent link wins,
+ * so a viewer who first came from Instagram and later from a text is
+ * credited to the text.
+ */
+export function getSourceTag(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = normalizeSourceTag(params.get("src") ?? params.get("utm_source"));
+  // Without tracking consent, use the tag on this page only and remember nothing.
+  if (!trackingAllowed()) return fromUrl;
+  try {
+    if (fromUrl) localStorage.setItem(SOURCE_KEY, fromUrl);
+    return fromUrl ?? normalizeSourceTag(localStorage.getItem(SOURCE_KEY));
+  } catch {
+    return fromUrl;
+  }
+}
+
 export function trackReelEvent(reelId: string, event: ReelEvent) {
   const visitorId = getVisitorId();
   if (!visitorId) return;
@@ -48,6 +74,7 @@ export function trackReelEvent(reelId: string, event: ReelEvent) {
     funnelId: defaultFunnel.id,
     reelId,
     event,
+    sourceTag: getSourceTag(),
   });
 
   // sendBeacon survives the page closing; fall back to a keepalive fetch.
