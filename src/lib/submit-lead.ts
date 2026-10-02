@@ -8,10 +8,12 @@ const FALLBACK_ERROR = `We couldn't send your request. Please call us at ${site.
 
 /** Sends an intake form to /api/leads, attaching the visitor id and link source. */
 export async function submitLead(
-  lead: Omit<LeadInput, "visitorId" | "sourceTag"> & { website?: string }
+  lead: Omit<LeadInput, "visitorId" | "sourceTag"> & { website?: string },
+  /** Pretend to send, e.g. for a sample funnel. */
+  { simulate = false } = {}
 ): Promise<SubmitLeadResult> {
-  // The concept site never sends or stores what people type.
-  if (site.demoMode) return { ok: true };
+  // The concept site and sample funnels never send or store what people type.
+  if (site.demoMode || simulate) return { ok: true };
   try {
     const res = await fetch("/api/leads", {
       method: "POST",

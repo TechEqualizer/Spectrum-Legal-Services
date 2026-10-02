@@ -4,7 +4,7 @@
 // visitor's history carries over. Nothing is logged for visitors who send
 // Global Privacy Control or Do Not Track.
 
-import { defaultFunnel } from "@/data/reels";
+import type { Funnel } from "@/data/funnel-types";
 import { normalizeSourceTag } from "@/lib/source-tag";
 
 export type ReelEvent =
@@ -65,13 +65,15 @@ export function getSourceTag(): string | undefined {
   }
 }
 
-export function trackReelEvent(reelId: string, event: ReelEvent) {
+export function trackReelEvent(funnel: Funnel, reelId: string, event: ReelEvent) {
+  // Sample funnels show the product; their views aren't anyone's data.
+  if (funnel.sample) return;
   const visitorId = getVisitorId();
   if (!visitorId) return;
 
   const body = JSON.stringify({
     visitorId,
-    funnelId: defaultFunnel.id,
+    funnelId: funnel.id,
     reelId,
     event,
     sourceTag: getSourceTag(),

@@ -1,4 +1,5 @@
-import { defaultFunnel, getReel } from "@/data/reels";
+import { getFunnelById } from "@/data/funnels";
+import { funnelReel } from "@/data/reels";
 import type { ReelEvent } from "@/lib/reel-tracking";
 import { callRpc } from "@/lib/server/supabase";
 import { normalizeSourceTag } from "@/lib/source-tag";
@@ -28,12 +29,15 @@ export async function POST(request: Request) {
     string,
     unknown
   >;
+  // Sample funnels never log anything.
+  const funnel = typeof funnelId === "string" ? getFunnelById(funnelId) : undefined;
   if (
     typeof visitorId !== "string" ||
     !UUID_PATTERN.test(visitorId) ||
-    funnelId !== defaultFunnel.id ||
+    !funnel ||
+    funnel.sample ||
     typeof reelId !== "string" ||
-    !getReel(reelId) ||
+    !funnelReel(funnel, reelId) ||
     typeof event !== "string" ||
     !EVENTS.includes(event as ReelEvent)
   ) {
@@ -42,7 +46,7 @@ export async function POST(request: Request) {
 
   const result = await callRpc("log_reel_event_v2", {
     p_visitor_id: visitorId,
-    p_funnel_id: funnelId,
+    p_funnel_id: funnel.id,
     p_reel_id: reelId,
     p_event: event,
     // An unusable tag is dropped rather than failing the event.
