@@ -9,6 +9,8 @@ import {
   type FunnelTrigger,
   type Reel,
 } from "@/data/reels";
+import type { ReelMedia } from "@/data/funnel-types";
+import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import type { LeadIntent } from "@/lib/leads";
 import { trackReelEvent } from "@/lib/reel-tracking";
@@ -24,6 +26,18 @@ type ReelViewerProps = {
   variant?: "modal" | "page";
   onClose: () => void;
 };
+
+// Two taps closer together than this count as a double-tap.
+const DOUBLE_TAP_MS = 260;
+
+// Icon paths (24x24, stroked).
+const HEART =
+  "M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4h2c.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z";
+const CALENDAR = "M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM8 12h3v3H8z";
+const PHONE =
+  "M5 4h3l2 5-2.5 1.5a11 11 0 006 6L15 14l5 2v3a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z";
+const MESSAGE = "M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z";
+const SHARE = "M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13";
 
 // How long a reel without a video stays on screen.
 const TEXT_SLIDE_DURATION = 8000;
@@ -53,6 +67,7 @@ export default function ReelViewer({
   // The booking or "text me later" form, open over the reel.
   const [sheet, setSheet] = useState<LeadIntent | null>(null);
   const isModal = variant === "modal";
+  const closeLabel = isModal ? "Back to the site" : "Pick another topic";
   const brand = funnel.brand;
   // Progress of the reel on screen, from 0 to 1, tagged with its step so a
   // new step starts empty without a reset.
@@ -108,6 +123,59 @@ export default function ReelViewer({
       setSheet("text_later");
     },
   };
+
+  // Likes this visit. Double-tapping an already-liked reel replays the heart.
+  const [likedIds, setLikedIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [burst, setBurst] = useState(0);
+  const liked = reel ? likedIds.has(reel.id) : false;
+  const like = (on: boolean) => {
+    if (!reel) return;
+    if (on && !likedIds.has(reel.id)) trackReelEvent(funnel, reel.id, "liked");
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(reel.id);
+      else next.delete(reel.id);
+      return next;
+    });
+  };
+  const toggleLike = () => like(!liked);
+
+  // One tap pauses or plays; two quick taps like the reel.
+  const tapTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (tapTimer.current !== null) window.clearTimeout(tapTimer.current);
+  }, []);
+  const onMediaTap = () => {
+    if (tapTimer.current !== null) {
+      window.clearTimeout(tapTimer.current);
+      tapTimer.current = null;
+      like(true);
+      setBurst((b) => b + 1);
+      return;
+    }
+    tapTimer.current = window.setTimeout(() => {
+      tapTimer.current = null;
+      setIsPaused((p) => !p);
+    }, DOUBLE_TAP_MS);
+  };
+
+  const { copied, share: shareLink } = useShareLink(funnel);
+  const share = () => reel && shareLink(reel.id);
+
+  // Progress segments: the reels seen so far, this one, and the ones ahead
+  // if the visitor keeps watching to the end.
+  let ahead = 0;
+  if (reel && !ended) {
+    const seen = new Set(path);
+    for (let id = reel.id; ; ) {
+      const next = nextReelId(funnel, id, "completed");
+      if (!next || seen.has(next)) break;
+      seen.add(next);
+      ahead++;
+      id = next;
+    }
+  }
+  const segments = path.length + ahead;
 
   // Latest handlers for listeners registered once per visit.
   const handlers = useRef({ goNext, goPrev, close, sheet });
@@ -207,7 +275,7 @@ export default function ReelViewer({
               funnel={funnel}
               reel={reel}
               ctas={ctas}
-              closeLabel={isModal ? "Back to the site" : "Pick another topic"}
+              closeLabel={closeLabel}
               onClose={close}
             />
           ) : (
@@ -221,24 +289,57 @@ export default function ReelViewer({
             />
           )}
 
-          {/* Top bar: progress and controls */}
-          <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent p-3 pb-8 short:pb-2">
+          {/* Tap to pause, double-tap to like, as in the social apps. */}
+          {!ended && (
             <div
-              className="h-1 overflow-hidden rounded-full bg-white/25"
+              className="absolute inset-0 z-10"
+              onClick={onMediaTap}
+              aria-hidden="true"
+              data-testid="reel-tap-area"
+            />
+          )}
+          {burst > 0 && (
+            <svg
+              key={burst}
+              className="animate-heart-pop pointer-events-none absolute left-1/2 top-1/2 z-30 -ml-12 -mt-12 h-24 w-24 text-white drop-shadow-lg"
+              fill="currentColor"
+              viewBox="0 0 24 24"
               aria-hidden="true"
             >
-              <div
-                data-testid="reel-progress"
-                className="h-full bg-white"
-                style={{ width: `${barWidth}%` }}
-              />
+              <path d={HEART} />
+            </svg>
+          )}
+
+          {/* Top: one segment per reel on this path, then the account row */}
+          <div className="absolute inset-x-0 top-0 z-30 bg-gradient-to-b from-black/60 to-transparent px-3 pb-8 pt-2 short:pb-2">
+            <div className="flex gap-1" aria-hidden="true">
+              {Array.from({ length: segments }, (_, i) => (
+                <div key={i} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30">
+                  <div
+                    data-testid={i === step && !ended ? "reel-progress" : undefined}
+                    className="h-full bg-white"
+                    style={{
+                      width: `${ended || i < step ? 100 : i === step ? barWidth : 0}%`,
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-white/80">
-                {brand.seriesLabel}
-              </span>
-              <div className="flex items-center gap-1">
-                {reel.video && !ended && (
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-white ring-2 ring-white/70"
+                  aria-hidden="true"
+                >
+                  {brand.name.replace(/^The\s+/i, "").charAt(0)}
+                </span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-sm font-semibold text-white">{brand.name}</span>
+                  <span className="block truncate text-[11px] text-white/75">{brand.seriesLabel}</span>
+                </span>
+              </div>
+              <div className="flex flex-shrink-0 items-center">
+                {(reel.media?.kind === "video" || reel.media?.kind === "youtube") && !ended && (
                   <IconButton
                     label={isMuted ? "Unmute" : "Mute"}
                     onClick={() => setIsMuted((m) => !m)}
@@ -275,44 +376,71 @@ export default function ReelViewer({
             </div>
           </div>
 
-          {/* Desktop previous/next */}
-          <button
-            type="button"
-            onClick={goPrev}
-            disabled={step === 0 && !ended}
-            aria-label="Previous video"
-            className="absolute left-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-0 tall:flex"
-          >
-            <Chevron d="M15 19l-7-7 7-7" />
-          </button>
-          {!ended && (
-            <button
-              type="button"
-              onClick={goNext}
-              aria-label="Skip to next video"
-              className="absolute right-2 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 tall:flex"
-            >
-              <Chevron d="M9 5l7 7-7 7" />
-            </button>
+          {/* Paused: a big play button, as in the apps */}
+          {isPaused && !ended && sheet === null && (
+            <span className="pointer-events-none absolute left-1/2 top-1/2 z-20 -ml-9 -mt-9 flex h-18 w-18 items-center justify-center rounded-full bg-black/40" aria-hidden="true">
+              <svg className="ml-1 h-9 w-9 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z" /></svg>
+            </span>
           )}
 
-          {/* Caption and call to action */}
           {!ended && (
-            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-5 pt-16 short:px-5 short:pb-3 short:pt-10">
-              <div className="mx-auto max-w-lg">
-                <span className="inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
-                  {reel.practiceArea}
-                </span>
-                <h2 className="mt-2 text-xl font-bold text-white short:mt-1 short:text-base">
-                  {reel.title}
-                </h2>
-                <p className="mt-1 text-sm text-gray-200 short:hidden">
-                  {reel.summary}
-                </p>
-                <CtaButtons brand={brand} primary={funnel.primaryCta} {...ctas} />
+            <>
+              {/* Action rail */}
+              <div className="absolute bottom-40 right-2 z-30 flex flex-col items-center gap-3 short:bottom-24 short:gap-1">
+                <RailButton label={liked ? "Liked" : "Like"} pressed={liked} onClick={toggleLike}>
+                  <path d={HEART} fill={liked ? "currentColor" : "none"} />
+                </RailButton>
+                {funnel.primaryCta === "book" ? (
+                  <>
+                    <RailButton label="Book" highlight onClick={ctas.onBook}>
+                      <path d={CALENDAR} />
+                    </RailButton>
+                    <RailButton label="Call" href={brand.phone.href} onClick={ctas.onCall}>
+                      <path d={PHONE} />
+                    </RailButton>
+                  </>
+                ) : (
+                  <>
+                    <RailButton label="Call" highlight href={brand.phone.href} onClick={ctas.onCall}>
+                      <path d={PHONE} />
+                    </RailButton>
+                    <RailButton label="Call back" onClick={ctas.onBook}>
+                      <path d={CALENDAR} />
+                    </RailButton>
+                  </>
+                )}
+                <RailButton label="Text me" onClick={ctas.onTextLater}>
+                  <path d={MESSAGE} />
+                </RailButton>
+                <RailButton label={copied ? "Copied" : "Share"} onClick={share}>
+                  <path d={SHARE} />
+                </RailButton>
+              </div>
+
+              {/* Caption, then the main action as a slim bar */}
+              <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pb-4 pt-16 short:pb-2 short:pt-8">
+                <div className="pr-16">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+                      {reel.practiceArea}
+                    </span>
+                    {reel.badge && (
+                      <span className="rounded-sm bg-black/50 px-2 py-0.5 text-[11px] font-bold text-white ring-1 ring-white/20">
+                        {reel.badge}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="mt-2 text-lg font-bold leading-snug text-white short:mt-1 short:text-base">
+                    {reel.title}
+                  </h2>
+                  <p className="mt-1 line-clamp-2 text-sm text-gray-200 short:hidden">
+                    {reel.summary}
+                  </p>
+                </div>
+                <PrimaryBar brand={brand} primary={funnel.primaryCta} {...ctas} />
                 <Disclaimer text={brand.disclaimer} />
               </div>
-            </div>
+            </>
           )}
         </div>
 
@@ -328,6 +456,30 @@ export default function ReelViewer({
             }}
           />
         )}
+      </div>
+
+      {/* Desktop: up and down beside the video, as on TikTok's site */}
+      <div
+        className="absolute right-6 top-1/2 z-[101] hidden -translate-y-1/2 flex-col gap-3 tall:flex"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={step === 0 && !ended}
+          aria-label="Previous video"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-30"
+        >
+          <Chevron d="M5 15l7-7 7 7" />
+        </button>
+        <button
+          type="button"
+          onClick={goNext}
+          aria-label={ended ? closeLabel : "Skip to next video"}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+        >
+          <Chevron d="M19 9l-7 7-7-7" />
+        </button>
       </div>
     </div>
   );
@@ -428,9 +580,10 @@ function EndCard({
 }
 
 /** Passes the funnel link on to someone else, tagged as a share. */
-function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
+/** Shares the funnel link (tagged as a share), or copies it where sharing isn't available. */
+function useShareLink(funnel: Funnel) {
   const [copied, setCopied] = useState(false);
-  const share = async () => {
+  const share = async (reelId: string) => {
     const url = `${window.location.origin}/f/${funnel.slug}?src=share`;
     try {
       if (navigator.share) {
@@ -443,20 +596,96 @@ function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
         await navigator.clipboard.writeText(url);
         setCopied(true);
       }
-      trackReelEvent(funnel, reel.id, "shared");
+      trackReelEvent(funnel, reelId, "shared");
     } catch {
       // Closed the share sheet, or the clipboard is blocked: nothing to do.
     }
   };
+  return { copied, share };
+}
+
+function ShareButton({ funnel, reel }: { funnel: Funnel; reel: Reel }) {
+  const { copied, share } = useShareLink(funnel);
   return (
     <button
       type="button"
-      onClick={share}
+      onClick={() => share(reel.id)}
       className="min-h-11 w-full rounded-md border border-white/30 px-5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
     >
       <span aria-live="polite">
         {copied ? "Link copied" : funnel.brand.copy.shareButton}
       </span>
+    </button>
+  );
+}
+
+/** One button on the right-hand rail: a round icon with its label under it. */
+function RailButton({
+  label,
+  children,
+  onClick,
+  href,
+  highlight = false,
+  pressed,
+}: {
+  label: string;
+  children: React.ReactNode;
+  onClick: () => void;
+  href?: string;
+  highlight?: boolean;
+  pressed?: boolean;
+}) {
+  const inner = (
+    <>
+      <span
+        className={`flex h-12 w-12 items-center justify-center rounded-full transition-transform active:scale-90 short:h-10 short:w-10 ${
+          highlight ? "bg-teal-accent shadow-lg" : "bg-black/35 backdrop-blur-sm"
+        } ${pressed ? "text-rose-500" : ""}`}
+      >
+        <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+          {children}
+        </svg>
+      </span>
+      <span className="text-[11px] font-semibold [text-shadow:0_1px_2px_rgb(0_0_0/0.6)] short:sr-only">
+        {label}
+      </span>
+    </>
+  );
+  const className = "flex min-w-14 flex-col items-center gap-1 text-white";
+  return href ? (
+    <a href={href} onClick={onClick} className={className}>
+      {inner}
+    </a>
+  ) : (
+    <button type="button" onClick={onClick} aria-pressed={pressed} className={className}>
+      {inner}
+    </button>
+  );
+}
+
+/** The main action under the caption, like the call-to-action strip on a sponsored reel. */
+function PrimaryBar({
+  brand,
+  primary,
+  onCall,
+  onBook,
+}: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"] }) {
+  const className =
+    "mt-3 flex min-h-11 w-full items-center justify-between rounded-md bg-teal-accent px-4 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110 short:mt-2 short:min-h-10";
+  const arrow = (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  );
+  return primary === "call" ? (
+    <a href={brand.phone.href} onClick={onCall} className={className}>
+      {`${brand.copy.callNow}: ${brand.phone.display}`}
+      {arrow}
+    </a>
+  ) : (
+    <button type="button" onClick={onBook} className={className}>
+      {brand.copy.bookPrimary}
+      {arrow}
     </button>
   );
 }
@@ -476,24 +705,150 @@ type ReelSlideProps = {
 };
 
 // Keyed by reel id, so its timer and progress start fresh for every reel.
-function ReelSlide({
-  reel,
+function ReelSlide(props: ReelSlideProps) {
+  const { media } = props.reel;
+  if (media?.kind === "video") return <VideoSlide {...props} media={media} />;
+  if (media?.kind === "youtube") return <YouTubeSlide {...props} id={media.id} />;
+  return <TimedSlide {...props} />;
+}
+
+/** Keeps the latest callbacks for listeners and timers set up once. */
+function useLatest<T>(value: T) {
+  const ref = useRef(value);
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref;
+}
+
+function VideoSlide({
+  media,
   isPaused,
   isMuted,
   onProgress,
   onFinished,
-}: ReelSlideProps) {
+}: ReelSlideProps & { media: Extract<ReelMedia, { kind: "video" }> }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (isPaused) video.pause();
+    else video.play().catch(() => {});
+  }, [isPaused]);
+
+  return (
+    <video
+      ref={videoRef}
+      className="absolute inset-0 h-full w-full bg-black object-cover"
+      src={media.src}
+      poster={media.poster}
+      muted={isMuted}
+      autoPlay={!isPaused}
+      playsInline
+      preload="metadata"
+      onTimeUpdate={(e) => {
+        const v = e.currentTarget;
+        if (v.duration) onProgress(v.currentTime / v.duration);
+      }}
+      onEnded={onFinished}
+    >
+      {media.captions && (
+        <track kind="captions" src={media.captions} srcLang="en" label="English" default />
+      )}
+    </video>
+  );
+}
+
+const YOUTUBE_ORIGIN = "https://www.youtube-nocookie.com";
+
+/**
+ * A YouTube video, driven through the player's postMessage interface (no
+ * extra script): it pauses, mutes and reports progress like a video file.
+ * Tap handling stays with the reel, so YouTube's own controls are hidden.
+ */
+function YouTubeSlide({
+  id,
+  isPaused,
+  isMuted,
+  onProgress,
+  onFinished,
+}: ReelSlideProps & { id: string }) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const callbacks = useLatest({ onProgress, onFinished });
+  const finished = useRef(false);
+  // Read once on mount; the player needs to know which page is talking to it.
+  const [src] = useState(() => youtubeEmbedUrl(id, window.location.origin));
+
+  const command = (func: string) =>
+    frameRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: "command", func, args: [] }),
+      YOUTUBE_ORIGIN
+    );
+
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== YOUTUBE_ORIGIN || e.source !== frameRef.current?.contentWindow) return;
+      let data: { event?: string; info?: { currentTime?: number; duration?: number; playerState?: number } | number };
+      try {
+        data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+      } catch {
+        return;
+      }
+      const info = typeof data.info === "object" ? data.info : undefined;
+      if (info?.duration && typeof info.currentTime === "number") {
+        callbacks.current.onProgress(info.currentTime / info.duration);
+      }
+      // Player state 0 means the video ended.
+      const ended = info?.playerState === 0 || (data.event === "onStateChange" && data.info === 0);
+      if (ended && !finished.current) {
+        finished.current = true;
+        callbacks.current.onFinished();
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [callbacks]);
+
+  // Commands sent before the player is ready are ignored; onLoad resends them.
+  const sync = () => {
+    command(isPaused ? "pauseVideo" : "playVideo");
+    command(isMuted ? "mute" : "unMute");
+  };
+  useEffect(sync);
+
+  return (
+    <div className="absolute inset-0 bg-black">
+      {/* The thumbnail shows until the player paints over it. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail */}
+      <img src={thumbnailOf({ kind: "youtube", id })} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+      <iframe
+        ref={frameRef}
+        src={src}
+        title="YouTube video"
+        allow="autoplay; encrypted-media; picture-in-picture"
+        className="absolute left-1/2 top-1/2 aspect-video h-full w-auto max-w-none -translate-x-1/2 -translate-y-1/2 border-0"
+        onLoad={() => {
+          // Ask the player to start sending its state.
+          frameRef.current?.contentWindow?.postMessage(
+            JSON.stringify({ event: "listening", id: 1, channel: "widget" }),
+            YOUTUBE_ORIGIN
+          );
+          sync();
+        }}
+      />
+    </div>
+  );
+}
+
+/** A photo, or the "coming soon" card, shown for a few seconds like a story. */
+function TimedSlide({ reel, isPaused, onProgress, onFinished }: ReelSlideProps) {
   // Survives pausing, so resuming picks up where the timer stopped.
   const elapsed = useRef(0);
-  const callbacks = useRef({ onProgress, onFinished });
-  useEffect(() => {
-    callbacks.current = { onProgress, onFinished };
-  });
+  const callbacks = useLatest({ onProgress, onFinished });
 
-  // Text-only reels advance on a timer; video reels advance when the video ends.
   useEffect(() => {
-    if (reel.video || isPaused) return;
+    if (isPaused) return;
     const timer = setInterval(() => {
       elapsed.current += TICK;
       callbacks.current.onProgress(elapsed.current / TEXT_SLIDE_DURATION);
@@ -503,42 +858,12 @@ function ReelSlide({
       }
     }, TICK);
     return () => clearInterval(timer);
-  }, [reel.video, isPaused]);
+  }, [isPaused, callbacks]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (isPaused) video.pause();
-    else video.play().catch(() => {});
-  }, [isPaused]);
-
-  if (reel.video) {
+  if (reel.media?.kind === "image") {
     return (
-      <video
-        ref={videoRef}
-        className="absolute inset-0 h-full w-full bg-black object-cover"
-        src={reel.video.src}
-        poster={reel.video.poster}
-        muted={isMuted}
-        autoPlay={!isPaused}
-        playsInline
-        preload="metadata"
-        onTimeUpdate={(e) => {
-          const v = e.currentTarget;
-          if (v.duration) onProgress(v.currentTime / v.duration);
-        }}
-        onEnded={onFinished}
-      >
-        {reel.video.captions && (
-          <track
-            kind="captions"
-            src={reel.video.captions}
-            srcLang="en"
-            label="English"
-            default
-          />
-        )}
-      </video>
+      // eslint-disable-next-line @next/next/no-img-element -- any photo the business adds
+      <img src={reel.media.src} alt="" className="absolute inset-0 h-full w-full bg-black object-cover" />
     );
   }
 
@@ -546,13 +871,7 @@ function ReelSlide({
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-8 pb-48 text-center">
       <div className="short:hidden">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/10">
-          <svg
-            className="h-8 w-8 text-sky-accent"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
+          <svg className="h-8 w-8 text-sky-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

@@ -1,15 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { reelTotals } from "@/admin/sample-data";
+import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { sampleFor } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
-import {
-  defaultFunnel,
-  getReel,
-  reels,
-  type Funnel,
-  type FunnelTrigger,
-} from "@/data/reels";
+import { funnelReel, type Funnel, type FunnelTrigger } from "@/data/reels";
 
 const END = "__end__";
 const NODE_W = 200;
@@ -20,7 +15,7 @@ const PAD = 24;
 // Extra room on the left for the "skipped" arcs between entry reels.
 const PAD_LEFT = 64;
 
-const WATCHED = "#28719A"; // brand blue: UI wiring, not data
+const WATCHED = "var(--teal-accent)"; // the brand's accent: UI wiring, not data
 const SKIPPED = "#9a9993";
 
 type Links = Funnel["links"];
@@ -28,16 +23,16 @@ type NodePos = { id: string; x: number; y: number };
 
 // Columns follow the "watched" path: entry reels on the left, each watched
 // step one column to the right, and the consultation card at the end.
-function layout(links: Links) {
-  const ids = reels.map((r) => r.id);
-  const depth = new Map<string, number>(defaultFunnel.entryReelIds.map((id) => [id, 0]));
+function layout(funnel: Funnel, links: Links) {
+  const ids = funnel.reels.map((r) => r.id);
+  const depth = new Map<string, number>(funnel.entryReelIds.map((id) => [id, 0]));
   // Longest-path relaxation, capped so a loop can't run forever.
   for (let pass = 0; pass < ids.length; pass++) {
     let changed = false;
     for (const id of ids) {
       const d = depth.get(id);
       const next = links[id]?.completed;
-      if (d === undefined || !next || defaultFunnel.entryReelIds.includes(next)) continue;
+      if (d === undefined || !next || funnel.entryReelIds.includes(next)) continue;
       const nd = Math.min(d + 1, ids.length);
       if ((depth.get(next) ?? -1) < nd) {
         depth.set(next, nd);
@@ -49,7 +44,7 @@ function layout(links: Links) {
   for (const id of ids) if (!depth.has(id)) depth.set(id, 1);
 
   const columns: string[][] = [];
-  for (const id of [...defaultFunnel.entryReelIds, ...ids.filter((i) => !defaultFunnel.entryReelIds.includes(i))]) {
+  for (const id of [...funnel.entryReelIds, ...ids.filter((i) => !funnel.entryReelIds.includes(i))]) {
     const c = depth.get(id)!;
     (columns[c] ??= []).push(id);
   }
@@ -89,13 +84,20 @@ function edgePath(a: NodePos, b: NodePos) {
 }
 
 export default function FunnelMap() {
-  const [links, setLinks] = useState<Links>(defaultFunnel.links);
-  const [selected, setSelected] = useState<string | null>(defaultFunnel.entryReelIds[0]);
-  const stats = useMemo(() => new Map(reelTotals(30).map((t) => [t.reel.id, t])), []);
-  const { pos, width, height } = useMemo(() => layout(links), [links]);
-  const edited = JSON.stringify(links) !== JSON.stringify(defaultFunnel.links);
+  const business = useAdminBusiness();
+  const { funnel } = business;
+  const getReel = (id: string) => funnelReel(funnel, id);
+  const [links, setLinks] = useState<Links>(funnel.links);
+  const [selected, setSelected] = useState<string | null>(funnel.entryReelIds[0]);
+  const stats = useMemo(
+    () => new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t])),
+    [business]
+  );
+  const { pos, width, height } = useMemo(() => layout(funnel, links), [funnel, links]);
+  const edited = JSON.stringify(links) !== JSON.stringify(funnel.links);
+  const endCard = `\u201c${funnel.brand.copy.endHeading}\u201d card`;
 
-  const edges = reels.flatMap((r) =>
+  const edges = funnel.reels.flatMap((r) =>
     (["completed", "skipped"] as FunnelTrigger[]).map((trigger) => ({
       from: r.id,
       to: links[r.id]?.[trigger] ?? END,
@@ -118,7 +120,7 @@ export default function FunnelMap() {
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Funnel map</h1>
           <p className="text-sm text-gray-600">
-            Funnel <code className="rounded bg-white px-1">{defaultFunnel.id}</code>. Click a reel to see
+            Funnel <code className="rounded bg-white px-1">{funnel.id}</code>. Click a reel to see
             its numbers and change where it leads.
           </p>
         </div>
@@ -174,14 +176,14 @@ export default function FunnelMap() {
                     style={{ left: p.x, top: p.y, width: NODE_W, height: NODE_H }}
                   >
                     <p className="text-[11px] font-bold uppercase tracking-wider text-teal-accent">End of funnel</p>
-                    <p className="text-sm font-semibold text-deep-navy">&ldquo;Talk to an attorney&rdquo; card</p>
-                    <p className="text-xs text-gray-600">Offers a free case evaluation</p>
+                    <p className="text-sm font-semibold text-deep-navy">{endCard}</p>
+                    <p className="text-xs text-gray-600">Offers &ldquo;{funnel.brand.copy.bookPrimary}&rdquo;</p>
                   </div>
                 );
               }
               const reel = getReel(p.id)!;
               const s = stats.get(p.id);
-              const isEntry = defaultFunnel.entryReelIds.includes(p.id);
+              const isEntry = funnel.entryReelIds.includes(p.id);
               const active = selected === p.id;
               return (
                 <button
@@ -255,8 +257,8 @@ export default function FunnelMap() {
                     value={links[sel.id]?.[trigger] ?? END}
                     onChange={(e) => setLink(sel.id, trigger, e.target.value)}
                   >
-                    <option value={END}>End: &ldquo;Talk to an attorney&rdquo; card</option>
-                    {reels.filter((r) => r.id !== sel.id).map((r) => (
+                    <option value={END}>End: {endCard}</option>
+                    {funnel.reels.filter((r) => r.id !== sel.id).map((r) => (
                       <option key={r.id} value={r.id}>{r.title}</option>
                     ))}
                   </select>
@@ -275,7 +277,7 @@ export default function FunnelMap() {
                 {edited && (
                   <button
                     type="button"
-                    onClick={() => setLinks(defaultFunnel.links)}
+                    onClick={() => setLinks(funnel.links)}
                     className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
                   >
                     Reset to live paths
@@ -306,7 +308,7 @@ export default function FunnelMap() {
               </tr>
             </thead>
             <tbody>
-              {reels.map((r) => (
+              {funnel.reels.map((r) => (
                 <tr key={r.id} className="border-b border-gray-100">
                   <td className="py-2.5 pr-4 font-medium text-deep-navy">{r.title}</td>
                   {(["completed", "skipped"] as FunnelTrigger[]).map((t) => {

@@ -8,14 +8,19 @@ export type Reel = {
   title: string;
   summary: string;
   duration?: string;
-  /** Self-hosted video, e.g. { src: "/reels/car-accident.mp4", poster: "/reels/car-accident.jpg", captions: "/reels/car-accident.vtt" }. */
-  video?: {
-    src: string;
-    poster?: string;
-    /** WebVTT captions file. */
-    captions?: string;
-  };
+  /** A short chip beside the topic, e.g. a starting price ("From $12/unit"). */
+  badge?: string;
+  /** What plays: a video file, a YouTube video, or a photo. Without it, the reel shows "Video coming soon". */
+  media?: ReelMedia;
 };
+
+export type ReelMedia =
+  /** A video file, e.g. { src: "/reels/car-accident.mp4", poster: "/reels/car-accident.jpg", captions: "/reels/car-accident.vtt" }. */
+  | { kind: "video"; src: string; poster?: string; captions?: string }
+  /** A YouTube video or Short, by its 11-character id. */
+  | { kind: "youtube"; id: string }
+  /** A photo, shown for a few seconds like a story. */
+  | { kind: "image"; src: string };
 
 export type FunnelTrigger = "completed" | "skipped";
 

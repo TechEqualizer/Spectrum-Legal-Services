@@ -1,23 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { sampleCampaigns, type DripCampaign, type DripStep } from "@/admin/sample-data";
+import { useAdminBusiness } from "@/admin/AdminBusiness";
+import type { DripCampaign, DripStep } from "@/admin/business";
 import { formatPercent } from "@/admin/viz";
-import { JlfLogo } from "@/components/Brand";
-import { getReel, reels } from "@/data/reels";
-import { site } from "@/config/site";
-
-const triggers = [
-  "New lead with case type Car Accident",
-  "New lead with case type Motorcycle Accident",
-  "New lead with case type Truck Accident",
-  "New lead with case type Uber / Lyft Accident",
-  "Visitor finished a video, left an email, but didn't book within 2 days",
-];
+import BrandLogo from "@/components/BrandLogo";
+import { funnelReel } from "@/data/reels";
 
 let nextId = 100;
 
 export default function Campaigns() {
+  const business = useAdminBusiness();
+  const { funnel, email } = business;
+  const { reels } = funnel;
+  const getReel = (id: string) => funnelReel(funnel, id);
+  const triggers = business.campaignTriggers;
+  const sampleCampaigns = business.campaigns;
   const [campaigns, setCampaigns] = useState<DripCampaign[]>(sampleCampaigns);
   const [openId, setOpenId] = useState(sampleCampaigns[0].id);
   const [previewStepId, setPreviewStepId] = useState(sampleCampaigns[0].steps[0].id);
@@ -36,7 +34,7 @@ export default function Campaigns() {
       id: `new-${nextId++}`,
       delayDays: (last?.delayDays ?? 0) + 3,
       reelId: reels[0].id,
-      subject: "A short video from Attorney Jeff",
+      subject: email.defaultSubject,
     };
     update({ steps: [...campaign.steps, step] });
     setPreviewStepId(step.id);
@@ -54,7 +52,7 @@ export default function Campaigns() {
       name: "Untitled campaign",
       trigger: triggers[0],
       active: false,
-      steps: [{ id: `new-${nextId++}`, delayDays: 0, reelId: reels[0].id, subject: "A short video from Attorney Jeff" }],
+      steps: [{ id: `new-${nextId++}`, delayDays: 0, reelId: reels[0].id, subject: email.defaultSubject }],
       stats: { enrolled: 0, opened: 0, watched: 0, booked: 0 },
     };
     setCampaigns((list) => [...list, c]);
@@ -234,15 +232,15 @@ export default function Campaigns() {
               {previewStep && previewReel && (
                 <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                   <div className="border-b border-gray-100 px-4 py-3 text-xs text-gray-600">
-                    <p><span className="font-semibold text-gray-800">From:</span> Attorney Jeff, {site.name}</p>
+                    <p><span className="font-semibold text-gray-800">From:</span> {email.from}</p>
                     <p className="truncate"><span className="font-semibold text-gray-800">Subject:</span> {previewStep.subject}</p>
                   </div>
                   <div className="bg-deep-navy px-4 py-3">
-                    <JlfLogo className="h-9 w-auto" />
+                    <BrandLogo brand={funnel.brand} size="sm" />
                   </div>
                   <div className="space-y-3 p-4 text-sm text-charcoal">
                     <p>Hi there,</p>
-                    <p>Here&apos;s a short video that answers a question we hear a lot.</p>
+                    <p>{email.intro}</p>
                     <div className="relative flex aspect-video items-end overflow-hidden rounded-lg bg-gradient-to-br from-royal-blue to-deep-navy p-3">
                       <span className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/25" aria-hidden="true">
                         <svg className="ml-0.5 h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z" /></svg>
@@ -251,10 +249,10 @@ export default function Campaigns() {
                     </div>
                     <p className="text-xs text-gray-600">{previewReel.summary}</p>
                     <span className="block rounded-md bg-teal-accent px-4 py-2.5 text-center text-sm font-bold text-white">
-                      Book your free case evaluation
+                      {email.cta}
                     </span>
                     <p className="text-[11px] leading-snug text-gray-500">
-                      Attorney Advertising. General information, not legal advice. You&apos;re getting this because you asked {site.name} about your case. Unsubscribe anytime.
+                      {email.footer}
                     </p>
                   </div>
                 </div>

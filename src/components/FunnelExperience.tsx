@@ -1,9 +1,8 @@
 "use client";
 
-import { Cormorant_Garamond } from "next/font/google";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import ReelViewer from "@/components/ReelViewer";
 import { site } from "@/config/site";
 import type { Funnel } from "@/data/funnel-types";
@@ -11,8 +10,6 @@ import { getFunnelBySlug } from "@/data/funnels";
 import { funnelReel } from "@/data/reels";
 import { trackReelEvent } from "@/lib/reel-tracking";
 
-// For text wordmarks (businesses without a logo image).
-const wordmarkFont = Cormorant_Garamond({ subsets: ["latin"], weight: ["600"], display: "swap" });
 
 /**
  * The shareable funnel link. It opens on a "What happened?" screen; each
@@ -121,28 +118,7 @@ function FunnelCover({ funnel, children }: { funnel: Funnel; children?: React.Re
       )}
       <div className="mx-auto flex max-w-md flex-col px-5 pb-10 pt-6">
         <div className="flex items-center justify-between gap-4">
-          {brand.logo.kind === "image" ? (
-            <Image
-              src={brand.logo.src}
-              alt={brand.logo.alt}
-              width={brand.logo.width}
-              height={brand.logo.height}
-              loading="eager"
-              fetchPriority="high"
-              className="h-12 w-auto"
-            />
-          ) : (
-            <p className="leading-none">
-              <span className={`${wordmarkFont.className} block text-4xl text-white`}>
-                {brand.logo.text}
-              </span>
-              {brand.logo.tagline && (
-                <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.3em] text-sky-accent">
-                  {brand.logo.tagline}
-                </span>
-              )}
-            </p>
-          )}
+          <BrandLogo brand={brand} eager />
           {brand.byline && (
             <p className="text-right text-xs leading-snug text-gray-300">
               {brand.byline[0]}

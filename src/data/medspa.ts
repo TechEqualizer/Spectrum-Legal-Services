@@ -2,7 +2,8 @@
 // businesses. Aurelia Med Spa is made up: the funnel is always labeled as a
 // sample, is never indexed, and its forms and tracking send nothing.
 //
-// The phone number is in the 555-01xx range reserved for fiction. Reel
+// The phone number is in the 555-01xx range reserved for fiction, and the
+// prices on the reels are made up too. Reel
 // titles and summaries are placeholders written to avoid outcome promises;
 // a real clinic's medical director should review its own scripts.
 
@@ -71,6 +72,7 @@ const brand: FunnelBrand = {
 const reels: Reel[] = [
   {
     id: "ms-wrinkle-relaxers-first-time",
+    badge: "From $12/unit",
     practiceArea: "Wrinkle Relaxers",
     title: "First time trying Botox? What the visit is like",
     summary:
@@ -78,6 +80,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-natural-results",
+    badge: "From $12/unit",
     practiceArea: "Wrinkle Relaxers",
     title: "Will I look frozen? How we keep it natural",
     summary:
@@ -85,6 +88,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-lip-filler",
+    badge: "From $650",
     practiceArea: "Lip Filler",
     title: "Lip filler that still looks like you",
     summary:
@@ -92,6 +96,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-filler-aftercare",
+    badge: "Aftercare",
     practiceArea: "Lip Filler",
     title: "Swelling, bruising and aftercare: the honest version",
     summary:
@@ -99,6 +104,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-glow-facial",
+    badge: "$185",
     practiceArea: "Facials",
     title: "The facial people book before big events",
     summary:
@@ -106,6 +112,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-microneedling",
+    badge: "$350/session",
     practiceArea: "Microneedling",
     title: "Microneedling for acne scars: what to expect",
     summary:
@@ -113,6 +120,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-laser-hair",
+    badge: "Packages",
     practiceArea: "Laser Hair Removal",
     title: "Laser hair removal: why it takes several sessions",
     summary:
@@ -120,6 +128,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-pricing",
+    badge: "Free consult",
     practiceArea: "Consultation",
     title: "How pricing works, with no surprises",
     summary:
@@ -127,6 +136,7 @@ const reels: Reel[] = [
   },
   {
     id: "ms-consultation",
+    badge: "Free",
     practiceArea: "Consultation",
     title: "What happens at your free consultation",
     summary:

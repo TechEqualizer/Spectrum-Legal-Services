@@ -1,37 +1,45 @@
 "use client";
 
 import { useState } from "react";
-import { sampleCampaigns, sampleLeads, type LeadStatus } from "@/admin/sample-data";
+import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { leadStatuses, sampleFor } from "@/admin/sample-data";
 import { FIRM_TIME_ZONE } from "@/admin/viz";
-import { getReel } from "@/data/reels";
+import { funnelReel } from "@/data/reels";
 import { sourceLabel } from "@/lib/source-tag";
 
-const statusStyle: Record<LeadStatus, string> = {
-  New: "bg-sky-accent/20 text-deep-navy",
-  Contacted: "bg-gray-100 text-gray-800",
-  "Consultation booked": "bg-amber-50 text-amber-900",
-  Signed: "bg-green-50 text-green-800",
-};
+// By position in the business's status list; the last one is a win.
+const statusStyles = [
+  "bg-sky-accent/20 text-deep-navy",
+  "bg-gray-100 text-gray-800",
+  "bg-amber-50 text-amber-900",
+  "bg-green-50 text-green-800",
+];
 
 const formatWhen = (d: Date) =>
   d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: FIRM_TIME_ZONE });
 
 export default function Leads() {
+  const business = useAdminBusiness();
+  const { funnel } = business;
+  const sampleLeads = sampleFor(business).leads;
+  const statuses = leadStatuses(business);
+  const statusStyle = (status: string) => statusStyles[statuses.indexOf(status)] ?? statusStyles[1];
+  const getReel = (id: string) => funnelReel(funnel, id);
   const [openId, setOpenId] = useState<string | null>(sampleLeads[0].id);
-  const [filter, setFilter] = useState<"All" | LeadStatus>("All");
+  const [filter, setFilter] = useState("All");
   const visible = sampleLeads.filter((l) => filter === "All" || l.status === filter);
   const lead = sampleLeads.find((l) => l.id === openId);
-  const campaign = lead?.campaignId ? sampleCampaigns.find((c) => c.id === lead.campaignId) : undefined;
+  const campaign = lead?.campaignId ? business.campaigns.find((c) => c.id === lead.campaignId) : undefined;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Leads</h1>
-          <p className="text-sm text-gray-600">Case evaluation requests, with the videos each person watched first.</p>
+          <p className="text-sm text-gray-600">{business.terms.leadsIntro}</p>
         </div>
         <div className="flex flex-wrap rounded-md border border-gray-300 bg-white p-1" role="group" aria-label="Filter by status">
-          {(["All", "New", "Contacted", "Consultation booked", "Signed"] as const).map((s) => (
+          {["All", ...statuses].map((s) => (
             <button
               key={s}
               type="button"
@@ -52,7 +60,7 @@ export default function Leads() {
               <tr>
                 <th className="px-4 py-3 font-semibold">Lead</th>
                 <th className="px-4 py-3 font-semibold">Received</th>
-                <th className="px-4 py-3 font-semibold">Case type</th>
+                <th className="px-4 py-3 font-semibold">{business.terms.topic}</th>
                 <th className="px-4 py-3 font-semibold">Came from</th>
                 <th className="px-4 py-3 text-right font-semibold">Videos</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
@@ -78,7 +86,7 @@ export default function Leads() {
                   </td>
                   <td className="px-4 py-3 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>{l.watchedReelIds.length}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${statusStyle[l.status]}`}>{l.status}</span>
+                    <span className={`inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${statusStyle(l.status)}`}>{l.status}</span>
                   </td>
                 </tr>
               ))}
@@ -121,7 +129,7 @@ export default function Leads() {
                   <li className="relative">
                     <span className="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-deep-navy ring-4 ring-white" aria-hidden="true" />
                     <p className="text-sm font-medium text-deep-navy">
-                      {lead.source === "Text me later" ? "Asked to be texted the next video" : "Requested a case evaluation"}
+                      {lead.source === "Text me later" ? "Asked to be texted the next video" : "Requested a consultation"}
                     </p>
                     <p className="text-xs text-gray-600">
                       {lead.referringReelId ? `From "${getReel(lead.referringReelId)?.title}"` : "From the hero form"}
@@ -137,7 +145,7 @@ export default function Leads() {
                     Enrolled in <strong>{campaign.name}</strong> ({campaign.steps.length} emails). Stops when they book.
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-600">Not in a campaign. Campaigns start from their trigger, e.g. a new car accident lead.</p>
+                  <p className="text-sm text-gray-600">Not in a campaign. Campaigns start from their trigger, e.g. {business.campaigns[0]?.trigger.toLowerCase()}.</p>
                 )}
               </div>
             </div>

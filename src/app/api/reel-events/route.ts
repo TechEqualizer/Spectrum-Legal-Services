@@ -13,6 +13,7 @@ const EVENTS: ReelEvent[] = [
   "call_clicked",
   "text_later_clicked",
   "shared",
+  "liked",
 ];
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

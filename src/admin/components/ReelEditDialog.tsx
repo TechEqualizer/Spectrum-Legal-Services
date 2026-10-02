@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import MediaPicker from "@/admin/components/MediaPicker";
 import {
   CTA_LABELS,
-  isMediaUrl,
   type EditorFunnel,
   type EditorReel,
   type PathTarget,
   type ReelCta,
 } from "@/admin/editor-model";
+import type { ReelMedia } from "@/data/funnel-types";
 import type { FunnelTrigger } from "@/data/reels";
-import { CASE_TYPES } from "@/lib/leads";
 
 export type ReelEditResult = {
   reel: EditorReel;
@@ -24,6 +24,9 @@ type ReelEditDialogProps = {
   reel: EditorReel;
   funnel: EditorFunnel;
   library: EditorReel[];
+  /** What a reel can be about, and what to call that. */
+  services: readonly string[];
+  topicLabel: string;
   onSave: (result: ReelEditResult) => void;
   onClose: () => void;
 };
@@ -33,7 +36,7 @@ const TRIGGERS: { id: FunnelTrigger; label: string }[] = [
   { id: "skipped", label: "When skipped" },
 ];
 
-export default function ReelEditDialog({ reel, funnel, library, onSave, onClose }: ReelEditDialogProps) {
+export default function ReelEditDialog({ reel, funnel, library, services, topicLabel, onSave, onClose }: ReelEditDialogProps) {
   const id = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const isNew = reel.id === "";
@@ -41,15 +44,12 @@ export default function ReelEditDialog({ reel, funnel, library, onSave, onClose 
     title: reel.title,
     summary: reel.summary,
     practiceArea: reel.practiceArea,
-    video: reel.video?.src ?? "",
-    poster: reel.video?.poster ?? "",
-    captions: reel.video?.captions ?? "",
     cta: reel.cta,
   });
+  const [media, setMedia] = useState<ReelMedia | undefined>(reel.media);
   const [paths, setPaths] = useState(funnel.paths[reel.id] ?? {});
   const [isTopic, setIsTopic] = useState(reel.id in funnel.topics);
   const [topic, setTopic] = useState(funnel.topics[reel.id] ?? reel.practiceArea);
-  const [posterBroken, setPosterBroken] = useState(false);
   const [error, setError] = useState("");
 
   // Opened as a modal dialog: the browser traps focus and closes it on Escape.
@@ -68,16 +68,6 @@ export default function ReelEditDialog({ reel, funnel, library, onSave, onClose 
   const save = (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.title.trim()) return setError("Give the reel a title.");
-    for (const [label, value] of [
-      ["Video", draft.video],
-      ["Cover image", draft.poster],
-      ["Captions", draft.captions],
-    ]) {
-      if (value && !isMediaUrl(value.trim())) {
-        return setError(`${label} link must start with https:// or /.`);
-      }
-    }
-    const video = draft.video.trim();
     onSave({
       reel: {
         id: reel.id,
@@ -85,13 +75,7 @@ export default function ReelEditDialog({ reel, funnel, library, onSave, onClose 
         summary: draft.summary.trim(),
         practiceArea: draft.practiceArea,
         cta: draft.cta,
-        video: video
-          ? {
-              src: video,
-              poster: draft.poster.trim() || undefined,
-              captions: draft.captions.trim() || undefined,
-            }
-          : undefined,
+        media,
       },
       paths,
       topic: isTopic ? topic.trim() || draft.practiceArea : undefined,
@@ -131,9 +115,9 @@ export default function ReelEditDialog({ reel, funnel, library, onSave, onClose 
               <input className="form-input text-sm" required maxLength={120} value={draft.title} onChange={(e) => set({ title: e.target.value })} />
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-deep-navy">Case type</span>
+              <span className="mb-1 block text-sm font-semibold text-deep-navy">{topicLabel}</span>
               <select className="form-input text-sm" value={draft.practiceArea} onChange={(e) => set({ practiceArea: e.target.value })}>
-                {CASE_TYPES.map((t) => <option key={t}>{t}</option>)}
+                {services.map((t) => <option key={t}>{t}</option>)}
               </select>
             </label>
           </div>
@@ -141,39 +125,7 @@ export default function ReelEditDialog({ reel, funnel, library, onSave, onClose 
             <span className="mb-1 block text-sm font-semibold text-deep-navy">Summary</span>
             <textarea className="form-input min-h-20 text-sm" maxLength={300} value={draft.summary} onChange={(e) => set({ summary: e.target.value })} />
           </label>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-deep-navy">Video file</span>
-              <input className="form-input text-sm" inputMode="url" placeholder="/reels/car-accident.mp4" value={draft.video} onChange={(e) => set({ video: e.target.value })} />
-              <span className="mt-1 block text-xs text-gray-600">Vertical MP4. Without one, the reel shows &ldquo;Video coming soon&rdquo;.</span>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-deep-navy">Captions <span className="font-normal text-gray-500">(WebVTT)</span></span>
-              <input className="form-input text-sm" inputMode="url" placeholder="/reels/car-accident.vtt" value={draft.captions} onChange={(e) => set({ captions: e.target.value })} />
-            </label>
-          </div>
-          <div className="flex gap-4">
-            <div className="h-24 w-16 flex-shrink-0 overflow-hidden rounded-md bg-deep-navy">
-              {draft.poster && !posterBroken && (
-                // eslint-disable-next-line @next/next/no-img-element -- previews any link the admin pastes
-                <img src={draft.poster} alt="" className="h-full w-full object-cover" onError={() => setPosterBroken(true)} />
-              )}
-            </div>
-            <label className="block min-w-0 flex-1">
-              <span className="mb-1 block text-sm font-semibold text-deep-navy">Cover image</span>
-              <input
-                className="form-input text-sm"
-                inputMode="url"
-                placeholder="/reels/car-accident.jpg"
-                value={draft.poster}
-                onChange={(e) => { set({ poster: e.target.value }); setPosterBroken(false); }}
-                aria-describedby={`${id}-poster-help`}
-              />
-              <span id={`${id}-poster-help`} className={`mt-1 block text-xs ${posterBroken ? "font-semibold text-red-700" : "text-gray-600"}`}>
-                {posterBroken ? "This image didn't load. Check the link." : "Shown before the video plays and on its tile."}
-              </span>
-            </label>
-          </div>
+          <MediaPicker value={media} onChange={setMedia} />
           <label className="block md:w-1/2">
             <span className="mb-1 block text-sm font-semibold text-deep-navy">Main button</span>
             <select className="form-input text-sm" value={draft.cta} onChange={(e) => set({ cta: e.target.value as ReelCta })}>
