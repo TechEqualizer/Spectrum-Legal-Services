@@ -29,7 +29,6 @@ export default function Leads() {
   const [filter, setFilter] = useState("All");
   const visible = sampleLeads.filter((l) => filter === "All" || l.status === filter);
   const lead = sampleLeads.find((l) => l.id === openId);
-  const campaign = lead?.campaignId ? business.campaigns.find((c) => c.id === lead.campaignId) : undefined;
 
   return (
     <div className="space-y-6">
@@ -138,16 +137,6 @@ export default function Leads() {
                 </ol>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
-                <h2 className="mb-1 text-sm font-bold text-deep-navy">Drip campaign</h2>
-                {campaign ? (
-                  <p className="text-sm text-gray-700">
-                    Enrolled in <strong>{campaign.name}</strong> ({campaign.steps.length} emails). Stops when they book.
-                  </p>
-                ) : (
-                  <p className="text-sm text-gray-600">Not in a campaign. Campaigns start from their trigger, e.g. {business.campaigns[0]?.trigger.toLowerCase()}.</p>
-                )}
-              </div>
             </div>
           ) : (
             <p className="text-sm text-gray-600">Select a lead to see its video journey.</p>

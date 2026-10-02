@@ -159,12 +159,10 @@ from the public site and is marked `noindex`.
 - **Funnel map**: the live paths from `src/data/reels.ts` as a diagram.
   Selecting a reel shows its numbers; changing where it leads redraws the map
   (preview only).
-- **Drip campaigns**: email sequences that each feature a reel, with a
-  trigger, send days, subject lines, and an email preview.
 - **Leads**: sample leads with the videos each one watched before booking.
 
 Next steps to make it real: an admin login (Supabase Auth), reading the
-tables with the secret key on the server, storing funnels and campaigns in
+tables with the secret key on the server, storing funnels in
 Supabase, and sending email through Resend.
 
 ## Database (Supabase)
