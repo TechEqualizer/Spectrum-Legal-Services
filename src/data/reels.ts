@@ -36,6 +36,7 @@ export const reels: Reel[] = [
   },
   {
     id: "car-accident-recorded-statement",
+    emphasis: "quiet",
     practiceArea: "Car Accident",
     title: "Should you give the insurer a recorded statement?",
     summary:
@@ -43,6 +44,7 @@ export const reels: Reel[] = [
   },
   {
     id: "injury-claim-deadlines",
+    emphasis: "bold",
     practiceArea: "Car Accident",
     title: "How long you have to file in California",
     summary:

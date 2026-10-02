@@ -9,7 +9,7 @@ import {
   type PathTarget,
   type ReelCta,
 } from "@/admin/editor-model";
-import type { ReelMedia } from "@/data/funnel-types";
+import type { ReelEmphasis, ReelMedia } from "@/data/funnel-types";
 import type { FunnelTrigger } from "@/data/reels";
 
 export type ReelEditResult = {
@@ -31,6 +31,12 @@ type ReelEditDialogProps = {
   onClose: () => void;
 };
 
+export const EMPHASIS_LABELS: Record<ReelEmphasis, { label: string; help: string }> = {
+  builds: { label: "Builds up (default)", help: "Book starts quiet and fills with your color partway through." },
+  quiet: { label: "Quiet", help: "For teaching reels: no Book pill, and the rail stays plain." },
+  bold: { label: "Bold", help: "For pricing or consultation reels: highlighted from the start." },
+};
+
 const TRIGGERS: { id: FunnelTrigger; label: string }[] = [
   { id: "completed", label: "When watched to the end" },
   { id: "skipped", label: "When skipped" },
@@ -45,6 +51,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
     summary: reel.summary,
     practiceArea: reel.practiceArea,
     cta: reel.cta,
+    emphasis: reel.emphasis ?? "builds",
   });
   const [media, setMedia] = useState<ReelMedia | undefined>(reel.media);
   const [paths, setPaths] = useState(funnel.paths[reel.id] ?? {});
@@ -75,6 +82,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
         summary: draft.summary.trim(),
         practiceArea: draft.practiceArea,
         cta: draft.cta,
+        emphasis: draft.emphasis === "builds" ? undefined : draft.emphasis,
         media,
       },
       paths,
@@ -126,7 +134,8 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
             <textarea className="form-input min-h-20 text-sm" maxLength={300} value={draft.summary} onChange={(e) => set({ summary: e.target.value })} />
           </label>
           <MediaPicker value={media} onChange={setMedia} />
-          <label className="block md:w-1/2">
+          <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
             <span className="mb-1 block text-sm font-semibold text-deep-navy">Main button</span>
             <select className="form-input text-sm" value={draft.cta} onChange={(e) => set({ cta: e.target.value as ReelCta })}>
               {(Object.keys(CTA_LABELS) as ReelCta[]).map((c) => (
@@ -136,6 +145,23 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
               ))}
             </select>
           </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-deep-navy">Selling</span>
+            <select
+              className="form-input text-sm"
+              value={draft.emphasis}
+              onChange={(e) => set({ emphasis: e.target.value as ReelEmphasis })}
+              aria-describedby={`${id}-emphasis-help`}
+            >
+              {(Object.keys(EMPHASIS_LABELS) as ReelEmphasis[]).map((e) => (
+                <option key={e} value={e}>{EMPHASIS_LABELS[e].label}</option>
+              ))}
+            </select>
+            <span id={`${id}-emphasis-help`} className="mt-1 block text-xs text-gray-600">
+              {EMPHASIS_LABELS[draft.emphasis].help}
+            </span>
+          </label>
+          </div>
         </fieldset>
 
         {/* Funnel-specific: paths and topic choice */}

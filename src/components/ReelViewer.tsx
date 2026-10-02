@@ -27,6 +27,9 @@ type ReelViewerProps = {
   onClose: () => void;
 };
 
+// How far through a "builds" reel the main action fills with the brand color.
+const CTA_REVEAL_AT = 0.6;
+
 // Two taps closer together than this count as a double-tap.
 const DOUBLE_TAP_MS = 260;
 
@@ -241,6 +244,13 @@ export default function ReelViewer({
       ? Math.min(progress.fraction, 1) * 100
       : 0;
 
+  // How visible the main action is. It starts quiet and fills with the
+  // brand color partway through the reel ("builds"), stays quiet on teaching
+  // reels ("quiet"), or is highlighted from the start ("bold").
+  const emphasis = reel.emphasis ?? "builds";
+  const watched = progress.step === step ? progress.fraction : 0;
+  const ctaRevealed = emphasis === "bold" || (emphasis === "builds" && watched >= CTA_REVEAL_AT);
+
   // The action rail: over the video on phones, beside it on desktop.
   const renderRail = (placement: "overlay" | "side") => (
     <div
@@ -257,7 +267,7 @@ export default function ReelViewer({
       </RailButton>
       {funnel.primaryCta === "book" ? (
         <>
-          <RailButton placement={placement} label="Book" highlight onClick={ctas.onBook}>
+          <RailButton placement={placement} label="Book" primary highlight={ctaRevealed} onClick={ctas.onBook}>
             <path d={CALENDAR} />
           </RailButton>
           <RailButton placement={placement} label="Call" href={brand.phone.href} onClick={ctas.onCall}>
@@ -266,7 +276,7 @@ export default function ReelViewer({
         </>
       ) : (
         <>
-          <RailButton placement={placement} label="Call" highlight href={brand.phone.href} onClick={ctas.onCall}>
+          <RailButton placement={placement} label="Call" primary highlight={ctaRevealed} href={brand.phone.href} onClick={ctas.onCall}>
             <path d={PHONE} />
           </RailButton>
           <RailButton placement={placement} label="Call back" onClick={ctas.onBook}>
@@ -402,7 +412,9 @@ export default function ReelViewer({
                     <span className="min-w-0 truncate text-[15px] font-semibold text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
                       {brand.handle ?? brand.name}
                     </span>
-                    <ChannelPill brand={brand} primary={funnel.primaryCta} {...ctas} />
+                    {emphasis !== "quiet" && (
+                      <ChannelPill brand={brand} primary={funnel.primaryCta} revealed={ctaRevealed} {...ctas} />
+                    )}
                   </div>
                   <button
                     type="button"
@@ -627,11 +639,14 @@ function RailButton({
   highlight = false,
   pressed,
   placement = "overlay",
+  primary = false,
 }: {
   label: string;
   children: React.ReactNode;
   onClick: () => void;
   href?: string;
+  /** The main action's slot: it keeps one size so filling it in doesn't move the rail. */
+  primary?: boolean;
   highlight?: boolean;
   pressed?: boolean;
   placement?: "overlay" | "side";
@@ -645,12 +660,13 @@ function RailButton({
   const inner = (
     <>
       <span
-        className={`flex items-center justify-center transition-transform active:scale-90 ${
-          side || highlight ? "h-12 w-12" : "h-9 w-9"
+        className={`flex items-center justify-center transition-[transform,background-color,box-shadow] duration-700 active:scale-90 ${
+          side || primary ? "h-12 w-12" : "h-9 w-9"
         } short:h-9 short:w-9 ${circle} ${pressed ? "text-rose-500" : ""}`}
       >
         <svg
           className={side || highlight ? "h-6 w-6" : "h-7 w-7 short:h-6 short:w-6"}
+          style={{ transition: "width 0.7s, height 0.7s" }}
           fill="none"
           stroke="currentColor"
           strokeWidth={side || highlight ? 2 : 1.75}
@@ -687,11 +703,14 @@ function RailButton({
 function ChannelPill({
   brand,
   primary,
+  revealed,
   onCall,
   onBook,
-}: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"] }) {
-  const className =
-    "flex h-7 flex-shrink-0 items-center rounded-full bg-teal-accent px-3 text-sm font-semibold text-white transition-all hover:brightness-110";
+}: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"]; revealed: boolean }) {
+  // Quiet at first (an outline), then filled with the brand color.
+  const className = `flex h-7 flex-shrink-0 items-center rounded-full px-3 text-sm font-semibold text-white transition-colors duration-700 hover:brightness-110 ${
+    revealed ? "bg-teal-accent" : "bg-white/15 ring-1 ring-inset ring-white/40"
+  }`;
   return primary === "call" ? (
     <a
       href={brand.phone.href}

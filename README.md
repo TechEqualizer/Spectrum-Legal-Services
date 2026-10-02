@@ -120,6 +120,13 @@ each reel decides which one comes next.
   the video is a 9:16 card with the rail beside it as round buttons, as
   on YouTube's site. It pads for phone safe areas (notch, home bar). The rail shows labels,
   not counts: there are no made-up like or comment numbers.
+- **How hard a reel sells** (`emphasis`): by default the main action
+  *builds up*: Book (or Call) starts quiet, an outline on the pill and a
+  plain icon on the rail, and fills with the brand color 60% of the way
+  through, like the call-to-action strip on a sponsored reel. `"quiet"`
+  hides the pill and keeps the rail plain for teaching reels; `"bold"`
+  highlights it from the start for pricing or consultation reels. The end
+  card always shows it. Set per reel in the admin's Edit reel ("Selling").
 - **Events** (`viewed`, `completed`, `skipped`, `exited`, `cta_clicked` for
   Book, `call_clicked`, `text_later_clicked`, `shared`, `liked`) are sent to
   `/api/reel-events` with an anonymous visitor id stored in the browser and

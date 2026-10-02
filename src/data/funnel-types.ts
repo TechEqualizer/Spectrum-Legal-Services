@@ -12,7 +12,17 @@ export type Reel = {
   badge?: string;
   /** What plays: a video file, a YouTube video, or a photo. Without it, the reel shows "Video coming soon". */
   media?: ReelMedia;
+  /**
+   * How hard the reel sells. "builds" (the default) starts with a quiet
+   * Book and fills it with the brand color partway through, like the
+   * call-to-action strip on a sponsored reel. "quiet" keeps it quiet for
+   * the whole reel (teaching reels); "bold" highlights it from the start
+   * (pricing, consultation).
+   */
+  emphasis?: ReelEmphasis;
 };
+
+export type ReelEmphasis = "quiet" | "builds" | "bold";
 
 export type ReelMedia =
   /** A video file, e.g. { src: "/reels/car-accident.mp4", poster: "/reels/car-accident.jpg", captions: "/reels/car-accident.vtt" }. */

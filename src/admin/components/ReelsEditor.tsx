@@ -406,6 +406,8 @@ function ReelRow({ stats: s, reel, index, count, funnel, unreachable, dragging, 
             <Chip>{reel.practiceArea}</Chip>
             <Chip tone="teal">{CTA_LABELS[cta]}</Chip>
             {topic && <Chip tone="navy">Topic: {topic}</Chip>}
+            {reel.emphasis === "quiet" && <Chip>Quiet</Chip>}
+            {reel.emphasis === "bold" && <Chip tone="navy">Bold</Chip>}
             {!reel.media && <Chip tone="amber">No video yet</Chip>}
             {reel.media?.kind === "youtube" && <Chip>YouTube</Chip>}
             {reel.media?.kind === "image" && <Chip>Photo</Chip>}
