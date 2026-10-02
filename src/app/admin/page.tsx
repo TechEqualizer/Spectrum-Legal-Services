@@ -1,5 +1,5 @@
-import Overview from "@/admin/components/Overview";
+import ReelsEditor from "@/admin/components/ReelsEditor";
 
-export default function AdminOverviewPage() {
-  return <Overview />;
+export default function AdminReelsPage() {
+  return <ReelsEditor />;
 }
