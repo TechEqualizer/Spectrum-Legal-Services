@@ -103,7 +103,9 @@ export type FlyerInput =
 
 export async function readFlyer(input: FlyerInput, eventName: string, today: string): Promise<ImportResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    return { problem: "Flyer import isn't set up yet. Add ANTHROPIC_API_KEY in Vercel, then redeploy." };
+    const env = process.env.VERCEL_ENV;
+    const where = env ? ` for ${env === "production" ? "Production" : env === "preview" ? "Preview" : env}` : "";
+    return { problem: `Flyer import isn't set up on this deployment. Add ANTHROPIC_API_KEY in Vercel${where}, then redeploy.` };
   }
   const client = new Anthropic();
   const source: Anthropic.Beta.BetaContentBlockParam =
