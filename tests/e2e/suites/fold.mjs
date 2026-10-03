@@ -1,0 +1,42 @@
+import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
+const S = process.argv[2]; const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
+const png = readFileSync(S+'/sample-photo.png');
+const player = `<!doctype html><body style="margin:0;background:radial-gradient(circle at 50% 40%,#7a5a3a,#2a1a10 60%,#000)"><script>addEventListener('message',e=>{const d=JSON.parse(e.data);parent.postMessage(JSON.stringify({event:'cmd',func:d.func||d.event}),'*');if(d.func==='playVideo')parent.postMessage(JSON.stringify({event:'infoDelivery',info:{playerState:1}}),'*');});</script></body>`;
+const b = await chromium.launch();
+for (const [w,h,mobile] of [[412,760,1],[375,667,1],[390,844,1],[360,640,1],[1440,900,0]]) {
+  const ctx = await b.newContext({viewport:{width:w,height:h}, deviceScaleFactor: mobile?2:1, isMobile:!!mobile, hasTouch:!!mobile});
+  await ctx.route(/i\.ytimg\.com/, r=>r.fulfill({status:200, contentType:'image/png', body:png}));
+  await ctx.route(/youtube-nocookie\.com/, r=>r.fulfill({status:200, contentType:'text/html', body:player}));
+  const p = await ctx.newPage(); const errs=[]; p.on('pageerror', e=>errs.push(e.message));
+  await p.goto('http://localhost:3002/f/events'); await p.waitForTimeout(3200);
+  const m = await p.evaluate(()=>({sh:document.documentElement.scrollHeight, ih:innerHeight}));
+  check(`${w}x${h}: no scroll`, m.sh <= m.ih, JSON.stringify(m));
+  const peek = p.getByRole('button',{name:/^(Sneak peek inside|Watch)$/});
+  const bb = await peek.boundingBox();
+  check(`${w}x${h}: main button on screen`, bb && bb.y+bb.height <= h, JSON.stringify(bb));
+  check(`${w}x${h}: 4 story circles`, await p.locator('main ul > li').count()===4);
+  const fine = await p.getByText('21+ with ID. Tickets are sold').boundingBox();
+  check(`${w}x${h}: fine print on screen`, fine && fine.y+fine.height <= h+1);
+  await p.screenshot({path:`${S}/fold-${w}x${h}.jpg`, quality:80});
+  check(`${w}x${h}: no errors`, !errs.length, errs.join('|'));
+  await ctx.close();
+}
+// Swipe up opens the reels; a story circle opens its date
+const ctx = await b.newContext({viewport:{width:412,height:760}, isMobile:true, hasTouch:true});
+await ctx.route(/i\.ytimg\.com/, r=>r.fulfill({status:200, contentType:'image/png', body:png}));
+await ctx.route(/youtube-nocookie\.com/, r=>r.fulfill({status:200, contentType:'text/html', body:player}));
+const p = await ctx.newPage(); await p.goto('http://localhost:3002/f/events'); await p.waitForTimeout(2800);
+const cdp = await ctx.newCDPSession(p);
+const swipe = async (y0,y1)=>{ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:200,y:y0}]}); for(let i=1;i<=6;i++) await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:200,y:y0+(y1-y0)*i/6}]}); await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); };
+await swipe(500,300); await p.waitForTimeout(800);
+check('swipe up opens this Sunday', await p.getByText('This Sunday on the roof: doors at 2:30').first().isVisible());
+await p.goto('http://localhost:3002/f/events'); await p.waitForTimeout(2800);
+await swipe(400,430); await p.waitForTimeout(500);
+check('small drag does nothing', await p.getByRole('button',{name:/^(Sneak peek inside|Watch)$/}).isVisible() && !(await p.getByText('This Sunday on the roof: doors at 2:30').first().isVisible()));
+await p.getByRole('button',{name:/Late Night/}).click(); await p.waitForTimeout(800);
+check('late night circle opens its reel', await p.getByText('Golden Hour: Late Night, once a month').first().isVisible());
+await p.goto('http://localhost:3002/f/events'); await p.waitForTimeout(2800);
+await p.getByRole('button',{name:'Watch last time'}).click(); await p.waitForTimeout(800);
+check('recap circle opens the recap', await p.getByText('Last Sunday, in 30 seconds').first().isVisible());
+await b.close(); console.log(res.join('\n'));
