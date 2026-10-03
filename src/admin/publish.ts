@@ -4,17 +4,25 @@
 
 import type { HeroMediaEdit } from "@/admin/drafts";
 import type { EditorFunnel, EditorReel } from "@/admin/editor-model";
-import type { ReelMedia } from "@/data/funnel-types";
-import type { Publication } from "@/lib/publication";
+import type { FunnelEvent, ReelMedia } from "@/data/funnel-types";
+import type { Publication, ScreenCopy } from "@/lib/publication";
 
-export type EditorState = { reels: EditorReel[]; funnels: EditorFunnel[]; heroMedia: HeroMediaEdit };
+export type EditorState = {
+  reels: EditorReel[];
+  funnels: EditorFunnel[];
+  heroMedia: HeroMediaEdit;
+  /** Only the words that differ from the built-in ones. */
+  screen?: ScreenCopy;
+  /** Event dates (undefined: the built-in ones). */
+  events?: FunnelEvent[];
+};
 export type LiveState = EditorState & { publishedAt: string | null; publishedBy: string | null };
 
 /** The funnel that gets published: the default one. */
 export const publishedFunnel = (funnels: EditorFunnel[]) => funnels.find((f) => f.isDefault) ?? funnels[0];
 
 /** What a publish would store, from the editor's state. */
-export function toPublication({ reels, funnels, heroMedia }: EditorState): Publication {
+export function toPublication({ reels, funnels, heroMedia, screen, events }: EditorState): Publication {
   const f = publishedFunnel(funnels);
   const used = new Set(f.order);
   return {
@@ -22,6 +30,8 @@ export function toPublication({ reels, funnels, heroMedia }: EditorState): Publi
     reels: reels.filter((r) => used.has(r.id)),
     funnel: { order: f.order, topics: f.topics, paths: f.paths, primaryCta: f.primaryCta },
     ...(heroMedia !== undefined ? { backdrop: heroMedia } : {}),
+    ...(screen && Object.keys(screen).length ? { screen } : {}),
+    ...(events ? { events: [...events].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)) } : {}),
   };
 }
 
@@ -71,6 +81,8 @@ export async function fetchLive(slug: string, builtIn: EditorState): Promise<Liv
     reels: [...publication.reels, ...builtIn.reels.filter((r) => !published.has(r.id))],
     funnels: builtIn.funnels.map((f) => (f.id === funnelId ? { ...f, ...publication.funnel } : f)),
     heroMedia: "backdrop" in publication ? publication.backdrop : undefined,
+    screen: publication.screen,
+    events: publication.events,
     publishedAt: publishedAt ?? null,
     publishedBy: publishedBy ?? null,
   };
@@ -131,6 +143,8 @@ export async function publish(
     reels: state.reels.map((r) => (r.media ? { ...r, media: swapMedia(r.media, urls) } : r)),
     funnels: state.funnels,
     heroMedia: swapMedia(state.heroMedia, urls),
+    screen: state.screen,
+    events: state.events,
   };
 
   onProgress("Publishing...");
