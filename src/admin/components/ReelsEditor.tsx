@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import HeroMediaCard from "@/admin/components/HeroMediaCard";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
 import ReelViewer from "@/components/ReelViewer";
 import {
@@ -15,10 +16,11 @@ import {
   type PathTarget,
 } from "@/admin/editor-model";
 import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
 import { sampleFor, type ReelTotals } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import type { FunnelTrigger } from "@/data/reels";
-import { thumbnailOf } from "@/lib/media";
+import { sceneMediaOf, thumbnailOf } from "@/lib/media";
 
 
 const blankReel: EditorReel = {
@@ -35,6 +37,11 @@ function slugify(title: string, taken: Set<string>) {
   let slug = base;
   for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
   return slug;
+}
+
+/** For telling whether anything changed. Keeps "live background" (undefined) apart from "removed" (null). */
+function snapshotOf(reels: EditorReel[], funnels: EditorFunnel[], heroMedia: HeroMediaEdit) {
+  return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia]);
 }
 
 /** Reels a visitor can reach from the funnel's starting points. */
@@ -62,6 +69,8 @@ export default function ReelsEditor() {
   const [initial] = useState(() => initialEditorState(business));
   const [library, setLibrary] = useState(initial.reels);
   const [funnels, setFunnels] = useState(initial.funnels);
+  // The opening screen's background (undefined: the live one).
+  const [heroMedia, setHeroMedia] = useState<HeroMediaEdit>(undefined);
   const [activeId, setActiveId] = useState(initial.funnels[0].id);
   // Sample results for the last 30 days, keyed by reel.
   const stats = new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t]));
@@ -72,6 +81,59 @@ export default function ReelsEditor() {
   const [addId, setAddId] = useState("");
   // Read out after a move, for keyboard and screen reader users.
   const [announcement, setAnnouncement] = useState("");
+  // When the edits were last saved in this browser (null: nothing saved, showing the live funnel).
+  const slug = liveFunnel.slug;
+  const savedAt = useDraftSavedAt(slug);
+  const [toast, setToast] = useState("");
+
+  // Pick up where this browser left off.
+  const loaded = useRef(false);
+  const lastSaved = useRef("");
+  useEffect(() => {
+    let current = true;
+    loadDraft(slug).then((draft) => {
+      if (!current) return;
+      if (draft) {
+        setLibrary(draft.reels);
+        setFunnels(draft.funnels);
+        setHeroMedia(draft.heroMedia);
+        setActiveId((id) => (draft.funnels.some((f) => f.id === id) ? id : draft.funnels[0].id));
+        lastSaved.current = snapshotOf(draft.reels, draft.funnels, draft.heroMedia);
+      } else {
+        lastSaved.current = snapshotOf(initial.reels, initial.funnels, undefined);
+      }
+      loaded.current = true;
+    });
+    return () => {
+      current = false;
+    };
+  }, [slug, initial]);
+
+  // Every change is saved as it happens.
+  useEffect(() => {
+    if (!loaded.current) return;
+    const snapshot = snapshotOf(library, funnels, heroMedia);
+    if (snapshot === lastSaved.current) return;
+    lastSaved.current = snapshot;
+    saveDraft(slug, { reels: library, funnels, heroMedia });
+  }, [slug, library, funnels, heroMedia]);
+
+  // A short "Saved" note where the person is looking.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2200);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const resetToLive = () => {
+    clearDraft(slug);
+    setLibrary(initial.reels);
+    setFunnels(initial.funnels);
+    setHeroMedia(undefined);
+    setActiveId(initial.funnels[0].id);
+    lastSaved.current = snapshotOf(initial.reels, initial.funnels, undefined);
+    setToast("Back to the live reels");
+  };
 
   const funnel = funnels.find((f) => f.id === activeId)!;
   const byId = new Map(library.map((r) => [r.id, r]));
@@ -113,6 +175,7 @@ export default function ReelsEditor() {
       return { ...f, order: isNew ? [...f.order, id] : f.order, topics, paths: nextPaths };
     });
     setEditing(null);
+    setToast(isNew ? "Reel added" : "Reel saved");
   };
 
   const newFunnel = () => {
@@ -141,9 +204,7 @@ export default function ReelsEditor() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Reels</h1>
-          <p className="text-sm text-gray-600">
-            Put reels in order. Each one goes to the next unless you give it a different path.
-          </p>
+          <p className="text-sm text-gray-600">Put reels in order. Each one plays the next.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
@@ -160,7 +221,7 @@ export default function ReelsEditor() {
             onClick={() => setPreview({ reelId: funnel.order[0], key: Date.now() })}
             className="min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50 disabled:opacity-40"
           >
-            Preview edits
+            Preview
           </button>
           <button
             type="button"
@@ -171,6 +232,16 @@ export default function ReelsEditor() {
           </button>
         </div>
       </div>
+
+      <HeroMediaCard
+        title={liveFunnel.cover.hero?.title ?? liveFunnel.cover.heading}
+        live={sceneMediaOf(liveFunnel)}
+        value={heroMedia}
+        onChange={(media, message) => {
+          setHeroMedia(media);
+          setToast(message);
+        }}
+      />
 
       {/* Funnels: containers with an entry trigger */}
       <section aria-labelledby="funnels-title">
@@ -215,44 +286,11 @@ export default function ReelsEditor() {
         </ul>
       </section>
 
-      {/* Settings for the selected funnel */}
-      <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="settings-title">
-        <h2 id="settings-title" className="sr-only">Funnel settings</h2>
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_11rem]">
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-deep-navy">Funnel name</span>
-            <input className="form-input text-sm" value={funnel.name} onChange={(e) => updateFunnel({ name: e.target.value })} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-deep-navy">Shown to</span>
-            <select className="form-input text-sm" value={funnel.entry} onChange={(e) => updateFunnel({ entry: e.target.value as EditorFunnel["entry"] })}>
-              {ENTRY_TRIGGERS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-deep-navy">Main button</span>
-            <select className="form-input text-sm" value={funnel.primaryCta} onChange={(e) => updateFunnel({ primaryCta: e.target.value as EditorFunnel["primaryCta"] })}>
-              <option value="call">Call</option>
-              <option value="book">Book</option>
-            </select>
-          </label>
-        </div>
-        <label className="mt-3 flex min-h-11 items-center gap-3 text-sm font-semibold text-deep-navy">
-          <input
-            type="checkbox"
-            className="h-5 w-5 accent-teal-accent"
-            checked={funnel.isDefault}
-            onChange={(e) => updateFunnel({ isDefault: e.target.checked })}
-          />
-          Default funnel: shown when no other funnel matches the visitor
-        </label>
-      </section>
-
       {/* The ordered reel list */}
       <section className="rounded-xl border border-gray-200 bg-white" aria-labelledby="order-title">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-gray-100 px-5 py-4">
           <h2 id="order-title" className="text-base font-bold text-deep-navy">Order</h2>
-          <p className="text-xs text-gray-600">Drag to reorder, or use the arrows. Results are the last 30 days (sample).</p>
+          <p className="text-xs text-gray-600">Drag or use the arrows. Results: last 30 days (sample).</p>
         </div>
         <p className="sr-only" aria-live="polite">{announcement}</p>
         {funnel.order.length === 0 ? (
@@ -306,12 +344,63 @@ export default function ReelsEditor() {
               </button>
             </div>
           )}
-          <button type="button" disabled className="ml-auto min-h-11 rounded-md bg-teal-accent px-4 text-sm font-bold text-white opacity-50" title="Saving comes with the admin login">
-            Publish changes
-          </button>
-          <p className="w-full text-right text-xs text-gray-500">Preview only: nothing is saved, and the live link doesn&apos;t change.</p>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right text-xs text-gray-600">
+            {savedAt ? (
+              <>
+                <span className="font-semibold text-deep-navy">
+                  <span aria-hidden="true">&#10003; </span>Saved in this browser,{" "}
+                  {new Date(savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                </span>
+                <button type="button" onClick={resetToLive} className="min-h-10 font-semibold text-red-700 hover:underline">
+                  Reset to live
+                </button>
+              </>
+            ) : (
+              <span>Showing your live reels. Changes save as you go.</span>
+            )}
+            <span className="w-full">Your live link changes once the admin has a login.</span>
+          </div>
         </div>
       </section>
+
+      {/* Settings for the selected funnel */}
+      <details className="group rounded-xl border border-gray-200 bg-white">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 text-base font-bold text-deep-navy">
+          Funnel settings
+          <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l-7 7-7-7" /></svg>
+        </summary>
+        <div className="border-t border-gray-100 p-5">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_11rem]">
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-deep-navy">Funnel name</span>
+            <input className="form-input text-sm" value={funnel.name} onChange={(e) => updateFunnel({ name: e.target.value })} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-deep-navy">Shown to</span>
+            <select className="form-input text-sm" value={funnel.entry} onChange={(e) => updateFunnel({ entry: e.target.value as EditorFunnel["entry"] })}>
+              {ENTRY_TRIGGERS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-deep-navy">Main button</span>
+            <select className="form-input text-sm" value={funnel.primaryCta} onChange={(e) => updateFunnel({ primaryCta: e.target.value as EditorFunnel["primaryCta"] })}>
+              <option value="call">Call</option>
+              <option value="book">Book</option>
+              <option value="tickets">Tickets</option>
+            </select>
+          </label>
+        </div>
+        <label className="mt-3 flex min-h-11 items-center gap-3 text-sm font-semibold text-deep-navy">
+          <input
+            type="checkbox"
+            className="h-5 w-5 accent-teal-accent"
+            checked={funnel.isDefault}
+            onChange={(e) => updateFunnel({ isDefault: e.target.checked })}
+          />
+          Default funnel: shown when no other funnel matches the visitor
+        </label>
+        </div>
+      </details>
 
       {preview && (
         <ReelViewer
@@ -321,6 +410,13 @@ export default function ReelsEditor() {
           onClose={() => setPreview(null)}
         />
       )}
+
+      <p
+        role="status"
+        className={`pointer-events-none fixed inset-x-0 bottom-24 z-50 mx-auto w-fit rounded-full bg-deep-navy px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-opacity lg:bottom-8 ${toast ? "opacity-100" : "opacity-0"}`}
+      >
+        {toast && <><span aria-hidden="true">&#10003; </span>{toast}</>}
+      </p>
 
       {editing && (
         <ReelEditDialog

@@ -20,6 +20,9 @@ export async function generateViewport({ params }: PageProps<"/f/[slug]">): Prom
     themeColor: funnel?.brand.theme?.["--deep-navy"] ?? "#0E1A2B",
     // Edge to edge on phones with a notch or home bar; the reels pad for the safe areas.
     viewportFit: "cover",
+    // The page is already dark; this stops phone browsers' forced dark mode
+    // (Samsung Internet, Chrome) from recoloring the opening scene.
+    colorScheme: "dark",
   };
 }
 

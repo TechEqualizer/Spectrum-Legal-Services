@@ -53,9 +53,71 @@ the reels at that topic.
   Twilio) and a job that texts each request the link to its next reel.
 - **Share**: the end card's "Send to someone who got hurt" shares the link
   tagged `src=share`.
+- **Opening scene**: the top of the opening screen plays like the start of
+  a trailer: the scene fades up from black, then the title comes up out of a soft blur
+  over film grain and a vignette. Behind it plays `cover.hero.media` (a
+  video file, a YouTube video or Short, or a photo; otherwise the first
+  reel's), muted, looping and slowly zooming; a YouTube video shows its
+  thumbnail until it's actually playing; until there is one, a
+  low sun and lens flare drawn in the brand's own colors. Set
+  `cover.hero` (title, tagline, button label, optional `media` and `zoom`)
+  to make the scene the whole first screen, with nothing to scroll: the
+  dates (or topics) as Instagram-style story circles, a "Sneak peek
+  inside" button into the reels, Get tickets (or Call) beside it, and the
+  fine print. Swiping up steps inside, like moving to the next reel.
+  Without it, the heading sits over a shorter scene and the choices follow. People
+  who turn on "reduce motion" get a still scene, and a browser that skips
+  animations still shows every word (`src/components/CinematicHero.tsx`).
 - Funnels are listed in `src/data/funnels.ts`; each one's `slug` is its
   link. Any other `/f/...` path is a 404. Each funnel gets its own link
   preview image (`src/app/f/[slug]/opengraph-image.tsx`).
+
+### Event funnels (`/f/events`)
+
+For event organizers, a funnel sells tickets instead of booking calls
+(`primaryCta: "tickets"`):
+
+- **Event dates** live in `funnel.events` (name, start time, venue, price,
+  ticket link, `on_sale` / `few_left` / `sold_out`). Reels point at one with
+  `eventId`.
+- **"Which night?"**: the opening screen lists upcoming dates with a
+  countdown (Tonight, Tomorrow, In 3 days), price and status, plus "Watch
+  last time" for the latest recap.
+- **Recaps happen on their own**: once a date is over, its reels show
+  "Recap" and their Tickets button sells the next date on sale. Sold-out
+  dates do the same; if nothing is on sale, Tickets becomes **Waitlist**.
+- **Tickets** opens the organizer's own ticket page (Eventbrite, Posh,
+  Dice...) in a new tab, with tracking added so their ticketing report shows
+  which source sold each ticket: Eventbrite's `aff=reels_<source>` code, or
+  UTM tags for other platforms. Logged as `cta_clicked`.
+- **Presale** (the "Text me later" form) collects numbers for the next
+  ticket drop, with SMS consent.
+- `brand.phone` is optional; without it, Call buttons are hidden.
+
+`/f/events` is a sample: Golden Hour Sundays is made up, its dates are
+always relative to today, and its ticket links go to example.com.
+
+### DM demos ("Prepared for ...")
+
+To pitch an organizer, build them a private preview from their own clips:
+
+```bash
+cp scripts/demo-template/example.json prospect.json   # edit: name, colors,
+                                                      # events, ticket links, clips
+node scripts/new-demo.mjs prospect.json               # prints /f/<name>-<random>
+git add -A && git commit -m "demo: <name>" && git push
+```
+
+The opening scene plays the first clip behind the organizer's name (or
+`"heroTitle"` and `"heroTagline"` if set). Clips (`"clip"`) are cropped and compressed with `scripts/prepare-reel.sh`
+into `public/demos/<slug>/`; reels can also use `"youtube"` links or
+`"photo"` files. The link has a random suffix, says "Private preview
+prepared for ...", is never indexed, and sends nothing (it's a sample), but
+its Tickets buttons go to the organizer's real ticket page. The script
+refuses an accent color too light for white text. Remove a demo with
+`node scripts/new-demo.mjs --remove <slug>` (and `--list` shows them all).
+Only use a prospect's content for the private pitch, and take it down if
+they say no.
 
 ### More than one business
 
@@ -70,6 +132,7 @@ forms re-skin without code changes.
 | --- | --- | --- |
 | `/f/jlf` | The JLF Firm (concept) | Call |
 | `/f/medspa` | Aurelia Med Spa (**sample**, made up) | Book |
+| `/f/events` | Golden Hour Sundays (**sample**, made up) | Tickets |
 
 **`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
 Spa doesn't exist: the page always says so, is never indexed, uses a
@@ -146,6 +209,10 @@ business's colors; the choice is remembered in the browser. There is no login ye
 real Supabase tables, and nothing on it saves or sends. It is not linked
 from the public site and is marked `noindex`.
 
+- **Opening screen** (top of the Reels page): attach, swap or remove what
+  plays behind the opening screen's title: upload a video or photo, or
+  paste a YouTube or direct link. Remove has Undo, and it saves with the
+  reel edits.
 - **Reels** (the admin home): each funnel as an ordered list. Every reel goes
   to the next one unless it has its own path for "watched to the end" or
   "skipped", so branching is added only where it helps. Rows show the reel's
@@ -157,19 +224,24 @@ from the public site and is marked `noindex`.
   500 MB) or photo (JPEG, PNG, WebP, GIF, up to 25 MB) by dragging or
   choosing a file, or paste a link (YouTube watch, Shorts and youtu.be
   links, or a direct video or photo link). Videos can add a cover image
-  and WebVTT captions. **Preview edits** (or a row's thumbnail) plays the
-  edited funnel in the real reel viewer, with nothing tracked or sent.
-  Uploads stay in the browser until the admin has storage and a login. The model is
-  `src/admin/editor-model.ts`; it starts from the live funnel in
-  `src/data/reels.ts`, and edits stay in the page.
-- **Overview** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,
+  and WebVTT captions; a pasted link counts as soon as it's valid.
+  **Preview** (or a row's thumbnail) plays the edited funnel in the real
+  reel viewer, with nothing tracked or sent. **Saving**: every change saves
+  in this browser as you go, per business, uploaded files included
+  (`src/admin/drafts.ts`: localStorage, with files in IndexedDB), and
+  survives a reload; **Reset to live** discards it. The live link changes
+  once the admin has a login and a database. The model is
+  `src/admin/editor-model.ts`; it starts from the live funnel.
+- **Results** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,
   and what viewers did with each reel, for the last 7, 30 or 90 days.
-- **Share links**: a builder for tagged funnel links, and which sources bring
+- **Share**: a builder for tagged funnel links, and which sources bring
   calls and call-back requests per 100 visitors.
-- **Funnel map**: the live paths from `src/data/reels.ts` as a diagram.
+- **Paths**: the live paths from `src/data/reels.ts` as a diagram.
   Selecting a reel shows its numbers; changing where it leads redraws the map
   (preview only).
 - **Leads**: sample leads with the videos each one watched before booking.
+- **Navigation**: on phones the five places sit in a bottom tab bar; on
+  desktop, a sidebar. Screens follow `.claude/skills/simple-navigation`.
 
 Next steps to make it real: an admin login (Supabase Auth), reading the
 tables with the secret key on the server, storing funnels in

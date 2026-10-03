@@ -216,7 +216,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
         {error && <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
 
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-4">
-          <p className="mr-auto text-xs text-gray-500">Preview: changes last until you leave this page.</p>
+          <p className="mr-auto text-xs text-gray-500">Saved in this browser.</p>
           <button type="button" onClick={() => dialogRef.current?.close()} className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray">
             Cancel
           </button>

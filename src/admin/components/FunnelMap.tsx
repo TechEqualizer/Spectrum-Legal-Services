@@ -118,7 +118,7 @@ export default function FunnelMap() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Funnel map</h1>
+          <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Paths</h1>
           <p className="text-sm text-gray-600">
             Funnel <code className="rounded bg-white px-1">{funnel.id}</code>. Click a reel to see
             its numbers and change where it leads.

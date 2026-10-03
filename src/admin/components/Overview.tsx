@@ -32,7 +32,7 @@ export default function Overview() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">
-            Overview
+            Results
           </h1>
           <p className="text-sm text-gray-600">
             How visitors move through {business.funnel.brand.name}&apos;s reels.

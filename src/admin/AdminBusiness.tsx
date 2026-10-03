@@ -64,17 +64,14 @@ export function AdminFrame({
       {nav}
       <div className="min-w-0 flex-1">
         <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 md:px-8 md:text-left">
-          <strong>Preview with sample data.</strong> Nothing here is real visitor
-          or client data, and changes aren&apos;t saved. Real data appears once
-          the admin has a login.
-          {funnel.sample && (
-            <> <strong>{funnel.brand.name} is a sample business.</strong></>
-          )}
+          <strong>Sample data.</strong> Your reel edits save in this browser; the
+          live link updates once the admin has a login.
+          {funnel.sample && <> {funnel.brand.name} is a sample business.</>}
         </p>
         <main
           key={funnel.id}
           id="main-content"
-          className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-8"
+          className="mx-auto max-w-6xl px-4 pb-24 pt-6 md:px-8 md:pt-8 lg:pb-8"
         >
           {children}
         </main>

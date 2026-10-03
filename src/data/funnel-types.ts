@@ -20,6 +20,24 @@ export type Reel = {
    * (pricing, consultation).
    */
   emphasis?: ReelEmphasis;
+  /**
+   * The event this reel promotes. Once the event is over, the reel becomes
+   * a recap and its Tickets button points at the next event.
+   */
+  eventId?: string;
+};
+
+/** One date of an event series, sold on the organizer's own ticketing page. */
+export type FunnelEvent = {
+  id: string;
+  name: string;
+  /** ISO date and time, with offset, e.g. "2026-10-12T15:00:00-07:00". */
+  startsAt: string;
+  venue?: string;
+  /** "From $25", "Free", ... */
+  price?: string;
+  ticketUrl: string;
+  status?: "on_sale" | "few_left" | "sold_out";
 };
 
 export type ReelEmphasis = "quiet" | "builds" | "bold";
@@ -39,7 +57,7 @@ export type FunnelTrigger = "completed" | "skipped";
  * happened); "book" suits people weighing their options. The other one and
  * "Text me later" always sit beside it.
  */
-export type FunnelCta = "call" | "book";
+export type FunnelCta = "call" | "book" | "tickets";
 
 /** Color overrides for the funnel's pages; the names are the tokens in globals.css. */
 export type FunnelTheme = Partial<
@@ -57,7 +75,8 @@ export type FunnelBrand = {
   handle?: string;
   /** Two short lines beside the logo. */
   byline?: [string, string];
-  phone: { display: string; href: string };
+  /** Optional for event organizers; without it, Call buttons are hidden. */
+  phone?: { display: string; href: string };
   theme?: FunnelTheme;
   /** What visitors can ask about. Saved as the lead's case type. */
   services: readonly string[];
@@ -70,6 +89,10 @@ export type FunnelBrand = {
   /** Fine print at the foot of the opening screen. */
   footer: string;
   copy: {
+    /** Main button when primaryCta is "tickets" (default "Get tickets"). */
+    ticketsPrimary?: string;
+    /** "Text me later" on the rail and end card ("Presale" for events). */
+    textLaterButton?: string;
     /** Primary button when primaryCta is "book". */
     bookPrimary: string;
     /** Secondary button when primaryCta is "call". */
@@ -101,16 +124,50 @@ export type Funnel = {
    * A made-up business for showing the product. Always labeled as such,
    * never indexed, and its forms and tracking never send anything.
    */
-  sample?: { notice: string };
+  sample?: {
+    notice: string;
+    /**
+     * A private demo made for one prospect ("Prepared for Golden Hour").
+     * Shown on the opening screen and in the link preview.
+     */
+    preparedFor?: string;
+  };
   brand: FunnelBrand;
   primaryCta: FunnelCta;
   reels: Reel[];
+  /** Event dates, for event organizers. The opening screen lists the upcoming ones. */
+  events?: FunnelEvent[];
+  /** Where tickets are sold, so ticket links get that platform's tracking codes. */
+  ticketing?: { provider: "eventbrite" | "posh" | "dice" | "other" };
   /** The opening screen of the shareable link. */
   cover: {
     heading: string;
     intro: string;
     /** Short labels for the entry reels, shown as "What happened?" choices. */
     entryLabels: Record<string, string>;
+    /**
+     * A full-height opening scene above the choices, like a film's title
+     * card: the title and tagline over footage, with Watch and Get tickets
+     * (or Call) buttons. Without it, the heading and intro sit over a
+     * shorter scene and the choices come right after.
+     */
+    hero?: {
+      title: string;
+      tagline?: string;
+      /** Label on the Watch button (default "Watch"). */
+      watchLabel?: string;
+      /**
+       * What plays behind the title, muted and looping: a video file, a
+       * YouTube video or Short, or a photo. Defaults to the first reel with
+       * media; without any, a moving glow in the brand colors.
+       */
+      media?: ReelMedia;
+      /**
+       * How far to zoom a YouTube backdrop (default 1.2). Raise it to crop
+       * black bars burned into the video itself.
+       */
+      zoom?: number;
+    };
   };
   /** Reels offered on the opening screen, in order. Every visit starts at one of these. */
   entryReelIds: string[];

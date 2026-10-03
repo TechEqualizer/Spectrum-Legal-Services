@@ -27,11 +27,13 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           await readFile(join(process.cwd(), "public", brand.logo.src))
         ).toString("base64")}`
       : null;
-  const tagline = funnel.sample
-    ? "Sample funnel"
-    : site.demoMode
-      ? "Concept preview"
-      : brand.phone.display;
+  const tagline = funnel.sample?.preparedFor
+    ? `Prepared for ${funnel.sample.preparedFor}`
+    : funnel.sample
+      ? "Sample funnel"
+      : site.demoMode
+        ? "Concept preview"
+        : (brand.phone?.display ?? "");
 
   return new ImageResponse(
     (
@@ -72,7 +74,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 28, color: "#d1d5db" }}>
           <span>
-            Watch, then {funnel.primaryCta === "book" ? "book" : "call"} in one tap
+            Watch, then {funnel.primaryCta === "tickets" ? "get tickets" : funnel.primaryCta === "book" ? "book" : "call"} in one tap
           </span>
           <span>{tagline}</span>
         </div>

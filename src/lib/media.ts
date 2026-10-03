@@ -1,7 +1,18 @@
 // Reel media helpers shared by the funnel and the admin: reading pasted
 // links, and picking a thumbnail.
 
-import type { ReelMedia } from "@/data/funnel-types";
+import type { Funnel, ReelMedia } from "@/data/funnel-types";
+
+/** What plays behind the opening screen's title: the hero's own media, else the first reel's video, YouTube video or photo. */
+export function sceneMediaOf(funnel: Funnel): ReelMedia | undefined {
+  if (funnel.cover.hero?.media) return funnel.cover.hero.media;
+  const media = funnel.reels.map((r) => r.media).filter(Boolean) as ReelMedia[];
+  return (
+    media.find((m) => m.kind === "video") ??
+    media.find((m) => m.kind === "youtube") ??
+    media.find((m) => m.kind === "image")
+  );
+}
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 
@@ -60,7 +71,7 @@ export function thumbnailOf(media: ReelMedia | undefined): string | undefined {
 }
 
 /** The privacy-enhanced YouTube player, set up to be driven by the reel viewer. */
-export function youtubeEmbedUrl(id: string, origin: string) {
+export function youtubeEmbedUrl(id: string, origin: string, { loop = false } = {}) {
   const params = new URLSearchParams({
     enablejsapi: "1",
     autoplay: "1",
@@ -70,6 +81,8 @@ export function youtubeEmbedUrl(id: string, origin: string) {
     rel: "0",
     modestbranding: "1",
     origin,
+    // A background loop: play the one video over and over, without YouTube's extras.
+    ...(loop ? { loop: "1", playlist: id, disablekb: "1", fs: "0", iv_load_policy: "3" } : {}),
   });
   return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
 }

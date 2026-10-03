@@ -2,6 +2,7 @@
 // the words they use and how their reels tend to perform. All of it is
 // SAMPLE data.
 
+import { eventsFunnel } from "@/data/events-sample";
 import { medspaFunnel } from "@/data/medspa";
 import { defaultFunnel } from "@/data/reels";
 import type { Funnel } from "@/data/funnel-types";
@@ -86,4 +87,26 @@ const medspa: AdminBusiness = {
   editorOrder: medspaFunnel.reels.map((r) => r.id),
 };
 
-export const businesses: AdminBusiness[] = [jlf, medspa];
+const events: AdminBusiness = {
+  funnel: eventsFunnel,
+  seeds: { days: 20261004, leads: 777 },
+  profile: {
+    "gh-this-sunday": { entryViews: 58, watch: 0.66, book: 0.06 },
+    "gh-lineup": { entryViews: 0, watch: 0.72, book: 0.08 },
+    "gh-last-time": { entryViews: 31, watch: 0.78, book: 0.03 },
+    "gh-sold-out": { entryViews: 14, watch: 0.55, book: 0.02 },
+    "gh-late-night": { entryViews: 22, watch: 0.62, book: 0.07 },
+    "gh-venue": { entryViews: 0, watch: 0.58, book: 0.02 },
+    "gh-presale": { entryViews: 0, watch: 0.7, book: 0.01 },
+  },
+  terms: {
+    topic: "Event",
+    leadsIntro: "Presale and waitlist sign-ups, with the videos each person watched first. Ticket sales show in your ticketing report.",
+    wonStatus: "Bought tickets",
+    hasWebsiteForm: false,
+  },
+  funnelName: "Sundays",
+  editorOrder: eventsFunnel.reels.map((r) => r.id),
+};
+
+export const businesses: AdminBusiness[] = [jlf, medspa, events];
