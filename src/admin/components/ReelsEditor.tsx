@@ -23,6 +23,8 @@ import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { useAdminSession } from "@/admin/session";
 import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
 import type { Look } from "@/lib/look";
+import type { FunnelDraft } from "@/lib/funnel-draft";
+import { HERO_PROMPT, keepPrompts, usePrompts } from "@/admin/prompts";
 import { fetchLive, publicationKey, publish, publishedFunnel, takeDown, toPublication, type EditorState, type LiveState } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { ScreenCopy } from "@/lib/publication";
@@ -106,6 +108,8 @@ export default function ReelsEditor() {
   // When the edits were last saved in this browser (null: nothing saved, showing the live funnel).
   const slug = liveFunnel.slug;
   const savedAt = useDraftSavedAt(slug);
+  // Video prompts from a drafted funnel, by reel id.
+  const prompts = usePrompts(slug);
   // A short confirmation near the bottom, with Undo when something was deleted.
   const [toast, setToastState] = useState<{ text: string; undo?: () => void; id: number } | null>(null);
   const setToast = (text: string, undo?: () => void) => setToastState(text ? { text, undo, id: Date.now() } : null);
@@ -246,6 +250,56 @@ export default function ReelsEditor() {
       setLook(before.look);
       setHeroMedia(before.heroMedia);
       setToast("Look put back");
+    });
+  };
+
+  /**
+   * A funnel drafted from a flyer: its reels (new, each with its video
+   * prompt, marked Needs video) become the published funnel's order, and
+   * its words go on the opening screen. The old reels stay in the library,
+   * and Undo puts everything back.
+   */
+  const applyDraft = (draft: FunnelDraft) => {
+    const before = { library, funnels, screen };
+    const dates = events ?? liveFunnel.events ?? [];
+    const dayOf = (iso: string) => {
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+    const taken = new Set(library.map((r) => r.id));
+    const prompts: Record<string, string> = { [HERO_PROMPT]: draft.heroPrompt };
+    const reels = draft.reels.map((d): EditorReel => {
+      const id = slugify(d.title, taken);
+      taken.add(id);
+      prompts[id] = d.videoPrompt;
+      // The date it sells; with only one date, every reel sells that one.
+      const event = d.date ? dates.find((e) => dayOf(e.startsAt) === d.date) : dates.length === 1 ? dates[0] : undefined;
+      return {
+        id,
+        title: d.title,
+        summary: d.summary,
+        practiceArea: liveFunnel.brand.services[0],
+        cta: "funnel",
+        ...(event ? { eventId: event.id } : {}),
+        ...(d.role === "last_call" ? { emphasis: "bold" as const } : {}),
+      };
+    });
+    const target = publishedFunnel(funnels);
+    keepPrompts(slug, prompts);
+    setLibrary([...reels, ...library]);
+    setFunnels(funnels.map((f) => (f.id === target.id ? { ...f, order: reels.map((r) => r.id), paths: {}, topics: {} } : f)));
+    setActiveId(target.id);
+    const words: ScreenCopy = liveFunnel.cover.hero
+      ? { title: draft.screen.title, tagline: draft.screen.tagline, watchLabel: draft.screen.watchLabel, heading: draft.screen.heading }
+      : { heading: draft.screen.title || draft.screen.heading, intro: draft.screen.tagline };
+    const next: ScreenCopy = { ...screen };
+    for (const [k, v] of Object.entries(words) as [keyof ScreenCopy, string | undefined][]) if (v) next[k] = v;
+    setScreen(next);
+    setToast(`Funnel drafted: ${reels.length} reels, each with a video prompt`, () => {
+      setLibrary(before.library);
+      setFunnels(before.funnels);
+      setScreen(before.screen);
+      setToast("Draft taken back");
     });
   };
 
@@ -426,6 +480,7 @@ export default function ReelsEditor() {
         value={heroMedia}
         screen={screen}
         look={look}
+        videoPrompt={prompts[HERO_PROMPT]}
         edited={heroEdited || screenEdited || lookEdited}
         inStudio={wide}
         onStyle={(nextLook, media) => {
@@ -463,6 +518,7 @@ export default function ReelsEditor() {
           }}
           onSave={saveDate}
           onLook={applyLook}
+          onDraft={applyDraft}
           inStudio={wide}
         />
       )}
@@ -535,6 +591,7 @@ export default function ReelsEditor() {
               return (
                 <ReelRow
                   date={shortDateOf(reel.eventId)}
+                  hasPrompt={Boolean(prompts[id])}
                   stats={stats.get(id)}
                   key={id}
                   reel={reel}
@@ -737,6 +794,7 @@ export default function ReelsEditor() {
           services={liveFunnel.brand.services}
           topicLabel={business.terms.topic}
           dates={dateOptions}
+          videoPrompt={prompts[editing.id]}
           onSave={save}
           onClose={() => setEditing(null)}
         />
@@ -869,6 +927,8 @@ export default function ReelsEditor() {
 type ReelRowProps = {
   /** The date this reel sells tickets for, e.g. "Oct 4". */
   date?: string;
+  /** A drafted video prompt waits for this reel. */
+  hasPrompt: boolean;
   stats: ReelTotals | undefined;
   reel: EditorReel;
   index: number;
@@ -891,7 +951,7 @@ const TRIGGER_LABELS: Record<FunnelTrigger, string> = {
   skipped: "Skipped",
 };
 
-function ReelRow({ date, stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
+function ReelRow({ date, hasPrompt, stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
   const [over, setOver] = useState(false);
   const overrides = Object.entries(funnel.paths[reel.id] ?? {}) as [FunnelTrigger, PathTarget][];
   const cta = reel.cta === "funnel" ? funnel.primaryCta : reel.cta;
@@ -939,7 +999,7 @@ function ReelRow({ date, stats: s, reel, index, count, funnel, unreachable, drag
             {date && <Chip tone="teal">{date}</Chip>}
             {reel.emphasis === "quiet" && <Chip>Quiet</Chip>}
             {reel.emphasis === "bold" && <Chip tone="navy">Bold</Chip>}
-            {!reel.media && <Chip tone="amber">No video yet</Chip>}
+            {!reel.media && <Chip tone="amber">{hasPrompt ? "Needs video" : "No video yet"}</Chip>}
             {reel.media?.kind === "youtube" && <Chip>YouTube</Chip>}
             {reel.media?.kind === "image" && <Chip>Photo</Chip>}
             {unreachable && <Chip tone="red">No path leads here</Chip>}

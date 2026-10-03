@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import MediaPicker from "@/admin/components/MediaPicker";
+import VideoPrompt from "@/admin/components/VideoPrompt";
 import StyleSheet from "@/admin/components/StyleSheet";
 import type { HeroMediaEdit } from "@/admin/drafts";
 import { titleFontClass } from "@/components/lookFonts";
@@ -58,6 +59,7 @@ export default function HeroMediaCard({
   onChange,
   onStyle,
   inStudio = false,
+  videoPrompt,
 }: {
   /** The funnel as built in (for its default words). */
   funnel: Funnel;
@@ -75,6 +77,8 @@ export default function HeroMediaCard({
   onStyle: (look: Look | undefined, media: HeroMediaEdit) => void;
   /** In the studio: its story step names it, and Style is the Design tab. */
   inStudio?: boolean;
+  /** A drafted prompt for making the opening scene's video. */
+  videoPrompt?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [styling, setStyling] = useState(false);
@@ -83,51 +87,54 @@ export default function HeroMediaCard({
   const title = funnel.cover.hero ? copy.title : copy.heading;
 
   return (
-    <section aria-labelledby="hero-media-title" className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4">
-      <button type="button" onClick={() => setOpen(true)} aria-label="Edit the opening screen" className="flex-shrink-0 rounded-lg focus-visible:outline-2">
-        <ScenePreview media={shown} title={title} look={look} small />
-      </button>
-      <div className="min-w-0 flex-1">
-        <h2 id="hero-media-title" className={inStudio ? "sr-only" : "font-bold text-deep-navy"}>Opening screen</h2>
-        <p className="truncate text-sm text-deep-navy">&ldquo;{title}&rdquo;</p>
-        <p className="text-sm text-gray-600">
-          {shown ? KIND_LABELS[shown.kind] : "No background: your brand colors"}
-          {edited && <span className="font-semibold text-amber-800"> &middot; not published</span>}
-        </p>
-        {look && (
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600">
-            <Swatches look={look} />
-            <span>{LOOK_FONTS[look.font].label}</span>
+    <section aria-labelledby="hero-media-title" className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={() => setOpen(true)} aria-label="Edit the opening screen" className="flex-shrink-0 rounded-lg focus-visible:outline-2">
+          <ScenePreview media={shown} title={title} look={look} small />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h2 id="hero-media-title" className={inStudio ? "sr-only" : "font-bold text-deep-navy"}>Opening screen</h2>
+          <p className="truncate text-sm text-deep-navy">&ldquo;{title}&rdquo;</p>
+          <p className="text-sm text-gray-600">
+            {shown ? KIND_LABELS[shown.kind] : "No background: your brand colors"}
+            {edited && <span className="font-semibold text-amber-800"> &middot; not published</span>}
           </p>
-        )}
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
-          >
-            Edit
-          </button>
-          {!inStudio && (
+          {look && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600">
+              <Swatches look={look} />
+              <span>{LOOK_FONTS[look.font].label}</span>
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
             <button
               type="button"
-              onClick={() => setStyling(true)}
+              onClick={() => setOpen(true)}
               className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
             >
-              Style
+              Edit
             </button>
-          )}
-          {shown && (
-            <button
-              type="button"
-              onClick={() => onChange({ media: null, screen }, "Background removed", () => onChange({ media: value, screen }, "Background restored"))}
-              className="min-h-10 text-sm font-semibold text-red-700 hover:underline"
-            >
-              Remove background
-            </button>
-          )}
+            {!inStudio && (
+              <button
+                type="button"
+                onClick={() => setStyling(true)}
+                className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+              >
+                Style
+              </button>
+            )}
+            {shown && (
+              <button
+                type="button"
+                onClick={() => onChange({ media: null, screen }, "Background removed", () => onChange({ media: value, screen }, "Background restored"))}
+                className="min-h-10 text-sm font-semibold text-red-700 hover:underline"
+              >
+                Remove background
+              </button>
+            )}
+          </div>
         </div>
       </div>
+      {videoPrompt && !(shown && shown.kind === "video") && <VideoPrompt prompt={videoPrompt} what="the opening scene" />}
       {styling && (
         <StyleSheet
           funnel={funnel}

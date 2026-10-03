@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import MediaPicker from "@/admin/components/MediaPicker";
+import VideoPrompt from "@/admin/components/VideoPrompt";
 import {
   CTA_LABELS,
   type EditorFunnel,
@@ -29,6 +30,8 @@ type ReelEditDialogProps = {
   topicLabel: string;
   /** The event's dates, for "Sells tickets for" (event funnels only). */
   dates?: { id: string; label: string }[];
+  /** A drafted prompt for making this reel's video. */
+  videoPrompt?: string;
   onSave: (result: ReelEditResult) => void;
   onClose: () => void;
 };
@@ -44,7 +47,7 @@ const TRIGGERS: { id: FunnelTrigger; label: string }[] = [
   { id: "skipped", label: "When skipped" },
 ];
 
-export default function ReelEditDialog({ reel, funnel, library, services, topicLabel, dates, onSave, onClose }: ReelEditDialogProps) {
+export default function ReelEditDialog({ reel, funnel, library, services, topicLabel, dates, videoPrompt, onSave, onClose }: ReelEditDialogProps) {
   const id = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const isNew = reel.id === "";
@@ -140,6 +143,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
             <textarea className="form-input min-h-20 text-sm" maxLength={300} value={draft.summary} onChange={(e) => set({ summary: e.target.value })} />
           </label>
           <MediaPicker value={media} onChange={setMedia} />
+          {videoPrompt && <VideoPrompt prompt={videoPrompt} />}
           {dates && (
             <label className="block">
               <span className="mb-1 block text-sm font-semibold text-deep-navy">Sells tickets for</span>

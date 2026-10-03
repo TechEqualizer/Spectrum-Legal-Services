@@ -251,6 +251,19 @@ business's colors. It is not linked from the public site and is marked
   `ANTHROPIC_API_KEY` (`/api/admin/import-event`, `src/lib/server/flyer-import.ts`);
   without it the sheet says so. QR codes aren't read: paste those ticket
   links.
+- **Draft my funnel** (in the import sheet, after reading a flyer): Claude
+  plans the whole funnel from the same flyer, with no re-upload: the opening
+  screen's words, and 4 to 6 reels in selling order (hook, the show, who's
+  there, details, the dare, last call), each linked to its date. Each reel,
+  and the opening scene, also gets a ready-to-paste video prompt (camera
+  move, length, 9:16, the scene, a shared style lock, and what to avoid,
+  such as on-screen text or warped hands). "Use this draft" replaces the
+  published funnel's reels (the old ones stay in the library; Undo puts
+  everything back). Drafted reels are marked **Needs video**, and their
+  prompt, with **Copy prompt**, is in the reel's editor and on the opening
+  screen card. Prompts are notes, never published, kept in this browser
+  (`src/admin/prompts.ts`) (`/api/admin/draft-funnel`,
+  `src/lib/server/funnel-draft.ts`).
 - **Match your flyer's style**: a flyer photo or PDF also gives three
   ready-made styles (True to flyer, Bold, Elegant: five brand colors and a
   title typeface each), plus the flyer's own colors. The import sheet shows

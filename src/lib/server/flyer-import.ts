@@ -137,19 +137,40 @@ export type FlyerInput =
   | { kind: "pdf"; data: string }
   | { kind: "text"; text: string };
 
-export async function readFlyer(input: FlyerInput, eventName: string, today: string): Promise<ImportResult> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    const env = process.env.VERCEL_ENV;
-    const where = env ? ` for ${env === "production" ? "Production" : env === "preview" ? "Preview" : env}` : "";
-    return { problem: `Flyer import isn't set up on this deployment. Add ANTHROPIC_API_KEY in Vercel${where}, then redeploy.` };
+/** The flyer as a message block for Claude. */
+export function flyerBlock(input: FlyerInput): Anthropic.Beta.BetaContentBlockParam {
+  return input.kind === "image"
+    ? { type: "image", source: { type: "base64", media_type: input.mediaType as "image/jpeg", data: input.data } }
+    : input.kind === "pdf"
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: input.data } }
+      : { type: "text", text: `<event_details>\n${input.text}\n</event_details>` };
+}
+
+/** Under Vercel's 4.5 MB request limit, as base64. The browser shrinks photos first. */
+const MAX_BASE64 = 4_000_000;
+
+/** The flyer from a request body ({ type, data } or { text }), or what's wrong with it. */
+export function flyerInputFrom(body: { type?: unknown; data?: unknown; text?: unknown } | null): FlyerInput | { error: string; status: number } {
+  const type = typeof body?.type === "string" ? body.type : "";
+  if (typeof body?.text === "string" && body.text.trim()) return { kind: "text", text: body.text.trim().slice(0, 20_000) };
+  if (typeof body?.data === "string" && (IMAGE_TYPES.has(type) || type === PDF_TYPE)) {
+    if (body.data.length > MAX_BASE64) return { error: "That file is too big. Use a photo or a PDF under 3 MB.", status: 413 };
+    return type === PDF_TYPE ? { kind: "pdf", data: body.data } : { kind: "image", mediaType: type, data: body.data };
   }
+  return { error: "Add a flyer (photo or PDF) or paste the event details.", status: 400 };
+}
+
+/** The setup message for a missing key, naming the environment to add it to. */
+export function missingKeyProblem() {
+  const env = process.env.VERCEL_ENV;
+  const where = env ? ` for ${env === "production" ? "Production" : env === "preview" ? "Preview" : env}` : "";
+  return `Flyer import isn't set up on this deployment. Add ANTHROPIC_API_KEY in Vercel${where}, then redeploy.`;
+}
+
+export async function readFlyer(input: FlyerInput, eventName: string, today: string): Promise<ImportResult> {
+  if (!process.env.ANTHROPIC_API_KEY) return { problem: missingKeyProblem() };
   const client = new Anthropic();
-  const source: Anthropic.Beta.BetaContentBlockParam =
-    input.kind === "image"
-      ? { type: "image", source: { type: "base64", media_type: input.mediaType as "image/jpeg", data: input.data } }
-      : input.kind === "pdf"
-        ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: input.data } }
-        : { type: "text", text: `<event_details>\n${input.text}\n</event_details>` };
+  const source = flyerBlock(input);
 
   let response: Anthropic.Beta.BetaMessage;
   try {

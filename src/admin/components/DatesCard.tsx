@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { FunnelEvent } from "@/data/funnel-types";
 import { isOver } from "@/lib/events";
-import FlyerImportSheet, { type FlyerFound, type ImportedDate } from "@/admin/components/FlyerImportSheet";
+import FlyerImportSheet, { type FlyerFound, type FunnelDraft, type ImportedDate } from "@/admin/components/FlyerImportSheet";
 import type { Look } from "@/lib/look";
 
 type Status = NonNullable<FunnelEvent["status"]>;
@@ -40,6 +40,7 @@ export default function DatesCard({
   onChange,
   onSave,
   onLook,
+  onDraft,
   inStudio = false,
 }: {
   slug: string;
@@ -52,6 +53,8 @@ export default function DatesCard({
   onSave: (event: FunnelEvent, reel: ReelChoice, isNew: boolean) => void;
   /** Use a flyer's look (and the flyer itself, as an upload link, behind the opening screen). */
   onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
+  /** Use a funnel drafted from a flyer. */
+  onDraft: (draft: FunnelDraft) => void;
   /** In the studio, where its story step names it. */
   inStudio?: boolean;
 }) {
@@ -74,12 +77,15 @@ export default function DatesCard({
     if (editing?.imported !== undefined) {
       const done = new Set(added).add(editing.imported);
       setAdded(done);
-      // Back to the list while there are more to review.
-      if (found && (found.dates.some((_, i) => !done.has(i)) || (found.look && !found.lookUsed))) setImporting(true);
+      // Back to the list while there's more to do there.
+      if (found && moreToDo(found, done)) setImporting(true);
       else closeImport();
     }
     setEditing(null);
   };
+  /** Dates left to review, a look not used, or a funnel not drafted yet. */
+  const moreToDo = (f: FlyerFound, done: Set<number>) =>
+    f.dates.some((_, i) => !done.has(i)) || Boolean(f.look && !f.lookUsed) || Boolean(f.source && !f.draftUsed);
   const closeImport = () => {
     setImporting(false);
     setFound(null);
@@ -186,7 +192,13 @@ export default function DatesCard({
             onLook(look, flyer, asBackground);
             setFound((f) => (f ? { ...f, lookUsed: true } : f));
             // Nothing else to do here: close.
-            if (found && found.dates.every((_, i) => added.has(i))) closeImport();
+            if (found && !moreToDo({ ...found, lookUsed: true }, added)) closeImport();
+          }}
+          onDrafted={(draft) => setFound((f) => (f ? { ...f, draft } : f))}
+          onDraft={(draft) => {
+            onDraft(draft);
+            setFound((f) => (f ? { ...f, draftUsed: true } : f));
+            if (found && !moreToDo({ ...found, draftUsed: true }, added)) closeImport();
           }}
           onClose={closeImport}
         />
