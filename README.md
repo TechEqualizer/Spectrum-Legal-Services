@@ -233,10 +233,16 @@ switches every page between the businesses the admin may edit, in that
 business's colors. It is not linked from the public site and is marked
 `noindex`.
 
-- **Opening screen** (top of the Reels page): attach, swap or remove what
-  plays behind the opening screen's title: upload a video or photo, or
-  paste a YouTube or direct link. Remove has Undo, and it saves with the
-  reel edits.
+- **Opening screen** (top of the Reels page): **Edit** opens one sheet for
+  the words visitors see first (title, tagline, main button and dates
+  heading on event funnels; heading and intro on the others) and what plays
+  behind them, with a live preview. An empty field uses the original words.
+  **Remove background** has Undo.
+- **Dates** (event funnels): the dates as rows; tap one to change its name,
+  date and time, price, venue, ticket link (https) and status (On sale, Few
+  left, Sold out). **+ Add date** starts a week after the last one with the
+  same details. Delete has Undo. Each date is a story circle on the opening
+  screen. Words and dates publish with everything else.
 - **Reels** (the admin home): each funnel as an ordered list. Every reel goes
   to the next one unless it has its own path for "watched to the end" or
   "skipped", so branching is added only where it helps. Rows show the reel's

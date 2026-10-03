@@ -1,0 +1,317 @@
+"use client";
+
+import { useEffect, useId, useRef, useState } from "react";
+import type { FunnelEvent } from "@/data/funnel-types";
+import { isOver } from "@/lib/events";
+
+type Status = NonNullable<FunnelEvent["status"]>;
+
+const STATUS: { id: Status; label: string }[] = [
+  { id: "on_sale", label: "On sale" },
+  { id: "few_left", label: "Few left" },
+  { id: "sold_out", label: "Sold out" },
+];
+
+const pad = (n: number) => String(n).padStart(2, "0");
+/** The date and time fields' values, in the admin's own time zone. */
+const toFields = (iso: string) => {
+  const d = new Date(iso);
+  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
+};
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+/**
+ * The event's dates, as rows: tap one to edit it, or add the next one.
+ * Each date shows on the opening screen as a story circle.
+ */
+export default function DatesCard({
+  events,
+  edited,
+  onChange,
+}: {
+  events: FunnelEvent[];
+  /** Differs from what's live. */
+  edited: boolean;
+  onChange: (events: FunnelEvent[], message: string, undo?: () => void) => void;
+}) {
+  // The editor's clock: read once, so rows don't jump between upcoming and past while open.
+  const [now] = useState(() => Date.now());
+  const [editing, setEditing] = useState<{ event: FunnelEvent; isNew: boolean } | null>(null);
+  const sorted = [...events].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  const upcoming = sorted.filter((e) => !isOver(e, now));
+  const past = sorted.filter((e) => isOver(e, now)).reverse();
+
+  const save = (event: FunnelEvent) => {
+    const exists = events.some((e) => e.id === event.id);
+    onChange(exists ? events.map((e) => (e.id === event.id ? event : e)) : [...events, event], exists ? "Date saved" : "Date added");
+    setEditing(null);
+  };
+  const remove = (event: FunnelEvent) => {
+    const before = events;
+    onChange(events.filter((e) => e.id !== event.id), "Date deleted", () => onChange(before, "Date restored"));
+    setEditing(null);
+  };
+
+  return (
+    <section aria-labelledby="dates-title" className="rounded-xl border border-gray-200 bg-white">
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-5">
+        <div>
+          <h2 id="dates-title" className="font-bold text-deep-navy">Dates</h2>
+          <p className="text-xs text-gray-600">
+            Shown as circles on your opening screen.
+            {edited && <span className="font-semibold text-amber-800"> Not published.</span>}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing({ event: newDate(sorted), isNew: true })}
+          className="min-h-10 flex-shrink-0 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+        >
+          + Add date
+        </button>
+      </div>
+
+      {upcoming.length === 0 ? (
+        <p className="px-5 py-6 text-sm text-gray-600">No upcoming dates. Add your next event so people can get tickets.</p>
+      ) : (
+        <ul role="list" className="divide-y divide-gray-100">
+          {upcoming.map((e) => (
+            <DateRow key={e.id} event={e} onClick={() => setEditing({ event: e, isNew: false })} />
+          ))}
+        </ul>
+      )}
+
+      {past.length > 0 && (
+        <details className="group border-t border-gray-100">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-4 text-sm font-semibold text-gray-600 sm:px-5">
+            Past dates ({past.length})
+            <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l-7 7-7-7" /></svg>
+          </summary>
+          <ul role="list" className="divide-y divide-gray-100 border-t border-gray-100">
+            {past.map((e) => (
+              <DateRow key={e.id} event={e} past onClick={() => setEditing({ event: e, isNew: false })} />
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {editing && (
+        <DateSheet
+          event={editing.event}
+          isNew={editing.isNew}
+          onSave={save}
+          onDelete={editing.isNew ? undefined : () => remove(editing.event)}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </section>
+  );
+}
+
+/** A new date: a week after the last one, at the same time, with the same details. */
+function newDate(sorted: FunnelEvent[]): FunnelEvent {
+  const last = sorted[sorted.length - 1];
+  const start = last ? new Date(last.startsAt) : new Date();
+  if (!last) start.setHours(19, 0, 0, 0);
+  start.setDate(start.getDate() + 7);
+  while (start.getTime() < Date.now()) start.setDate(start.getDate() + 7);
+  return {
+    id: `ev-${Date.now().toString(36)}`,
+    name: last?.name.split(": ")[0] ?? "",
+    startsAt: start.toISOString(),
+    venue: last?.venue,
+    price: last?.price,
+    ticketUrl: "",
+  };
+}
+
+function DateRow({ event, past = false, onClick }: { event: FunnelEvent; past?: boolean; onClick: () => void }) {
+  const d = new Date(event.startsAt);
+  const status = past ? "Past" : STATUS.find((s) => s.id === (event.status ?? "on_sale"))!.label;
+  return (
+    <li>
+      <button type="button" onClick={onClick} className="flex min-h-16 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-soft-gray sm:px-5">
+        <span className={`flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl leading-none ${past ? "bg-gray-100 text-gray-500" : "bg-deep-navy text-white"}`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${past ? "" : "text-sky-accent"}`}>{d.toLocaleDateString("en-US", { month: "short" })}</span>
+          <span className="mt-0.5 text-lg font-bold">{d.getDate()}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold text-deep-navy">{event.name}</span>
+          <span className="block truncate text-xs text-gray-600">
+            {when(event.startsAt)}
+            {event.price ? ` · ${event.price}` : ""}
+          </span>
+        </span>
+        <span
+          className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            past ? "bg-gray-100 text-gray-600" : event.status === "sold_out" ? "bg-gray-100 text-gray-700" : event.status === "few_left" ? "bg-amber-100 text-amber-900" : "bg-teal-accent/10 text-teal-accent"
+          }`}
+        >
+          {status}
+        </span>
+        <svg className="h-4 w-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </li>
+  );
+}
+
+function DateSheet({
+  event,
+  isNew,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  event: FunnelEvent;
+  isNew: boolean;
+  onSave: (event: FunnelEvent) => void;
+  onDelete?: () => void;
+  onClose: () => void;
+}) {
+  const id = useId();
+  const ref = useRef<HTMLDialogElement>(null);
+  const initial = toFields(event.startsAt);
+  const [name, setName] = useState(event.name);
+  const [date, setDate] = useState(initial.date);
+  const [time, setTime] = useState(initial.time);
+  const [venue, setVenue] = useState(event.venue ?? "");
+  const [price, setPrice] = useState(event.price ?? "");
+  const [ticketUrl, setTicketUrl] = useState(event.ticketUrl);
+  const [status, setStatus] = useState<Status>(event.status ?? "on_sale");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  useEffect(() => ref.current?.showModal(), []);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const problems: Record<string, string> = {};
+    if (!name.trim()) problems.name = "Give the date a name.";
+    const start = new Date(`${date}T${time || "00:00"}`);
+    if (!date || Number.isNaN(start.getTime())) problems.date = "Pick a date.";
+    try {
+      if (new URL(ticketUrl.trim()).protocol !== "https:") throw new Error();
+    } catch {
+      problems.ticketUrl = "Paste the ticket page link, starting with https://.";
+    }
+    setErrors(problems);
+    if (Object.keys(problems).length) return;
+    onSave({
+      id: event.id,
+      name: name.trim(),
+      startsAt: start.toISOString(),
+      ticketUrl: ticketUrl.trim(),
+      ...(venue.trim() ? { venue: venue.trim() } : {}),
+      ...(price.trim() ? { price: price.trim() } : {}),
+      ...(status !== "on_sale" ? { status } : {}),
+    });
+  };
+
+  const field = "mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-charcoal focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-accent";
+  const err = (k: string) =>
+    errors[k] ? <p id={`${id}-${k}-error`} role="alert" className="mt-1 text-xs font-semibold text-red-700">{errors[k]}</p> : null;
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      aria-labelledby={`${id}-title`}
+      className="m-auto max-h-[92dvh] w-[min(30rem,calc(100vw-1rem))] overflow-y-auto rounded-2xl bg-soft-gray p-0 text-charcoal shadow-2xl backdrop:bg-deep-navy/60"
+    >
+      <form onSubmit={submit} noValidate>
+        <div className="flex items-start justify-between gap-4 px-5 pb-2 pt-5">
+          <h2 id={`${id}-title`} className="text-xl font-bold text-deep-navy">{isNew ? "Add date" : "Edit date"}</h2>
+          <button
+            type="button"
+            onClick={() => ref.current?.close()}
+            aria-label="Close"
+            className="-mr-2 -mt-1 flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-deep-navy"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="space-y-5 px-5 pb-5">
+          <div className="divide-y divide-gray-100 rounded-xl bg-white">
+            <div className="px-4 py-3">
+              <label htmlFor={`${id}-name`} className="text-sm font-semibold text-deep-navy">Name</label>
+              <input id={`${id}-name`} className={field} maxLength={80} value={name} onChange={(e) => setName(e.target.value)} aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? `${id}-name-error` : undefined} />
+              {err("name")}
+            </div>
+            <div className="grid grid-cols-2 gap-3 px-4 py-3">
+              <div>
+                <label htmlFor={`${id}-date`} className="text-sm font-semibold text-deep-navy">Date</label>
+                <input id={`${id}-date`} type="date" className={field} value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={Boolean(errors.date)} aria-describedby={errors.date ? `${id}-date-error` : undefined} />
+                {err("date")}
+              </div>
+              <div>
+                <label htmlFor={`${id}-time`} className="text-sm font-semibold text-deep-navy">Starts</label>
+                <input id={`${id}-time`} type="time" className={field} value={time} onChange={(e) => setTime(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 px-4 py-3">
+              <div>
+                <label htmlFor={`${id}-price`} className="text-sm font-semibold text-deep-navy">Price</label>
+                <input id={`${id}-price`} className={field} maxLength={30} placeholder="From $25" value={price} onChange={(e) => setPrice(e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor={`${id}-venue`} className="text-sm font-semibold text-deep-navy">Venue</label>
+                <input id={`${id}-venue`} className={field} maxLength={80} value={venue} onChange={(e) => setVenue(e.target.value)} />
+              </div>
+            </div>
+            <div className="px-4 py-3">
+              <label htmlFor={`${id}-tickets`} className="text-sm font-semibold text-deep-navy">Ticket link</label>
+              <input
+                id={`${id}-tickets`}
+                type="url"
+                inputMode="url"
+                className={field}
+                placeholder="https://www.eventbrite.com/e/..."
+                value={ticketUrl}
+                onChange={(e) => setTicketUrl(e.target.value)}
+                aria-invalid={Boolean(errors.ticketUrl)}
+                aria-describedby={errors.ticketUrl ? `${id}-ticketUrl-error` : undefined}
+              />
+              {err("ticketUrl")}
+            </div>
+          </div>
+
+          <div>
+            <p id={`${id}-status`} className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-gray-500">Tickets</p>
+            {/* Segmented control */}
+            <div role="radiogroup" aria-labelledby={`${id}-status`} className="grid grid-cols-3 gap-1 rounded-xl bg-gray-200/70 p-1">
+              {STATUS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={status === s.id}
+                  onClick={() => setStatus(s.id)}
+                  className={`min-h-10 rounded-lg text-sm font-semibold transition ${status === s.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 px-1 text-xs text-gray-500">
+              {status === "sold_out" ? "Its Tickets button sells the next date instead." : status === "few_left" ? "Shows “Few left” on the opening screen." : "Tickets open your ticket page."}
+            </p>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 flex items-center gap-3 border-t border-gray-200 bg-soft-gray/95 px-5 py-3 backdrop-blur">
+          {onDelete && (
+            <button type="button" onClick={onDelete} className="mr-auto min-h-11 px-1 text-sm font-semibold text-red-700 hover:underline">
+              Delete
+            </button>
+          )}
+          <button type="button" onClick={() => ref.current?.close()} className="ml-auto min-h-11 rounded-lg px-4 text-sm font-semibold text-deep-navy hover:bg-white">
+            Cancel
+          </button>
+          <button type="submit" className="min-h-11 rounded-lg bg-deep-navy px-6 text-sm font-bold text-white hover:bg-royal-blue">
+            {isNew ? "Add date" : "Save"}
+          </button>
+        </div>
+      </form>
+    </dialog>
+  );
+}

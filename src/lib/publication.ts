@@ -3,7 +3,7 @@
 // Shared by the funnel link, the API routes and the admin.
 
 import { withEdits, type EditorFunnel, type EditorReel, type PathTarget, type ReelCta } from "@/admin/editor-model";
-import type { Funnel, FunnelCta, ReelEmphasis, ReelMedia } from "@/data/funnel-types";
+import type { Funnel, FunnelCta, FunnelEvent, ReelEmphasis, ReelMedia } from "@/data/funnel-types";
 
 export type Publication = {
   version: 1;
@@ -13,13 +13,58 @@ export type Publication = {
   funnel: Pick<EditorFunnel, "order" | "topics" | "paths" | "primaryCta">;
   /** What plays behind the opening screen's title: absent keeps the default, null shows none. */
   backdrop?: ReelMedia | null;
+  /** The opening screen's words; any left out keep the built-in ones. */
+  screen?: ScreenCopy;
+  /** Event dates, replacing the built-in list. */
+  events?: FunnelEvent[];
+};
+
+/**
+ * The opening screen's words. With a full opening scene (cover.hero):
+ * title, tagline and button label over the scene, then heading and intro
+ * above the dates. Without one: heading and intro over the scene.
+ */
+export type ScreenCopy = {
+  title?: string;
+  tagline?: string;
+  watchLabel?: string;
+  heading?: string;
+  intro?: string;
+};
+
+export const SCREEN_LIMITS: Record<keyof ScreenCopy, number> = {
+  title: 60,
+  tagline: 140,
+  watchLabel: 24,
+  heading: 40,
+  intro: 160,
 };
 
 /** The funnel as published, or the built-in one when nothing is published. */
 export function applyPublication(base: Funnel, publication: Publication | null | undefined): Funnel {
   if (!publication) return base;
   const funnel = withEdits(base, publication.funnel, publication.reels);
-  return "backdrop" in publication ? { ...funnel, cover: { ...funnel.cover, backdrop: publication.backdrop } } : funnel;
+  const { screen = {} } = publication;
+  return {
+    ...funnel,
+    ...(publication.events ? { events: publication.events } : {}),
+    cover: {
+      ...funnel.cover,
+      ...("backdrop" in publication ? { backdrop: publication.backdrop } : {}),
+      heading: screen.heading ?? funnel.cover.heading,
+      intro: screen.intro ?? funnel.cover.intro,
+      ...(funnel.cover.hero
+        ? {
+            hero: {
+              ...funnel.cover.hero,
+              title: screen.title ?? funnel.cover.hero.title,
+              tagline: screen.tagline ?? funnel.cover.hero.tagline,
+              watchLabel: screen.watchLabel ?? funnel.cover.hero.watchLabel,
+            },
+          }
+        : {}),
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -27,6 +72,8 @@ export function applyPublication(base: Funnel, publication: Publication | null |
 // it is stored and again when it is read.
 
 const REEL_ID = /^[a-z0-9-]{1,80}$/;
+const EVENT_ID = /^[a-z0-9-]{1,64}$/;
+const STATUSES = ["on_sale", "few_left", "sold_out"] as const;
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 const CTAS: FunnelCta[] = ["call", "book", "tickets"];
 const REEL_CTAS: ReelCta[] = ["funnel", "call", "book", "tickets", "text_later"];
@@ -128,6 +175,44 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
     reels,
     funnel: { order, topics, paths, primaryCta: f.primaryCta as FunnelCta },
   };
+  if (input.screen !== undefined) {
+    if (!isObject(input.screen)) return "Bad opening screen words.";
+    const screen: ScreenCopy = {};
+    for (const [k, v] of Object.entries(input.screen)) {
+      const max = SCREEN_LIMITS[k as keyof ScreenCopy];
+      if (!max) continue;
+      if (typeof v !== "string" || !v.trim() || v.length > max) return `Opening screen: the ${k} must be 1 to ${max} characters.`;
+      screen[k as keyof ScreenCopy] = v.trim();
+    }
+    publication.screen = screen;
+  }
+
+  if (input.events !== undefined) {
+    if (!base.events) return "This funnel doesn't have dates.";
+    if (!Array.isArray(input.events) || input.events.length > 60) return "Dates are missing or too many.";
+    const events: FunnelEvent[] = [];
+    const eventIds = new Set<string>();
+    for (const e of input.events) {
+      if (!isObject(e) || typeof e.id !== "string" || !EVENT_ID.test(e.id) || eventIds.has(e.id)) return "A date has a bad or repeated id.";
+      if (!text(e.name, 80) || !(e.name as string).trim()) return "Every date needs a name.";
+      if (typeof e.startsAt !== "string" || Number.isNaN(Date.parse(e.startsAt))) return `"${e.name}" needs a date and time.`;
+      if (!text(e.venue, 80, true) || !text(e.price, 30, true)) return `"${e.name}" has a venue or price that's too long.`;
+      if (!isMediaUrl(e.ticketUrl) || (e.ticketUrl as string).startsWith("/")) return `"${e.name}" needs a ticket link starting with https://.`;
+      if (e.status !== undefined && !STATUSES.includes(e.status as (typeof STATUSES)[number])) return `"${e.name}" has an unknown status.`;
+      eventIds.add(e.id);
+      events.push({
+        id: e.id,
+        name: (e.name as string).trim(),
+        startsAt: new Date(e.startsAt).toISOString(),
+        ticketUrl: e.ticketUrl as string,
+        ...(typeof e.venue === "string" && e.venue.trim() ? { venue: e.venue.trim() } : {}),
+        ...(typeof e.price === "string" && e.price.trim() ? { price: e.price.trim() } : {}),
+        ...(e.status ? { status: e.status as FunnelEvent["status"] } : {}),
+      });
+    }
+    publication.events = events.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  }
+
   if ("backdrop" in input && input.backdrop !== undefined) {
     if (input.backdrop !== null) {
       const problem = checkMedia(input.backdrop);

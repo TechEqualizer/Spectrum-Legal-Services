@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import DatesCard from "@/admin/components/DatesCard";
 import HeroMediaCard from "@/admin/components/HeroMediaCard";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
 import ReelViewer from "@/components/ReelViewer";
@@ -19,6 +20,8 @@ import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { useAdminSession } from "@/admin/session";
 import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
 import { fetchLive, publicationKey, publish, takeDown, type EditorState, type LiveState } from "@/admin/publish";
+import type { FunnelEvent } from "@/data/funnel-types";
+import type { ScreenCopy } from "@/lib/publication";
 import { sampleFor, type ReelTotals } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import type { FunnelTrigger } from "@/data/reels";
@@ -42,8 +45,8 @@ function slugify(title: string, taken: Set<string>) {
 }
 
 /** For telling whether anything changed. Keeps "live background" (undefined) apart from "removed" (null). */
-function snapshotOf(reels: EditorReel[], funnels: EditorFunnel[], heroMedia: HeroMediaEdit) {
-  return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia]);
+function snapshotOf({ reels, funnels, heroMedia, screen, events }: EditorState) {
+  return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia, screen ?? {}, events ?? "live"]);
 }
 
 /** Reels a visitor can reach from the funnel's starting points. */
@@ -74,6 +77,9 @@ export default function ReelsEditor() {
   const [funnels, setFunnels] = useState(initial.funnels);
   // The opening screen's background (undefined: the live one).
   const [heroMedia, setHeroMedia] = useState<HeroMediaEdit>(undefined);
+  // The opening screen's words that differ from the built-in ones, and the event dates (undefined: built-in).
+  const [screen, setScreen] = useState<ScreenCopy | undefined>(undefined);
+  const [events, setEvents] = useState<FunnelEvent[] | undefined>(undefined);
   const [activeId, setActiveId] = useState(initial.funnels[0].id);
   // Sample results for the last 30 days, keyed by reel.
   const stats = new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t]));
@@ -87,7 +93,9 @@ export default function ReelsEditor() {
   // When the edits were last saved in this browser (null: nothing saved, showing the live funnel).
   const slug = liveFunnel.slug;
   const savedAt = useDraftSavedAt(slug);
-  const [toast, setToast] = useState("");
+  // A short confirmation near the bottom, with Undo when something was deleted.
+  const [toast, setToastState] = useState<{ text: string; undo?: () => void; id: number } | null>(null);
+  const setToast = (text: string, undo?: () => void) => setToastState(text ? { text, undo, id: Date.now() } : null);
   // What's on the live link now (null while it loads).
   const [live, setLive] = useState<LiveState | null>(null);
   const [liveError, setLiveError] = useState("");
@@ -99,6 +107,8 @@ export default function ReelsEditor() {
     setLibrary(state.reels);
     setFunnels(state.funnels);
     setHeroMedia(state.heroMedia);
+    setScreen(state.screen);
+    setEvents(state.events);
     setActiveId((id) => (state.funnels.some((f) => f.id === id) ? id : state.funnels[0].id));
   };
 
@@ -119,8 +129,9 @@ export default function ReelsEditor() {
       const base = liveState ?? { ...builtIn, publishedAt: null, publishedBy: null };
       setLive(base);
       const start = draft ?? base;
-      show({ reels: start.reels, funnels: start.funnels, heroMedia: start.heroMedia });
-      lastSaved.current = snapshotOf(start.reels, start.funnels, start.heroMedia);
+      const state: EditorState = { reels: start.reels, funnels: start.funnels, heroMedia: start.heroMedia, screen: start.screen, events: start.events };
+      show(state);
+      lastSaved.current = snapshotOf(state);
       loaded.current = true;
     });
     return () => {
@@ -131,29 +142,34 @@ export default function ReelsEditor() {
   // Every change is saved as it happens.
   useEffect(() => {
     if (!loaded.current) return;
-    const snapshot = snapshotOf(library, funnels, heroMedia);
+    const state: EditorState = { reels: library, funnels, heroMedia, screen, events };
+    const snapshot = snapshotOf(state);
     if (snapshot === lastSaved.current) return;
     lastSaved.current = snapshot;
-    saveDraft(slug, { reels: library, funnels, heroMedia });
-  }, [slug, library, funnels, heroMedia]);
+    saveDraft(slug, state);
+  }, [slug, library, funnels, heroMedia, screen, events]);
 
   // A short "Saved" note where the person is looking.
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(""), 2200);
+    const t = setTimeout(() => setToastState(null), toast.undo ? 6000 : 2200);
     return () => clearTimeout(t);
   }, [toast]);
 
-  const current: EditorState = { reels: library, funnels, heroMedia };
+  const current: EditorState = { reels: library, funnels, heroMedia, screen, events };
   const unpublished = Boolean(live) && publicationKey(current) !== publicationKey(live!);
   const showBar = unpublished || Boolean(publishing) || Boolean(publishError);
+  const screenEdited = Boolean(live) && JSON.stringify(screen ?? {}) !== JSON.stringify(live!.screen ?? {});
+  // Same dates in any order count as unchanged.
+  const byStart = (list?: FunnelEvent[]) => (list ? [...list].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)) : "live");
+  const eventsEdited = Boolean(live) && JSON.stringify(byStart(events)) !== JSON.stringify(byStart(live!.events));
   const heroEdited = Boolean(live) && JSON.stringify(heroMedia ?? "live") !== JSON.stringify(live!.heroMedia ?? "live");
 
   const resetToLive = () => {
     if (!live) return;
     clearDraft(slug);
     show(live);
-    lastSaved.current = snapshotOf(live.reels, live.funnels, live.heroMedia);
+    lastSaved.current = snapshotOf(live);
     setToast("Back to what's live");
   };
 
@@ -283,15 +299,28 @@ export default function ReelsEditor() {
       </div>
 
       <HeroMediaCard
-        title={liveFunnel.cover.hero?.title ?? liveFunnel.cover.heading}
+        funnel={liveFunnel}
         live={sceneMediaOf(liveFunnel)}
         value={heroMedia}
-        edited={heroEdited}
-        onChange={(media, message) => {
-          setHeroMedia(media);
-          setToast(message);
+        screen={screen}
+        edited={heroEdited || screenEdited}
+        onChange={(change, message, undo) => {
+          setHeroMedia(change.media);
+          setScreen(change.screen);
+          setToast(message, undo);
         }}
       />
+
+      {liveFunnel.events && (
+        <DatesCard
+          events={events ?? liveFunnel.events}
+          edited={eventsEdited}
+          onChange={(next, message, undo) => {
+            setEvents(next);
+            setToast(message, undo);
+          }}
+        />
+      )}
 
       {/* Funnels: containers with an entry trigger */}
       <section aria-labelledby="funnels-title">
@@ -501,15 +530,31 @@ export default function ReelsEditor() {
         />
       )}
 
-      <p
+      <div
         role="status"
-        className={`pointer-events-none fixed inset-x-0 z-50 mx-auto w-fit max-w-[calc(100vw-2rem)] rounded-full bg-deep-navy px-5 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-white/15 transition-opacity ${
+        className={`fixed inset-x-0 z-50 mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-full bg-deep-navy py-2.5 pl-5 text-sm font-semibold text-white shadow-lg ring-1 ring-white/15 transition-opacity ${toast?.undo ? "pr-2" : "pointer-events-none pr-5"} ${
           // Above the tab bar, and above the publish bar when it shows.
           showBar ? "bottom-[calc(9.5rem+env(safe-area-inset-bottom))] lg:bottom-28" : "bottom-24 lg:bottom-8"
         } ${toast ? "opacity-100" : "opacity-0"}`}
       >
-        {toast && <><span aria-hidden="true">&#10003; </span>{toast}</>}
-      </p>
+        {toast && (
+          <>
+            <span><span aria-hidden="true">&#10003; </span>{toast.text}</span>
+            {toast.undo && (
+              <button
+                type="button"
+                onClick={() => {
+                  toast.undo!();
+                  setToastState(null);
+                }}
+                className="min-h-9 rounded-full px-3 font-bold text-sky-accent hover:bg-white/10"
+              >
+                Undo
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {editing && (
         <ReelEditDialog

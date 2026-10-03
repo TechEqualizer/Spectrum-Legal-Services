@@ -4,7 +4,8 @@
 
 import { useSyncExternalStore } from "react";
 import type { EditorFunnel, EditorReel } from "@/admin/editor-model";
-import type { ReelMedia } from "@/data/funnel-types";
+import type { FunnelEvent, ReelMedia } from "@/data/funnel-types";
+import type { ScreenCopy } from "@/lib/publication";
 
 /**
  * The opening screen's background: media to show, null for none (the
@@ -12,7 +13,15 @@ import type { ReelMedia } from "@/data/funnel-types";
  */
 export type HeroMediaEdit = ReelMedia | null | undefined;
 
-export type DraftData = { reels: EditorReel[]; funnels: EditorFunnel[]; heroMedia?: ReelMedia | null };
+export type DraftData = {
+  reels: EditorReel[];
+  funnels: EditorFunnel[];
+  heroMedia?: ReelMedia | null;
+  /** The opening screen's words, where they differ from the built-in ones. */
+  screen?: ScreenCopy;
+  /** Event dates (undefined: the built-in ones). */
+  events?: FunnelEvent[];
+};
 export type Draft = DraftData & { savedAt: number };
 
 const draftKey = (business: string) => `admin_draft_${business}`;
