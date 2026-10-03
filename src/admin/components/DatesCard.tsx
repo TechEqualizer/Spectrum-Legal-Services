@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { FunnelEvent } from "@/data/funnel-types";
 import { isOver } from "@/lib/events";
+import FlyerImportSheet, { type ImportedDate } from "@/admin/components/FlyerImportSheet";
 
 type Status = NonNullable<FunnelEvent["status"]>;
 
@@ -31,12 +32,14 @@ export type DateReel = { id: string; title: string; eventId?: string };
 export type ReelChoice = string;
 
 export default function DatesCard({
+  slug,
   events,
   reels,
   edited,
   onChange,
   onSave,
 }: {
+  slug: string;
   events: FunnelEvent[];
   reels: DateReel[];
   /** Differs from what's live. */
@@ -47,7 +50,11 @@ export default function DatesCard({
 }) {
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
-  const [editing, setEditing] = useState<{ event: FunnelEvent; isNew: boolean } | null>(null);
+  const [editing, setEditing] = useState<{ event: FunnelEvent; isNew: boolean; imported?: number } | null>(null);
+  // Flyer import: the sheet is open, what it found, and which of those are added.
+  const [importing, setImporting] = useState(false);
+  const [found, setFound] = useState<{ dates: ImportedDate[]; note: string } | null>(null);
+  const [added, setAdded] = useState<Set<number>>(() => new Set());
   const sorted = [...events].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
   const upcoming = sorted.filter((e) => !isOver(e, now));
   const past = sorted.filter((e) => isOver(e, now)).reverse();
@@ -57,7 +64,30 @@ export default function DatesCard({
     (e.reelId ? reels.find((r) => r.id === e.reelId) : undefined) ?? reels.find((r) => r.eventId === e.id);
   const save = (event: FunnelEvent, reel: ReelChoice) => {
     onSave(event, reel, !events.some((e) => e.id === event.id));
+    if (editing?.imported !== undefined) {
+      const done = new Set(added).add(editing.imported);
+      setAdded(done);
+      // Back to the list while there are more to review.
+      if (found && found.dates.some((_, i) => !done.has(i))) setImporting(true);
+      else closeImport();
+    }
     setEditing(null);
+  };
+  const closeImport = () => {
+    setImporting(false);
+    setFound(null);
+    setAdded(new Set());
+  };
+  const days = new Set(events.map((e) => toFields(e.startsAt).date));
+  const review = (index: number, dates = found?.dates ?? []) => {
+    setImporting(false);
+    setEditing({ event: fromFlyer(dates[index], sorted), isNew: true, imported: index });
+  };
+  const onFound = (result: { dates: ImportedDate[]; note: string } | null) => {
+    setFound(result);
+    setAdded(new Set());
+    // One new date: straight to review.
+    if (result?.dates.length === 1 && !days.has(result.dates[0].date)) review(0, result.dates);
   };
   const remove = (event: FunnelEvent) => {
     const before = events;
@@ -75,13 +105,22 @@ export default function DatesCard({
             {edited && <span className="font-semibold text-amber-800"> Not published.</span>}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setEditing({ event: newDate(sorted), isNew: true })}
-          className="min-h-10 flex-shrink-0 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
-        >
-          + Add date
-        </button>
+        <div className="flex flex-shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() => setImporting(true)}
+            className="min-h-10 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+          >
+            Import flyer
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing({ event: newDate(sorted), isNew: true })}
+            className="min-h-10 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+          >
+            + Add date
+          </button>
+        </div>
       </div>
 
       {upcoming.length === 0 ? (
@@ -110,15 +149,26 @@ export default function DatesCard({
 
       {editing && (
         <DateSheet
+          key={editing.event.id}
           event={editing.event}
           isNew={editing.isNew}
+          imported={editing.imported !== undefined && found ? found.dates[editing.imported] : undefined}
           reels={reels}
           events={events}
-          initialReel={editing.isNew ? "new" : opener(editing.event)?.id ?? ""}
+          initialReel={editing.imported !== undefined ? "" : editing.isNew ? "new" : opener(editing.event)?.id ?? ""}
           onSave={save}
           onDelete={editing.isNew ? undefined : () => remove(editing.event)}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            // Closing a reviewed date goes back to the flyer's list.
+            if (editing.imported !== undefined && found && found.dates.length > 1) setImporting(true);
+            else if (editing.imported !== undefined) closeImport();
+            setEditing(null);
+          }}
         />
+      )}
+
+      {importing && (
+        <FlyerImportSheet slug={slug} found={found} added={added} taken={days} onFound={onFound} onReview={review} onClose={closeImport} />
       )}
     </section>
   );
@@ -138,6 +188,20 @@ function newDate(sorted: FunnelEvent[]): FunnelEvent {
     venue: last?.venue,
     price: last?.price,
     ticketUrl: "",
+  };
+}
+
+/** A new date from what the flyer says. Anything it left out stays empty, for the admin to fill. */
+function fromFlyer(d: ImportedDate, sorted: FunnelEvent[]): FunnelEvent {
+  const last = sorted[sorted.length - 1];
+  return {
+    id: `ev-${Date.now().toString(36)}`,
+    name: d.name || (last?.name.split(": ")[0] ?? ""),
+    // No time on the flyer: the time of the last date, else 7 PM.
+    startsAt: new Date(`${d.date}T${d.time || (last ? toFields(last.startsAt).time : "19:00")}`).toISOString(),
+    ...(d.venue ? { venue: d.venue } : {}),
+    ...(d.price ? { price: d.price } : {}),
+    ticketUrl: d.ticketUrl,
   };
 }
 
@@ -179,6 +243,7 @@ function DateRow({ event, reel, past = false, onClick }: { event: FunnelEvent; r
 function DateSheet({
   event,
   isNew,
+  imported,
   reels,
   events,
   initialReel,
@@ -188,6 +253,8 @@ function DateSheet({
 }: {
   event: FunnelEvent;
   isNew: boolean;
+  /** What the flyer said, when this date came from one. */
+  imported?: ImportedDate;
   reels: DateReel[];
   events: FunnelEvent[];
   initialReel: ReelChoice;
@@ -263,6 +330,7 @@ function DateSheet({
         </div>
 
         <div className="space-y-5 px-5 pb-5">
+          {imported && <FromFlyer imported={imported} />}
           <div className="divide-y divide-gray-100 rounded-xl bg-white">
             <div className="px-4 py-3">
               <label htmlFor={`${id}-name`} className="text-sm font-semibold text-deep-navy">Name</label>
@@ -312,6 +380,7 @@ function DateSheet({
             <div className="rounded-xl bg-white px-4 py-3">
               <select id={`${id}-reel`} className={field.replace("mt-1 ", "")} value={reel} onChange={(e) => setReel(e.target.value)} aria-describedby={`${id}-reel-help`}>
                 {!isNew && <option value="">First reel for this date</option>}
+                {imported && <option value="">Your first reel (link one later)</option>}
                 <option value="new">+ New reel for this date</option>
                 {reels.map((r, i) => {
                   const other = r.eventId && r.eventId !== event.id ? events.find((e) => e.id === r.eventId) : undefined;
@@ -324,7 +393,9 @@ function DateSheet({
                 })}
               </select>
               <p id={`${id}-reel-help`} className="mt-1.5 text-xs text-gray-500">
-                {reel === "new"
+                {reel === "" && imported
+                  ? "Plays your first reel until you link one. Its Tickets button sells this date."
+                  : reel === "new"
                   ? "After saving, add its video and title. It plays when someone taps this date."
                   : movesFrom
                     ? `Moves this reel from ${shortDate(movesFrom)} to this date. Its Tickets button sells this date.`
@@ -371,5 +442,19 @@ function DateSheet({
         </div>
       </form>
     </dialog>
+  );
+}
+
+/** Says the details came from the flyer, and what it left out. */
+function FromFlyer({ imported }: { imported: ImportedDate }) {
+  const missing = [!imported.time && "start time", !imported.venue && "venue", !imported.price && "price", !imported.ticketUrl && "ticket link"].filter(
+    (m): m is string => Boolean(m)
+  );
+  const list = missing.length > 1 ? `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}` : missing[0];
+  return (
+    <p className="rounded-xl bg-teal-accent/10 px-4 py-3 text-sm text-deep-navy">
+      <span className="font-semibold">Filled in from your flyer.</span> Check it, then add.
+      {list && <> The flyer didn’t show the {list}.</>}
+    </p>
   );
 }

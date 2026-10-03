@@ -243,6 +243,21 @@ business's colors. It is not linked from the public site and is marked
   left, Sold out). **+ Add date** starts a week after the last one with the
   same details. Delete has Undo. Each date is a story circle on the opening
   screen. Words and dates publish with everything else.
+- **Import flyer** (Dates): choose a flyer (photo, screenshot or PDF) or
+  paste the event details, and Claude reads the date, time, venue, price and
+  ticket link. Each date it finds opens in the date sheet, filled in and
+  marked with what the flyer left out, so nothing is added until it's
+  reviewed. Photos are shrunk in the browser first. It needs
+  `ANTHROPIC_API_KEY` (`/api/admin/import-event`, `src/lib/server/flyer-import.ts`);
+  without it the sheet says so. QR codes aren't read: paste those ticket
+  links.
+- **One upcoming date**: the opening screen shows a single event card
+  (day, time, venue, price, status; tap to watch) instead of a row of one
+  circle, with **Add to calendar** (`/f/<slug>/calendar/<event id>`, an
+  .ics file with a reminder) and **Watch last time**. The line above the
+  title becomes a hook ("This Sunday", "One night only") and, on the day,
+  a countdown ("Starts in 3h 20m"). Within 48 hours, or once it's "Few
+  left", **Get tickets** becomes the main button.
 - **A reel for each date**: a date's **Opens with** picks the reel its
   circle plays (or **+ New reel for this date**, which opens the reel
   editor ready for it). That reel's Tickets button sells that date; picking

@@ -361,6 +361,7 @@ export default function ReelsEditor() {
 
       {liveFunnel.events && (
         <DatesCard
+          slug={slug}
           events={events ?? liveFunnel.events}
           reels={publishedFunnel(funnels)
             .order.map((id) => byId.get(id))

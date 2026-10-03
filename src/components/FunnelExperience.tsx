@@ -1,17 +1,48 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CinematicHero from "@/components/CinematicHero";
 import ReelViewer from "@/components/ReelViewer";
 import { site } from "@/config/site";
-import type { Funnel } from "@/data/funnel-types";
+import type { Funnel, FunnelEvent } from "@/data/funnel-types";
 import { getFunnelBySlug } from "@/data/funnels";
 import { applyPublication, type Publication } from "@/lib/publication";
 import { funnelReel } from "@/data/reels";
 import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents } from "@/lib/events";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
+
+const HOUR = 60 * 60 * 1000;
+const PRIMARY =
+  "cine-shimmer flex min-h-14 items-center justify-center whitespace-nowrap rounded-full bg-teal-accent text-[17px] font-semibold text-white shadow-lg shadow-black/40 transition hover:brightness-110 max-[380px]:text-base";
+const GLASS =
+  "flex min-h-14 items-center justify-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 font-semibold text-white backdrop-blur-md transition hover:bg-white/20";
+
+/** The current time, ticking every 30 seconds while `on`. */
+function useClock(on: boolean, start: number) {
+  const [time, setTime] = useState(start);
+  useEffect(() => {
+    if (!on) return;
+    const t = setInterval(() => setTime(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, [on]);
+  return time;
+}
+
+/** The line above the title when there's one date: a countdown on the day, else a hook. */
+function singleHook(event: FunnelEvent, untilStart: number) {
+  if (untilStart <= 0) return "Happening now";
+  if (untilStart < 12 * HOUR) {
+    const h = Math.floor(untilStart / HOUR);
+    const m = Math.floor((untilStart % HOUR) / 60_000);
+    return `Starts in ${h ? `${h}h ` : ""}${m}m`;
+  }
+  if (untilStart < 6.5 * 24 * HOUR) {
+    return `This ${new Date(event.startsAt).toLocaleDateString("en-US", { weekday: "long" })}`;
+  }
+  return "One night only";
+}
 
 /**
  * The shareable funnel link. It opens on a "What happened?" screen; each
@@ -46,10 +77,25 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
     : undefined;
   const onSale = isEvents ? nextOnSale(funnel, now) : undefined;
   const hero = funnel.cover.hero;
+  // One upcoming date: a single event card instead of a row of one circle.
+  const single = hero && isEvents && upcoming.length === 1 ? upcoming[0] : undefined;
+  // Ticks every 30 seconds, for the countdown on the day.
+  const clock = useClock(Boolean(single), now);
+  const untilStart = single ? Date.parse(single.startsAt) - clock : Infinity;
+  // Close to the date, or nearly gone: selling the ticket comes first.
+  const ticketsFirst = Boolean(single && onSale?.id === single.id && (untilStart < 48 * HOUR || single.status === "few_left"));
 
-  // The scene names the next date on sale, with a live dot.
+  // The scene names the next date on sale, with a live dot. With one date,
+  // the card carries the details, so this is just the hook (or a countdown).
   let eyebrow: React.ReactNode = brand.seriesLabel;
-  if (onSale) {
+  if (single) {
+    eyebrow = (
+      <span className="inline-flex items-center gap-2">
+        <span className="cine-live h-1.5 w-1.5 rounded-full bg-sky-accent" />
+        {singleHook(single, untilStart)}
+      </span>
+    );
+  } else if (onSale) {
     const chip = eventChip(onSale, now);
     const date = formatEventDate(onSale);
     const when = chip.text.startsWith(date) ? chip.text : `${date} \u00b7 ${chip.text}`;
@@ -69,57 +115,74 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
   // circles, one main button into the reels, tickets beside it, fine print.
   const actions = hero && (
     <>
+      {single ? (
+        <SingleDate
+          event={single}
+          now={now}
+          calendarHref={`/f/${funnel.slug}/calendar/${encodeURIComponent(single.id)}`}
+          onOpen={() => startAt(reelFor(single.id))}
+          onRecap={recap ? () => startAt(recap.id) : undefined}
+        />
+      ) : (
+        <>
       <h2 className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/70">{funnel.cover.heading}</h2>
-      <ul className="-mx-5 mt-2.5 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none]" role="list">
-        {isEvents
-          ? [
-              ...upcoming.map((event) => {
-                const chip = eventChip(event, now);
-                const soldOut = event.status === "sold_out";
-                const status = soldOut ? "Sold out" : event.status === "few_left" ? "Few left" : chip.text;
-                // "Golden Hour: Late Night" -> "Late Night"
-                const variant = event.name.includes(": ") ? event.name.split(": ").slice(1).join(": ") : undefined;
-                return (
+        <ul className="-mx-5 mt-2.5 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none]" role="list">
+          {isEvents
+            ? [
+                ...upcoming.map((event) => {
+                  const chip = eventChip(event, now);
+                  const soldOut = event.status === "sold_out";
+                  const status = soldOut ? "Sold out" : event.status === "few_left" ? "Few left" : chip.text;
+                  // "Golden Hour: Late Night" -> "Late Night"
+                  const variant = event.name.includes(": ") ? event.name.split(": ").slice(1).join(": ") : undefined;
+                  return (
+                    <StoryCircle
+                      key={event.id}
+                      label={`${event.name}, ${formatEventDate(event)}, ${chip.text}`}
+                      date={new Date(event.startsAt)}
+                      line1={status}
+                      line2={variant}
+                      hot={chip.tone === "hot"}
+                      dim={soldOut}
+                      onClick={() => startAt(reelFor(event.id))}
+                    />
+                  );
+                }),
+                recap && (
                   <StoryCircle
-                    key={event.id}
-                    label={`${event.name}, ${formatEventDate(event)}, ${chip.text}`}
-                    date={new Date(event.startsAt)}
-                    line1={status}
-                    line2={variant}
-                    hot={chip.tone === "hot"}
-                    dim={soldOut}
-                    onClick={() => startAt(reelFor(event.id))}
+                    key="recap"
+                    label="Watch last time"
+                    line1="Last time"
+                    line2="Recap"
+                    dim
+                    onClick={() => startAt(recap.id)}
                   />
-                );
-              }),
-              recap && (
+                ),
+              ]
+            : entries.map((id) => (
                 <StoryCircle
-                  key="recap"
-                  label="Watch last time"
-                  line1="Last time"
-                  line2="Recap"
-                  dim
-                  onClick={() => startAt(recap.id)}
+                  key={id}
+                  label={funnel.cover.entryLabels[id] ?? funnelReel(funnel, id)!.practiceArea}
+                  line1={funnel.cover.entryLabels[id] ?? funnelReel(funnel, id)!.practiceArea}
+                  onClick={() => startAt(id)}
                 />
-              ),
-            ]
-          : entries.map((id) => (
-              <StoryCircle
-                key={id}
-                label={funnel.cover.entryLabels[id] ?? funnelReel(funnel, id)!.practiceArea}
-                line1={funnel.cover.entryLabels[id] ?? funnelReel(funnel, id)!.practiceArea}
-                onClick={() => startAt(id)}
-              />
-            ))}
-      </ul>
+              ))}
+        </ul>
+        </>
+      )}
       <div className="mt-4 flex gap-2.5">
         <button
           type="button"
           onClick={() => startAt(peekReel)}
-          className="cine-shimmer flex min-h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-teal-accent px-4 text-[17px] max-[380px]:text-base font-semibold text-white shadow-lg shadow-black/40 transition hover:brightness-110"
+          className={
+            ticketsFirst
+              ? `${GLASS} order-2 gap-2 px-5 max-[380px]:px-4`
+              : `${PRIMARY} flex-1 gap-2.5 px-4`
+          }
         >
           <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
-          {hero.watchLabel ?? "Watch"}
+          {/* Shorter when it's the second button, so both fit on small phones. */}
+          {ticketsFirst ? "Watch" : hero.watchLabel ?? "Watch"}
         </button>
         {onSale ? (
           <a
@@ -127,7 +190,7 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
             target="_blank"
             rel="noopener"
             onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
-            className="flex min-h-14 items-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-5 font-semibold text-white backdrop-blur-md transition hover:bg-white/20 max-[380px]:px-4"
+            className={ticketsFirst ? `${PRIMARY} order-1 flex-1 px-4` : `${GLASS} px-5 max-[380px]:px-4`}
           >
             {brand.copy.ticketsPrimary ?? "Get tickets"}
           </a>
@@ -383,5 +446,77 @@ function StoryCircle({
         {line2 && <span className="-mt-1 w-full truncate text-center text-[10px] leading-tight text-white/55">{line2}</span>}
       </button>
     </li>
+  );
+}
+
+/** "3 PM" or "3:30 PM". */
+const timeOf = (d: Date) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":00", "");
+
+/**
+ * The one upcoming date, as a card: when, where and how much, with its
+ * status. Tapping it plays the date's reel. Below it: Add to calendar, and
+ * last time's recap.
+ */
+function SingleDate({
+  event,
+  now,
+  calendarHref,
+  onOpen,
+  onRecap,
+}: {
+  event: FunnelEvent;
+  now: number;
+  calendarHref: string;
+  onOpen: () => void;
+  onRecap?: () => void;
+}) {
+  const d = new Date(event.startsAt);
+  const chip = eventChip(event, now);
+  const soldOut = event.status === "sold_out";
+  const status = soldOut ? "Sold out" : event.status === "few_left" ? "Few left" : chip.text.split(" \u00b7 ")[0];
+  const where = [event.venue, event.price].filter(Boolean).join(" \u00b7 ");
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`${event.name}, ${formatEventDate(event)}${where ? `, ${where}` : ""}, ${status}. Watch`}
+        className="flex w-full items-center gap-3 rounded-2xl bg-white/10 p-3 text-left ring-1 ring-white/15 backdrop-blur-md transition hover:bg-white/15"
+      >
+        <span className="flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-black/30 leading-none">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-accent">
+            {d.toLocaleDateString("en-US", { month: "short" })}
+          </span>
+          <span className="mt-1 text-xl font-bold text-white">{d.getDate()}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-semibold text-white">
+            {d.toLocaleDateString("en-US", { weekday: "long" })} &middot; {timeOf(d)}
+          </span>
+          {where && <span className="mt-0.5 block truncate text-[13px] text-white/75">{where}</span>}
+        </span>
+        <span
+          className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            soldOut ? "bg-white/10 text-white/70" : chip.tone === "hot" ? "bg-sky-accent text-deep-navy" : "bg-white/15 text-white"
+          }`}
+        >
+          {status}
+        </span>
+      </button>
+      <div className="mt-2 flex items-center justify-between px-1 text-[13px] font-medium">
+        <a href={calendarHref} download className="flex min-h-9 items-center gap-1.5 text-white/80 hover:text-white">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18M12 14v4M10 16h4" />
+          </svg>
+          Add to calendar
+        </a>
+        {onRecap && (
+          <button type="button" onClick={onRecap} className="flex min-h-9 items-center gap-1.5 text-white/80 hover:text-white">
+            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
+            Watch last time
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
