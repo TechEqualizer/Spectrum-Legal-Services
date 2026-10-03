@@ -133,6 +133,16 @@ forms re-skin without code changes.
 | `/f/jlf` | The JLF Firm (concept) | Call |
 | `/f/medspa` | Aurelia Med Spa (**sample**, made up) | Book |
 | `/f/events` | Golden Hour Sundays (**sample**, made up) | Tickets |
+| `/f/masquerade` | Big Love Productions: Masquerade on the Runway (**client**) | Tickets |
+
+**`/f/masquerade` is a real client's link**, so its forms and tracking are
+live. Its content comes from the event flyer (`src/data/masquerade.ts`): one
+date (Sat, Oct 31, 8pm, Detroit, 21+), Eventbrite tickets, the flyer behind
+the opening screen, and two reels with photos cropped from it
+(`public/clients/masquerade`). The other reels show "Video coming soon" until
+their videos are uploaded in the admin, where Big Love Productions replaced
+Golden Hour Sundays. Golden Hour stays at `/f/events` as a sample to show
+other organizers.
 
 **`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
 Spa doesn't exist: the page always says so, is never indexed, uses a
@@ -251,6 +261,19 @@ business's colors. It is not linked from the public site and is marked
   `ANTHROPIC_API_KEY` (`/api/admin/import-event`, `src/lib/server/flyer-import.ts`);
   without it the sheet says so. QR codes aren't read: paste those ticket
   links.
+- **Draft my funnel** (in the import sheet, after reading a flyer): Claude
+  plans the whole funnel from the same flyer, with no re-upload: the opening
+  screen's words, and 4 to 6 reels in selling order (hook, the show, who's
+  there, details, the dare, last call), each linked to its date. Each reel,
+  and the opening scene, also gets a ready-to-paste video prompt (camera
+  move, length, 9:16, the scene, a shared style lock, and what to avoid,
+  such as on-screen text or warped hands). "Use this draft" replaces the
+  published funnel's reels (the old ones stay in the library; Undo puts
+  everything back). Drafted reels are marked **Needs video**, and their
+  prompt, with **Copy prompt**, is in the reel's editor and on the opening
+  screen card. Prompts are notes, never published, kept in this browser
+  (`src/admin/prompts.ts`) (`/api/admin/draft-funnel`,
+  `src/lib/server/funnel-draft.ts`).
 - **Match your flyer's style**: a flyer photo or PDF also gives three
   ready-made styles (True to flyer, Bold, Elegant: five brand colors and a
   title typeface each), plus the flyer's own colors. The import sheet shows
@@ -301,6 +324,13 @@ business's colors. It is not linked from the public site and is marked
   **Settings** (funnel settings). The top bar has **Undo / Redo** (also
   ⌘Z / ⇧⌘Z), the live link, Discard and **Publish**. Narrower screens and
   phones keep the single-column editor below.
+- **Path strip** (under the studio's phone): the funnel the link shows, as a
+  path: **Opening → each reel in order → End** (the main action). Each reel
+  shows the date circles that open it ("Oct 4"), its detours ("Skipped → 3",
+  "Watched → End"), and fades if no topic, date or path reaches it. Tap a
+  stop to play it in the phone; as you tap through the phone, the stop on
+  screen is highlighted ("On screen"). The preview reports what's on screen
+  with `postMessage`; the End stop opens the end card directly.
 - **Reels** (the admin home): each funnel as an ordered list. Every reel goes
   to the next one unless it has its own path for "watched to the end" or
   "skipped", so branching is added only where it helps. Rows show the reel's

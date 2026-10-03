@@ -5,7 +5,8 @@ import DatesCard from "@/admin/components/DatesCard";
 import HeroMediaCard from "@/admin/components/HeroMediaCard";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
 import StyleSheet from "@/admin/components/StyleSheet";
-import { ResultsPanel, StoryStep, Studio, useWideScreen } from "@/admin/components/Studio";
+import { PathStrip, ResultsPanel, StoryStep, Studio, useWideScreen, type PathStop } from "@/admin/components/Studio";
+import type { PreviewMoment } from "@/admin/components/PreviewFrame";
 import ReelViewer from "@/components/ReelViewer";
 import {
   CTA_LABELS,
@@ -22,6 +23,8 @@ import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { useAdminSession } from "@/admin/session";
 import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
 import type { Look } from "@/lib/look";
+import type { FunnelDraft } from "@/lib/funnel-draft";
+import { HERO_PROMPT, keepPrompts, usePrompts } from "@/admin/prompts";
 import { fetchLive, publicationKey, publish, publishedFunnel, takeDown, toPublication, type EditorState, type LiveState } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { ScreenCopy } from "@/lib/publication";
@@ -59,9 +62,9 @@ function snapshotOf({ reels, funnels, heroMedia, screen, events, look }: EditorS
   return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia, screen ?? {}, events ?? "live", look ?? "built-in"]);
 }
 
-/** Reels a visitor can reach from the funnel's starting points. */
-function reachable(funnel: EditorFunnel) {
-  const starts = Object.keys(funnel.topics).filter((id) => funnel.order.includes(id));
+/** Reels a visitor can reach from the funnel's starting points: its topics, and the reels date circles open. */
+function reachable(funnel: EditorFunnel, extraStarts: string[] = []) {
+  const starts = [...Object.keys(funnel.topics), ...extraStarts].filter((id, i, all) => funnel.order.includes(id) && all.indexOf(id) === i);
   const queue = starts.length ? starts : funnel.order.slice(0, 1);
   const seen = new Set<string>(queue);
   while (queue.length) {
@@ -105,6 +108,8 @@ export default function ReelsEditor() {
   // When the edits were last saved in this browser (null: nothing saved, showing the live funnel).
   const slug = liveFunnel.slug;
   const savedAt = useDraftSavedAt(slug);
+  // Video prompts from a drafted funnel, by reel id.
+  const prompts = usePrompts(slug);
   // A short confirmation near the bottom, with Undo when something was deleted.
   const [toast, setToastState] = useState<{ text: string; undo?: () => void; id: number } | null>(null);
   const setToast = (text: string, undo?: () => void) => setToastState(text ? { text, undo, id: Date.now() } : null);
@@ -208,7 +213,9 @@ export default function ReelsEditor() {
 
   // The studio: three columns on wide screens, with the funnel live in a phone.
   const wide = useWideScreen();
-  const [go, setGo] = useState<{ reelId?: string; key: number }>({ key: 0 });
+  const [go, setGo] = useState<{ reelId?: string; end?: boolean; key: number }>({ key: 0 });
+  // What's on screen in the studio's phone, for the path strip.
+  const [moment, setMoment] = useState<PreviewMoment>({ reelId: null, ended: false });
   const draftPublication = toPublication(current);
   /** Plays a reel: in the studio's phone, or full screen. */
   const play = (reelId: string) => (wide ? setGo((g) => ({ reelId, key: g.key + 1 })) : setPreview({ reelId, key: Date.now() }));
@@ -243,6 +250,56 @@ export default function ReelsEditor() {
       setLook(before.look);
       setHeroMedia(before.heroMedia);
       setToast("Look put back");
+    });
+  };
+
+  /**
+   * A funnel drafted from a flyer: its reels (new, each with its video
+   * prompt, marked Needs video) become the published funnel's order, and
+   * its words go on the opening screen. The old reels stay in the library,
+   * and Undo puts everything back.
+   */
+  const applyDraft = (draft: FunnelDraft) => {
+    const before = { library, funnels, screen };
+    const dates = events ?? liveFunnel.events ?? [];
+    const dayOf = (iso: string) => {
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+    const taken = new Set(library.map((r) => r.id));
+    const prompts: Record<string, string> = { [HERO_PROMPT]: draft.heroPrompt };
+    const reels = draft.reels.map((d): EditorReel => {
+      const id = slugify(d.title, taken);
+      taken.add(id);
+      prompts[id] = d.videoPrompt;
+      // The date it sells; with only one date, every reel sells that one.
+      const event = d.date ? dates.find((e) => dayOf(e.startsAt) === d.date) : dates.length === 1 ? dates[0] : undefined;
+      return {
+        id,
+        title: d.title,
+        summary: d.summary,
+        practiceArea: liveFunnel.brand.services[0],
+        cta: "funnel",
+        ...(event ? { eventId: event.id } : {}),
+        ...(d.role === "last_call" ? { emphasis: "bold" as const } : {}),
+      };
+    });
+    const target = publishedFunnel(funnels);
+    keepPrompts(slug, prompts);
+    setLibrary([...reels, ...library]);
+    setFunnels(funnels.map((f) => (f.id === target.id ? { ...f, order: reels.map((r) => r.id), paths: {}, topics: {} } : f)));
+    setActiveId(target.id);
+    const words: ScreenCopy = liveFunnel.cover.hero
+      ? { title: draft.screen.title, tagline: draft.screen.tagline, watchLabel: draft.screen.watchLabel, heading: draft.screen.heading }
+      : { heading: draft.screen.title || draft.screen.heading, intro: draft.screen.tagline };
+    const next: ScreenCopy = { ...screen };
+    for (const [k, v] of Object.entries(words) as [keyof ScreenCopy, string | undefined][]) if (v) next[k] = v;
+    setScreen(next);
+    setToast(`Funnel drafted: ${reels.length} reels, each with a video prompt`, () => {
+      setLibrary(before.library);
+      setFunnels(before.funnels);
+      setScreen(before.screen);
+      setToast("Draft taken back");
     });
   };
 
@@ -283,7 +340,12 @@ export default function ReelsEditor() {
 
   const funnel = funnels.find((f) => f.id === activeId)!;
   const byId = new Map(library.map((r) => [r.id, r]));
-  const reach = reachable(funnel);
+  // Each date's circle opens a reel: its chosen one, else the first that sells it.
+  const dateOpener = (f: EditorFunnel, e: FunnelEvent) =>
+    e.reelId && f.order.includes(e.reelId) ? e.reelId : f.order.find((id) => library.find((r) => r.id === id)?.eventId === e.id);
+  const dateStarts = (f: EditorFunnel) =>
+    (events ?? liveFunnel.events ?? []).map((e) => dateOpener(f, e)).filter((id): id is string => Boolean(id));
+  const reach = reachable(funnel, funnel.id === publishedFunnel(funnels).id ? dateStarts(funnel) : []);
   const notInFunnel = library.filter((r) => !funnel.order.includes(r.id));
 
   const updateFunnel = (patch: Partial<EditorFunnel> | ((f: EditorFunnel) => EditorFunnel)) =>
@@ -418,6 +480,7 @@ export default function ReelsEditor() {
         value={heroMedia}
         screen={screen}
         look={look}
+        videoPrompt={prompts[HERO_PROMPT]}
         edited={heroEdited || screenEdited || lookEdited}
         inStudio={wide}
         onStyle={(nextLook, media) => {
@@ -455,6 +518,7 @@ export default function ReelsEditor() {
           }}
           onSave={saveDate}
           onLook={applyLook}
+          onDraft={applyDraft}
           inStudio={wide}
         />
       )}
@@ -520,13 +584,15 @@ export default function ReelsEditor() {
         {funnel.order.length === 0 ? (
           <p className="p-6 text-sm text-gray-600">No reels yet. Add one below or create a new reel.</p>
         ) : (
-          <ol role="list">
+          // Rows lay out by the list's own width: in the studio it's a column, not the window.
+          <ol role="list" className="@container">
             {funnel.order.map((id, i) => {
               const reel = byId.get(id);
               if (!reel) return null;
               return (
                 <ReelRow
                   date={shortDateOf(reel.eventId)}
+                  hasPrompt={Boolean(prompts[id])}
                   stats={stats.get(id)}
                   key={id}
                   reel={reel}
@@ -729,6 +795,7 @@ export default function ReelsEditor() {
           services={liveFunnel.brand.services}
           topicLabel={business.terms.topic}
           dates={dateOptions}
+          videoPrompt={prompts[editing.id]}
           onSave={save}
           onClose={() => setEditing(null)}
         />
@@ -737,6 +804,46 @@ export default function ReelsEditor() {
   );
 
   const shownMedia = heroMedia === undefined ? sceneMediaOf(liveFunnel) : heroMedia ?? undefined;
+
+  // The path strip follows the funnel the preview (and the live link) shows.
+  const shown = publishedFunnel(funnels);
+  const shownReach = reachable(shown, dateStarts(shown));
+  const stepLabel = (target: PathTarget) => (target === "end" ? "End" : String(shown.order.indexOf(target) + 1));
+  /** Dates whose circle opens this reel: its chosen reel, else the first that sells it. */
+  const datesOpening = (reelId: string) =>
+    (allDates ?? [])
+      .filter((e) => dateOpener(shown, e) === reelId)
+      .map((e) => new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+  const stops: PathStop[] = [
+    { id: "opening", kind: "opening", title: "Opening" },
+    ...shown.order.flatMap((id, i): PathStop[] => {
+      const reel = byId.get(id);
+      if (!reel) return [];
+      const detours = Object.entries(shown.paths[id] ?? {}) as [FunnelTrigger, PathTarget][];
+      const dates = datesOpening(id);
+      return [{
+        id,
+        kind: "reel",
+        n: i + 1,
+        title: reel.title,
+        thumb: thumbnailOf(reel.media),
+        ...(dates.length ? { date: dates.join(", ") } : {}),
+        ...(detours.length ? { notes: detours.map(([t, target]) => `${TRIGGER_LABELS[t]} → ${stepLabel(target)}`) } : {}),
+        ...(!shownReach.has(id) ? { unreachable: true } : {}),
+      }];
+    }),
+    { id: "end", kind: "end", title: `End: ${CTA_LABELS[shown.primaryCta]}` },
+  ];
+  const goTo = (stop: PathStop) =>
+    setGo((g) =>
+      stop.kind === "opening"
+        ? { key: g.key + 1 }
+        : stop.kind === "end"
+          ? { reelId: shown.order.at(-1), end: true, key: g.key + 1 }
+          : { reelId: stop.id, key: g.key + 1 }
+    );
+  const onScreen = moment.ended ? "end" : moment.reelId ?? "opening";
+
   if (wide) {
     return (
       <Studio
@@ -745,6 +852,8 @@ export default function ReelsEditor() {
         publication={draftPublication}
         go={go}
         onRestart={() => setGo((g) => ({ key: g.key + 1 }))}
+        onMoment={setMoment}
+        strip={shown.order.length > 0 ? <PathStrip stops={stops} current={onScreen} onGo={goTo} /> : undefined}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undo}
@@ -819,6 +928,8 @@ export default function ReelsEditor() {
 type ReelRowProps = {
   /** The date this reel sells tickets for, e.g. "Oct 4". */
   date?: string;
+  /** A drafted video prompt waits for this reel. */
+  hasPrompt: boolean;
   stats: ReelTotals | undefined;
   reel: EditorReel;
   index: number;
@@ -841,7 +952,7 @@ const TRIGGER_LABELS: Record<FunnelTrigger, string> = {
   skipped: "Skipped",
 };
 
-function ReelRow({ date, stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
+function ReelRow({ date, hasPrompt, stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
   const [over, setOver] = useState(false);
   const overrides = Object.entries(funnel.paths[reel.id] ?? {}) as [FunnelTrigger, PathTarget][];
   const cta = reel.cta === "funnel" ? funnel.primaryCta : reel.cta;
@@ -865,10 +976,10 @@ function ReelRow({ date, stats: s, reel, index, count, funnel, unreachable, drag
         setOver(false);
         onDropHere();
       }}
-      className={`flex flex-col gap-3 border-b border-gray-100 px-3 py-4 last:border-b-0 sm:flex-row sm:items-center sm:px-5 ${dragging ? "opacity-40" : ""} ${over ? "bg-sky-accent/10" : ""}`}
+      className={`flex flex-col gap-3 border-b border-gray-100 px-3 py-4 last:border-b-0 @2xl:flex-row @2xl:items-center @2xl:px-5 ${dragging ? "opacity-40" : ""} ${over ? "bg-sky-accent/10" : ""}`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span className="hidden cursor-grab text-gray-400 sm:block" aria-hidden="true">
+        <span className="hidden cursor-grab text-gray-400 @2xl:block" aria-hidden="true">
           <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
             <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" />
             <circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
@@ -889,7 +1000,7 @@ function ReelRow({ date, stats: s, reel, index, count, funnel, unreachable, drag
             {date && <Chip tone="teal">{date}</Chip>}
             {reel.emphasis === "quiet" && <Chip>Quiet</Chip>}
             {reel.emphasis === "bold" && <Chip tone="navy">Bold</Chip>}
-            {!reel.media && <Chip tone="amber">No video yet</Chip>}
+            {!reel.media && <Chip tone="amber">{hasPrompt ? "Needs video" : "No video yet"}</Chip>}
             {reel.media?.kind === "youtube" && <Chip>YouTube</Chip>}
             {reel.media?.kind === "image" && <Chip>Photo</Chip>}
             {unreachable && <Chip tone="red">No path leads here</Chip>}
@@ -904,14 +1015,14 @@ function ReelRow({ date, stats: s, reel, index, count, funnel, unreachable, drag
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pl-12 sm:flex-nowrap sm:pl-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pl-12 @2xl:flex-nowrap @2xl:pl-0">
         {/* Phones: one line of text; wider screens: three columns. */}
-        <p className="text-xs text-gray-600 sm:hidden" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <p className="text-xs text-gray-600 @2xl:hidden" style={{ fontVariantNumeric: "tabular-nums" }}>
           {s
             ? `${formatNumber(s.views)} views · ${formatPercent(s.completed / s.views)} watched · ${formatNumber(s.booked)} booked`
             : "No results yet"}
         </p>
-        <dl className="hidden grid-cols-3 gap-4 text-right text-xs sm:grid" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <dl className="hidden grid-cols-3 gap-4 text-right text-xs @2xl:grid" style={{ fontVariantNumeric: "tabular-nums" }}>
           {s ? (
             <>
               <Stat label="Views" value={formatNumber(s.views)} />

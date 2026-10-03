@@ -32,3 +32,6 @@ export const site = {
    */
   demoMode: process.env.NEXT_PUBLIC_DEMO_MODE !== "false",
 } as const;
+
+/** Whether a page is part of the concept: demo mode, unless it's a live client's funnel. */
+export const isConcept = (funnel?: { live?: boolean }) => site.demoMode && !funnel?.live;

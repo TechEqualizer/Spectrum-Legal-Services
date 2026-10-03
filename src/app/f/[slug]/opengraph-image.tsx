@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { site } from "@/config/site";
+import { isConcept } from "@/config/site";
 import { funnels, getFunnelBySlug } from "@/data/funnels";
 
 // The preview card people see when a funnel link is pasted into a text, DM
@@ -31,7 +31,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     ? `Prepared for ${funnel.sample.preparedFor}`
     : funnel.sample
       ? "Sample funnel"
-      : site.demoMode
+      : isConcept(funnel)
         ? "Concept preview"
         : (brand.phone?.display ?? "");
 

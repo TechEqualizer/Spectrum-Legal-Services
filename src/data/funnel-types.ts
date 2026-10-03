@@ -146,6 +146,11 @@ export type Funnel = {
      */
     preparedFor?: string;
   };
+  /**
+   * A real business's own link: live even while the site is in demo mode
+   * (no concept label, indexed, and its forms send).
+   */
+  live?: boolean;
   brand: FunnelBrand;
   primaryCta: FunnelCta;
   reels: Reel[];

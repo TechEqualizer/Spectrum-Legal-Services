@@ -26,6 +26,10 @@ type ReelViewerProps = {
    */
   variant?: "modal" | "page";
   onClose: () => void;
+  /** Opens on the end card after the start reel (the admin preview's "end" stop). */
+  startEnded?: boolean;
+  /** Told which reel is on screen, or that the end card is (the admin preview follows along). */
+  onMoment?: (moment: { reelId: string | null; ended: boolean }) => void;
 };
 
 // How far through a "builds" reel the main action fills with the brand color.
@@ -58,13 +62,15 @@ export default function ReelViewer({
   startReelId,
   variant = "modal",
   onClose,
+  startEnded = false,
+  onMoment,
 }: ReelViewerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
   // Reels visited this visit, in order. Previous walks back along this path.
   const [path, setPath] = useState<string[]>([startReelId]);
   // True once the funnel runs out of reels and shows the consultation card.
-  const [ended, setEnded] = useState(false);
+  const [ended, setEnded] = useState(startEnded);
   // Reduced-motion users start paused, so nothing advances until they press play.
   const [isPaused, setIsPaused] = useState(() =>
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -81,6 +87,10 @@ export default function ReelViewer({
 
   const step = path.length - 1;
   const reel = funnelReel(funnel, path[step]);
+
+  useEffect(() => {
+    onMoment?.({ reelId: reel?.id ?? null, ended });
+  }, [onMoment, reel?.id, ended]);
 
   // Log a view each time a reel comes on screen. The ref stops React's
   // development double-run of effects from logging it twice.

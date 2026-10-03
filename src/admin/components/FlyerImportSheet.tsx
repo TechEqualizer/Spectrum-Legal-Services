@@ -5,11 +5,28 @@ import { ScenePreview, Swatches } from "@/admin/components/HeroMediaCard";
 import { keepUpload } from "@/admin/drafts";
 import { LOOK_FONTS, type Look } from "@/lib/look";
 import type { ImportedDate } from "@/lib/server/flyer-import";
+import { REEL_ROLES, type FunnelDraft } from "@/lib/funnel-draft";
 
-export type { ImportedDate };
+export type { FunnelDraft, ImportedDate };
 
-/** What a flyer gave: its dates, and its look with the flyer itself (an upload link) when it was a picture. */
-export type FlyerFound = { dates: ImportedDate[]; note: string; look?: Look; flyer?: string; lookUsed?: boolean };
+/** The flyer as sent: a shrunk picture or PDF, or pasted text. */
+type FlyerSource = { type: string; data: string } | { text: string };
+
+/**
+ * What a flyer gave: its dates, and its look with the flyer itself (an
+ * upload link) when it was a picture. The flyer as sent is kept, so a
+ * funnel can be drafted from it without choosing it again.
+ */
+export type FlyerFound = {
+  dates: ImportedDate[];
+  note: string;
+  look?: Look;
+  flyer?: string;
+  lookUsed?: boolean;
+  source?: FlyerSource;
+  draft?: FunnelDraft;
+  draftUsed?: boolean;
+};
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -67,6 +84,8 @@ export default function FlyerImportSheet({
   onFound,
   onReview,
   onLook,
+  onDrafted,
+  onDraft,
   onClose,
 }: {
   slug: string;
@@ -80,6 +99,10 @@ export default function FlyerImportSheet({
   onReview: (index: number) => void;
   /** Use the flyer's look, and the flyer as the opening screen's background if given. */
   onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
+  /** A funnel drafted from the flyer, to show for review. */
+  onDrafted: (draft: FunnelDraft) => void;
+  /** Use the drafted funnel. */
+  onDraft: (draft: FunnelDraft) => void;
   onClose: () => void;
 }) {
   const id = useId();
@@ -119,6 +142,7 @@ export default function FlyerImportSheet({
       onFound({
         dates: body.dates,
         note: body.note ?? "",
+        source: payload,
         ...(body.look ? { look: body.look } : {}),
         // The (shrunk) flyer, kept so it can go behind the opening screen and survive a reload.
         ...(body.look && blob ? { flyer: keepUpload(new File([blob], "flyer.jpg", { type: "image/jpeg" })) } : {}),
@@ -220,6 +244,9 @@ export default function FlyerImportSheet({
               )}
               {found.note && <p className="px-1 text-xs text-gray-600">{found.note}</p>}
             </>
+          )}
+          {found.source && (
+            <DraftOffer slug={slug} found={found} onDrafted={onDrafted} onUse={onDraft} />
           )}
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => onFound(null)} className="min-h-11 px-1 text-sm font-semibold text-deep-navy hover:underline">
@@ -389,6 +416,141 @@ function LookOffer({
         </div>
       </div>
       {!used && <p className="mt-3 text-xs text-gray-500">You can change it anytime: Style, on your opening screen.</p>}
+    </section>
+  );
+}
+
+const SOURCE_LABELS: Record<FunnelDraft["reels"][number]["source"], string> = {
+  photo: "Start from your photo",
+  flyer_art: "Start from the flyer",
+  text: "From words",
+};
+
+/**
+ * "Draft your whole funnel": Claude plans the opening words and the reels
+ * in selling order, each with a video prompt. Shown for review first;
+ * "Use this draft" puts it in the editor, where Undo takes it back.
+ */
+function DraftOffer({
+  slug,
+  found,
+  onDrafted,
+  onUse,
+}: {
+  slug: string;
+  found: FlyerFound;
+  onDrafted: (draft: FunnelDraft) => void;
+  onUse: (draft: FunnelDraft) => void;
+}) {
+  const id = useId();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const draft = found.draft;
+
+  const write = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/draft-funnel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, today: localDay(new Date()), dates: found.dates.map((d) => ({ date: d.date, name: d.name })), ...found.source }),
+      }).catch(() => null);
+      if (!res) throw new Error("Couldn't reach the server. Check your connection and try again.");
+      const body = (await res.json().catch(() => ({}))) as Partial<FunnelDraft> & { error?: string };
+      if (res.status === 401) throw new Error("Your sign-in expired. Sign in again, then try.");
+      if (!res.ok || !body.reels || !body.screen) throw new Error(body.error ?? "Couldn't draft the funnel. Try again.");
+      onDrafted(body as FunnelDraft);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't draft the funnel. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (found.draftUsed) {
+    return (
+      <section aria-labelledby={`${id}-title`} className="rounded-xl bg-white p-4">
+        <h3 id={`${id}-title`} className="font-bold text-deep-navy">Funnel drafted ✓</h3>
+        <p className="mt-1 text-sm text-gray-600">Your reels are in the editor, each marked Needs video with its prompt.</p>
+      </section>
+    );
+  }
+
+  if (!draft) {
+    return (
+      <section aria-labelledby={`${id}-title`} aria-busy={busy} className="rounded-xl bg-white p-4">
+        <h3 id={`${id}-title`} className="font-bold text-deep-navy">Draft your whole funnel?</h3>
+        <p className="mt-1 text-sm text-gray-600">
+          From this flyer: your opening words, 4 to 6 reels in selling order, and a video prompt for each one.
+        </p>
+        {error && <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{error}</p>}
+        <button
+          type="button"
+          onClick={write}
+          disabled={busy}
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue disabled:cursor-wait disabled:opacity-70"
+        >
+          {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" aria-hidden="true" />}
+          {busy ? "Writing your funnel…" : "Draft my funnel"}
+        </button>
+        {busy && <p role="status" className="mt-2 text-xs text-gray-500">This takes about a minute.</p>}
+      </section>
+    );
+  }
+
+  const dayOf = (date?: string) =>
+    date ? new Date(`${date}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : undefined;
+  return (
+    <section aria-labelledby={`${id}-title`} className="rounded-xl bg-white p-4">
+      <h3 id={`${id}-title`} className="font-bold text-deep-navy">Your funnel, drafted</h3>
+      <div className="mt-3 rounded-lg bg-deep-navy px-4 py-3 text-white">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Opening screen</p>
+        <p className="mt-1 text-lg font-bold leading-snug">{draft.screen.title || draft.screen.heading}</p>
+        {draft.screen.tagline && <p className="mt-0.5 text-sm text-white/85">{draft.screen.tagline}</p>}
+        {draft.screen.watchLabel && (
+          <p className="mt-2 inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">{draft.screen.watchLabel}</p>
+        )}
+      </div>
+      <ol role="list" className="mt-3 space-y-3">
+        {draft.reels.map((r, i) => (
+          <li key={i} className="flex gap-3">
+            <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-soft-gray text-sm font-bold text-deep-navy" style={{ fontVariantNumeric: "tabular-nums" }}>
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold leading-snug text-deep-navy">{r.title}</span>
+              <span className="block text-xs text-gray-600">
+                {[REEL_ROLES[r.role], dayOf(r.date), SOURCE_LABELS[r.source]].filter(Boolean).join(" · ")}
+              </span>
+              {r.summary && <span className="mt-0.5 block text-sm text-charcoal">{r.summary}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-3 text-xs text-gray-600">
+        Each reel comes with a video prompt to copy into a video tool. Using this replaces the reels in your funnel; Undo puts them back.
+      </p>
+      {error && <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{error}</p>}
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={write}
+          disabled={busy}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray disabled:cursor-wait disabled:opacity-60"
+        >
+          {busy && <span className="h-4 w-4 animate-spin rounded-full border-2 border-deep-navy/30 border-t-deep-navy motion-reduce:animate-none" aria-hidden="true" />}
+          {busy ? "Writing…" : "Try another"}
+        </button>
+        <button
+          type="button"
+          onClick={() => onUse(draft)}
+          disabled={busy}
+          className="ml-auto min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue disabled:opacity-60"
+        >
+          Use this draft
+        </button>
+      </div>
     </section>
   );
 }

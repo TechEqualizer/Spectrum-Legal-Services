@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { site } from "@/config/site";
+import { isConcept } from "@/config/site";
 import type { Funnel, Reel } from "@/data/reels";
 import { isValidPhone, type LeadIntent } from "@/lib/leads";
 import { isPreviewMode } from "@/lib/reel-tracking";
@@ -42,7 +42,7 @@ export default function FunnelLeadSheet({ funnel, intent, reel, copy, onClose }:
   const textLater = intent === "text_later";
   const text = copy ?? (textLater ? brand.copy.textLater : brand.copy.book);
   // Nothing is sent from the concept site or a sample funnel.
-  const simulated = site.demoMode || Boolean(funnel.sample) || isPreviewMode();
+  const simulated = isConcept(funnel) || Boolean(funnel.sample) || isPreviewMode();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +63,7 @@ export default function FunnelLeadSheet({ funnel, intent, reel, copy, onClose }:
       referringReelId: reel.id,
       smsConsent: textLater ? consent : undefined,
       website,
-    }, { simulate: simulated });
+    }, { simulate: simulated, live: funnel.live });
     setIsSubmitting(false);
     if (result.ok) setSent(true);
     else setError(result.error);
