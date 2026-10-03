@@ -57,6 +57,7 @@ export default function HeroMediaCard({
   edited = false,
   onChange,
   onStyle,
+  inStudio = false,
 }: {
   /** The funnel as built in (for its default words). */
   funnel: Funnel;
@@ -72,6 +73,8 @@ export default function HeroMediaCard({
   onChange: (change: { media: HeroMediaEdit; screen: ScreenCopy | undefined }, message: string, undo?: () => void) => void;
   /** Done in the Style sheet: the look (undefined: the original) and the background. */
   onStyle: (look: Look | undefined, media: HeroMediaEdit) => void;
+  /** In the studio: its story step names it, and Style is the Design tab. */
+  inStudio?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [styling, setStyling] = useState(false);
@@ -85,7 +88,7 @@ export default function HeroMediaCard({
         <ScenePreview media={shown} title={title} look={look} small />
       </button>
       <div className="min-w-0 flex-1">
-        <h2 id="hero-media-title" className="font-bold text-deep-navy">Opening screen</h2>
+        <h2 id="hero-media-title" className={inStudio ? "sr-only" : "font-bold text-deep-navy"}>Opening screen</h2>
         <p className="truncate text-sm text-deep-navy">&ldquo;{title}&rdquo;</p>
         <p className="text-sm text-gray-600">
           {shown ? KIND_LABELS[shown.kind] : "No background: your brand colors"}
@@ -105,13 +108,15 @@ export default function HeroMediaCard({
           >
             Edit
           </button>
-          <button
-            type="button"
-            onClick={() => setStyling(true)}
-            className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
-          >
-            Style
-          </button>
+          {!inStudio && (
+            <button
+              type="button"
+              onClick={() => setStyling(true)}
+              className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+            >
+              Style
+            </button>
+          )}
           {shown && (
             <button
               type="button"

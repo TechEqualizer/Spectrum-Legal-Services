@@ -54,6 +54,7 @@ export default function StyleSheet({
   media,
   onDone,
   onClose,
+  panel = false,
 }: {
   /** The funnel as built in: its own colors, logo and dates. */
   funnel: Funnel;
@@ -63,23 +64,49 @@ export default function StyleSheet({
   /** What's behind the opening screen now. */
   media: ReelMedia | undefined;
   onDone: (look: Look | undefined, media: HeroMediaEdit) => void;
-  onClose: () => void;
+  onClose?: () => void;
+  /**
+   * In the studio's Design tab: no sheet, no Cancel or Done. Every tap is
+   * applied at once (the phone beside it shows it), with Undo in the top bar.
+   */
+  panel?: boolean;
 }) {
   const id = useId();
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => ref.current?.showModal(), []);
+  useEffect(() => {
+    if (!panel) ref.current?.showModal();
+  }, [panel]);
 
   const original = useMemo(() => builtInColors(funnel), [funnel]);
   const flyer = look?.flyer || (media?.kind === "image" && media.fit ? media.src : undefined);
   const suggestions = look?.suggestions ?? [];
   const palette = look?.palette?.length ? look.palette : [...new Set(Object.values(look?.colors ?? original))];
 
-  // The sheet's own copy: undefined colors means the original look.
-  const [colors, setColors] = useState<LookColors | undefined>(look?.colors);
-  const [font, setFont] = useState<LookFont>(look?.font ?? "classic");
-  const [backdrop, setBackdrop] = useState<Backdrop>(
-    media?.kind === "image" && media.fit ? media.fit : media ? "keep" : flyer ? "glow" : "keep"
-  );
+  const backdropOf = (m: ReelMedia | undefined): Backdrop => (m?.kind === "image" && m.fit ? m.fit : m ? "keep" : flyer ? "glow" : "keep");
+  // The sheet's own copy (undefined colors: the original look). In a panel,
+  // the editor's state is the only copy.
+  const [localColors, setLocalColors] = useState<LookColors | undefined>(look?.colors);
+  const [localFont, setLocalFont] = useState<LookFont>(look?.font ?? "classic");
+  const [localBackdrop, setLocalBackdrop] = useState<Backdrop>(() => backdropOf(media));
+  const colors = panel ? look?.colors : localColors;
+  const font = panel ? (look?.font ?? "classic") : localFont;
+  const backdrop = panel ? backdropOf(media) : localBackdrop;
+
+  const lookFor = (c: LookColors | undefined, f: LookFont): Look | undefined =>
+    !c && f === "classic" ? undefined : { ...(look ?? {}), colors: c ?? original, font: f, ...(flyer ? { flyer } : {}) };
+  const mediaFor = (b: Backdrop): HeroMediaEdit =>
+    b === "keep" ? (media ?? null) : b === "glow" || !flyer ? null : { kind: "image", src: flyer, fit: b };
+  /** A change: kept in the sheet until Done, or applied at once in a panel. null colors: the original. */
+  const commit = (next: { colors?: LookColors | null; font?: LookFont; backdrop?: Backdrop }) => {
+    if (!panel) {
+      if (next.colors !== undefined) setLocalColors(next.colors ?? undefined);
+      if (next.font) setLocalFont(next.font);
+      if (next.backdrop) setLocalBackdrop(next.backdrop);
+      return;
+    }
+    const c = next.colors === undefined ? colors : (next.colors ?? undefined);
+    onDone(lookFor(c, next.font ?? font), next.backdrop ? mediaFor(next.backdrop) : media ?? null);
+  };
   const [open, setOpen] = useState<(typeof ROLE_ROWS)[number]["pick"] | null>(null);
   // What the admin picked for each role, to say when it was adjusted for readability.
   const [picked, setPicked] = useState<Partial<Record<string, string>>>({});
@@ -93,23 +120,11 @@ export default function StyleSheet({
 
   const pick = (role: (typeof ROLE_ROWS)[number], hex: string) => {
     const next = { background: shown["--deep-navy"], button: shown["--teal-accent"], highlight: shown["--sky-accent"], [role.pick]: hex };
-    setColors(composeColors(next, shown));
+    commit({ colors: composeColors(next, shown) });
     setPicked((p) => ({ ...p, [role.role]: hex }));
   };
 
-  const done = () => {
-    const nextLook: Look | undefined = isOriginal
-      ? undefined
-      : {
-          ...(look ?? {}),
-          colors: shown,
-          font,
-          ...(flyer ? { flyer } : {}),
-        };
-    const nextMedia: HeroMediaEdit =
-      backdrop === "keep" ? (media ?? null) : backdrop === "glow" ? null : { kind: "image", src: flyer!, fit: backdrop };
-    onDone(nextLook, nextMedia);
-  };
+  const done = () => onDone(lookFor(colors, font), mediaFor(backdrop));
 
   const backdrops: { id: Backdrop; label: string; disabled?: boolean }[] = [
     ...(media && !(media.kind === "image" && media.fit) ? [{ id: "keep" as const, label: media.kind === "image" ? "Photo" : "Video" }] : []),
@@ -120,30 +135,7 @@ export default function StyleSheet({
   const previewMedia: ReelMedia | undefined =
     backdrop === "keep" ? media : backdrop === "glow" || !flyer ? undefined : { kind: "image", src: flyer, fit: backdrop };
 
-  return (
-    <dialog
-      ref={ref}
-      onClose={onClose}
-      aria-labelledby={`${id}-title`}
-      className="m-auto h-[100dvh] max-h-[100dvh] w-full max-w-none overflow-y-auto bg-soft-gray p-0 text-charcoal shadow-2xl backdrop:bg-deep-navy/60 sm:h-auto sm:max-h-[92dvh] sm:w-[min(52rem,calc(100vw-2rem))] sm:rounded-2xl"
-    >
-      {/* Title bar: Cancel, title, Done, always in reach. */}
-      <div className="sticky top-0 z-20 grid grid-cols-[1fr_auto_1fr] items-center border-b border-gray-200 bg-soft-gray/90 px-2 py-1.5 backdrop-blur">
-        <button type="button" onClick={() => ref.current?.close()} className="min-h-11 justify-self-start rounded-lg px-3 text-[15px] font-semibold text-deep-navy hover:bg-white">
-          Cancel
-        </button>
-        <h2 id={`${id}-title`} className="text-[17px] font-bold text-deep-navy">Style</h2>
-        <button type="button" onClick={done} className="min-h-11 justify-self-end rounded-lg bg-deep-navy px-5 text-[15px] font-bold text-white hover:bg-royal-blue">
-          Done
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-6 px-4 pb-8 pt-4 sm:flex-row sm:px-6">
-        {/* The preview stays in view while the controls scroll. */}
-        <div className="sticky top-[60px] z-10 -mx-4 flex justify-center bg-soft-gray/95 px-4 pb-3 backdrop-blur sm:static sm:mx-0 sm:block sm:self-start sm:bg-transparent sm:px-0 sm:pb-0 sm:backdrop-blur-none">
-          <StylePreview funnel={funnel} title={title} colors={shown} font={font} media={previewMedia} />
-        </div>
-
+  const controls = (
         <div className="min-w-0 flex-1 space-y-6">
           {(suggestions.length > 0 || look) && (
             <Group label="Suggested">
@@ -156,8 +148,7 @@ export default function StyleSheet({
                     font={s.font}
                     selected={selected === i}
                     onSelect={() => {
-                      setColors(s.colors);
-                      setFont(s.font);
+                      commit({ colors: s.colors, font: s.font });
                       setPicked({});
                     }}
                   />
@@ -168,8 +159,7 @@ export default function StyleSheet({
                   font="classic"
                   selected={selected === "original"}
                   onSelect={() => {
-                    setColors(undefined);
-                    setFont("classic");
+                    commit({ colors: null, font: "classic" });
                     setPicked({});
                   }}
                 />
@@ -186,7 +176,7 @@ export default function StyleSheet({
                   onClick={() => {
                     const n = shuffles + 1;
                     setShuffles(n);
-                    setColors(shuffleColors(look.palette!, shown, n));
+                    commit({ colors: shuffleColors(look.palette!, shown, n) });
                     setPicked({});
                   }}
                   className="-my-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold normal-case tracking-normal text-deep-navy hover:bg-white"
@@ -258,7 +248,7 @@ export default function StyleSheet({
                   type="button"
                   role="radio"
                   aria-checked={font === f}
-                  onClick={() => setFont(f)}
+                  onClick={() => commit({ font: f })}
                   className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left"
                 >
                   <span className={`${titleFontClass(f)} min-w-0 flex-1 truncate text-2xl leading-tight text-deep-navy`}>{title}</span>
@@ -280,7 +270,7 @@ export default function StyleSheet({
                   role="radio"
                   aria-checked={backdrop === b.id}
                   disabled={b.disabled}
-                  onClick={() => setBackdrop(b.id)}
+                  onClick={() => commit({ backdrop: b.id })}
                   className={`min-h-10 rounded-lg text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${backdrop === b.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
                 >
                   {b.label}
@@ -300,6 +290,35 @@ export default function StyleSheet({
             </p>
           </Group>
         </div>
+  );
+
+  if (panel) return controls;
+
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      aria-labelledby={`${id}-title`}
+      className="m-auto h-[100dvh] max-h-[100dvh] w-full max-w-none overflow-y-auto bg-soft-gray p-0 text-charcoal shadow-2xl backdrop:bg-deep-navy/60 sm:h-auto sm:max-h-[92dvh] sm:w-[min(52rem,calc(100vw-2rem))] sm:rounded-2xl"
+    >
+      {/* Title bar: Cancel, title, Done, always in reach. */}
+      <div className="sticky top-0 z-20 grid grid-cols-[1fr_auto_1fr] items-center border-b border-gray-200 bg-soft-gray/90 px-2 py-1.5 backdrop-blur">
+        <button type="button" onClick={() => ref.current?.close()} className="min-h-11 justify-self-start rounded-lg px-3 text-[15px] font-semibold text-deep-navy hover:bg-white">
+          Cancel
+        </button>
+        <h2 id={`${id}-title`} className="text-[17px] font-bold text-deep-navy">Style</h2>
+        <button type="button" onClick={done} className="min-h-11 justify-self-end rounded-lg bg-deep-navy px-5 text-[15px] font-bold text-white hover:bg-royal-blue">
+          Done
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-6 px-4 pb-8 pt-4 sm:flex-row sm:px-6">
+        {/* The preview stays in view while the controls scroll. */}
+        <div className="sticky top-[60px] z-10 -mx-4 flex justify-center bg-soft-gray/95 px-4 pb-3 backdrop-blur sm:static sm:mx-0 sm:block sm:self-start sm:bg-transparent sm:px-0 sm:pb-0 sm:backdrop-blur-none">
+          <StylePreview funnel={funnel} title={title} colors={shown} font={font} media={previewMedia} />
+        </div>
+
+        {controls}
       </div>
     </dialog>
   );

@@ -67,9 +67,19 @@ export function getSourceTag(): string | undefined {
   }
 }
 
+/**
+ * The admin's live preview: what the admin taps there isn't a visit, and
+ * forms there send nothing.
+ */
+let previewing = false;
+export const setPreviewMode = (on: boolean) => {
+  previewing = on;
+};
+export const isPreviewMode = () => previewing;
+
 export function trackReelEvent(funnel: Funnel, reelId: string, event: ReelEvent) {
   // Sample funnels show the product; their views aren't anyone's data.
-  if (funnel.sample) return;
+  if (funnel.sample || previewing) return;
   const visitorId = getVisitorId();
   if (!visitorId) return;
 

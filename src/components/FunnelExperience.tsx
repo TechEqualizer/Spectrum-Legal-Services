@@ -49,11 +49,20 @@ function singleHook(event: FunnelEvent, untilStart: number) {
  * choice starts the reels at that topic. ?start=<reel id> skips straight to
  * a reel, which is how follow-up texts send someone their next video.
  */
-export default function FunnelExperience({ slug, publication }: { slug: string; publication: Publication | null }) {
+export default function FunnelExperience({
+  slug,
+  publication,
+  startReelId,
+}: {
+  slug: string;
+  publication: Publication | null;
+  /** Opens straight into this reel, like ?start= (the admin preview uses it). */
+  startReelId?: string;
+}) {
   const funnel = useMemo(() => applyPublication(getFunnelBySlug(slug)!, publication), [slug, publication]);
   const { brand } = funnel;
   const params = useSearchParams();
-  const start = params.get("start");
+  const start = startReelId ?? params.get("start");
   // Each visit gets a new key, so the viewer starts a fresh path every time.
   const [visit, setVisit] = useState<{ reelId: string; key: number } | null>(
     () => (start && funnelReel(funnel, start) ? { reelId: start, key: 0 } : null)

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import DatesCard from "@/admin/components/DatesCard";
 import HeroMediaCard from "@/admin/components/HeroMediaCard";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
+import StyleSheet from "@/admin/components/StyleSheet";
+import { ResultsPanel, StoryStep, Studio, useWideScreen } from "@/admin/components/Studio";
 import ReelViewer from "@/components/ReelViewer";
 import {
   CTA_LABELS,
@@ -20,7 +22,7 @@ import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { useAdminSession } from "@/admin/session";
 import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
 import type { Look } from "@/lib/look";
-import { fetchLive, publicationKey, publish, publishedFunnel, takeDown, type EditorState, type LiveState } from "@/admin/publish";
+import { fetchLive, publicationKey, publish, publishedFunnel, takeDown, toPublication, type EditorState, type LiveState } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { ScreenCopy } from "@/lib/publication";
 import { sampleFor, type ReelTotals } from "@/admin/sample-data";
@@ -143,6 +145,10 @@ export default function ReelsEditor() {
       const state: EditorState = { reels: start.reels, funnels: start.funnels, heroMedia: start.heroMedia, screen: start.screen, events: start.events, look: start.look };
       show(state);
       lastSaved.current = snapshotOf(state);
+      // Undo starts from here.
+      lastStep.current = state;
+      past.current = [];
+      future.current = [];
       loaded.current = true;
     });
     return () => {
@@ -168,6 +174,44 @@ export default function ReelsEditor() {
   }, [toast]);
 
   const current: EditorState = { reels: library, funnels, heroMedia, screen, events, look };
+
+  // Undo and Redo, for the studio's top bar: every saved change is a step.
+  const past = useRef<EditorState[]>([]);
+  const future = useRef<EditorState[]>([]);
+  const lastStep = useRef<EditorState | null>(null);
+  const restoring = useRef(false);
+  const [, setSteps] = useState(0);
+  useEffect(() => {
+    if (!loaded.current) return;
+    const state: EditorState = { reels: library, funnels, heroMedia, screen, events, look };
+    if (restoring.current) {
+      restoring.current = false;
+    } else if (lastStep.current && snapshotOf(lastStep.current) !== snapshotOf(state)) {
+      past.current = [...past.current.slice(-59), lastStep.current];
+      future.current = [];
+    }
+    lastStep.current = state;
+    setSteps((n) => n + 1);
+  }, [library, funnels, heroMedia, screen, events, look]);
+  const stepTo = (from: React.MutableRefObject<EditorState[]>, to: React.MutableRefObject<EditorState[]>) => {
+    const state = from.current.at(-1);
+    if (!state) return;
+    from.current = from.current.slice(0, -1);
+    to.current = [...to.current, current];
+    restoring.current = true;
+    show(state);
+  };
+  const undo = () => stepTo(past, future);
+  const redo = () => stepTo(future, past);
+  const canUndo = past.current.length > 0;
+  const canRedo = future.current.length > 0;
+
+  // The studio: three columns on wide screens, with the funnel live in a phone.
+  const wide = useWideScreen();
+  const [go, setGo] = useState<{ reelId?: string; key: number }>({ key: 0 });
+  const draftPublication = toPublication(current);
+  /** Plays a reel: in the studio's phone, or full screen. */
+  const play = (reelId: string) => (wide ? setGo((g) => ({ reelId, key: g.key + 1 })) : setPreview({ reelId, key: Date.now() }));
   const unpublished = Boolean(live) && publicationKey(current) !== publicationKey(live!);
   // The event's dates, for linking reels ("Sells tickets for", and the chip on each row).
   const allDates = events ?? liveFunnel.events;
@@ -330,8 +374,8 @@ export default function ReelsEditor() {
     return i === -1 ? "End card" : `${i + 1}. ${byId.get(target)?.title}`;
   };
 
-  return (
-    <div className="space-y-6">
+  const headerEl = (
+    <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Reels</h1>
@@ -363,7 +407,11 @@ export default function ReelsEditor() {
           </button>
         </div>
       </div>
+    </>
+  );
 
+  const heroEl = (
+    <>
       <HeroMediaCard
         funnel={liveFunnel}
         live={sceneMediaOf(liveFunnel)}
@@ -371,6 +419,7 @@ export default function ReelsEditor() {
         screen={screen}
         look={look}
         edited={heroEdited || screenEdited || lookEdited}
+        inStudio={wide}
         onStyle={(nextLook, media) => {
           const before = { look, heroMedia };
           setLook(nextLook);
@@ -387,7 +436,11 @@ export default function ReelsEditor() {
           setToast(message, undo);
         }}
       />
+    </>
+  );
 
+  const datesEl = (
+    <>
       {liveFunnel.events && (
         <DatesCard
           slug={slug}
@@ -402,9 +455,14 @@ export default function ReelsEditor() {
           }}
           onSave={saveDate}
           onLook={applyLook}
+          inStudio={wide}
         />
       )}
+    </>
+  );
 
+  const funnelsEl = (
+    <>
       {/* Funnels: containers with an entry trigger */}
       <section aria-labelledby="funnels-title">
         <h2 id="funnels-title" className="sr-only">Funnels</h2>
@@ -447,7 +505,11 @@ export default function ReelsEditor() {
           </li>
         </ul>
       </section>
+    </>
+  );
 
+  const orderEl = (
+    <>
       {/* The ordered reel list */}
       <section className="rounded-xl border border-gray-200 bg-white" aria-labelledby="order-title">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-gray-100 px-5 py-4">
@@ -479,7 +541,7 @@ export default function ReelsEditor() {
                   onDropHere={() => dragId && dragId !== id && moveTo(dragId, i)}
                   onMove={(by) => moveTo(id, i + by)}
                   onEdit={() => setEditing(reel)}
-                  onPlay={() => setPreview({ reelId: id, key: Date.now() })}
+                  onPlay={() => play(id)}
                   onRemove={() => updateFunnel((f) => removeFromFunnel(f, id))}
                 />
               );
@@ -521,14 +583,11 @@ export default function ReelsEditor() {
           </p>
         </div>
       </section>
+    </>
+  );
 
-      {/* Settings for the selected funnel */}
-      <details className="group rounded-xl border border-gray-200 bg-white">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 text-base font-bold text-deep-navy">
-          Funnel settings
-          <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l-7 7-7-7" /></svg>
-        </summary>
-        <div className="border-t border-gray-100 p-5">
+  const settingsInner = (
+        <div className="border-t border-gray-100 p-5 xl:border-0 xl:p-0">
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_11rem]">
           <label className="block">
             <span className="mb-1 block text-sm font-semibold text-deep-navy">Funnel name</span>
@@ -568,14 +627,33 @@ export default function ReelsEditor() {
           </div>
         )}
         </div>
-      </details>
+  );
 
+  const settingsEl = (
+    <>
+      {/* Settings for the selected funnel */}
+      <details className="group rounded-xl border border-gray-200 bg-white">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 text-base font-bold text-deep-navy">
+          Funnel settings
+          <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l-7 7-7-7" /></svg>
+        </summary>
+        {settingsInner}
+      </details>
+    </>
+  );
+
+  const liveErrorEl = (
+    <>
       {liveError && (
         <p role="alert" className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Couldn&apos;t check what&apos;s live ({liveError}). Edits still save here; reload to try again.
         </p>
       )}
+    </>
+  );
 
+  const publishBarEl = (
+    <>
       {/* Publish bar: shows up when there are edits the live link doesn't have yet. */}
       {showBar && (
         <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 lg:bottom-4" role="region" aria-label="Publish">
@@ -604,7 +682,11 @@ export default function ReelsEditor() {
           </div>
         </div>
       )}
+    </>
+  );
 
+  const overlaysEl = (
+    <>
       {preview && (
         <ReelViewer
           key={preview.key}
@@ -613,7 +695,6 @@ export default function ReelsEditor() {
           onClose={() => setPreview(null)}
         />
       )}
-
       <div
         role="status"
         className={`fixed inset-x-0 z-50 mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-full bg-deep-navy py-2.5 pl-5 text-sm font-semibold text-white shadow-lg ring-1 ring-white/15 transition-opacity ${toast?.undo ? "pr-2" : "pointer-events-none pr-5"} ${
@@ -639,7 +720,6 @@ export default function ReelsEditor() {
           </>
         )}
       </div>
-
       {editing && (
         <ReelEditDialog
           key={editing.id || "new"}
@@ -653,6 +733,85 @@ export default function ReelsEditor() {
           onClose={() => setEditing(null)}
         />
       )}
+    </>
+  );
+
+  const shownMedia = heroMedia === undefined ? sceneMediaOf(liveFunnel) : heroMedia ?? undefined;
+  if (wide) {
+    return (
+      <Studio
+        slug={slug}
+        title={liveFunnel.brand.name}
+        publication={draftPublication}
+        go={go}
+        onRestart={() => setGo((g) => ({ key: g.key + 1 }))}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        unpublished={unpublished}
+        publishing={publishing}
+        publishError={publishError}
+        onPublish={runPublish}
+        onDiscard={resetToLive}
+        liveHref={`/f/${liveFunnel.slug}`}
+        story={
+          <>
+            <StoryStep n={1} title="Opening scene" hint="What people see first" onShow={() => setGo((g) => ({ key: g.key + 1 }))}>
+              {heroEl}
+            </StoryStep>
+            {liveFunnel.events && (
+              <StoryStep n={2} title="Dates" hint="Each is a circle that opens its reel" onShow={() => setGo((g) => ({ key: g.key + 1 }))}>
+                {datesEl}
+              </StoryStep>
+            )}
+            <StoryStep n={liveFunnel.events ? 3 : 2} title="Reels" hint="Each one plays the next" onShow={() => funnel.order[0] && setGo((g) => ({ reelId: funnel.order[0], key: g.key + 1 }))}>
+              {funnelsEl}
+              {orderEl}
+              <button
+                type="button"
+                onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
+                className="min-h-11 w-full rounded-xl border border-dashed border-gray-400 text-sm font-semibold text-deep-navy hover:bg-white"
+              >
+                + Add reel
+              </button>
+            </StoryStep>
+            {liveErrorEl}
+          </>
+        }
+        design={
+          <StyleSheet
+            panel
+            funnel={liveFunnel}
+            title={liveFunnel.cover.hero ? screen?.title ?? liveFunnel.cover.hero.title : screen?.heading ?? liveFunnel.cover.heading}
+            look={look}
+            media={shownMedia}
+            onDone={(nextLook, media) => {
+              setLook(nextLook);
+              // The background only changes when Background was tapped.
+              if (media !== (shownMedia ?? null)) setHeroMedia(media);
+            }}
+          />
+        }
+        results={<ResultsPanel rows={funnel.order.map((id) => stats.get(id)).filter((r): r is ReelTotals => Boolean(r))} onPlay={(id) => setGo((g) => ({ reelId: id, key: g.key + 1 }))} />}
+        settings={settingsInner}
+      >
+        {overlaysEl}
+      </Studio>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {headerEl}
+      {heroEl}
+      {datesEl}
+      {funnelsEl}
+      {orderEl}
+      {settingsEl}
+      {liveErrorEl}
+      {publishBarEl}
+      {overlaysEl}
     </div>
   );
 }

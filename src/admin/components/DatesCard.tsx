@@ -40,6 +40,7 @@ export default function DatesCard({
   onChange,
   onSave,
   onLook,
+  inStudio = false,
 }: {
   slug: string;
   events: FunnelEvent[];
@@ -51,6 +52,8 @@ export default function DatesCard({
   onSave: (event: FunnelEvent, reel: ReelChoice, isNew: boolean) => void;
   /** Use a flyer's look (and the flyer itself, as an upload link, behind the opening screen). */
   onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
+  /** In the studio, where its story step names it. */
+  inStudio?: boolean;
 }) {
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
@@ -103,9 +106,9 @@ export default function DatesCard({
     <section aria-labelledby="dates-title" className="rounded-xl border border-gray-200 bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-5">
         <div>
-          <h2 id="dates-title" className="font-bold text-deep-navy">Dates</h2>
+          <h2 id="dates-title" className={inStudio ? "sr-only" : "font-bold text-deep-navy"}>Dates</h2>
           <p className="text-xs text-gray-600">
-            Shown as circles on your opening screen.
+            <span className={inStudio ? "sr-only" : undefined}>Shown as circles on your opening screen.</span>
             {edited && <span className="font-semibold text-amber-800"> Not published.</span>}
           </p>
         </div>
