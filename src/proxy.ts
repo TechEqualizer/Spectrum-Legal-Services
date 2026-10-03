@@ -12,7 +12,7 @@ import {
 // This is a convenience, not the lock: pages check the admin with Supabase
 // (getAdmin), and Supabase's row-level security decides every write.
 
-const OPEN = ["/admin/login", "/api/admin/login"];
+const OPEN = ["/admin/login", "/api/admin/login", "/api/admin/status"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

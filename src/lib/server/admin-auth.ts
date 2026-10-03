@@ -39,12 +39,53 @@ async function authCall(path: string, init: RequestInit): Promise<Response | nul
   }
 }
 
-export async function signInWithPassword(email: string, password: string): Promise<AuthTokens | "invalid" | "unavailable"> {
-  const res = await authCall("token?grant_type=password", { method: "POST", body: JSON.stringify({ email, password }) });
-  if (!res) return "unavailable";
+/** Why sign-in couldn't run, in words the admin (or whoever set it up) can act on. */
+export type SignInProblem = { problem: string };
+
+export async function signInWithPassword(email: string, password: string): Promise<AuthTokens | "invalid" | SignInProblem> {
+  if (!url() || !key()) {
+    return { problem: "This deployment is missing its Supabase settings (SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY). Add them in Vercel, then redeploy." };
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${url()}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: { apikey: key()!, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      cache: "no-store",
+    });
+  } catch (e) {
+    console.error("[admin sign-in] couldn't reach Supabase", e);
+    return { problem: `Couldn't reach Supabase (${e instanceof Error ? e.message : String(e)}). Check SUPABASE_URL.` };
+  }
   if (res.status === 400 || res.status === 401) return "invalid";
-  if (!res.ok) return "unavailable";
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).slice(0, 200);
+    console.error("[admin sign-in] Supabase answered", res.status, detail);
+    return { problem: `Supabase answered ${res.status}${detail ? `: ${detail}` : ""}.` };
+  }
   return (await res.json()) as AuthTokens;
+}
+
+/** Whether this deployment can sign admins in: its settings, and whether Supabase answers. */
+export async function signInStatus() {
+  const configured = { SUPABASE_URL: Boolean(url()), SUPABASE_PUBLISHABLE_KEY: Boolean(key()) };
+  let supabase = "not checked";
+  if (url() && key()) {
+    try {
+      const res = await fetch(`${url()}/auth/v1/health`, { headers: { apikey: key()! }, cache: "no-store" });
+      supabase = res.ok ? "reachable" : `answered ${res.status}`;
+    } catch (e) {
+      supabase = `unreachable: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+  let host = "";
+  try {
+    host = url() ? new URL(url()!).host : "";
+  } catch {
+    host = "not a valid URL";
+  }
+  return { configured, supabaseHost: host, supabase };
 }
 
 export async function refreshTokens(refreshToken: string): Promise<AuthTokens | null> {
