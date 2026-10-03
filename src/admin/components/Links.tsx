@@ -68,7 +68,7 @@ export default function Links() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Share links</h1>
+        <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Share</h1>
         <p className="text-sm text-gray-600">
           The reel funnel as its own link. Give each place you share it its own tag, so you can see which one brings calls and bookings.
         </p>

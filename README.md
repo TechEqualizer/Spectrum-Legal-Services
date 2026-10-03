@@ -220,19 +220,24 @@ from the public site and is marked `noindex`.
   500 MB) or photo (JPEG, PNG, WebP, GIF, up to 25 MB) by dragging or
   choosing a file, or paste a link (YouTube watch, Shorts and youtu.be
   links, or a direct video or photo link). Videos can add a cover image
-  and WebVTT captions. **Preview edits** (or a row's thumbnail) plays the
-  edited funnel in the real reel viewer, with nothing tracked or sent.
-  Uploads stay in the browser until the admin has storage and a login. The model is
-  `src/admin/editor-model.ts`; it starts from the live funnel in
-  `src/data/reels.ts`, and edits stay in the page.
-- **Overview** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,
+  and WebVTT captions; a pasted link counts as soon as it's valid.
+  **Preview** (or a row's thumbnail) plays the edited funnel in the real
+  reel viewer, with nothing tracked or sent. **Saving**: every change saves
+  in this browser as you go, per business, uploaded files included
+  (`src/admin/drafts.ts`: localStorage, with files in IndexedDB), and
+  survives a reload; **Reset to live** discards it. The live link changes
+  once the admin has a login and a database. The model is
+  `src/admin/editor-model.ts`; it starts from the live funnel.
+- **Results** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,
   and what viewers did with each reel, for the last 7, 30 or 90 days.
-- **Share links**: a builder for tagged funnel links, and which sources bring
+- **Share**: a builder for tagged funnel links, and which sources bring
   calls and call-back requests per 100 visitors.
-- **Funnel map**: the live paths from `src/data/reels.ts` as a diagram.
+- **Paths**: the live paths from `src/data/reels.ts` as a diagram.
   Selecting a reel shows its numbers; changing where it leads redraws the map
   (preview only).
 - **Leads**: sample leads with the videos each one watched before booking.
+- **Navigation**: on phones the five places sit in a bottom tab bar; on
+  desktop, a sidebar. Screens follow `.claude/skills/simple-navigation`.
 
 Next steps to make it real: an admin login (Supabase Auth), reading the
 tables with the secret key on the server, storing funnels in

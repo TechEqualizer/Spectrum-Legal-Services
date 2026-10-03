@@ -1,11 +1,12 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { keepUpload } from "@/admin/drafts";
 import type { ReelMedia } from "@/data/funnel-types";
 import { mediaFromLink, thumbnailOf, UPLOAD_LIMITS } from "@/lib/media";
 
-// Preview only: uploads become blob: links that last until the page closes.
-// Saving them needs storage behind the admin login.
+// Uploads are kept in this browser (see drafts.ts) until the admin has
+// storage behind a login.
 
 type MediaPickerProps = {
   value: ReelMedia | undefined;
@@ -20,7 +21,7 @@ function mediaFromFile(file: File): ReelMedia | string {
     if (file.size > UPLOAD_LIMITS.video) {
       return `That video is ${Math.round(file.size / MB)} MB. Trim it to under ${UPLOAD_LIMITS.video / MB} MB; reels work best under a minute.`;
     }
-    return { kind: "video", src: URL.createObjectURL(file) };
+    return { kind: "video", src: keepUpload(file) };
   }
   if (file.type.startsWith("image/")) {
     if (file.size > UPLOAD_LIMITS.image) {
@@ -29,7 +30,7 @@ function mediaFromFile(file: File): ReelMedia | string {
     if (file.type === "image/heic" || file.type === "image/heif") {
       return "HEIC photos don't show in most browsers. Export it as JPEG first (on iPhone: Settings, Camera, Formats, Most Compatible).";
     }
-    return { kind: "image", src: URL.createObjectURL(file) };
+    return { kind: "image", src: keepUpload(file) };
   }
   return "Upload a video (MP4, MOV, WebM) or a photo (JPEG, PNG, WebP, GIF).";
 }
@@ -147,7 +148,14 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
                   inputMode="url"
                   placeholder="https://youtube.com/shorts/... or https://.../reel.mp4"
                   value={link}
-                  onChange={(e) => setLink(e.target.value)}
+                  onChange={(e) => {
+                    setLink(e.target.value);
+                    // A valid link counts as soon as it's there: Android keyboards
+                    // often paste without a paste event, and Save shouldn't need
+                    // a second tap on "Use link". Errors wait for Use link or Enter.
+                    const result = mediaFromLink(e.target.value);
+                    if (typeof result !== "string") { setError(""); setBroken(false); setFileName(""); onChange(result); }
+                  }}
                   onPaste={(e) => {
                     // Use a pasted link straight away.
                     const text = e.clipboardData.getData("text");
@@ -174,7 +182,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
             <p className="text-xs text-gray-600">Plays in YouTube&apos;s privacy-enhanced player. Shorts fill the screen; wide videos are cropped to fit.</p>
           )}
           {uploaded && (
-            <p className="text-xs text-gray-500">Preview: uploads stay in this browser until the admin has storage and a login.</p>
+            <p className="text-xs text-gray-500">Uploads are saved in this browser until the admin has a login.</p>
           )}
           {value && (
             <button type="button" onClick={() => { onChange(undefined); setFileName(""); setBroken(false); }} className="text-xs font-semibold text-red-700 hover:underline">
@@ -251,7 +259,7 @@ function ExtraFile({
               if (!file) return;
               if (file.size > limit) return setError(`Use a file under ${Math.round(limit / MB)} MB.`);
               setError("");
-              onChange(URL.createObjectURL(file));
+              onChange(keepUpload(file));
             }}
           />
         </label>
