@@ -121,7 +121,7 @@ export default function FunnelLeadSheet({ funnel, intent, reel, onClose }: Funne
               <button
                 type="button"
                 onClick={onClose}
-                className="min-h-11 w-full rounded-md bg-teal-accent px-4 font-semibold text-white hover:brightness-110"
+                className="min-h-11 w-full rounded-md bg-teal-accent px-4 font-semibold text-on-accent hover:brightness-110"
               >
                 Keep watching
               </button>
@@ -206,7 +206,7 @@ export default function FunnelLeadSheet({ funnel, intent, reel, onClose }: Funne
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="min-h-12 w-full rounded-md bg-teal-accent px-4 font-semibold text-white shadow-md hover:brightness-110 disabled:opacity-60"
+                className="min-h-12 w-full rounded-md bg-teal-accent px-4 font-semibold text-on-accent shadow-md hover:brightness-110 disabled:opacity-60"
               >
                 {isSubmitting ? "Sending..." : text.submit}
               </button>

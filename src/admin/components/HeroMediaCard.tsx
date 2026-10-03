@@ -3,9 +3,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import MediaPicker from "@/admin/components/MediaPicker";
 import type { HeroMediaEdit } from "@/admin/drafts";
-import { wordmarkFont } from "@/components/BrandLogo";
+import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
 import { thumbnailOf } from "@/lib/media";
+import { LOOK_FONTS, LOOK_ROLES, themeOf, type Look } from "@/lib/look";
 import { SCREEN_LIMITS, type ScreenCopy } from "@/lib/publication";
 
 const KIND_LABELS: Record<ReelMedia["kind"], string> = {
@@ -51,8 +52,10 @@ export default function HeroMediaCard({
   live,
   value,
   screen,
+  look,
   edited = false,
   onChange,
+  onResetLook,
 }: {
   /** The funnel as built in (for its default words). */
   funnel: Funnel;
@@ -61,9 +64,12 @@ export default function HeroMediaCard({
   value: HeroMediaEdit;
   /** Words that differ from the built-in ones. */
   screen: ScreenCopy | undefined;
+  /** Brand colors and title typeface, when changed from the built-in ones (e.g. matched to a flyer). */
+  look?: Look;
   /** Differs from what's live. */
   edited?: boolean;
   onChange: (change: { media: HeroMediaEdit; screen: ScreenCopy | undefined }, message: string, undo?: () => void) => void;
+  onResetLook: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const shown = value === undefined ? live : value ?? undefined;
@@ -73,7 +79,7 @@ export default function HeroMediaCard({
   return (
     <section aria-labelledby="hero-media-title" className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4">
       <button type="button" onClick={() => setOpen(true)} aria-label="Edit the opening screen" className="flex-shrink-0 rounded-lg focus-visible:outline-2">
-        <ScenePreview media={shown} title={title} small />
+        <ScenePreview media={shown} title={title} look={look} small />
       </button>
       <div className="min-w-0 flex-1">
         <h2 id="hero-media-title" className="font-bold text-deep-navy">Opening screen</h2>
@@ -82,6 +88,15 @@ export default function HeroMediaCard({
           {shown ? KIND_LABELS[shown.kind] : "No background: your brand colors"}
           {edited && <span className="font-semibold text-amber-800"> &middot; not published</span>}
         </p>
+        {look && (
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600">
+            <Swatches look={look} />
+            <span>{LOOK_FONTS[look.font].label}, from your flyer</span>
+            <button type="button" onClick={onResetLook} className="min-h-8 font-semibold text-deep-navy hover:underline">
+              Original look
+            </button>
+          </p>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
           <button
             type="button"
@@ -104,6 +119,7 @@ export default function HeroMediaCard({
       {open && (
         <OpeningScreenSheet
           funnel={funnel}
+          look={look}
           initialMedia={shown}
           initialCopy={copy}
           onSave={(media, words) => {
@@ -126,12 +142,14 @@ export default function HeroMediaCard({
 
 function OpeningScreenSheet({
   funnel,
+  look,
   initialMedia,
   initialCopy,
   onSave,
   onClose,
 }: {
   funnel: Funnel;
+  look?: Look;
   initialMedia: ReelMedia | undefined;
   initialCopy: Required<ScreenCopy>;
   onSave: (media: ReelMedia | undefined, words: ScreenCopy) => void;
@@ -182,6 +200,7 @@ function OpeningScreenSheet({
           <div className="flex justify-center md:sticky md:top-0 md:self-start">
             <ScenePreview
               media={media}
+              look={look}
               title={previewTitle}
               tagline={previewTagline}
               button={hero ? words.watchLabel?.trim() || builtIn.watchLabel : undefined}
@@ -247,14 +266,28 @@ function OpeningScreenSheet({
 }
 
 /** A small phone-shaped picture of the opening screen: the background, darkened, with the words over it. */
-function ScenePreview({
+/** The look's five colors, as small dots. */
+export function Swatches({ look }: { look: Look }) {
+  return (
+    <span className="inline-flex -space-x-1" aria-hidden="true">
+      {LOOK_ROLES.map((role) => (
+        <span key={role} className="h-4 w-4 rounded-full ring-2 ring-white" style={{ background: look.colors[role] }} />
+      ))}
+    </span>
+  );
+}
+
+export function ScenePreview({
   media,
+  look,
   title,
   tagline,
   button,
   small = false,
 }: {
   media: ReelMedia | undefined;
+  /** Shown in these colors and typeface instead of the funnel's own. */
+  look?: Look;
   title: string;
   tagline?: string;
   button?: string;
@@ -262,8 +295,19 @@ function ScenePreview({
 }) {
   const poster = thumbnailOf(media);
   return (
-    <div aria-hidden="true" className={`relative aspect-[9/16] flex-shrink-0 overflow-hidden rounded-xl bg-deep-navy ${small ? "w-14" : "w-36 md:w-48"}`}>
-      {media?.kind === "video" && !media.poster ? (
+    <div
+      aria-hidden="true"
+      style={look ? (themeOf(look) as React.CSSProperties) : undefined}
+      className={`relative aspect-[9/16] flex-shrink-0 overflow-hidden rounded-xl bg-deep-navy ${small ? "w-14" : "w-36 md:w-48"}`}
+    >
+      {media?.kind === "image" && media.fit === "poster" ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
+          <img src={media.src} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover blur-md brightness-[0.55] saturate-150" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
+          <img src={media.src} alt="" className={`absolute inset-x-0 mx-auto h-[52%] w-auto max-w-[80%] rounded object-contain [mask-image:linear-gradient(to_bottom,black_55%,transparent)] ${small ? "top-1.5" : "top-6"}`} />
+        </>
+      ) : media?.kind === "video" && !media.poster ? (
         <video src={media.src} muted loop playsInline autoPlay={!small} preload="metadata" className="absolute inset-0 h-full w-full object-cover" />
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element -- any file or link the admin adds
@@ -271,13 +315,13 @@ function ScenePreview({
       ) : (
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_36%,var(--sky-accent),var(--teal-accent)_30%,transparent_62%)] opacity-80" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-deep-navy via-deep-navy/50 to-black/30" />
+      <div className={`absolute inset-0 bg-gradient-to-t from-deep-navy ${media?.kind === "image" && media.fit === "poster" ? "via-deep-navy/40 via-35% to-transparent to-60%" : "via-deep-navy/50 to-black/30"}`} />
       {!small && (
         <div className="absolute inset-x-3 bottom-4">
-          <p className={`${wordmarkFont.className} line-clamp-3 text-[1.35rem] leading-[1.05] text-white md:text-[1.6rem]`}>{title}</p>
+          <p className={`${titleFontClass(look?.font)} line-clamp-3 text-[1.35rem] leading-[1.05] text-white md:text-[1.6rem]`}>{title}</p>
           {tagline && <p className="mt-1.5 line-clamp-3 text-[9px] leading-snug text-white/80 md:text-[10px]">{tagline}</p>}
           {button && (
-            <span className="mt-2.5 flex h-7 items-center justify-center truncate rounded-full bg-teal-accent px-2 text-[10px] font-semibold text-white">
+            <span className="mt-2.5 flex h-7 items-center justify-center truncate rounded-full bg-teal-accent px-2 text-[10px] font-semibold text-on-accent">
               {button}
             </span>
           )}

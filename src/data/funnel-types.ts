@@ -1,6 +1,8 @@
 // Types for reel funnels. Each funnel is one business's shareable link
 // (/f/<slug>): its reels, the paths between them, and its brand.
 
+import type { LookFont } from "@/lib/look";
+
 export type Reel = {
   id: string;
   /** The reel's topic. Must be one of its funnel's brand.services. */
@@ -53,7 +55,8 @@ export type ReelMedia =
   /** A YouTube video or Short, by its 11-character id. */
   | { kind: "youtube"; id: string }
   /** A photo, shown for a few seconds like a story. */
-  | { kind: "image"; src: string };
+  /** fit "poster": the whole picture, sharp, over a blurred copy of itself (for a flyer behind the opening screen). */
+  | { kind: "image"; src: string; fit?: "poster" };
 
 export type FunnelTrigger = "completed" | "skipped";
 
@@ -66,7 +69,7 @@ export type FunnelCta = "call" | "book" | "tickets";
 
 /** Color overrides for the funnel's pages; the names are the tokens in globals.css. */
 export type FunnelTheme = Partial<
-  Record<"--deep-navy" | "--royal-blue" | "--teal-accent" | "--sky-accent" | "--soft-gray", string>
+  Record<"--deep-navy" | "--royal-blue" | "--teal-accent" | "--sky-accent" | "--soft-gray" | "--on-accent", string>
 >;
 
 /** Who the funnel belongs to, and the words it uses. */
@@ -156,6 +159,8 @@ export type Funnel = {
      * brand-color glow. Set by the admin's opening-screen editor.
      */
     backdrop?: ReelMedia | null;
+    /** The title's typeface (default: the classic serif). Set by a published look. */
+    titleFont?: LookFont;
     /**
      * A full-height opening scene above the choices, like a film's title
      * card: the title and tagline over footage, with Watch and Get tickets

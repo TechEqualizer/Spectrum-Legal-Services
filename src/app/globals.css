@@ -30,6 +30,8 @@
   --color-deep-navy: var(--deep-navy);
   --color-royal-blue: var(--royal-blue);
   --color-teal-accent: var(--teal-accent);
+  /* Words on the brand's main buttons: white, or dark on a light accent like gold (set by a look). */
+  --color-on-accent: var(--on-accent, #fff);
   --color-sky-accent: var(--sky-accent);
   --color-jeff-green: var(--jeff-green);
   --color-soft-gray: var(--soft-gray);

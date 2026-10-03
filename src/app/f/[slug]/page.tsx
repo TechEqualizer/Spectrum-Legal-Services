@@ -17,10 +17,13 @@ export function generateStaticParams() {
 }
 
 export async function generateViewport({ params }: PageProps<"/f/[slug]">): Promise<Viewport> {
-  const funnel = getFunnelBySlug((await params).slug);
+  const { slug } = await params;
+  const funnel = getFunnelBySlug(slug);
+  // A published look (e.g. matched to a flyer) recolors it too.
+  const look = funnel ? (await getPublication(slug))?.publication?.look : undefined;
   // Colors the browser bar (and in-app browsers that honor it) to match.
   return {
-    themeColor: funnel?.brand.theme?.["--deep-navy"] ?? "#0E1A2B",
+    themeColor: look?.colors["--deep-navy"] ?? funnel?.brand.theme?.["--deep-navy"] ?? "#0E1A2B",
     // Edge to edge on phones with a notch or home bar; the reels pad for the safe areas.
     viewportFit: "cover",
     // The page is already dark; this stops phone browsers' forced dark mode

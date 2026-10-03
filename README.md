@@ -251,6 +251,18 @@ business's colors. It is not linked from the public site and is marked
   `ANTHROPIC_API_KEY` (`/api/admin/import-event`, `src/lib/server/flyer-import.ts`);
   without it the sheet says so. QR codes aren't read: paste those ticket
   links.
+- **Match your flyer's look**: a flyer photo or PDF also gives a look (five
+  brand colors and a title typeface from a vetted set: classic serif,
+  fashion serif, engraved capitals, bold condensed, modern sans;
+  `src/lib/look.ts`, `src/components/lookFonts.ts`). The import sheet
+  previews it; **Use this look** applies it, with Undo, optionally with
+  **Flyer as the background**: the flyer, sharp, under the logo, over a
+  blurred copy of itself (`fit: "poster"`). Colors are adjusted to stay
+  readable (white on the background and buttons, highlights on the
+  background, dark text on light sheets); a light accent such as gold keeps
+  its color and gets dark button words (`--on-accent`). The opening-screen
+  card shows the look, with **Original look** to go back. It publishes with
+  everything else and recolors the link, the reels and the browser bar.
 - **One upcoming date**: the opening screen shows a single event card
   (day, time, venue, price, status; tap to watch) instead of a row of one
   circle, with **Add to calendar** (`/f/<slug>/calendar/<event id>`, an

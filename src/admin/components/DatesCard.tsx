@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { FunnelEvent } from "@/data/funnel-types";
 import { isOver } from "@/lib/events";
-import FlyerImportSheet, { type ImportedDate } from "@/admin/components/FlyerImportSheet";
+import FlyerImportSheet, { type FlyerFound, type ImportedDate } from "@/admin/components/FlyerImportSheet";
+import type { Look } from "@/lib/look";
 
 type Status = NonNullable<FunnelEvent["status"]>;
 
@@ -38,6 +39,7 @@ export default function DatesCard({
   edited,
   onChange,
   onSave,
+  onLook,
 }: {
   slug: string;
   events: FunnelEvent[];
@@ -47,13 +49,15 @@ export default function DatesCard({
   onChange: (events: FunnelEvent[], message: string, undo?: () => void) => void;
   /** Saves a date and links its reel. */
   onSave: (event: FunnelEvent, reel: ReelChoice, isNew: boolean) => void;
+  /** Use a flyer's look (and the flyer itself, as an upload link, behind the opening screen). */
+  onLook: (look: Look, flyer?: string) => void;
 }) {
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
   const [editing, setEditing] = useState<{ event: FunnelEvent; isNew: boolean; imported?: number } | null>(null);
   // Flyer import: the sheet is open, what it found, and which of those are added.
   const [importing, setImporting] = useState(false);
-  const [found, setFound] = useState<{ dates: ImportedDate[]; note: string } | null>(null);
+  const [found, setFound] = useState<FlyerFound | null>(null);
   const [added, setAdded] = useState<Set<number>>(() => new Set());
   const sorted = [...events].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
   const upcoming = sorted.filter((e) => !isOver(e, now));
@@ -68,7 +72,7 @@ export default function DatesCard({
       const done = new Set(added).add(editing.imported);
       setAdded(done);
       // Back to the list while there are more to review.
-      if (found && found.dates.some((_, i) => !done.has(i))) setImporting(true);
+      if (found && (found.dates.some((_, i) => !done.has(i)) || (found.look && !found.lookUsed))) setImporting(true);
       else closeImport();
     }
     setEditing(null);
@@ -83,11 +87,11 @@ export default function DatesCard({
     setImporting(false);
     setEditing({ event: fromFlyer(dates[index], sorted), isNew: true, imported: index });
   };
-  const onFound = (result: { dates: ImportedDate[]; note: string } | null) => {
+  const onFound = (result: FlyerFound | null) => {
     setFound(result);
     setAdded(new Set());
-    // One new date: straight to review.
-    if (result?.dates.length === 1 && !days.has(result.dates[0].date)) review(0, result.dates);
+    // One new date and no look to offer: straight to review.
+    if (!result?.look && result?.dates.length === 1 && !days.has(result.dates[0].date)) review(0, result.dates);
   };
   const remove = (event: FunnelEvent) => {
     const before = events;
@@ -160,7 +164,7 @@ export default function DatesCard({
           onDelete={editing.isNew ? undefined : () => remove(editing.event)}
           onClose={() => {
             // Closing a reviewed date goes back to the flyer's list.
-            if (editing.imported !== undefined && found && found.dates.length > 1) setImporting(true);
+            if (editing.imported !== undefined && found && (found.dates.length > 1 || found.look)) setImporting(true);
             else if (editing.imported !== undefined) closeImport();
             setEditing(null);
           }}
@@ -168,7 +172,21 @@ export default function DatesCard({
       )}
 
       {importing && (
-        <FlyerImportSheet slug={slug} found={found} added={added} taken={days} onFound={onFound} onReview={review} onClose={closeImport} />
+        <FlyerImportSheet
+          slug={slug}
+          found={found}
+          added={added}
+          taken={days}
+          onFound={onFound}
+          onReview={review}
+          onLook={(look, flyer) => {
+            onLook(look, flyer);
+            setFound((f) => (f ? { ...f, lookUsed: true } : f));
+            // Nothing else to do here: close.
+            if (found && found.dates.every((_, i) => added.has(i))) closeImport();
+          }}
+          onClose={closeImport}
+        />
       )}
     </section>
   );

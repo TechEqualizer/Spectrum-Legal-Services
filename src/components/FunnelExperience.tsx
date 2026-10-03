@@ -15,7 +15,7 @@ import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
 const HOUR = 60 * 60 * 1000;
 const PRIMARY =
-  "cine-shimmer flex min-h-14 items-center justify-center whitespace-nowrap rounded-full bg-teal-accent text-[17px] font-semibold text-white shadow-lg shadow-black/40 transition hover:brightness-110 max-[380px]:text-base";
+  "cine-shimmer flex min-h-14 items-center justify-center whitespace-nowrap rounded-full bg-teal-accent text-[17px] font-semibold text-on-accent shadow-lg shadow-black/40 transition hover:brightness-110 max-[380px]:text-base";
 const GLASS =
   "flex min-h-14 items-center justify-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 font-semibold text-white backdrop-blur-md transition hover:bg-white/20";
 
@@ -281,7 +281,7 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
                 target="_blank"
                 rel="noopener"
                 onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
-                className="mt-2 flex min-h-12 w-full items-center justify-center rounded-md bg-teal-accent px-5 font-semibold text-white shadow-md hover:brightness-110"
+                className="mt-2 flex min-h-12 w-full items-center justify-center rounded-md bg-teal-accent px-5 font-semibold text-on-accent shadow-md hover:brightness-110"
               >
                 {brand.copy.coverCall}
               </a>
@@ -294,7 +294,7 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
               <a
                 href={brand.phone.href}
                 onClick={() => trackReelEvent(funnel, entries[0], "call_clicked")}
-                className="mt-2 flex min-h-12 w-full items-center justify-center rounded-md bg-teal-accent px-5 font-semibold text-white shadow-md hover:brightness-110"
+                className="mt-2 flex min-h-12 w-full items-center justify-center rounded-md bg-teal-accent px-5 font-semibold text-on-accent shadow-md hover:brightness-110"
               >
                 {brand.copy.coverCall}
               </a>
