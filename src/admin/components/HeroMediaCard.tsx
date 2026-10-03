@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import MediaPicker from "@/admin/components/MediaPicker";
+import StyleSheet from "@/admin/components/StyleSheet";
 import type { HeroMediaEdit } from "@/admin/drafts";
 import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
@@ -55,7 +56,7 @@ export default function HeroMediaCard({
   look,
   edited = false,
   onChange,
-  onResetLook,
+  onStyle,
 }: {
   /** The funnel as built in (for its default words). */
   funnel: Funnel;
@@ -69,9 +70,11 @@ export default function HeroMediaCard({
   /** Differs from what's live. */
   edited?: boolean;
   onChange: (change: { media: HeroMediaEdit; screen: ScreenCopy | undefined }, message: string, undo?: () => void) => void;
-  onResetLook: () => void;
+  /** Done in the Style sheet: the look (undefined: the original) and the background. */
+  onStyle: (look: Look | undefined, media: HeroMediaEdit) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [styling, setStyling] = useState(false);
   const shown = value === undefined ? live : value ?? undefined;
   const copy = { ...builtInCopy(funnel), ...screen };
   const title = funnel.cover.hero ? copy.title : copy.heading;
@@ -91,10 +94,7 @@ export default function HeroMediaCard({
         {look && (
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600">
             <Swatches look={look} />
-            <span>{LOOK_FONTS[look.font].label}, from your flyer</span>
-            <button type="button" onClick={onResetLook} className="min-h-8 font-semibold text-deep-navy hover:underline">
-              Original look
-            </button>
+            <span>{LOOK_FONTS[look.font].label}</span>
           </p>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -104,6 +104,13 @@ export default function HeroMediaCard({
             className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
           >
             Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setStyling(true)}
+            className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+          >
+            Style
           </button>
           {shown && (
             <button
@@ -116,6 +123,19 @@ export default function HeroMediaCard({
           )}
         </div>
       </div>
+      {styling && (
+        <StyleSheet
+          funnel={funnel}
+          title={title}
+          look={look}
+          media={shown}
+          onDone={(nextLook, media) => {
+            onStyle(nextLook, media);
+            setStyling(false);
+          }}
+          onClose={() => setStyling(false)}
+        />
+      )}
       {open && (
         <OpeningScreenSheet
           funnel={funnel}
@@ -300,7 +320,10 @@ export function ScenePreview({
       style={look ? (themeOf(look) as React.CSSProperties) : undefined}
       className={`relative aspect-[9/16] flex-shrink-0 overflow-hidden rounded-xl bg-deep-navy ${small ? "w-14" : "w-36 md:w-48"}`}
     >
-      {media?.kind === "image" && media.fit === "poster" ? (
+      {media?.kind === "image" && media.fit === "blur" ? (
+        // eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer, as color only
+        <img src={media.src} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover blur-lg brightness-[0.6] saturate-150" />
+      ) : media?.kind === "image" && media.fit === "poster" ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
           <img src={media.src} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover blur-md brightness-[0.55] saturate-150" />

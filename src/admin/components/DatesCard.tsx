@@ -50,7 +50,7 @@ export default function DatesCard({
   /** Saves a date and links its reel. */
   onSave: (event: FunnelEvent, reel: ReelChoice, isNew: boolean) => void;
   /** Use a flyer's look (and the flyer itself, as an upload link, behind the opening screen). */
-  onLook: (look: Look, flyer?: string) => void;
+  onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
 }) {
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
@@ -179,8 +179,8 @@ export default function DatesCard({
           taken={days}
           onFound={onFound}
           onReview={review}
-          onLook={(look, flyer) => {
-            onLook(look, flyer);
+          onLook={(look, flyer, asBackground) => {
+            onLook(look, flyer, asBackground);
             setFound((f) => (f ? { ...f, lookUsed: true } : f));
             // Nothing else to do here: close.
             if (found && found.dates.every((_, i) => added.has(i))) closeImport();

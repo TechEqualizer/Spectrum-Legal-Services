@@ -149,6 +149,8 @@ export async function publish(
   const used = new Set(publishedFunnel(state.funnels).order);
   state.reels.filter((r) => used.has(r.id)).forEach((r) => collect(r.media));
   collect(state.heroMedia);
+  // The flyer kept with the look, so its background choices work after a reload.
+  if (state.look?.flyer?.startsWith("blob:")) uploads.add(state.look.flyer);
 
   const urls = new Map<string, string>();
   let n = 0;
@@ -162,7 +164,7 @@ export async function publish(
     heroMedia: swapMedia(state.heroMedia, urls),
     screen: state.screen,
     events: state.events,
-    look: state.look,
+    look: state.look?.flyer ? { ...state.look, flyer: urls.get(state.look.flyer) ?? state.look.flyer } : state.look,
   };
 
   onProgress("Publishing...");

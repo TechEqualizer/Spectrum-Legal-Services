@@ -160,6 +160,9 @@ function Scene({ media, paused, live, zoom }: { media?: ReelMedia; paused: boole
         )
       ) : media?.kind === "image" && media.fit === "poster" ? (
         <PosterScene src={media.src} />
+      ) : media?.kind === "image" && media.fit === "blur" ? (
+        // eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer, as color only
+        <img src={media.src} alt="" className="cine-kenburns absolute inset-0 h-full w-full scale-125 object-cover blur-3xl brightness-[0.6] saturate-150" />
       ) : media?.kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element -- any uploaded photo, sized by CSS
         <img className="cine-kenburns absolute inset-0 h-full w-full object-cover" src={media.src} alt="" />
@@ -187,7 +190,7 @@ function Scene({ media, paused, live, zoom }: { media?: ReelMedia; paused: boole
       )}
       </div>
       {/* Footage is dimmed a little so bright shots never wash out the words. */}
-      {media && !(media.kind === "image" && media.fit === "poster") && <div className="absolute inset-0 bg-black/30" />}
+      {media && !(media.kind === "image" && media.fit) && <div className="absolute inset-0 bg-black/30" />}
       {/* Grain, vignette, and a fade into the page so the words always read. */}
       <div className="cine-grain absolute -inset-1/2 opacity-[0.14]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,transparent_35%,rgba(0,0,0,0.55)_100%)]" />

@@ -27,7 +27,19 @@ export const LOOK_FONTS = {
 export type LookFont = keyof typeof LOOK_FONTS;
 export const LOOK_FONT_IDS = Object.keys(LOOK_FONTS) as LookFont[];
 
-export type Look = { colors: LookColors; font: LookFont };
+/** A ready-made combination from the flyer ("True to flyer", "Bold", "Elegant"). */
+export type LookSuggestion = { label: string; colors: LookColors; font: LookFont };
+
+export type Look = {
+  colors: LookColors;
+  font: LookFont;
+  /** The flyer's own colors, for remixing in the Style sheet. */
+  palette?: string[];
+  /** Ready-made combinations from the flyer, the first one true to it. */
+  suggestions?: LookSuggestion[];
+  /** The flyer itself (an upload or public link), for the background choices. */
+  flyer?: string;
+};
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -83,16 +95,88 @@ export function readableColors(colors: LookColors): LookColors {
   return { "--deep-navy": deep, "--royal-blue": mid, "--teal-accent": accent, "--sky-accent": highlight, "--soft-gray": light };
 }
 
-/** A look from untrusted input (a publish, or the model's answer), made readable; null if it isn't one. */
-export function parseLook(input: unknown): Look | null {
+function parseColors(input: unknown): LookColors | null {
   if (typeof input !== "object" || input === null) return null;
-  const { colors, font } = input as { colors?: unknown; font?: unknown };
-  if (typeof colors !== "object" || colors === null) return null;
-  const c = colors as Record<string, unknown>;
+  const c = input as Record<string, unknown>;
   if (!LOOK_ROLES.every((role) => typeof c[role] === "string" && HEX.test(c[role] as string))) return null;
-  if (typeof font !== "string" || !(font in LOOK_FONTS)) return null;
-  const picked = Object.fromEntries(LOOK_ROLES.map((role) => [role, (c[role] as string).toUpperCase()])) as LookColors;
-  return { colors: readableColors(picked), font: font as LookFont };
+  return readableColors(Object.fromEntries(LOOK_ROLES.map((role) => [role, (c[role] as string).toUpperCase()])) as LookColors);
+}
+const isFont = (v: unknown): v is LookFont => typeof v === "string" && v in LOOK_FONTS;
+
+/**
+ * A look from untrusted input (a publish, or the model's answer), made
+ * readable; null if it isn't one. `isUrl` checks the flyer's link; without
+ * it the flyer is dropped.
+ */
+export function parseLook(input: unknown, isUrl?: (v: unknown) => boolean): Look | null {
+  if (typeof input !== "object" || input === null) return null;
+  const { colors: rawColors, font, palette, suggestions, flyer } = input as Record<string, unknown>;
+  const colors = parseColors(rawColors);
+  if (!colors || !isFont(font)) return null;
+  const look: Look = { colors, font };
+  if (Array.isArray(palette)) {
+    const swatches = [...new Set(palette.filter((c): c is string => typeof c === "string" && HEX.test(c)).map((c) => c.toUpperCase()))].slice(0, 10);
+    if (swatches.length) look.palette = swatches;
+  }
+  if (Array.isArray(suggestions)) {
+    const list = suggestions.slice(0, 4).flatMap((sg): LookSuggestion[] => {
+      if (typeof sg !== "object" || sg === null) return [];
+      const { label, colors: c, font: f } = sg as Record<string, unknown>;
+      const parsed = parseColors(c);
+      return typeof label === "string" && label.trim() && label.length <= 24 && parsed && isFont(f) ? [{ label: label.trim(), colors: parsed, font: f }] : [];
+    });
+    if (list.length) look.suggestions = list;
+  }
+  if (flyer !== undefined && isUrl?.(flyer)) look.flyer = flyer as string;
+  return look;
+}
+
+// ---------------------------------------------------------------------------
+// Remixing in the Style sheet: the admin picks three colors, the rest follow.
+
+const saturation = (hex: string) => {
+  const [r, g, b] = toRgb(hex).map((c) => c / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  return max === 0 ? 0 : (max - min) / max;
+};
+const lum = (hex: string) => luminance(toRgb(hex));
+
+/**
+ * Colors from three picks: the background, the buttons and the highlights.
+ * The deeper tone is the background warmed toward the buttons; the light
+ * sheets keep their tint. Then everything is made readable.
+ */
+export function composeColors(pick: { background: string; button: string; highlight: string }, base: LookColors): LookColors {
+  const bg = toRgb(pick.background);
+  return readableColors({
+    "--deep-navy": pick.background,
+    "--royal-blue": toHex(mix(mix(bg, toRgb(pick.button), 0.18), WHITE, 0.06)),
+    "--teal-accent": pick.button,
+    "--sky-accent": pick.highlight,
+    "--soft-gray": base["--soft-gray"],
+  });
+}
+
+/** Whether readableColors had to change a pick, so the sheet can say so. */
+export const wasAdjusted = (picked: string, shown: string) => picked.toUpperCase() !== shown.toUpperCase();
+
+/**
+ * Another good combination from the flyer's colors: one of its darkest as
+ * the background, one of its most vivid for the buttons, and a bright one
+ * for highlights. `seed` picks which, so each tap of Shuffle differs.
+ */
+export function shuffleColors(palette: string[], base: LookColors, seed: number): LookColors {
+  const byDark = [...palette].sort((a, b) => lum(a) - lum(b));
+  const darks = byDark.slice(0, Math.max(2, Math.ceil(palette.length / 3)));
+  const rest = palette.filter((c) => !darks.includes(c));
+  const vivid = (rest.length ? rest : palette).sort((a, b) => saturation(b) - saturation(a)).slice(0, 3);
+  const bright = [...palette].sort((a, b) => lum(b) * (0.5 + saturation(b)) - lum(a) * (0.5 + saturation(a))).slice(0, 3);
+  const at = <T,>(list: T[], n: number) => list[((n % list.length) + list.length) % list.length];
+  const background = at(darks, seed);
+  const button = at(vivid, seed + Math.floor(seed / darks.length));
+  const highlight = at(bright.filter((c) => c !== button).length ? bright.filter((c) => c !== button) : bright, seed + 1);
+  return composeColors({ background, button, highlight }, base);
 }
 
 /** The words' color on a main button: white, or the dark background color on a light accent. */

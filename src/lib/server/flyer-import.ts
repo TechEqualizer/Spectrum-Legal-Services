@@ -25,6 +25,15 @@ export const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "im
 export const PDF_TYPE = "application/pdf";
 
 const nullableString = { type: ["string", "null"] };
+const hex = { type: "string", description: "#RRGGBB" };
+const COMBINATION_KEYS = ["background", "depth", "button", "highlight", "light", "font"];
+/** One color combination for the page, in its roles, plus a title typeface. */
+const COMBINATION = {
+  type: "object",
+  additionalProperties: false,
+  required: COMBINATION_KEYS,
+  properties: { background: hex, depth: hex, button: hex, highlight: hex, light: hex, font: { type: "string", enum: LOOK_FONT_IDS } },
+};
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -50,15 +59,13 @@ const SCHEMA = {
     look: {
       type: "object",
       additionalProperties: false,
-      required: ["found", "background", "depth", "button", "highlight", "light", "font"],
+      required: ["found", ...COMBINATION_KEYS, "palette", "bold", "elegant"],
       properties: {
         found: { type: "boolean" },
-        background: { type: "string", description: "#RRGGBB" },
-        depth: { type: "string", description: "#RRGGBB" },
-        button: { type: "string", description: "#RRGGBB" },
-        highlight: { type: "string", description: "#RRGGBB" },
-        light: { type: "string", description: "#RRGGBB" },
-        font: { type: "string", enum: LOOK_FONT_IDS },
+        ...COMBINATION.properties,
+        palette: { type: "array", items: { type: "string", description: "#RRGGBB" } },
+        bold: COMBINATION,
+        elegant: COMBINATION,
       },
     },
   },
@@ -84,7 +91,12 @@ Also describe the flyer's look, so the event's ticket page can match it. The pag
 - button: the flyer's signature accent, used for the main buttons with white text.
 - highlight: a bright accent from the flyer (often metallic gold, neon, or a light tint) for small highlights on the dark background.
 - light: a pale tint in the flyer's palette (off-white, champagne, blush...) for light sheets with dark text.
-- font: the title typeface closest in feel to the flyer's headline lettering: ${LOOK_FONT_IDS.map((id) => `"${id}" (${LOOK_FONTS[id].label}: ${LOOK_FONTS[id].hint})`).join(", ")}.`;
+- font: the title typeface closest in feel to the flyer's headline lettering: ${LOOK_FONT_IDS.map((id) => `"${id}" (${LOOK_FONTS[id].label}: ${LOOK_FONTS[id].hint})`).join(", ")}.
+
+Then give two more combinations from the same flyer, for the organizer to choose from, using the same roles:
+- bold: the flyer at its loudest: its most vivid color on the buttons, its brightest for highlights, a deep background.
+- elegant: quieter and more luxurious: the deepest dark, a refined accent (metallic, jewel tone or muted), a soft highlight; a serif typeface fits most.
+And palette: the 6 to 8 most distinct colors that are really on the flyer, darkest first, as #RRGGBB, for the organizer to remix.`;
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
@@ -183,14 +195,21 @@ function lookOf(raw: unknown): Look | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   if (r.found !== true) return null;
+  const combination = (c: unknown) => {
+    const x = (c && typeof c === "object" ? c : {}) as Record<string, unknown>;
+    return {
+      colors: { "--deep-navy": x.background, "--royal-blue": x.depth, "--teal-accent": x.button, "--sky-accent": x.highlight, "--soft-gray": x.light },
+      font: x.font,
+    };
+  };
+  const faithful = combination(r);
   return parseLook({
-    colors: {
-      "--deep-navy": r.background,
-      "--royal-blue": r.depth,
-      "--teal-accent": r.button,
-      "--sky-accent": r.highlight,
-      "--soft-gray": r.light,
-    },
-    font: r.font,
+    ...faithful,
+    palette: r.palette,
+    suggestions: [
+      { label: "True to flyer", ...faithful },
+      { label: "Bold", ...combination(r.bold) },
+      { label: "Elegant", ...combination(r.elegant) },
+    ],
   });
 }

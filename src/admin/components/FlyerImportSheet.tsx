@@ -79,7 +79,7 @@ export default function FlyerImportSheet({
   onFound: (result: FlyerFound | null) => void;
   onReview: (index: number) => void;
   /** Use the flyer's look, and the flyer as the opening screen's background if given. */
-  onLook: (look: Look, flyer?: string) => void;
+  onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
   onClose: () => void;
 }) {
   const id = useId();
@@ -169,7 +169,7 @@ export default function FlyerImportSheet({
               onWithFlyer={setWithFlyer}
               title={found.dates[0]?.name.split(": ")[0] || "Your event"}
               used={Boolean(found.lookUsed)}
-              onUse={() => onLook(found.look!, withFlyer ? found.flyer : undefined)}
+              onUse={(chosen) => onLook(chosen, found.flyer, withFlyer)}
             />
           )}
           {found.dates.length === 0 ? (
@@ -318,7 +318,11 @@ export default function FlyerImportSheet({
   );
 }
 
-/** "Match your flyer's look?": a preview in the flyer's colors and type, and one button to use it. */
+/**
+ * "Match your flyer's look?": the flyer's suggested styles side by side in
+ * one segmented control, a preview of the chosen one, and one button to use
+ * it. Fine-tuning lives in Style, on the opening screen card.
+ */
 function LookOffer({
   look,
   flyer,
@@ -336,34 +340,55 @@ function LookOffer({
   onWithFlyer: (on: boolean) => void;
   title: string;
   used: boolean;
-  onUse: () => void;
+  onUse: (look: Look) => void;
 }) {
   const id = useId();
+  const options = look.suggestions?.length ? look.suggestions : [{ label: "True to flyer", colors: look.colors, font: look.font }];
+  const [chosen, setChosen] = useState(0);
+  const option = options[Math.min(chosen, options.length - 1)];
+  const shown: Look = { ...look, colors: option.colors, font: option.font };
   return (
-    <section aria-labelledby={`${id}-look`} className="flex gap-4 rounded-xl bg-white p-4">
-      <ScenePreview media={flyer ? { kind: "image", src: flyer, fit: "poster" } : undefined} look={look} title={title} button="Get tickets" />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <h3 id={`${id}-look`} className="font-bold text-deep-navy">{used ? "Look matched" : "Match your flyer’s look?"}</h3>
-        <p className="mt-1 flex items-center gap-2 text-sm text-gray-600">
-          <Swatches look={look} />
-        </p>
-        <p className="mt-1 text-sm text-gray-600">{LOOK_FONTS[look.font].label} titles. Colors adjusted so words stay readable.</p>
-        {hasFlyer && !used && (
-          <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-deep-navy">
-            <input type="checkbox" checked={withFlyer} onChange={(e) => onWithFlyer(e.target.checked)} className="h-5 w-5 accent-[var(--teal-accent)]" />
-            Flyer as the background
-          </label>
-        )}
-        <div className="mt-auto pt-3">
-          {used ? (
-            <p className="text-sm font-semibold text-teal-700">Applied ✓ Publish to put it live.</p>
-          ) : (
-            <button type="button" onClick={onUse} className="min-h-11 w-full rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue">
-              Use this look
+    <section aria-labelledby={`${id}-look`} className="rounded-xl bg-white p-4">
+      <h3 id={`${id}-look`} className="font-bold text-deep-navy">{used ? "Style matched" : "Match your flyer’s style?"}</h3>
+      {options.length > 1 && !used && (
+        <div role="radiogroup" aria-label="Suggested styles" className="mt-3 grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-gray-200/70 p-1">
+          {options.map((o, i) => (
+            <button
+              key={o.label}
+              type="button"
+              role="radio"
+              aria-checked={i === chosen}
+              onClick={() => setChosen(i)}
+              className={`min-h-10 rounded-lg px-1 text-sm font-semibold transition ${i === chosen ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+            >
+              {o.label}
             </button>
+          ))}
+        </div>
+      )}
+      <div className="mt-3 flex gap-4">
+        <ScenePreview media={flyer ? { kind: "image", src: flyer, fit: "poster" } : undefined} look={shown} title={title} button="Get tickets" />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Swatches look={shown} />
+          <p className="mt-2 text-sm text-gray-600">{LOOK_FONTS[shown.font].label} titles, with colors kept readable.</p>
+          {hasFlyer && !used && (
+            <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-deep-navy">
+              <input type="checkbox" checked={withFlyer} onChange={(e) => onWithFlyer(e.target.checked)} className="h-5 w-5 accent-[var(--teal-accent)]" />
+              Flyer as the background
+            </label>
           )}
+          <div className="mt-auto pt-3">
+            {used ? (
+              <p className="text-sm font-semibold text-teal-700">Applied ✓ Fine-tune it in Style.</p>
+            ) : (
+              <button type="button" onClick={() => onUse(shown)} className="min-h-11 w-full rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue">
+                Use this style
+              </button>
+            )}
+          </div>
         </div>
       </div>
+      {!used && <p className="mt-3 text-xs text-gray-500">You can change it anytime: Style, on your opening screen.</p>}
     </section>
   );
 }
