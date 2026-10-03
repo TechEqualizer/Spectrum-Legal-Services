@@ -13,6 +13,8 @@ check('title', await p.getByRole('heading', { name: 'Masquerade on the Runway' }
 check('date in Detroit time', await p.getByText('Saturday · 8 PM').isVisible());
 const href = await p.getByRole('link', { name: /Get tickets/ }).first().getAttribute('href');
 check('Eventbrite link with tracking', href.startsWith('https://www.eventbrite.com/e/masquerade-on-the-runway-tickets-1998119183265?aff=reels_'), href);
+check('price and age on the date card', (await p.getByRole('button', { name: /Masquerade on the Runway, .*Watch$/ }).innerText()).includes('From $31') && (await p.locator('body').innerText()).includes('30+'));
+check('no 21+ left', !(await p.locator('body').innerText()).includes('21+'));
 check('flyer behind the title', await p.locator('img[src*="masquerade"][src*="flyer"]').count() > 0);
 await p.getByRole('button', { name: /Sneak peek inside/ }).click(); await p.waitForTimeout(1000);
 check('first reel: masks on', await p.getByText('Masks on. Secrets revealed.').first().isVisible());

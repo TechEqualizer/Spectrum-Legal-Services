@@ -1,6 +1,7 @@
 // Big Love Productions' Masquerade on the Runway (/f/masquerade): a real
 // client's event funnel, so its forms and tracking are live. Everything here
-// is from the event's flyer; the photos are crops of it
+// is from the event's flyer and its Eventbrite page (prices, 30+, dress code,
+// refunds); the photos are crops of the flyer
 // (public/clients/masquerade). Admin edits (dates, words, videos, look)
 // publish over this.
 
@@ -25,9 +26,9 @@ const brand: FunnelBrand = {
   smsConsent:
     "I agree that Big Love Productions may text me at this number about Masquerade on the Runway and upcoming events. Up to 4 messages a month. Msg & data rates may apply. Reply STOP to opt out.",
   seriesLabel: "Masquerade on the Runway",
-  ageLimit: "21+",
-  disclaimer: "21+ with ID. Limited tickets; early arrival suggested.",
-  footer: "21+ with ID. Tickets are sold on Eventbrite. Limited tickets; early arrival suggested.",
+  ageLimit: "30+",
+  disclaimer: "30+ with ID. Gala Halloween attire and a mask required.",
+  footer: "30+ with ID. Gala Halloween attire and a mask required. Tickets are sold on Eventbrite, refundable up to 7 days before. Limited tickets; early arrival suggested.",
   copy: {
     ticketsPrimary: "Get tickets",
     textLaterButton: "Updates",
@@ -47,9 +48,9 @@ const brand: FunnelBrand = {
       `You're on the list, ${name}. Updates go to ${number}. Reply STOP any time to opt out.`,
     formFinePrint: "No spam: event updates only.",
     endHeading: "Masks on?",
-    endBody: "Tickets are limited. Grab yours before Halloween night, and arrive early.",
+    endBody: "General admission is $31 until Oct 30; VIP is $75, with private seating and mystery perks. Tickets are limited.",
     shareButton: "Send to the group chat",
-    shareText: "Masquerade on the Runway: a Halloween fashion show in Detroit, Sat Oct 31, 8pm. 21+.",
+    shareText: "Masquerade on the Runway: a Halloween fashion show in Detroit, Sat Oct 31, 8pm. 30+.",
   },
 };
 
@@ -60,6 +61,7 @@ const events: FunnelEvent[] = [
     // Detroit is still on daylight time on Oct 31, 2026.
     startsAt: "2026-10-31T20:00:00-04:00",
     venue: "1600 East Grand Blvd, Detroit",
+    price: "From $31",
     ticketUrl: "https://www.eventbrite.com/e/masquerade-on-the-runway-tickets-1998119183265",
   },
 ];
@@ -93,14 +95,15 @@ const reels: Reel[] = [
     eventId: "mr-2026",
     practiceArea: "Costume contest",
     title: "Dress to impress… if you dare",
-    summary: "Come masked and dressed for the runway. There's a costume contest.",
+    summary: "Gala Halloween attire and a mask are required. Dress for the runway: there's a costume contest.",
   },
   {
     id: "mr-tickets",
     eventId: "mr-2026",
     practiceArea: "The night",
     title: "Limited tickets. Arrive early.",
-    summary: "Sat, Oct 31, 8 to 11pm at 1600 East Grand Blvd, Detroit. 21+ with ID.",
+    summary: "General admission $31, on sale until Oct 30. VIP $75: private seating and mystery perks. Sat, Oct 31, 8 to 11pm, 1600 East Grand Blvd. 30+ with ID.",
+    badge: "From $31",
     emphasis: "bold",
   },
 ];
