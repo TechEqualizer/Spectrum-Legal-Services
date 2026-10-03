@@ -243,6 +243,12 @@ business's colors. It is not linked from the public site and is marked
   left, Sold out). **+ Add date** starts a week after the last one with the
   same details. Delete has Undo. Each date is a story circle on the opening
   screen. Words and dates publish with everything else.
+- **A reel for each date**: a date's **Opens with** picks the reel its
+  circle plays (or **+ New reel for this date**, which opens the reel
+  editor ready for it). That reel's Tickets button sells that date; picking
+  a reel that belonged to another date moves it. A reel's own **Sells
+  tickets for** sets its date from the other side, and each reel row shows
+  its date. Rows without a reel say "No reel yet".
 - **Reels** (the admin home): each funnel as an ordered list. Every reel goes
   to the next one unless it has its own path for "watched to the end" or
   "skipped", so branching is added only where it helps. Rows show the reel's

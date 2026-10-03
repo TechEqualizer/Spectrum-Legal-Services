@@ -31,7 +31,19 @@ export function toPublication({ reels, funnels, heroMedia, screen, events }: Edi
     funnel: { order: f.order, topics: f.topics, paths: f.paths, primaryCta: f.primaryCta },
     ...(heroMedia !== undefined ? { backdrop: heroMedia } : {}),
     ...(screen && Object.keys(screen).length ? { screen } : {}),
-    ...(events ? { events: [...events].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)) } : {}),
+    ...(events
+      ? {
+          events: [...events]
+            .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
+            // A date can only open a reel that's in the published funnel.
+            .map((e) => {
+              if (!e.reelId || used.has(e.reelId)) return e;
+              const unlinked = { ...e };
+              delete unlinked.reelId;
+              return unlinked;
+            }),
+        }
+      : {}),
   };
 }
 

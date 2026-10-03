@@ -9,7 +9,7 @@ import type { Funnel } from "@/data/funnel-types";
 import { getFunnelBySlug } from "@/data/funnels";
 import { applyPublication, type Publication } from "@/lib/publication";
 import { funnelReel } from "@/data/reels";
-import { eventChip, formatEventDate, isOver, nextOnSale, ticketHref, upcomingEvents } from "@/lib/events";
+import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents } from "@/lib/events";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
 
@@ -33,7 +33,10 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
   // component only renders in the browser, so "now" is the viewer's clock.
   const [now] = useState(() => Date.now());
   const isEvents = Boolean(funnel.events?.length);
-  const reelFor = (eventId: string) => funnel.reels.find((r) => r.eventId === eventId)?.id ?? entries[0];
+  const reelFor = (eventId: string) => {
+    const event = funnel.events?.find((e) => e.id === eventId);
+    return (event && openingReel(funnel, event)?.id) ?? entries[0];
+  };
   const upcoming = isEvents ? upcomingEvents(funnel, now) : [];
   const recap = isEvents
     ? funnel.reels.find((r) => {
