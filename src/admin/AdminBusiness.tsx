@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { businesses, type AdminBusiness } from "@/admin/business";
 import PasswordSheet from "@/admin/components/PasswordSheet";
@@ -64,6 +65,8 @@ export function AdminFrame({
   const business = useAdminBusiness();
   const { funnel } = business;
   const session = useAdminSession();
+  // The Reels page is a full-width studio on wide screens.
+  const studio = usePathname() === "/admin";
   return (
     <div
       className="min-h-screen bg-soft-gray text-charcoal lg:flex"
@@ -79,7 +82,7 @@ export function AdminFrame({
         <main
           key={funnel.id}
           id="main-content"
-          className="mx-auto max-w-6xl px-4 pb-24 pt-6 md:px-8 md:pt-8 lg:pb-8"
+          className={`mx-auto max-w-6xl px-4 pb-24 pt-6 md:px-8 md:pt-8 lg:pb-8 ${studio ? "xl:max-w-none xl:px-6 xl:pb-0 xl:pt-4" : ""}`}
         >
           {children}
         </main>
