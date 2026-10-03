@@ -30,6 +30,17 @@ npm run dev                  # http://localhost:3000
 Without the Supabase variables the site still runs, but the intake forms show
 an error instead of saving, and reel events are dropped.
 
+## Tests
+
+```bash
+npm run test:e2e             # every suite, in a real browser (about 7 minutes)
+npm run test:e2e -- draft    # one suite
+```
+
+End-to-end tests run the built app against stand-ins for Supabase and the
+Claude API, so they need no keys and touch nothing real. See
+[`tests/e2e/README.md`](tests/e2e/README.md).
+
 ## Shareable funnel link (`/f/jlf`)
 
 The reel funnel on its own, with no website around it: the link to put in an
