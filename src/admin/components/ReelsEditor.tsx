@@ -19,6 +19,7 @@ import {
 import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { useAdminSession } from "@/admin/session";
 import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
+import type { Look } from "@/lib/look";
 import { fetchLive, publicationKey, publish, publishedFunnel, takeDown, type EditorState, type LiveState } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { ScreenCopy } from "@/lib/publication";
@@ -52,8 +53,8 @@ function withoutReel(event: FunnelEvent): FunnelEvent {
 }
 
 /** For telling whether anything changed. Keeps "live background" (undefined) apart from "removed" (null). */
-function snapshotOf({ reels, funnels, heroMedia, screen, events }: EditorState) {
-  return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia, screen ?? {}, events ?? "live"]);
+function snapshotOf({ reels, funnels, heroMedia, screen, events, look }: EditorState) {
+  return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia, screen ?? {}, events ?? "live", look ?? "built-in"]);
 }
 
 /** Reels a visitor can reach from the funnel's starting points. */
@@ -87,6 +88,8 @@ export default function ReelsEditor() {
   // The opening screen's words that differ from the built-in ones, and the event dates (undefined: built-in).
   const [screen, setScreen] = useState<ScreenCopy | undefined>(undefined);
   const [events, setEvents] = useState<FunnelEvent[] | undefined>(undefined);
+  // Brand colors and title typeface (undefined: the built-in ones).
+  const [look, setLook] = useState<Look | undefined>(undefined);
   const [activeId, setActiveId] = useState(initial.funnels[0].id);
   // Sample results for the last 30 days, keyed by reel.
   const stats = new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t]));
@@ -116,6 +119,7 @@ export default function ReelsEditor() {
     setHeroMedia(state.heroMedia);
     setScreen(state.screen);
     setEvents(state.events);
+    setLook(state.look);
     setActiveId((id) => (state.funnels.some((f) => f.id === id) ? id : state.funnels[0].id));
   };
 
@@ -136,7 +140,7 @@ export default function ReelsEditor() {
       const base = liveState ?? { ...builtIn, publishedAt: null, publishedBy: null };
       setLive(base);
       const start = draft ?? base;
-      const state: EditorState = { reels: start.reels, funnels: start.funnels, heroMedia: start.heroMedia, screen: start.screen, events: start.events };
+      const state: EditorState = { reels: start.reels, funnels: start.funnels, heroMedia: start.heroMedia, screen: start.screen, events: start.events, look: start.look };
       show(state);
       lastSaved.current = snapshotOf(state);
       loaded.current = true;
@@ -149,12 +153,12 @@ export default function ReelsEditor() {
   // Every change is saved as it happens.
   useEffect(() => {
     if (!loaded.current) return;
-    const state: EditorState = { reels: library, funnels, heroMedia, screen, events };
+    const state: EditorState = { reels: library, funnels, heroMedia, screen, events, look };
     const snapshot = snapshotOf(state);
     if (snapshot === lastSaved.current) return;
     lastSaved.current = snapshot;
     saveDraft(slug, state);
-  }, [slug, library, funnels, heroMedia, screen, events]);
+  }, [slug, library, funnels, heroMedia, screen, events, look]);
 
   // A short "Saved" note where the person is looking.
   useEffect(() => {
@@ -163,7 +167,7 @@ export default function ReelsEditor() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const current: EditorState = { reels: library, funnels, heroMedia, screen, events };
+  const current: EditorState = { reels: library, funnels, heroMedia, screen, events, look };
   const unpublished = Boolean(live) && publicationKey(current) !== publicationKey(live!);
   // The event's dates, for linking reels ("Sells tickets for", and the chip on each row).
   const allDates = events ?? liveFunnel.events;
@@ -183,6 +187,19 @@ export default function ReelsEditor() {
   const byStart = (list?: FunnelEvent[]) => (list ? [...list].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)) : "live");
   const eventsEdited = Boolean(live) && JSON.stringify(byStart(events)) !== JSON.stringify(byStart(live!.events));
   const heroEdited = Boolean(live) && JSON.stringify(heroMedia ?? "live") !== JSON.stringify(live!.heroMedia ?? "live");
+  const lookEdited = Boolean(live) && JSON.stringify(look ?? null) !== JSON.stringify(live!.look ?? null);
+
+  /** A look matched to a flyer, optionally with the flyer behind the opening screen. Undo puts both back. */
+  const applyLook = (next: Look, flyer?: string) => {
+    const before = { look, heroMedia };
+    setLook(next);
+    if (flyer) setHeroMedia({ kind: "image", src: flyer, fit: "poster" });
+    setToast(flyer ? "Look and background matched to your flyer" : "Look matched to your flyer", () => {
+      setLook(before.look);
+      setHeroMedia(before.heroMedia);
+      setToast("Look put back");
+    });
+  };
 
   const resetToLive = () => {
     if (!live) return;
@@ -351,7 +368,16 @@ export default function ReelsEditor() {
         live={sceneMediaOf(liveFunnel)}
         value={heroMedia}
         screen={screen}
-        edited={heroEdited || screenEdited}
+        look={look}
+        edited={heroEdited || screenEdited || lookEdited}
+        onResetLook={() => {
+          const before = look;
+          setLook(undefined);
+          setToast("Original look", () => {
+            setLook(before);
+            setToast("Look put back");
+          });
+        }}
         onChange={(change, message, undo) => {
           setHeroMedia(change.media);
           setScreen(change.screen);
@@ -372,6 +398,7 @@ export default function ReelsEditor() {
             setToast(message, undo);
           }}
           onSave={saveDate}
+          onLook={applyLook}
         />
       )}
 

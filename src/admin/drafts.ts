@@ -5,6 +5,7 @@
 import { useSyncExternalStore } from "react";
 import type { EditorFunnel, EditorReel } from "@/admin/editor-model";
 import type { FunnelEvent, ReelMedia } from "@/data/funnel-types";
+import type { Look } from "@/lib/look";
 import type { ScreenCopy } from "@/lib/publication";
 
 /**
@@ -21,6 +22,8 @@ export type DraftData = {
   screen?: ScreenCopy;
   /** Event dates (undefined: the built-in ones). */
   events?: FunnelEvent[];
+  /** Brand colors and title typeface (undefined: the built-in ones). */
+  look?: Look;
 };
 export type Draft = DraftData & { savedAt: number };
 

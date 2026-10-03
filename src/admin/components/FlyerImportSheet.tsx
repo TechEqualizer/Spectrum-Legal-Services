@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { ScenePreview, Swatches } from "@/admin/components/HeroMediaCard";
+import { keepUpload } from "@/admin/drafts";
+import { LOOK_FONTS, type Look } from "@/lib/look";
 import type { ImportedDate } from "@/lib/server/flyer-import";
 
 export type { ImportedDate };
+
+/** What a flyer gave: its dates, and its look with the flyer itself (an upload link) when it was a picture. */
+export type FlyerFound = { dates: ImportedDate[]; note: string; look?: Look; flyer?: string; lookUsed?: boolean };
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 /** Phone photos are big: send at most 1600px, as JPEG, so it's quick and under the upload limit. */
-async function shrink(file: File): Promise<{ type: string; data: string }> {
+async function shrink(file: File): Promise<{ type: string; data: string; blob?: Blob }> {
   if (file.type === "application/pdf") {
     if (file.size > 3 * 1024 * 1024) throw new Error("That PDF is too big. Use one under 3 MB, or a photo of the flyer.");
     return { type: file.type, data: await toBase64(file) };
@@ -31,7 +37,7 @@ async function shrink(file: File): Promise<{ type: string; data: string }> {
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
   if (!blob) throw new Error("That file can't be read. Use a JPG or PNG photo, or a PDF.");
-  return { type: "image/jpeg", data: await toBase64(blob) };
+  return { type: "image/jpeg", data: await toBase64(blob), blob };
 }
 
 const toBase64 = (blob: Blob) =>
@@ -60,17 +66,20 @@ export default function FlyerImportSheet({
   taken,
   onFound,
   onReview,
+  onLook,
   onClose,
 }: {
   slug: string;
   /** Dates found so far (null: nothing read yet). */
-  found: { dates: ImportedDate[]; note: string } | null;
+  found: FlyerFound | null;
   /** Indexes of found dates already added. */
   added: Set<number>;
   /** Days ("2026-10-12") that already have a date. */
   taken: Set<string>;
-  onFound: (result: { dates: ImportedDate[]; note: string } | null) => void;
+  onFound: (result: FlyerFound | null) => void;
   onReview: (index: number) => void;
+  /** Use the flyer's look, and the flyer as the opening screen's background if given. */
+  onLook: (look: Look, flyer?: string) => void;
   onClose: () => void;
 }) {
   const id = useId();
@@ -81,6 +90,7 @@ export default function FlyerImportSheet({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [withFlyer, setWithFlyer] = useState(true);
   useEffect(() => ref.current?.showModal(), []);
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
@@ -96,17 +106,23 @@ export default function FlyerImportSheet({
     setBusy(true);
     setError("");
     try {
-      const payload = file ? await shrink(file) : { text };
+      const { blob, ...payload } = file ? await shrink(file) : { text, blob: undefined };
       const res = await fetch("/api/admin/import-event", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, today: localDay(new Date()), ...payload }),
       }).catch(() => null);
       if (!res) throw new Error("Couldn't reach the server. Check your connection and try again.");
-      const body = (await res.json().catch(() => ({}))) as { dates?: ImportedDate[]; note?: string; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { dates?: ImportedDate[]; note?: string; look?: Look; error?: string };
       if (res.status === 401) throw new Error("Your sign-in expired. Sign in again, then try.");
       if (!res.ok || !body.dates) throw new Error(body.error ?? "Couldn't read the flyer. Try again.");
-      onFound({ dates: body.dates, note: body.note ?? "" });
+      onFound({
+        dates: body.dates,
+        note: body.note ?? "",
+        ...(body.look ? { look: body.look } : {}),
+        // The (shrunk) flyer, kept so it can go behind the opening screen and survive a reload.
+        ...(body.look && blob ? { flyer: keepUpload(new File([blob], "flyer.jpg", { type: "image/jpeg" })) } : {}),
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't read the flyer. Try again.");
     } finally {
@@ -144,6 +160,18 @@ export default function FlyerImportSheet({
 
       {found ? (
         <div className="space-y-4 px-5 pb-5">
+          {found.look && (
+            <LookOffer
+              look={found.look}
+              flyer={withFlyer ? found.flyer : undefined}
+              hasFlyer={Boolean(found.flyer)}
+              withFlyer={withFlyer}
+              onWithFlyer={setWithFlyer}
+              title={found.dates[0]?.name.split(": ")[0] || "Your event"}
+              used={Boolean(found.lookUsed)}
+              onUse={() => onLook(found.look!, withFlyer ? found.flyer : undefined)}
+            />
+          )}
           {found.dates.length === 0 ? (
             <p role="alert" className="rounded-xl bg-white px-4 py-4 text-sm text-charcoal">
               {found.note || "No event dates found."} Try a clearer photo, or paste the details.
@@ -287,5 +315,55 @@ export default function FlyerImportSheet({
         </>
       )}
     </dialog>
+  );
+}
+
+/** "Match your flyer's look?": a preview in the flyer's colors and type, and one button to use it. */
+function LookOffer({
+  look,
+  flyer,
+  hasFlyer,
+  withFlyer,
+  onWithFlyer,
+  title,
+  used,
+  onUse,
+}: {
+  look: Look;
+  flyer?: string;
+  hasFlyer: boolean;
+  withFlyer: boolean;
+  onWithFlyer: (on: boolean) => void;
+  title: string;
+  used: boolean;
+  onUse: () => void;
+}) {
+  const id = useId();
+  return (
+    <section aria-labelledby={`${id}-look`} className="flex gap-4 rounded-xl bg-white p-4">
+      <ScenePreview media={flyer ? { kind: "image", src: flyer, fit: "poster" } : undefined} look={look} title={title} button="Get tickets" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <h3 id={`${id}-look`} className="font-bold text-deep-navy">{used ? "Look matched" : "Match your flyer’s look?"}</h3>
+        <p className="mt-1 flex items-center gap-2 text-sm text-gray-600">
+          <Swatches look={look} />
+        </p>
+        <p className="mt-1 text-sm text-gray-600">{LOOK_FONTS[look.font].label} titles. Colors adjusted so words stay readable.</p>
+        {hasFlyer && !used && (
+          <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-deep-navy">
+            <input type="checkbox" checked={withFlyer} onChange={(e) => onWithFlyer(e.target.checked)} className="h-5 w-5 accent-[var(--teal-accent)]" />
+            Flyer as the background
+          </label>
+        )}
+        <div className="mt-auto pt-3">
+          {used ? (
+            <p className="text-sm font-semibold text-teal-700">Applied ✓ Publish to put it live.</p>
+          ) : (
+            <button type="button" onClick={onUse} className="min-h-11 w-full rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue">
+              Use this look
+            </button>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }

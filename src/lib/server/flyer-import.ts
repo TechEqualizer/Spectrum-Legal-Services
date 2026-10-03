@@ -3,6 +3,7 @@
 // each date in the date sheet before it's added.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { LOOK_FONT_IDS, LOOK_FONTS, parseLook, type Look } from "@/lib/look";
 
 /** A date as read from the flyer, in the event's local time. */
 export type ImportedDate = {
@@ -17,7 +18,8 @@ export type ImportedDate = {
   ticketUrl: string;
 };
 
-export type ImportResult = { dates: ImportedDate[]; note: string } | { problem: string };
+/** The dates found, and the flyer's look when it was a picture of one. */
+export type ImportResult = { dates: ImportedDate[]; note: string; look?: Look } | { problem: string };
 
 export const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 export const PDF_TYPE = "application/pdf";
@@ -26,7 +28,7 @@ const nullableString = { type: ["string", "null"] };
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["dates", "note"],
+  required: ["dates", "note", "look"],
   properties: {
     dates: {
       type: "array",
@@ -45,6 +47,20 @@ const SCHEMA = {
       },
     },
     note: nullableString,
+    look: {
+      type: "object",
+      additionalProperties: false,
+      required: ["found", "background", "depth", "button", "highlight", "light", "font"],
+      properties: {
+        found: { type: "boolean" },
+        background: { type: "string", description: "#RRGGBB" },
+        depth: { type: "string", description: "#RRGGBB" },
+        button: { type: "string", description: "#RRGGBB" },
+        highlight: { type: "string", description: "#RRGGBB" },
+        light: { type: "string", description: "#RRGGBB" },
+        font: { type: "string", enum: LOOK_FONT_IDS },
+      },
+    },
   },
 };
 
@@ -60,7 +76,15 @@ For each separate date the flyer advertises, give:
 - price: short, as the flyer says it, e.g. "From $25", "$20 / $30 at the door", "Free". null if not shown.
 - ticketUrl: a ticket link written out on the flyer. Add https:// if it's written without it. null if there's only a QR code or no link; don't guess one.
 
-Only include what the flyer actually says; never invent details. If you can't find any event date, return an empty list and use note to say what's missing in one short sentence, written to the event organizer. Otherwise note is null, or one short sentence about anything they should double-check (e.g. a time that was hard to read).`;
+Only include what the flyer actually says; never invent details. If you can't find any event date, return an empty list and use note to say what's missing in one short sentence, written to the event organizer. Otherwise note is null, or one short sentence about anything they should double-check (e.g. a time that was hard to read).
+
+Also describe the flyer's look, so the event's ticket page can match it. The page is dark: a dark background behind white words, buttons with white text, bright highlights, and light sheets for forms. Set look.found to false if you were given only text (no picture or PDF of a flyer), and fill the colors with anything. Otherwise set it true and pick colors that are actually on the flyer, as #RRGGBB:
+- background: the darkest dominant color, deep enough for white text (near-black versions of the flyer's darks are fine).
+- depth: a second dark tone, a little lighter or a different hue than background, for gradients.
+- button: the flyer's signature accent, used for the main buttons with white text.
+- highlight: a bright accent from the flyer (often metallic gold, neon, or a light tint) for small highlights on the dark background.
+- light: a pale tint in the flyer's palette (off-white, champagne, blush...) for light sheets with dark text.
+- font: the title typeface closest in feel to the flyer's headline lettering: ${LOOK_FONT_IDS.map((id) => `"${id}" (${LOOK_FONTS[id].label}: ${LOOK_FONTS[id].hint})`).join(", ")}.`;
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
@@ -124,7 +148,7 @@ export async function readFlyer(input: FlyerInput, eventName: string, today: str
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       system: instructions(today, eventName),
-      messages: [{ role: "user", content: [source, { type: "text", text: "Pull out the event dates." }] }],
+      messages: [{ role: "user", content: [source, { type: "text", text: "Pull out the event dates and the flyer's look." }] }],
       output_config: { format: { type: "json_schema", schema: SCHEMA } },
     });
   } catch (e) {
@@ -143,11 +167,30 @@ export async function readFlyer(input: FlyerInput, eventName: string, today: str
     return { problem: "That was too much to read at once. Try a single flyer." };
   }
   const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
-  let parsed: { dates?: unknown; note?: unknown };
+  let parsed: { dates?: unknown; note?: unknown; look?: unknown };
   try {
     parsed = JSON.parse(text);
   } catch {
     return { problem: "Couldn't read the flyer just now. Try again, or add the date by hand." };
   }
-  return { dates: cleanDates(parsed.dates), note: clean(parsed.note, 200) };
+  // Only a picture of a flyer has a look; text has none to read.
+  const look = input.kind !== "text" ? lookOf(parsed.look) : null;
+  return { dates: cleanDates(parsed.dates), note: clean(parsed.note, 200), ...(look ? { look } : {}) };
+}
+
+/** The model's colors in the funnel's theme roles, made readable. */
+function lookOf(raw: unknown): Look | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  if (r.found !== true) return null;
+  return parseLook({
+    colors: {
+      "--deep-navy": r.background,
+      "--royal-blue": r.depth,
+      "--teal-accent": r.button,
+      "--sky-accent": r.highlight,
+      "--soft-gray": r.light,
+    },
+    font: r.font,
+  });
 }

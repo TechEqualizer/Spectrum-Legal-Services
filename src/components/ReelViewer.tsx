@@ -319,7 +319,7 @@ export default function ReelViewer({
         <path d={SHARE} />
       </RailButton>
       <span
-        className={`mt-1 flex items-center justify-center bg-teal-accent text-sm font-bold text-white ring-2 ring-white short:hidden ${
+        className={`mt-1 flex items-center justify-center bg-teal-accent text-sm font-bold text-on-accent ring-2 ring-white short:hidden ${
           placement === "overlay" ? "h-[34px] w-[34px] rounded-[7px]" : "h-10 w-10 rounded-lg"
         }`}
         aria-hidden="true"
@@ -435,7 +435,7 @@ export default function ReelViewer({
                 <div>
                   {reelEvent && <EventChip chip={eventChip(reelEvent, now)} />}
                   <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-white ring-1 ring-white/70" aria-hidden="true">
+                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-on-accent ring-1 ring-white/70" aria-hidden="true">
                       {initial}
                     </span>
                     <span className="min-w-0 truncate text-[15px] font-semibold text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
@@ -533,7 +533,7 @@ type CtaHandlers = {
 };
 
 const primaryClass =
-  "flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-teal-accent px-5 font-semibold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110 short:min-h-11";
+  "flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-teal-accent px-5 font-semibold text-on-accent shadow-md transition-all duration-200 hover:shadow-lg hover:brightness-110 short:min-h-11";
 const secondaryClass =
   "flex min-h-11 flex-1 items-center justify-center rounded-md border border-white/30 bg-white/5 px-3 text-sm font-semibold text-white transition-colors hover:bg-white/15";
 
@@ -617,7 +617,7 @@ function EndCard({
   return (
     <div className="absolute inset-0 overflow-y-auto bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-6 py-16 text-center short:py-12">
       <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center">
-        <span className="mx-auto inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+        <span className="mx-auto inline-block rounded-sm bg-teal-accent px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-on-accent">
           {reel.practiceArea}
         </span>
         <h2 className="mt-4 text-2xl font-bold text-white short:mt-2 short:text-xl">
@@ -776,8 +776,8 @@ function ChannelPill({
   onTextLater,
 }: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"]; revealed: boolean }) {
   // Quiet at first (an outline), then filled with the brand color.
-  const className = `flex h-7 flex-shrink-0 items-center rounded-full px-3 text-sm font-semibold text-white transition-colors duration-700 hover:brightness-110 ${
-    revealed ? "bg-teal-accent" : "bg-white/15 ring-1 ring-inset ring-white/40"
+  const className = `flex h-7 flex-shrink-0 items-center rounded-full px-3 text-sm font-semibold transition-colors duration-700 hover:brightness-110 ${
+    revealed ? "bg-teal-accent text-on-accent" : "bg-white/15 text-white ring-1 ring-inset ring-white/40"
   }`;
   if (primary === "tickets") {
     return ticketUrl ? (
@@ -807,7 +807,7 @@ function ChannelPill({
 /** Countdown or status for a reel's event: Tonight, In 3 days, Sold out, Recap... */
 function EventChip({ chip }: { chip: ReturnType<typeof eventChip> }) {
   const tone =
-    chip.tone === "hot" ? "bg-teal-accent text-white" : chip.tone === "muted" ? "bg-black/40 text-white/85" : "bg-white/20 text-white";
+    chip.tone === "hot" ? "bg-teal-accent text-on-accent" : chip.tone === "muted" ? "bg-black/40 text-white/85" : "bg-white/20 text-white";
   return (
     <span className={`mb-2 inline-flex rounded-md px-2 py-0.5 text-xs font-semibold backdrop-blur-sm ${tone}`}>
       {chip.text}

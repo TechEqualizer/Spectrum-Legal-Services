@@ -4,6 +4,7 @@
 
 import { withEdits, type EditorFunnel, type EditorReel, type PathTarget, type ReelCta } from "@/admin/editor-model";
 import type { Funnel, FunnelCta, FunnelEvent, ReelEmphasis, ReelMedia } from "@/data/funnel-types";
+import { parseLook, themeOf, type Look } from "@/lib/look";
 
 export type Publication = {
   version: 1;
@@ -17,6 +18,8 @@ export type Publication = {
   screen?: ScreenCopy;
   /** Event dates, replacing the built-in list. */
   events?: FunnelEvent[];
+  /** Brand colors and title typeface (e.g. matched to a flyer), over the built-in ones. */
+  look?: Look;
 };
 
 /**
@@ -45,11 +48,14 @@ export function applyPublication(base: Funnel, publication: Publication | null |
   if (!publication) return base;
   const funnel = withEdits(base, publication.funnel, publication.reels);
   const { screen = {} } = publication;
+  const { look } = publication;
   return {
     ...funnel,
     ...(publication.events ? { events: publication.events } : {}),
+    ...(look ? { brand: { ...funnel.brand, theme: { ...funnel.brand.theme, ...themeOf(look) } } } : {}),
     cover: {
       ...funnel.cover,
+      ...(look ? { titleFont: look.font } : {}),
       ...("backdrop" in publication ? { backdrop: publication.backdrop } : {}),
       heading: screen.heading ?? funnel.cover.heading,
       intro: screen.intro ?? funnel.cover.intro,
@@ -99,7 +105,10 @@ function isMediaUrl(v: unknown) {
 function checkMedia(m: unknown): string | null {
   if (!isObject(m)) return "media must be an object";
   if (m.kind === "youtube") return typeof m.id === "string" && YOUTUBE_ID.test(m.id) ? null : "bad YouTube id";
-  if (m.kind === "image") return isMediaUrl(m.src) ? null : "photo needs an https link";
+  if (m.kind === "image") {
+    if (m.fit !== undefined && m.fit !== "poster") return "unknown photo fit";
+    return isMediaUrl(m.src) ? null : "photo needs an https link";
+  }
   if (m.kind === "video") {
     if (!isMediaUrl(m.src)) return "video needs an https link";
     if (m.poster !== undefined && !isMediaUrl(m.poster)) return "cover image needs an https link";
@@ -213,6 +222,12 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
       });
     }
     publication.events = events.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  }
+
+  if (input.look !== undefined) {
+    const look = parseLook(input.look);
+    if (!look) return "The look's colors or typeface aren't valid.";
+    publication.look = look;
   }
 
   if ("backdrop" in input && input.backdrop !== undefined) {

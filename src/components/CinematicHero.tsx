@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import BrandLogo, { wordmarkFont } from "@/components/BrandLogo";
+import BrandLogo from "@/components/BrandLogo";
+import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
 import { sceneMediaOf, thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
 
@@ -93,7 +94,7 @@ export default function CinematicHero({
             </p>
           )}
           <h1
-            className={`cine-title ${wordmarkFont.className} text-balance leading-[0.95] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)] ${
+            className={`cine-title ${titleFontClass(cover.titleFont)} text-balance leading-[0.95] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)] ${
               full
                 ? "text-[2.85rem] tall:text-6xl [@media(max-height:680px)]:text-[2.4rem]"
                 : "text-5xl tall:text-6xl"
@@ -157,6 +158,8 @@ function Scene({ media, paused, live, zoom }: { media?: ReelMedia; paused: boole
           // eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail
           <img src={thumbnailOf(media)} alt="" className="cine-kenburns absolute inset-0 h-full w-full object-cover" />
         )
+      ) : media?.kind === "image" && media.fit === "poster" ? (
+        <PosterScene src={media.src} />
       ) : media?.kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element -- any uploaded photo, sized by CSS
         <img className="cine-kenburns absolute inset-0 h-full w-full object-cover" src={media.src} alt="" />
@@ -184,13 +187,32 @@ function Scene({ media, paused, live, zoom }: { media?: ReelMedia; paused: boole
       )}
       </div>
       {/* Footage is dimmed a little so bright shots never wash out the words. */}
-      {media && <div className="absolute inset-0 bg-black/30" />}
+      {media && !(media.kind === "image" && media.fit === "poster") && <div className="absolute inset-0 bg-black/30" />}
       {/* Grain, vignette, and a fade into the page so the words always read. */}
       <div className="cine-grain absolute -inset-1/2 opacity-[0.14]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,transparent_35%,rgba(0,0,0,0.55)_100%)]" />
       <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/75 via-black/30 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-[75%] bg-gradient-to-t from-deep-navy from-10% via-deep-navy/75 to-transparent" />
     </div>
+  );
+}
+
+/**
+ * A flyer behind the title: the whole poster, sharp, under the logo, over a
+ * blurred and darkened copy of itself that fills the screen in its colors.
+ * Its lower part fades into the page, where the title and buttons sit.
+ */
+function PosterScene({ src }: { src: string }) {
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
+      <img src={src} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl brightness-[0.55] saturate-150" />
+      {/* Between the logo and the words: the words take about 470px at the bottom on a phone. */}
+      <div className="absolute inset-x-0 top-[104px] flex h-[clamp(150px,calc(100%-104px-480px),62%)] justify-center px-6 [mask-image:linear-gradient(to_bottom,black_75%,transparent)] lg:h-[clamp(150px,calc(100%-104px-440px),62%)]">
+        {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
+        <img src={src} alt="" className="cine-kenburns h-full w-auto max-w-full rounded-lg object-contain shadow-2xl shadow-black/60" />
+      </div>
+    </>
   );
 }
 

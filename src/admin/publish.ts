@@ -5,6 +5,7 @@
 import type { HeroMediaEdit } from "@/admin/drafts";
 import type { EditorFunnel, EditorReel } from "@/admin/editor-model";
 import type { FunnelEvent, ReelMedia } from "@/data/funnel-types";
+import type { Look } from "@/lib/look";
 import type { Publication, ScreenCopy } from "@/lib/publication";
 
 export type EditorState = {
@@ -15,6 +16,8 @@ export type EditorState = {
   screen?: ScreenCopy;
   /** Event dates (undefined: the built-in ones). */
   events?: FunnelEvent[];
+  /** Brand colors and title typeface (undefined: the built-in ones). */
+  look?: Look;
 };
 export type LiveState = EditorState & { publishedAt: string | null; publishedBy: string | null };
 
@@ -22,7 +25,7 @@ export type LiveState = EditorState & { publishedAt: string | null; publishedBy:
 export const publishedFunnel = (funnels: EditorFunnel[]) => funnels.find((f) => f.isDefault) ?? funnels[0];
 
 /** What a publish would store, from the editor's state. */
-export function toPublication({ reels, funnels, heroMedia, screen, events }: EditorState): Publication {
+export function toPublication({ reels, funnels, heroMedia, screen, events, look }: EditorState): Publication {
   const f = publishedFunnel(funnels);
   const used = new Set(f.order);
   return {
@@ -31,6 +34,7 @@ export function toPublication({ reels, funnels, heroMedia, screen, events }: Edi
     funnel: { order: f.order, topics: f.topics, paths: f.paths, primaryCta: f.primaryCta },
     ...(heroMedia !== undefined ? { backdrop: heroMedia } : {}),
     ...(screen && Object.keys(screen).length ? { screen } : {}),
+    ...(look ? { look } : {}),
     ...(events
       ? {
           events: [...events]
@@ -95,6 +99,7 @@ export async function fetchLive(slug: string, builtIn: EditorState): Promise<Liv
     heroMedia: "backdrop" in publication ? publication.backdrop : undefined,
     screen: publication.screen,
     events: publication.events,
+    look: publication.look,
     publishedAt: publishedAt ?? null,
     publishedBy: publishedBy ?? null,
   };
@@ -157,6 +162,7 @@ export async function publish(
     heroMedia: swapMedia(state.heroMedia, urls),
     screen: state.screen,
     events: state.events,
+    look: state.look,
   };
 
   onProgress("Publishing...");
