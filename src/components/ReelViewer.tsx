@@ -11,7 +11,7 @@ import {
 } from "@/data/reels";
 import type { ReelMedia } from "@/data/funnel-types";
 import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
-import { eventChip, eventOf, ticketHref, ticketTarget } from "@/lib/events";
+import { eventChip, eventOf, formatEventDate, isOver, ticketHref, ticketTarget } from "@/lib/events";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import type { LeadIntent } from "@/lib/leads";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
@@ -124,9 +124,17 @@ export default function ReelViewer({
     ? ticketHref(funnel, ticketEvent, { reelId: reel?.id, sourceTag: getSourceTag() })
     : undefined;
   const reelEvent = reel ? eventOf(funnel, reel) : undefined;
+  // A sold-out date's reel leads with its waitlist; Tickets then sells another
+  // date, and says which.
+  const waitlist =
+    funnel.primaryCta === "tickets" && reelEvent && !isOver(reelEvent, now) && reelEvent.status === "sold_out"
+      ? { event: reelEvent, other: ticketEvent }
+      : undefined;
 
   const ctas: CtaHandlers = {
     ticketUrl,
+    waitlist: Boolean(waitlist),
+    otherDate: waitlist?.other ? formatEventDate(waitlist.other) : undefined,
     onTickets: () => reel && trackReelEvent(funnel, reel.id, "cta_clicked"),
     onCall: () => reel && trackReelEvent(funnel, reel.id, "call_clicked"),
     onBook: () => {
@@ -280,7 +288,23 @@ export default function ReelViewer({
         <path d={HEART} fill={liked ? "currentColor" : "none"} />
       </RailButton>
       {funnel.primaryCta === "tickets" ? (
-        ticketUrl ? (
+        waitlist ? (
+          <>
+            <RailButton placement={placement} label="Waitlist" primary highlight={ctaRevealed} onClick={ctas.onTextLater}>
+              <path d={TICKET} />
+            </RailButton>
+            {ticketUrl && (
+              <RailButton
+                placement={placement}
+                label={waitlist.other ? `Get ${new Date(waitlist.other.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Other date"}
+                href={ticketUrl}
+                onClick={ctas.onTickets}
+              >
+                <path d={TICKET} />
+              </RailButton>
+            )}
+          </>
+        ) : ticketUrl ? (
           <RailButton placement={placement} label="Tickets" primary highlight={ctaRevealed} href={ticketUrl} onClick={ctas.onTickets}>
             <path d={TICKET} />
           </RailButton>
@@ -312,9 +336,12 @@ export default function ReelViewer({
           </RailButton>
         </>
       )}
-      <RailButton placement={placement} label={brand.copy.textLaterButton ?? "Text me"} onClick={ctas.onTextLater}>
-        <path d={MESSAGE} />
-      </RailButton>
+      {/* On a sold-out date, Waitlist already is the text-me button. */}
+      {!waitlist && (
+        <RailButton placement={placement} label={brand.copy.textLaterButton ?? "Text me"} onClick={ctas.onTextLater}>
+          <path d={MESSAGE} />
+        </RailButton>
+      )}
       <RailButton placement={placement} label={copied ? "Copied" : "Share"} onClick={share}>
         <path d={SHARE} />
       </RailButton>
@@ -486,6 +513,15 @@ export default function ReelViewer({
             funnel={funnel}
             intent={sheet}
             reel={reel}
+            copy={
+              sheet === "text_later" && waitlist
+                ? {
+                    heading: "Join the waitlist",
+                    intro: `${formatEventDate(waitlist.event)} is sold out. If tickets come back, the waitlist hears first, by text.`,
+                    submit: "Join the waitlist",
+                  }
+                : undefined
+            }
             onClose={() => {
               setSheet(null);
               dialogRef.current?.focus();
@@ -526,6 +562,10 @@ export default function ReelViewer({
 type CtaHandlers = {
   /** The ticket link (with tracking), for ticket funnels with an event on sale. */
   ticketUrl?: string;
+  /** This reel's date is sold out: the waitlist comes first. */
+  waitlist?: boolean;
+  /** The date the ticket link sells instead, e.g. "Sun, Oct 4". */
+  otherDate?: string;
   onTickets: () => void;
   onCall: () => void;
   onBook: () => void;
@@ -545,6 +585,8 @@ function CtaButtons({
   brand,
   primary,
   ticketUrl,
+  waitlist,
+  otherDate,
   onTickets,
   onCall,
   onBook,
@@ -568,7 +610,13 @@ function CtaButtons({
     </button>
   );
   const main =
-    primary === "tickets"
+    primary === "tickets" && waitlist
+      ? (
+          <button type="button" onClick={onTextLater} className={primaryClass}>
+            Join the waitlist
+          </button>
+        )
+      : primary === "tickets"
       ? ticketUrl
         ? (
             <a href={ticketUrl} target="_blank" rel="noopener" onClick={onTickets} className={primaryClass}>
@@ -580,7 +628,15 @@ function CtaButtons({
         ? call(primaryClass, `${brand.copy.callNow}: ${phone.display}`)
         : book(primaryClass, brand.copy.bookPrimary);
   const others =
-    primary === "tickets"
+    primary === "tickets" && waitlist
+      ? [
+          ticketUrl && (
+            <a href={ticketUrl} target="_blank" rel="noopener" onClick={onTickets} className={secondaryClass}>
+              {otherDate ? `Or get ${otherDate} \u2192` : "Or get another date \u2192"}
+            </a>
+          ),
+        ]
+      : primary === "tickets"
       ? [ticketUrl ? textLater(secondaryClass) : null, call(secondaryClass, brand.copy.callNow)]
       : primary === "call" && phone
         ? [book(secondaryClass, brand.copy.callBack), textLater(secondaryClass)]
@@ -770,6 +826,7 @@ function ChannelPill({
   primary,
   revealed,
   ticketUrl,
+  waitlist,
   onTickets,
   onCall,
   onBook,
@@ -780,7 +837,7 @@ function ChannelPill({
     revealed ? "bg-teal-accent text-on-accent" : "bg-white/15 text-white ring-1 ring-inset ring-white/40"
   }`;
   if (primary === "tickets") {
-    return ticketUrl ? (
+    return ticketUrl && !waitlist ? (
       <a href={ticketUrl} target="_blank" rel="noopener" onClick={onTickets} aria-label={brand.copy.ticketsPrimary ?? "Get tickets"} className={className}>
         Tickets
       </a>

@@ -82,8 +82,10 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
   // Ticks every 30 seconds, for the countdown on the day.
   const clock = useClock(Boolean(single), now);
   const untilStart = single ? Date.parse(single.startsAt) - clock : Infinity;
-  // Close to the date, or nearly gone: selling the ticket comes first.
-  const ticketsFirst = Boolean(single && onSale?.id === single.id && (untilStart < 48 * HOUR || single.status === "few_left"));
+  // Close to the date on sale, or nearly gone: selling the ticket comes first,
+  // with one date or several.
+  const untilOnSale = onSale ? Date.parse(onSale.startsAt) - clock : Infinity;
+  const ticketsFirst = Boolean(onSale && (!single || onSale.id === single.id) && (untilOnSale < 48 * HOUR || onSale.status === "few_left"));
 
   // The scene names the next date on sale, with a live dot. With one date,
   // the card carries the details, so this is just the hook (or a countdown).
@@ -129,19 +131,23 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
         <ul className="-mx-5 mt-2.5 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none]" role="list">
           {isEvents
             ? [
-                ...upcoming.map((event) => {
+                // Dates you can buy first; sold-out ones after them, dimmed, for the waitlist.
+                ...[...upcoming.filter((e) => e.status !== "sold_out"), ...upcoming.filter((e) => e.status === "sold_out")].map((event) => {
                   const chip = eventChip(event, now);
                   const soldOut = event.status === "sold_out";
                   const status = soldOut ? "Sold out" : event.status === "few_left" ? "Few left" : chip.text;
                   // "Golden Hour: Late Night" -> "Late Night"
                   const variant = event.name.includes(": ") ? event.name.split(": ").slice(1).join(": ") : undefined;
+                  // Far-off dates use the date itself as the chip; say it once.
+                  const date = formatEventDate(event);
+                  const when = chip.text.startsWith(date) ? chip.text : `${date}, ${chip.text}`;
                   return (
                     <StoryCircle
                       key={event.id}
-                      label={`${event.name}, ${formatEventDate(event)}, ${chip.text}`}
+                      label={`${event.name}, ${when}${event.price && !soldOut ? `, ${event.price}` : ""}${soldOut ? ", join the waitlist" : ""}`}
                       date={new Date(event.startsAt)}
                       line1={status}
-                      line2={variant}
+                      line2={variant ?? (soldOut ? "Waitlist" : undefined)}
                       hot={chip.tone === "hot"}
                       dim={soldOut}
                       onClick={() => startAt(reelFor(event.id))}
@@ -190,9 +196,15 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
             target="_blank"
             rel="noopener"
             onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
+            aria-label={`${brand.copy.ticketsPrimary ?? "Get tickets"}: ${onSale.name}, ${formatEventDate(onSale)}, ${timeOf(new Date(onSale.startsAt))}${onSale.price ? `, ${onSale.price}` : ""}`}
             className={ticketsFirst ? `${PRIMARY} order-1 flex-1 px-4` : `${GLASS} px-5 max-[380px]:px-4`}
           >
-            {brand.copy.ticketsPrimary ?? "Get tickets"}
+            {/* With several dates, the button says which one it sells. */}
+            {single
+              ? brand.copy.ticketsPrimary ?? "Get tickets"
+              : ticketsFirst
+                ? `Tickets \u00b7 ${formatEventDate(onSale)}`
+                : `Tickets \u00b7 ${shortDay(onSale)}`}
           </a>
         ) : (
           brand.phone && (
@@ -206,11 +218,19 @@ export default function FunnelExperience({ slug, publication }: { slug: string; 
           )
         )}
       </div>
-      <p aria-hidden="true" className="mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-white/60 pointer-fine:hidden">
+      {/* What the tickets button buys, before anyone taps it. */}
+      {onSale && !single && (
+        <p className="mt-2.5 text-center text-xs font-medium text-white/75">
+          {[onSale.name.includes(": ") ? onSale.name.split(": ").slice(1).join(": ") : undefined, `${formatEventDate(onSale)}, ${timeOf(new Date(onSale.startsAt))}`, onSale.price, brand.ageLimit]
+            .filter(Boolean)
+            .join(" \u00b7 ")}
+        </p>
+      )}
+      <p aria-hidden="true" className="mt-2 flex items-center justify-center gap-1.5 text-xs font-medium text-white/60 pointer-fine:hidden">
         <svg className="cine-bob h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" /></svg>
         Swipe up to step inside
       </p>
-      <p className="mt-2.5 text-center text-[10px] leading-snug text-white/45">{brand.footer}</p>
+      <p className="mt-2 text-center text-[11px] leading-snug text-white/60">{brand.footer}</p>
     </>
   );
 
@@ -429,7 +449,7 @@ function StoryCircle({
             <span className="flex h-[58px] w-[58px] flex-col items-center justify-center rounded-full bg-white/10 leading-none backdrop-blur-md">
               {date ? (
                 <>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-accent">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-accent">
                     {date.toLocaleDateString("en-US", { month: "short" })}
                   </span>
                   <span className="mt-0.5 text-xl font-bold text-white">{date.getDate()}</span>
@@ -443,11 +463,14 @@ function StoryCircle({
         <span className={`w-full truncate text-center text-[11px] leading-tight ${hot ? "font-semibold text-sky-accent" : dim ? "text-white/55" : "text-white/85"}`}>
           {line1}
         </span>
-        {line2 && <span className="-mt-1 w-full truncate text-center text-[10px] leading-tight text-white/55">{line2}</span>}
+        {line2 && <span className="-mt-1 w-full truncate text-center text-[11px] leading-tight text-white/60">{line2}</span>}
       </button>
     </li>
   );
 }
+
+/** "Oct 4": a short date for a button that has to share a row. */
+const shortDay = (e: FunnelEvent) => new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 /** "3 PM" or "3:30 PM". */
 const timeOf = (d: Date) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":00", "");

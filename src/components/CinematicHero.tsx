@@ -210,8 +210,8 @@ function PosterScene({ src }: { src: string }) {
     <>
       {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
       <img src={src} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl brightness-[0.55] saturate-150" />
-      {/* Between the logo and the words: the words take about 470px at the bottom on a phone. */}
-      <div className="absolute inset-x-0 top-[104px] flex h-[clamp(150px,calc(100%-104px-480px),62%)] justify-center px-6 [mask-image:linear-gradient(to_bottom,black_75%,transparent)] lg:h-[clamp(150px,calc(100%-104px-440px),62%)]">
+      {/* Between the logo and the words: the words take about 500px at the bottom on a phone. */}
+      <div className="absolute inset-x-0 top-[104px] flex h-[clamp(140px,calc(100%-104px-510px),62%)] justify-center px-6 [mask-image:linear-gradient(to_bottom,black_75%,transparent)] lg:h-[clamp(140px,calc(100%-104px-470px),62%)]">
         {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
         <img src={src} alt="" className="cine-kenburns h-full w-auto max-w-full rounded-lg object-contain shadow-2xl shadow-black/60" />
       </div>

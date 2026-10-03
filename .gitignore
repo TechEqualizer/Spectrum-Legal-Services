@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Impeccable (design skill) runtime files
+**/.impeccable/hook.cache.json
+.impeccable/live/
