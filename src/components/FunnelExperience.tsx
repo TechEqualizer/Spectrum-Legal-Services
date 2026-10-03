@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import CinematicHero from "@/components/CinematicHero";
 import ReelViewer from "@/components/ReelViewer";
-import { site } from "@/config/site";
+import { isConcept } from "@/config/site";
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
 import { getFunnelBySlug } from "@/data/funnels";
 import { applyPublication, type Publication } from "@/lib/publication";
@@ -414,7 +414,7 @@ function FunnelCover({
   // A sample business is always labeled; the JLF concept is labeled in demo mode.
   const notice =
     funnel.sample?.notice ??
-    (site.demoMode
+    (isConcept(funnel)
       ? `Concept preview prepared for ${brand.name}. Not the firm's official link.`
       : undefined);
   const noticeBar = notice && (

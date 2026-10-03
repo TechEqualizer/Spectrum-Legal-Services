@@ -5,10 +5,11 @@
 import { demoFunnels } from "@/data/demos";
 import type { Funnel } from "@/data/funnel-types";
 import { eventsFunnel } from "@/data/events-sample";
+import { masqueradeFunnel } from "@/data/masquerade";
 import { medspaFunnel } from "@/data/medspa";
 import { defaultFunnel } from "@/data/reels";
 
-export const funnels: Funnel[] = [defaultFunnel, medspaFunnel, eventsFunnel, ...demoFunnels];
+export const funnels: Funnel[] = [defaultFunnel, medspaFunnel, eventsFunnel, masqueradeFunnel, ...demoFunnels];
 
 export function getFunnelBySlug(slug: string) {
   return funnels.find((funnel) => funnel.slug === slug);

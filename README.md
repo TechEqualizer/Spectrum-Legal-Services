@@ -133,6 +133,16 @@ forms re-skin without code changes.
 | `/f/jlf` | The JLF Firm (concept) | Call |
 | `/f/medspa` | Aurelia Med Spa (**sample**, made up) | Book |
 | `/f/events` | Golden Hour Sundays (**sample**, made up) | Tickets |
+| `/f/masquerade` | Big Love Productions: Masquerade on the Runway (**client**) | Tickets |
+
+**`/f/masquerade` is a real client's link**, so its forms and tracking are
+live. Its content comes from the event flyer (`src/data/masquerade.ts`): one
+date (Sat, Oct 31, 8pm, Detroit, 21+), Eventbrite tickets, the flyer behind
+the opening screen, and two reels with photos cropped from it
+(`public/clients/masquerade`). The other reels show "Video coming soon" until
+their videos are uploaded in the admin, where Big Love Productions replaced
+Golden Hour Sundays. Golden Hour stays at `/f/events` as a sample to show
+other organizers.
 
 **`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
 Spa doesn't exist: the page always says so, is never indexed, uses a

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import FunnelExperience, { FunnelSplash } from "@/components/FunnelExperience";
-import { site } from "@/config/site";
+import { isConcept } from "@/config/site";
 import { funnels, getFunnelBySlug } from "@/data/funnels";
 import { getPublication } from "@/lib/server/publications";
 
@@ -37,9 +37,9 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
   if (!funnel) return {};
   const title = `${funnel.brand.seriesLabel} | ${funnel.brand.name}`;
   const description = `${funnel.cover.heading} ${funnel.cover.intro}`;
-  const labeled = Boolean(funnel.sample) || site.demoMode;
+  const labeled = Boolean(funnel.sample) || isConcept(funnel);
   return {
-    title: funnel.sample ? `${title} (Sample)` : site.demoMode ? `${title} (Concept Preview)` : title,
+    title: funnel.sample ? `${title} (Sample)` : isConcept(funnel) ? `${title} (Concept Preview)` : title,
     description,
     // Replace the JLF site's author and keywords from the root layout.
     authors: [{ name: funnel.brand.name }],
@@ -47,7 +47,8 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
     openGraph: { title, description, type: "website", siteName: funnel.brand.name },
     twitter: { card: "summary_large_image", title, description },
     // A sample business never appears in search results.
-    robots: labeled ? { index: false, follow: false } : undefined,
+    // A live client's link is indexed even while the concept site isn't.
+    robots: labeled ? { index: false, follow: false } : funnel.live ? { index: true, follow: true } : undefined,
   };
 }
 

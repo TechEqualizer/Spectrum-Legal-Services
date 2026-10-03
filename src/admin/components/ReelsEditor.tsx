@@ -584,7 +584,8 @@ export default function ReelsEditor() {
         {funnel.order.length === 0 ? (
           <p className="p-6 text-sm text-gray-600">No reels yet. Add one below or create a new reel.</p>
         ) : (
-          <ol role="list">
+          // Rows lay out by the list's own width: in the studio it's a column, not the window.
+          <ol role="list" className="@container">
             {funnel.order.map((id, i) => {
               const reel = byId.get(id);
               if (!reel) return null;
@@ -975,10 +976,10 @@ function ReelRow({ date, hasPrompt, stats: s, reel, index, count, funnel, unreac
         setOver(false);
         onDropHere();
       }}
-      className={`flex flex-col gap-3 border-b border-gray-100 px-3 py-4 last:border-b-0 sm:flex-row sm:items-center sm:px-5 ${dragging ? "opacity-40" : ""} ${over ? "bg-sky-accent/10" : ""}`}
+      className={`flex flex-col gap-3 border-b border-gray-100 px-3 py-4 last:border-b-0 @2xl:flex-row @2xl:items-center @2xl:px-5 ${dragging ? "opacity-40" : ""} ${over ? "bg-sky-accent/10" : ""}`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span className="hidden cursor-grab text-gray-400 sm:block" aria-hidden="true">
+        <span className="hidden cursor-grab text-gray-400 @2xl:block" aria-hidden="true">
           <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
             <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" />
             <circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
@@ -1014,14 +1015,14 @@ function ReelRow({ date, hasPrompt, stats: s, reel, index, count, funnel, unreac
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pl-12 sm:flex-nowrap sm:pl-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pl-12 @2xl:flex-nowrap @2xl:pl-0">
         {/* Phones: one line of text; wider screens: three columns. */}
-        <p className="text-xs text-gray-600 sm:hidden" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <p className="text-xs text-gray-600 @2xl:hidden" style={{ fontVariantNumeric: "tabular-nums" }}>
           {s
             ? `${formatNumber(s.views)} views · ${formatPercent(s.completed / s.views)} watched · ${formatNumber(s.booked)} booked`
             : "No results yet"}
         </p>
-        <dl className="hidden grid-cols-3 gap-4 text-right text-xs sm:grid" style={{ fontVariantNumeric: "tabular-nums" }}>
+        <dl className="hidden grid-cols-3 gap-4 text-right text-xs @2xl:grid" style={{ fontVariantNumeric: "tabular-nums" }}>
           {s ? (
             <>
               <Stat label="Views" value={formatNumber(s.views)} />

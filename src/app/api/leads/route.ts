@@ -171,14 +171,6 @@ async function notifyFirm(lead: LeadInput, funnel?: Funnel) {
 }
 
 export async function POST(request: Request) {
-  // The concept site must not collect anyone's details, even if called directly.
-  if (site.demoMode) {
-    return Response.json(
-      { error: "This concept site doesn't accept submissions." },
-      { status: 403 }
-    );
-  }
-
   let body: unknown;
   try {
     body = await request.json();
@@ -205,6 +197,14 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed }, { status: 400 });
   }
   const { lead, funnel } = parsed;
+  // The concept site must not collect anyone's details, even if called
+  // directly. A live client's funnel still collects them.
+  if (site.demoMode && !funnel?.live) {
+    return Response.json(
+      { error: "This concept site doesn't accept submissions." },
+      { status: 403 }
+    );
+  }
   // A sample funnel's business doesn't exist, so it never collects details.
   if (funnel?.sample) {
     return Response.json(
