@@ -60,9 +60,12 @@ the reels at that topic.
   reel's), muted, looping and slowly zooming; a YouTube video shows its
   thumbnail until it's actually playing; until there is one, a
   low sun and lens flare drawn in the brand's own colors. Set
-  `cover.hero` (title, tagline, Watch label, optional `media`) for a
-  full-height scene with Watch and Get tickets (or Call) buttons; without
-  it, the heading sits over a shorter scene and the choices follow. People
+  `cover.hero` (title, tagline, button label, optional `media` and `zoom`)
+  to make the scene the whole first screen, with nothing to scroll: the
+  dates (or topics) as Instagram-style story circles, a "Sneak peek
+  inside" button into the reels, Get tickets (or Call) beside it, and the
+  fine print. Swiping up steps inside, like moving to the next reel.
+  Without it, the heading sits over a shorter scene and the choices follow. People
   who turn on "reduce motion" get a still scene, and a browser that skips
   animations still shows every word (`src/components/CinematicHero.tsx`).
 - Funnels are listed in `src/data/funnels.ts`; each one's `slug` is its

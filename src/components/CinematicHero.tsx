@@ -43,6 +43,7 @@ export default function CinematicHero({
   eyebrow,
   actions,
   paused = false,
+  onSwipeUp,
 }: {
   funnel: Funnel;
   revealed: boolean;
@@ -50,6 +51,8 @@ export default function CinematicHero({
   actions?: React.ReactNode;
   /** Pauses the background video, e.g. while a reel plays on top. */
   paused?: boolean;
+  /** A full scene: swiping up steps inside, like moving to the next reel. */
+  onSwipeUp?: () => void;
 }) {
   const { brand, cover } = funnel;
   const hero = cover.hero;
@@ -57,14 +60,28 @@ export default function CinematicHero({
   const full = Boolean(hero);
   const title = hero?.title ?? cover.heading;
   const tagline = hero?.tagline ?? cover.intro;
+  const touch = useRef<{ x: number; y: number } | null>(null);
 
   return (
     <div
       className={`relative isolate flex flex-col overflow-hidden ${
-        full ? "cine-hero-full short:min-h-0" : "cine-hero-short short:min-h-0"
+        full ? "flex-1" : "cine-hero-short short:min-h-0"
       }`}
+      onTouchStart={(e) => {
+        touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }}
+      onTouchEnd={(e) => {
+        const from = touch.current;
+        touch.current = null;
+        if (!from || !onSwipeUp) return;
+        const dx = e.changedTouches[0].clientX - from.x;
+        const dy = e.changedTouches[0].clientY - from.y;
+        // Only a deliberate upward swipe, and only when the page has nowhere further to scroll.
+        const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+        if (dy < -60 && Math.abs(dx) < Math.abs(dy) / 2 && atBottom) onSwipeUp();
+      }}
     >
-      <Scene media={media} paused={paused} live={revealed} />
+      <Scene media={media} paused={paused} live={revealed} zoom={hero?.zoom} />
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6">
         <div className="flex items-center justify-between gap-4">
@@ -80,27 +97,32 @@ export default function CinematicHero({
           )}
         </div>
 
-        <div className={`mt-auto ${full ? "pb-8 pt-16" : "pb-6 pt-12"} ${revealed ? "" : "invisible"}`}>
+        <div className={`mt-auto ${full ? "pb-4 pt-10" : "pb-6 pt-12"} ${revealed ? "" : "invisible"}`}>
           {eyebrow && (
-            <p className="cine-reveal mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-accent" style={{ animationDelay: "0.55s" }}>
+            <p className="cine-reveal mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-accent max-[400px]:tracking-[0.16em]" style={{ animationDelay: "0.55s" }}>
               {eyebrow}
             </p>
           )}
           <h1
             className={`cine-title ${wordmarkFont.className} text-balance leading-[0.95] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)] ${
-              full ? "text-[3.25rem] tall:text-7xl" : "text-5xl tall:text-6xl"
+              full
+                ? "text-[2.85rem] tall:text-6xl [@media(max-height:680px)]:text-[2.4rem]"
+                : "text-5xl tall:text-6xl"
             }`}
             style={{ animationDelay: "0.7s" }}
           >
             {title}
           </h1>
           {tagline && (
-            <p className="cine-reveal mt-3 max-w-sm text-pretty text-[15px] leading-relaxed text-white/85" style={{ animationDelay: "1.05s" }}>
+            <p
+              className={`cine-reveal mt-3 max-w-sm text-pretty text-[15px] leading-relaxed text-white/85 ${full ? "[@media(max-height:640px)]:hidden" : ""}`}
+              style={{ animationDelay: "1.05s" }}
+            >
               {tagline}
             </p>
           )}
           {actions && (
-            <div className="cine-reveal mt-6 flex flex-wrap gap-2.5" style={{ animationDelay: "1.3s" }}>
+            <div className="cine-reveal mt-5" style={{ animationDelay: "1.3s" }}>
               {actions}
             </div>
           )}
@@ -111,7 +133,7 @@ export default function CinematicHero({
   );
 }
 
-function Scene({ media, paused, live }: { media?: ReelMedia; paused: boolean; live: boolean }) {
+function Scene({ media, paused, live, zoom }: { media?: ReelMedia; paused: boolean; live: boolean; zoom?: number }) {
   const video = useRef<HTMLVideoElement>(null);
 
   // Plays muted behind the title; holds still for reduced motion and while a reel is open.
@@ -141,7 +163,7 @@ function Scene({ media, paused, live }: { media?: ReelMedia; paused: boolean; li
       ) : media?.kind === "youtube" ? (
         // The server-rendered splash shows the thumbnail; the player starts in the browser.
         live ? (
-          <YouTubeScene id={media.id} paused={paused} />
+          <YouTubeScene id={media.id} paused={paused} zoom={zoom} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail
           <img src={thumbnailOf(media)} alt="" className="cine-kenburns absolute inset-0 h-full w-full object-cover" />
@@ -177,7 +199,7 @@ function Scene({ media, paused, live }: { media?: ReelMedia; paused: boolean; li
       {/* Grain, vignette, and a fade into the page so the words always read. */}
       <div className="cine-grain absolute -inset-1/2 opacity-[0.14]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,transparent_35%,rgba(0,0,0,0.55)_100%)]" />
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/75 via-black/30 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-[75%] bg-gradient-to-t from-deep-navy from-10% via-deep-navy/75 to-transparent" />
     </div>
   );
@@ -192,7 +214,7 @@ const YOUTUBE_ORIGIN = "https://www.youtube-nocookie.com";
  * the phone won't autoplay (low power mode) or asks for less motion, the
  * thumbnail stays.
  */
-function YouTubeScene({ id, paused }: { id: string; paused: boolean }) {
+function YouTubeScene({ id, paused, zoom = 1.2 }: { id: string; paused: boolean; zoom?: number }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [playing, setPlaying] = useState(false);
   // Read once in the browser; the player needs to know which page is talking to it.
@@ -240,10 +262,11 @@ function YouTubeScene({ id, paused }: { id: string; paused: boolean }) {
           title="Background video"
           tabIndex={-1}
           allow="autoplay; encrypted-media"
-          // Sized to cover the scene at 9:16 (a Short), and a little larger so YouTube's edges stay out of view.
-          className={`absolute left-1/2 top-1/2 h-[max(100cqh,177.78cqw)] w-[max(100cqw,56.25cqh)] -translate-x-1/2 -translate-y-1/2 scale-[1.2] border-0 transition-opacity duration-1000 ${
+          // Sized to cover the scene at 9:16 (a Short), then zoomed so YouTube's edges, and any black bars in the video, stay out of view.
+          className={`absolute left-1/2 top-1/2 h-[max(100cqh,177.78cqw)] w-[max(100cqw,56.25cqh)] -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-1000 ${
             playing ? "opacity-100" : "opacity-0"
           }`}
+          style={{ scale: String(zoom) }}
           onLoad={() => {
             // Ask the player to start sending its state.
             frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), YOUTUBE_ORIGIN);

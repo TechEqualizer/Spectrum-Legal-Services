@@ -184,7 +184,7 @@ const funnel = {
     hero: {
       title: spec.heroTitle ?? name,
       ...(spec.heroTagline ?? spec.byline?.[0] ? { tagline: spec.heroTagline ?? spec.byline[0] } : {}),
-      watchLabel: "Watch the vibe",
+      watchLabel: "Sneak peek inside",
     },
   },
   entryReelIds,

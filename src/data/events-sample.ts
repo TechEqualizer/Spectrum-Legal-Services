@@ -145,8 +145,9 @@ export const eventsFunnel: Funnel = {
     hero: {
       title: "Sundays, on the roof.",
       tagline: "Afro-house and amapiano from 3pm until the sun goes down.",
-      watchLabel: "Watch the vibe",
+      watchLabel: "Sneak peek inside",
       media: { kind: "youtube", id: "8U1ok3oEq8Q" },
+      zoom: 1.45,
     },
   },
   entryReelIds: ["gh-this-sunday", "gh-sold-out", "gh-late-night", "gh-last-time"],

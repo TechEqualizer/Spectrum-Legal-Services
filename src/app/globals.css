@@ -129,7 +129,11 @@
    funnel's theme, so each brand gets its own light. Built so a browser that
    skips animations (battery saver, forced dark mode, older phones) still
    shows the whole scene and every word: nothing starts hidden or covered. */
-.cine-hero-full { min-height: 80vh; min-height: 80svh; }
+/* A full scene is the whole first screen: notice, scene, buttons, fine print. */
+.cine-screen {
+  min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
 .cine-hero-short { min-height: 46vh; min-height: 46svh; }
 .cine-glow {
   background: radial-gradient(circle at 50% 50%, var(--sky-accent) 0%, var(--sky-accent) 14%, var(--teal-accent) 36%, transparent 66%);
@@ -175,6 +179,18 @@
 .cine-reveal { animation: cine-reveal 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .cine-title { animation: cine-title 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .cine-live { animation: cine-live 2s ease-out infinite; }
+/* A slow glint across the main button, every few seconds. */
+.cine-shimmer { position: relative; overflow: hidden; }
+.cine-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: cine-shimmer 4s ease-in-out 2.4s infinite;
+}
+/* The "swipe up" chevron. */
+.cine-bob { animation: cine-bob 1.8s ease-in-out infinite; }
 
 @keyframes cine-breathe {
   from { opacity: 0.7; transform: scale(0.94); }
@@ -227,6 +243,14 @@
   from { opacity: 0; transform: translateY(10px) scale(1.04); filter: blur(14px); letter-spacing: 0.12em; }
   to { opacity: 1; transform: none; filter: none; letter-spacing: normal; }
 }
+@keyframes cine-shimmer {
+  0% { transform: translateX(-120%); }
+  35%, 100% { transform: translateX(120%); }
+}
+@keyframes cine-bob {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-5px); opacity: 1; }
+}
 @keyframes cine-live {
   0% { box-shadow: 0 0 0 0 var(--sky-accent); }
   100% { box-shadow: 0 0 0 8px transparent; }
@@ -236,7 +260,8 @@
    the words are simply there. */
 @media (prefers-reduced-motion: reduce) {
   .cine-glow, .cine-sink, .cine-wash, .cine-flare, .cine-leak, .cine-mote, .cine-grain,
-  .cine-kenburns, .cine-fade-in, .cine-reveal, .cine-title, .cine-live {
+  .cine-kenburns, .cine-fade-in, .cine-reveal, .cine-title, .cine-live, .cine-bob,
+  .cine-shimmer::after {
     animation: none;
   }
 }

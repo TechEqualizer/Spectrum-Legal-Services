@@ -162,6 +162,11 @@ export type Funnel = {
        * media; without any, a moving glow in the brand colors.
        */
       media?: ReelMedia;
+      /**
+       * How far to zoom a YouTube backdrop (default 1.2). Raise it to crop
+       * black bars burned into the video itself.
+       */
+      zoom?: number;
     };
   };
   /** Reels offered on the opening screen, in order. Every visit starts at one of these. */
