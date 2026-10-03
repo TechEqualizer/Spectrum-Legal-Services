@@ -55,8 +55,10 @@ the reels at that topic.
   tagged `src=share`.
 - **Opening scene**: the top of the opening screen plays like the start of
   a trailer: the scene fades up from black, then the title comes up out of a soft blur
-  over film grain and a vignette. Behind it plays the funnel's first reel
-  with a video (or photo), muted and slowly zooming; until there is one, a
+  over film grain and a vignette. Behind it plays `cover.hero.media` (a
+  video file, a YouTube video or Short, or a photo; otherwise the first
+  reel's), muted, looping and slowly zooming; a YouTube video shows its
+  thumbnail until it's actually playing; until there is one, a
   low sun and lens flare drawn in the brand's own colors. Set
   `cover.hero` (title, tagline, Watch label, optional `media`) for a
   full-height scene with Watch and Get tickets (or Call) buttons; without

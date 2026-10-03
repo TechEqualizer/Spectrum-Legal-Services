@@ -156,8 +156,12 @@ export type Funnel = {
       tagline?: string;
       /** Label on the Watch button (default "Watch"). */
       watchLabel?: string;
-      /** What plays behind the title. Defaults to the first reel with a video or photo; without one, a moving glow in the brand colors. */
-      media?: Extract<ReelMedia, { kind: "video" | "image" }>;
+      /**
+       * What plays behind the title, muted and looping: a video file, a
+       * YouTube video or Short, or a photo. Defaults to the first reel with
+       * media; without any, a moving glow in the brand colors.
+       */
+      media?: ReelMedia;
     };
   };
   /** Reels offered on the opening screen, in order. Every visit starts at one of these. */

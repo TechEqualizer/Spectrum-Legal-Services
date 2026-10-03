@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import BrandLogo, { wordmarkFont } from "@/components/BrandLogo";
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
-
-type SceneMedia = Extract<ReelMedia, { kind: "video" | "image" }>;
+import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
 
 // Specks of light drifting up through the glow: left %, bottom %, size px, seconds, delay.
 const MOTES: [number, number, number, number, number][] = [
@@ -17,13 +16,15 @@ const MOTES: [number, number, number, number, number][] = [
   [36, 34, 2, 17, 11],
 ];
 
-/** What plays behind the title: the hero's own media, else the first reel with a video or photo. */
-function sceneMedia(funnel: Funnel): SceneMedia | undefined {
+/** What plays behind the title: the hero's own media, else the first reel's video, YouTube video or photo. */
+function sceneMedia(funnel: Funnel): ReelMedia | undefined {
   if (funnel.cover.hero?.media) return funnel.cover.hero.media;
   const media = funnel.reels.map((r) => r.media).filter(Boolean) as ReelMedia[];
-  return (media.find((m) => m.kind === "video") ?? media.find((m) => m.kind === "image")) as
-    | SceneMedia
-    | undefined;
+  return (
+    media.find((m) => m.kind === "video") ??
+    media.find((m) => m.kind === "youtube") ??
+    media.find((m) => m.kind === "image")
+  );
 }
 
 /**
@@ -63,7 +64,7 @@ export default function CinematicHero({
         full ? "cine-hero-full short:min-h-0" : "cine-hero-short short:min-h-0"
       }`}
     >
-      <Scene media={media} paused={paused} />
+      <Scene media={media} paused={paused} live={revealed} />
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6">
         <div className="flex items-center justify-between gap-4">
@@ -110,7 +111,7 @@ export default function CinematicHero({
   );
 }
 
-function Scene({ media, paused }: { media?: SceneMedia; paused: boolean }) {
+function Scene({ media, paused, live }: { media?: ReelMedia; paused: boolean; live: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
 
   // Plays muted behind the title; holds still for reduced motion and while a reel is open.
@@ -137,6 +138,14 @@ function Scene({ media, paused }: { media?: SceneMedia; paused: boolean }) {
           autoPlay
           preload="metadata"
         />
+      ) : media?.kind === "youtube" ? (
+        // The server-rendered splash shows the thumbnail; the player starts in the browser.
+        live ? (
+          <YouTubeScene id={media.id} paused={paused} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail
+          <img src={thumbnailOf(media)} alt="" className="cine-kenburns absolute inset-0 h-full w-full object-cover" />
+        )
       ) : media?.kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element -- any uploaded photo, sized by CSS
         <img className="cine-kenburns absolute inset-0 h-full w-full object-cover" src={media.src} alt="" />
@@ -163,11 +172,85 @@ function Scene({ media, paused }: { media?: SceneMedia; paused: boolean }) {
         </>
       )}
       </div>
+      {/* Footage is dimmed a little so bright shots never wash out the words. */}
+      {media && <div className="absolute inset-0 bg-black/30" />}
       {/* Grain, vignette, and a fade into the page so the words always read. */}
       <div className="cine-grain absolute -inset-1/2 opacity-[0.14]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,transparent_35%,rgba(0,0,0,0.55)_100%)]" />
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-[75%] bg-gradient-to-t from-deep-navy from-10% via-deep-navy/75 to-transparent" />
+    </div>
+  );
+}
+
+const YOUTUBE_ORIGIN = "https://www.youtube-nocookie.com";
+
+/**
+ * A YouTube video or Short as the backdrop: muted, looping, cropped to fill
+ * the scene like a video file. Its thumbnail shows until the player reports
+ * that it's playing, so YouTube's loading screen and title never show. If
+ * the phone won't autoplay (low power mode) or asks for less motion, the
+ * thumbnail stays.
+ */
+function YouTubeScene({ id, paused }: { id: string; paused: boolean }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [playing, setPlaying] = useState(false);
+  // Read once in the browser; the player needs to know which page is talking to it.
+  const [src] = useState(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? null
+      : youtubeEmbedUrl(id, window.location.origin, { loop: true })
+  );
+
+  const command = (func: string) =>
+    frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), YOUTUBE_ORIGIN);
+
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== YOUTUBE_ORIGIN || e.source !== frame.current?.contentWindow) return;
+      let data: { event?: string; info?: { playerState?: number } | number };
+      try {
+        data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+      } catch {
+        return;
+      }
+      // Player state 1 means playing.
+      const state = typeof data.info === "object" ? data.info?.playerState : data.event === "onStateChange" ? data.info : undefined;
+      if (state === 1) setPlaying(true);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // Commands sent before the player is ready are ignored; onLoad resends them.
+  const sync = () => {
+    command("mute");
+    command(paused ? "pauseVideo" : "playVideo");
+  };
+  useEffect(sync);
+
+  return (
+    <div className="absolute inset-0 [container-type:size]">
+      {/* eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail */}
+      <img src={thumbnailOf({ kind: "youtube", id })} alt="" className="cine-kenburns absolute inset-0 h-full w-full object-cover" />
+      {src && (
+        <iframe
+          ref={frame}
+          src={src}
+          title="Background video"
+          tabIndex={-1}
+          allow="autoplay; encrypted-media"
+          // Sized to cover the scene at 9:16 (a Short), and a little larger so YouTube's edges stay out of view.
+          className={`absolute left-1/2 top-1/2 h-[max(100cqh,177.78cqw)] w-[max(100cqw,56.25cqh)] -translate-x-1/2 -translate-y-1/2 scale-[1.2] border-0 transition-opacity duration-1000 ${
+            playing ? "opacity-100" : "opacity-0"
+          }`}
+          onLoad={() => {
+            // Ask the player to start sending its state.
+            frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), YOUTUBE_ORIGIN);
+            sync();
+          }}
+        />
+      )}
     </div>
   );
 }

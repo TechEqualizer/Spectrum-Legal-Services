@@ -60,7 +60,7 @@ export function thumbnailOf(media: ReelMedia | undefined): string | undefined {
 }
 
 /** The privacy-enhanced YouTube player, set up to be driven by the reel viewer. */
-export function youtubeEmbedUrl(id: string, origin: string) {
+export function youtubeEmbedUrl(id: string, origin: string, { loop = false } = {}) {
   const params = new URLSearchParams({
     enablejsapi: "1",
     autoplay: "1",
@@ -70,6 +70,8 @@ export function youtubeEmbedUrl(id: string, origin: string) {
     rel: "0",
     modestbranding: "1",
     origin,
+    // A background loop: play the one video over and over, without YouTube's extras.
+    ...(loop ? { loop: "1", playlist: id, disablekb: "1", fs: "0", iv_load_policy: "3" } : {}),
   });
   return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
 }
