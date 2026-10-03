@@ -8,6 +8,7 @@ export async function GET() {
   return NextResponse.json(
     {
       ...(await signInStatus()),
+      flyerImport: { ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY?.trim()) },
       deployment: process.env.VERCEL_URL ?? null,
       environment: process.env.VERCEL_ENV ?? null,
       commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
