@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import type { PreviewMessage } from "@/admin/components/PreviewFrame";
+import type { PreviewMessage, PreviewMoment } from "@/admin/components/PreviewFrame";
 import type { ReelTotals } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import type { Publication } from "@/lib/publication";
@@ -35,10 +35,13 @@ export function StudioPhone({
   slug,
   publication,
   go,
+  onMoment,
 }: {
   slug: string;
   publication: Publication;
-  go: { reelId?: string; key: number };
+  go: { reelId?: string; end?: boolean; key: number };
+  /** What's on screen in the phone, as the admin taps through it. */
+  onMoment?: (moment: PreviewMoment) => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -58,11 +61,13 @@ export function StudioPhone({
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e.origin === window.location.origin && e.source === frame.current?.contentWindow && e.data?.type === "preview:ready") setReady(true);
+      if (e.origin !== window.location.origin || e.source !== frame.current?.contentWindow) return;
+      if (e.data?.type === "preview:ready") setReady(true);
+      if (e.data?.type === "preview:moment") onMoment?.({ reelId: e.data.reelId ?? null, ended: Boolean(e.data.ended) });
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [onMoment]);
 
   const post = (message: PreviewMessage) => frame.current?.contentWindow?.postMessage(message, window.location.origin);
   // Every edit shows at once.
@@ -71,11 +76,13 @@ export function StudioPhone({
   }, [ready, publication]);
   // Jump to a moment: the opening screen, or a reel.
   useEffect(() => {
-    if (ready && go.key > 0) post({ type: "preview:go", reelId: go.reelId });
+    if (ready && go.key > 0) post({ type: "preview:go", reelId: go.reelId, end: go.end });
   }, [ready, go]);
 
   return (
-    <div ref={box} className="flex h-full min-h-0 items-center justify-center">
+    // Clipped (not scrollable): the phone is scaled down, but its full-size
+    // box must not make the page taller or let focus inside it scroll anything.
+    <div ref={box} className="flex h-full min-h-0 items-center justify-center overflow-clip">
       <div
         className="relative flex-shrink-0 rounded-[3.25rem] bg-[#0b0b0d] p-3 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45)] ring-1 ring-black/40"
         style={{ width: PHONE.width + 24, height: PHONE.height + 24, transform: `scale(${scale})`, transformOrigin: "center" }}
@@ -248,6 +255,8 @@ export function Studio({
   publication,
   go,
   onRestart,
+  onMoment,
+  strip,
   canUndo,
   canRedo,
   onUndo,
@@ -267,8 +276,11 @@ export function Studio({
   slug: string;
   title: string;
   publication: Publication;
-  go: { reelId?: string; key: number };
+  go: { reelId?: string; end?: boolean; key: number };
   onRestart: () => void;
+  onMoment?: (moment: PreviewMoment) => void;
+  /** Under the phone: the path through the funnel. */
+  strip?: React.ReactNode;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -302,7 +314,8 @@ export function Studio({
 
   const quiet = "inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-white disabled:opacity-40 disabled:hover:bg-transparent";
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] flex-col">
+    // Each column scrolls on its own; the page itself never does.
+    <div className="relative flex h-[calc(100dvh-5.5rem)] flex-col overflow-clip">
       <header className="flex items-center gap-2 border-b border-gray-200 pb-3">
         <div className="mr-auto min-w-0">
           <h1 className="truncate text-lg font-bold text-deep-navy">{title}</h1>
@@ -347,7 +360,7 @@ export function Studio({
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(18rem,25rem)_minmax(18rem,1fr)_minmax(17rem,23rem)] gap-5 pt-4">
-        <div className="min-h-0 space-y-8 overflow-y-auto pb-10 pr-1" aria-label="Your story">
+        <div className="relative min-h-0 space-y-8 overflow-y-auto pb-10 pr-1" aria-label="Your story">
           {story}
         </div>
         <div className="flex min-h-0 flex-col">
@@ -359,10 +372,11 @@ export function Studio({
             </button>
           </div>
           <div className="min-h-0 flex-1">
-            <StudioPhone slug={slug} publication={publication} go={go} />
+            <StudioPhone slug={slug} publication={publication} go={go} onMoment={onMoment} />
           </div>
+          {strip}
         </div>
-        <div className="flex min-h-0 flex-col overflow-y-auto pb-10 pl-1">
+        <div className="relative flex min-h-0 flex-col overflow-y-auto pb-10 pl-1">
           <StudioTabs
             tabs={[
               { id: "design", label: "Design" },
@@ -382,3 +396,81 @@ export function Studio({
 }
 
 const canDiscard = (unpublished: boolean, publishing: string) => unpublished && !publishing;
+
+/** One stop on the path strip: the opening screen, a reel, or the end card. */
+export type PathStop = {
+  /** "opening", a reel id, or "end". */
+  id: string;
+  kind: "opening" | "reel" | "end";
+  /** The reel's place in the order, from 1. */
+  n?: number;
+  title: string;
+  thumb?: string;
+  /** A date this reel opens from, e.g. "Oct 4". */
+  date?: string;
+  /** Where it goes instead of the next reel, e.g. "Skipped → 4". */
+  notes?: string[];
+  /** No path from the start reaches it. */
+  unreachable?: boolean;
+};
+
+/**
+ * The funnel as a path, under the phone: the opening, each reel in order
+ * with any detours, then the end card. Tap a stop to play it; the stop on
+ * screen is highlighted as the admin taps through the phone.
+ */
+export function PathStrip({ stops, current, onGo }: { stops: PathStop[]; current: string; onGo: (stop: PathStop) => void }) {
+  const list = useRef<HTMLOListElement>(null);
+  // Keep the stop on screen in view, scrolling the strip only (never the page).
+  useEffect(() => {
+    const ol = list.current;
+    const el = ol?.querySelector<HTMLElement>('[aria-current="step"]')?.closest("li");
+    if (!ol || !el) return;
+    ol.scrollTo({
+      left: el.offsetLeft - (ol.clientWidth - el.clientWidth) / 2,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [current]);
+  return (
+    <nav aria-label="Path through your link" className="mt-3">
+      <ol ref={list} role="list" className="relative flex items-start gap-1.5 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:thin]">
+        {stops.map((stop, i) => {
+          const on = stop.id === current;
+          return (
+            <li key={stop.id} className="flex flex-shrink-0 items-start gap-1.5">
+              {i > 0 && (
+                <svg className="mt-6 h-3.5 w-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+              )}
+              <button
+                type="button"
+                onClick={() => onGo(stop)}
+                aria-current={on ? "step" : undefined}
+                aria-label={`${stop.kind === "reel" ? `Reel ${stop.n}: ` : ""}${stop.title}${stop.date ? `, opens from ${stop.date}` : ""}${stop.unreachable ? ", not reached by any path" : ""}${stop.notes?.length ? `, ${stop.notes.join(", ")}` : ""}. Play in the preview.`}
+                className={`group flex w-[5.5rem] flex-col items-center gap-1 rounded-xl p-1.5 text-center transition ${on ? "bg-white shadow-sm ring-2 ring-deep-navy" : "hover:bg-white/70"} ${stop.unreachable ? "opacity-50" : ""}`}
+              >
+                <span
+                  className={`relative flex h-12 w-9 items-center justify-center overflow-hidden rounded-md text-[11px] font-bold ${
+                    stop.kind === "reel" ? "bg-deep-navy text-white" : stop.kind === "end" ? "bg-teal-accent text-on-accent" : "bg-gradient-to-b from-royal-blue to-deep-navy text-white"
+                  } ${stop.unreachable ? "outline-dashed outline-1 outline-gray-400" : ""}`}
+                  aria-hidden="true"
+                >
+                  {stop.thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- the reel's own poster
+                    <img src={stop.thumb} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  ) : null}
+                  <span className="relative">{stop.kind === "reel" ? stop.n : stop.kind === "end" ? "★" : "▶"}</span>
+                </span>
+                <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-deep-navy">{stop.title}</span>
+                {stop.date && <span className="rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold leading-4 text-amber-900">{stop.date}</span>}
+                {stop.notes?.map((note) => (
+                  <span key={note} className="text-[11px] leading-tight text-gray-600">{note}</span>
+                ))}
+                {on && <span className="text-[11px] font-bold leading-tight text-teal-700">On screen</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}

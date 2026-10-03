@@ -53,11 +53,17 @@ export default function FunnelExperience({
   slug,
   publication,
   startReelId,
+  startEnded = false,
+  onMoment,
 }: {
   slug: string;
   publication: Publication | null;
   /** Opens straight into this reel, like ?start= (the admin preview uses it). */
   startReelId?: string;
+  /** With startReelId: opens on the end card that follows it. */
+  startEnded?: boolean;
+  /** Told what's on screen: the opening (no reel), a reel, or the end card. */
+  onMoment?: (moment: { reelId: string | null; ended: boolean }) => void;
 }) {
   const funnel = useMemo(() => applyPublication(getFunnelBySlug(slug)!, publication), [slug, publication]);
   const { brand } = funnel;
@@ -67,6 +73,11 @@ export default function FunnelExperience({
   const [visit, setVisit] = useState<{ reelId: string; key: number } | null>(
     () => (start && funnelReel(funnel, start) ? { reelId: start, key: 0 } : null)
   );
+
+  // The opening screen is on show whenever no reel is.
+  useEffect(() => {
+    if (!visit) onMoment?.({ reelId: null, ended: false });
+  }, [visit, onMoment]);
 
   const entries = funnel.entryReelIds.filter((id) => funnelReel(funnel, id));
   // Event funnels list their upcoming dates instead of fixed topics. This
@@ -339,6 +350,8 @@ export default function FunnelExperience({
           variant="page"
           funnel={funnel}
           startReelId={visit.reelId}
+          startEnded={startEnded && visit.key === 0}
+          onMoment={onMoment}
           onClose={() => setVisit(null)}
         />
       )}

@@ -5,7 +5,8 @@ import DatesCard from "@/admin/components/DatesCard";
 import HeroMediaCard from "@/admin/components/HeroMediaCard";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
 import StyleSheet from "@/admin/components/StyleSheet";
-import { ResultsPanel, StoryStep, Studio, useWideScreen } from "@/admin/components/Studio";
+import { PathStrip, ResultsPanel, StoryStep, Studio, useWideScreen, type PathStop } from "@/admin/components/Studio";
+import type { PreviewMoment } from "@/admin/components/PreviewFrame";
 import ReelViewer from "@/components/ReelViewer";
 import {
   CTA_LABELS,
@@ -59,9 +60,9 @@ function snapshotOf({ reels, funnels, heroMedia, screen, events, look }: EditorS
   return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia, screen ?? {}, events ?? "live", look ?? "built-in"]);
 }
 
-/** Reels a visitor can reach from the funnel's starting points. */
-function reachable(funnel: EditorFunnel) {
-  const starts = Object.keys(funnel.topics).filter((id) => funnel.order.includes(id));
+/** Reels a visitor can reach from the funnel's starting points: its topics, and the reels date circles open. */
+function reachable(funnel: EditorFunnel, extraStarts: string[] = []) {
+  const starts = [...Object.keys(funnel.topics), ...extraStarts].filter((id, i, all) => funnel.order.includes(id) && all.indexOf(id) === i);
   const queue = starts.length ? starts : funnel.order.slice(0, 1);
   const seen = new Set<string>(queue);
   while (queue.length) {
@@ -208,7 +209,9 @@ export default function ReelsEditor() {
 
   // The studio: three columns on wide screens, with the funnel live in a phone.
   const wide = useWideScreen();
-  const [go, setGo] = useState<{ reelId?: string; key: number }>({ key: 0 });
+  const [go, setGo] = useState<{ reelId?: string; end?: boolean; key: number }>({ key: 0 });
+  // What's on screen in the studio's phone, for the path strip.
+  const [moment, setMoment] = useState<PreviewMoment>({ reelId: null, ended: false });
   const draftPublication = toPublication(current);
   /** Plays a reel: in the studio's phone, or full screen. */
   const play = (reelId: string) => (wide ? setGo((g) => ({ reelId, key: g.key + 1 })) : setPreview({ reelId, key: Date.now() }));
@@ -283,7 +286,12 @@ export default function ReelsEditor() {
 
   const funnel = funnels.find((f) => f.id === activeId)!;
   const byId = new Map(library.map((r) => [r.id, r]));
-  const reach = reachable(funnel);
+  // Each date's circle opens a reel: its chosen one, else the first that sells it.
+  const dateOpener = (f: EditorFunnel, e: FunnelEvent) =>
+    e.reelId && f.order.includes(e.reelId) ? e.reelId : f.order.find((id) => library.find((r) => r.id === id)?.eventId === e.id);
+  const dateStarts = (f: EditorFunnel) =>
+    (events ?? liveFunnel.events ?? []).map((e) => dateOpener(f, e)).filter((id): id is string => Boolean(id));
+  const reach = reachable(funnel, funnel.id === publishedFunnel(funnels).id ? dateStarts(funnel) : []);
   const notInFunnel = library.filter((r) => !funnel.order.includes(r.id));
 
   const updateFunnel = (patch: Partial<EditorFunnel> | ((f: EditorFunnel) => EditorFunnel)) =>
@@ -737,6 +745,46 @@ export default function ReelsEditor() {
   );
 
   const shownMedia = heroMedia === undefined ? sceneMediaOf(liveFunnel) : heroMedia ?? undefined;
+
+  // The path strip follows the funnel the preview (and the live link) shows.
+  const shown = publishedFunnel(funnels);
+  const shownReach = reachable(shown, dateStarts(shown));
+  const stepLabel = (target: PathTarget) => (target === "end" ? "End" : String(shown.order.indexOf(target) + 1));
+  /** Dates whose circle opens this reel: its chosen reel, else the first that sells it. */
+  const datesOpening = (reelId: string) =>
+    (allDates ?? [])
+      .filter((e) => dateOpener(shown, e) === reelId)
+      .map((e) => new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+  const stops: PathStop[] = [
+    { id: "opening", kind: "opening", title: "Opening" },
+    ...shown.order.flatMap((id, i): PathStop[] => {
+      const reel = byId.get(id);
+      if (!reel) return [];
+      const detours = Object.entries(shown.paths[id] ?? {}) as [FunnelTrigger, PathTarget][];
+      const dates = datesOpening(id);
+      return [{
+        id,
+        kind: "reel",
+        n: i + 1,
+        title: reel.title,
+        thumb: thumbnailOf(reel.media),
+        ...(dates.length ? { date: dates.join(", ") } : {}),
+        ...(detours.length ? { notes: detours.map(([t, target]) => `${TRIGGER_LABELS[t]} → ${stepLabel(target)}`) } : {}),
+        ...(!shownReach.has(id) ? { unreachable: true } : {}),
+      }];
+    }),
+    { id: "end", kind: "end", title: `End: ${CTA_LABELS[shown.primaryCta]}` },
+  ];
+  const goTo = (stop: PathStop) =>
+    setGo((g) =>
+      stop.kind === "opening"
+        ? { key: g.key + 1 }
+        : stop.kind === "end"
+          ? { reelId: shown.order.at(-1), end: true, key: g.key + 1 }
+          : { reelId: stop.id, key: g.key + 1 }
+    );
+  const onScreen = moment.ended ? "end" : moment.reelId ?? "opening";
+
   if (wide) {
     return (
       <Studio
@@ -745,6 +793,8 @@ export default function ReelsEditor() {
         publication={draftPublication}
         go={go}
         onRestart={() => setGo((g) => ({ key: g.key + 1 }))}
+        onMoment={setMoment}
+        strip={shown.order.length > 0 ? <PathStrip stops={stops} current={onScreen} onGo={goTo} /> : undefined}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undo}
