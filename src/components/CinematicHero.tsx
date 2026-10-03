@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import BrandLogo, { wordmarkFont } from "@/components/BrandLogo";
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
-import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
+import { sceneMediaOf, thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
 
 // Specks of light drifting up through the glow: left %, bottom %, size px, seconds, delay.
 const MOTES: [number, number, number, number, number][] = [
@@ -15,17 +15,6 @@ const MOTES: [number, number, number, number, number][] = [
   [88, 30, 2, 19, 5],
   [36, 34, 2, 17, 11],
 ];
-
-/** What plays behind the title: the hero's own media, else the first reel's video, YouTube video or photo. */
-function sceneMedia(funnel: Funnel): ReelMedia | undefined {
-  if (funnel.cover.hero?.media) return funnel.cover.hero.media;
-  const media = funnel.reels.map((r) => r.media).filter(Boolean) as ReelMedia[];
-  return (
-    media.find((m) => m.kind === "video") ??
-    media.find((m) => m.kind === "youtube") ??
-    media.find((m) => m.kind === "image")
-  );
-}
 
 /**
  * The opening scene of a funnel link, like the first seconds of a trailer:
@@ -56,7 +45,7 @@ export default function CinematicHero({
 }) {
   const { brand, cover } = funnel;
   const hero = cover.hero;
-  const media = sceneMedia(funnel);
+  const media = sceneMediaOf(funnel);
   const full = Boolean(hero);
   const title = hero?.title ?? cover.heading;
   const tagline = hero?.tagline ?? cover.intro;

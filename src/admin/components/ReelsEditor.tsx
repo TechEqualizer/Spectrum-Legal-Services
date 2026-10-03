@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import HeroMediaCard from "@/admin/components/HeroMediaCard";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
 import ReelViewer from "@/components/ReelViewer";
 import {
@@ -15,11 +16,11 @@ import {
   type PathTarget,
 } from "@/admin/editor-model";
 import { useAdminBusiness } from "@/admin/AdminBusiness";
-import { clearDraft, loadDraft, saveDraft, useDraftSavedAt } from "@/admin/drafts";
+import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
 import { sampleFor, type ReelTotals } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import type { FunnelTrigger } from "@/data/reels";
-import { thumbnailOf } from "@/lib/media";
+import { sceneMediaOf, thumbnailOf } from "@/lib/media";
 
 
 const blankReel: EditorReel = {
@@ -36,6 +37,11 @@ function slugify(title: string, taken: Set<string>) {
   let slug = base;
   for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
   return slug;
+}
+
+/** For telling whether anything changed. Keeps "live background" (undefined) apart from "removed" (null). */
+function snapshotOf(reels: EditorReel[], funnels: EditorFunnel[], heroMedia: HeroMediaEdit) {
+  return JSON.stringify([reels, funnels, heroMedia === undefined ? "live" : heroMedia]);
 }
 
 /** Reels a visitor can reach from the funnel's starting points. */
@@ -63,6 +69,8 @@ export default function ReelsEditor() {
   const [initial] = useState(() => initialEditorState(business));
   const [library, setLibrary] = useState(initial.reels);
   const [funnels, setFunnels] = useState(initial.funnels);
+  // The opening screen's background (undefined: the live one).
+  const [heroMedia, setHeroMedia] = useState<HeroMediaEdit>(undefined);
   const [activeId, setActiveId] = useState(initial.funnels[0].id);
   // Sample results for the last 30 days, keyed by reel.
   const stats = new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t]));
@@ -88,10 +96,11 @@ export default function ReelsEditor() {
       if (draft) {
         setLibrary(draft.reels);
         setFunnels(draft.funnels);
+        setHeroMedia(draft.heroMedia);
         setActiveId((id) => (draft.funnels.some((f) => f.id === id) ? id : draft.funnels[0].id));
-        lastSaved.current = JSON.stringify([draft.reels, draft.funnels]);
+        lastSaved.current = snapshotOf(draft.reels, draft.funnels, draft.heroMedia);
       } else {
-        lastSaved.current = JSON.stringify([initial.reels, initial.funnels]);
+        lastSaved.current = snapshotOf(initial.reels, initial.funnels, undefined);
       }
       loaded.current = true;
     });
@@ -103,11 +112,11 @@ export default function ReelsEditor() {
   // Every change is saved as it happens.
   useEffect(() => {
     if (!loaded.current) return;
-    const snapshot = JSON.stringify([library, funnels]);
+    const snapshot = snapshotOf(library, funnels, heroMedia);
     if (snapshot === lastSaved.current) return;
     lastSaved.current = snapshot;
-    saveDraft(slug, library, funnels);
-  }, [slug, library, funnels]);
+    saveDraft(slug, { reels: library, funnels, heroMedia });
+  }, [slug, library, funnels, heroMedia]);
 
   // A short "Saved" note where the person is looking.
   useEffect(() => {
@@ -120,8 +129,9 @@ export default function ReelsEditor() {
     clearDraft(slug);
     setLibrary(initial.reels);
     setFunnels(initial.funnels);
+    setHeroMedia(undefined);
     setActiveId(initial.funnels[0].id);
-    lastSaved.current = JSON.stringify([initial.reels, initial.funnels]);
+    lastSaved.current = snapshotOf(initial.reels, initial.funnels, undefined);
     setToast("Back to the live reels");
   };
 
@@ -222,6 +232,16 @@ export default function ReelsEditor() {
           </button>
         </div>
       </div>
+
+      <HeroMediaCard
+        title={liveFunnel.cover.hero?.title ?? liveFunnel.cover.heading}
+        live={sceneMediaOf(liveFunnel)}
+        value={heroMedia}
+        onChange={(media, message) => {
+          setHeroMedia(media);
+          setToast(message);
+        }}
+      />
 
       {/* Funnels: containers with an entry trigger */}
       <section aria-labelledby="funnels-title">

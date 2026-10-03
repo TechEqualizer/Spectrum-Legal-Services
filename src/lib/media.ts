@@ -1,7 +1,18 @@
 // Reel media helpers shared by the funnel and the admin: reading pasted
 // links, and picking a thumbnail.
 
-import type { ReelMedia } from "@/data/funnel-types";
+import type { Funnel, ReelMedia } from "@/data/funnel-types";
+
+/** What plays behind the opening screen's title: the hero's own media, else the first reel's video, YouTube video or photo. */
+export function sceneMediaOf(funnel: Funnel): ReelMedia | undefined {
+  if (funnel.cover.hero?.media) return funnel.cover.hero.media;
+  const media = funnel.reels.map((r) => r.media).filter(Boolean) as ReelMedia[];
+  return (
+    media.find((m) => m.kind === "video") ??
+    media.find((m) => m.kind === "youtube") ??
+    media.find((m) => m.kind === "image")
+  );
+}
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
 

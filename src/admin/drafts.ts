@@ -4,8 +4,16 @@
 
 import { useSyncExternalStore } from "react";
 import type { EditorFunnel, EditorReel } from "@/admin/editor-model";
+import type { ReelMedia } from "@/data/funnel-types";
 
-export type Draft = { reels: EditorReel[]; funnels: EditorFunnel[]; savedAt: number };
+/**
+ * The opening screen's background: media to show, null for none (the
+ * brand glow), or undefined to keep the live one.
+ */
+export type HeroMediaEdit = ReelMedia | null | undefined;
+
+export type DraftData = { reels: EditorReel[]; funnels: EditorFunnel[]; heroMedia?: ReelMedia | null };
+export type Draft = DraftData & { savedAt: number };
 
 const draftKey = (business: string) => `admin_draft_${business}`;
 const UPLOAD_PREFIX = "upload:";
@@ -84,9 +92,9 @@ export function useDraftSavedAt(business: string): number | null {
   );
 }
 
-export function saveDraft(business: string, reels: EditorReel[], funnels: EditorFunnel[]): boolean {
+export function saveDraft(business: string, data: DraftData): boolean {
   // Upload links become references to the stored file.
-  const stored = mapStrings({ reels, funnels }, (s) =>
+  const stored = mapStrings(data, (s) =>
     s.startsWith("blob:") && uploadKeys.has(s) ? UPLOAD_PREFIX + uploadKeys.get(s) : s
   );
   try {
@@ -129,14 +137,23 @@ export async function loadDraft(business: string): Promise<Draft | null> {
     if (!s.startsWith(UPLOAD_PREFIX)) return s;
     return urls.get(s.slice(UPLOAD_PREFIX.length)) ?? "";
   });
-  // A file the browser no longer has: the reel goes back to "No video yet".
-  for (const reel of restored.reels) {
-    const media = reel.media;
-    if (media && "src" in media && !media.src) delete reel.media;
-    else if (media?.kind === "video") {
+  // A file the browser no longer has: the reel goes back to "No video yet",
+  // and the opening screen to its live background.
+  const usable = (media: ReelMedia | undefined) => {
+    if (media && "src" in media && !media.src) return undefined;
+    if (media?.kind === "video") {
       if (media.poster === "") delete media.poster;
       if (media.captions === "") delete media.captions;
     }
+    return media;
+  };
+  for (const reel of restored.reels) {
+    reel.media = usable(reel.media);
+    if (!reel.media) delete reel.media;
+  }
+  if (restored.heroMedia) {
+    restored.heroMedia = usable(restored.heroMedia);
+    if (!restored.heroMedia) delete restored.heroMedia;
   }
   return restored;
 }
