@@ -65,7 +65,7 @@ export default function FunnelExperience({ slug }: { slug: string }) {
       <button
         type="button"
         onClick={() => startAt(onSale ? reelFor(onSale.id) : entries[0])}
-        className="flex min-h-12 items-center gap-2 rounded-full bg-white pl-4 pr-5 font-semibold text-deep-navy shadow-lg shadow-black/30 transition hover:bg-white/90"
+        className="flex min-h-12 items-center gap-2 rounded-full bg-teal-accent pl-4 pr-5 font-semibold text-white shadow-lg shadow-black/40 transition hover:brightness-110"
       >
         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
         {hero.watchLabel ?? "Watch"}
@@ -224,7 +224,7 @@ function FunnelShell({ funnel, children }: { funnel: Funnel; children: React.Rea
   return (
     <main
       id="main-content"
-      className="min-h-dvh bg-deep-navy pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white"
+      className="min-h-dvh bg-deep-navy [color-scheme:dark] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white"
       style={funnel.brand.theme as React.CSSProperties}
     >
       {children}

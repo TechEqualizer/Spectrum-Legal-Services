@@ -29,7 +29,7 @@ function sceneMedia(funnel: Funnel): SceneMedia | undefined {
 /**
  * The opening scene of a funnel link, like the first seconds of a trailer:
  * footage (or a moving glow in the brand's colors) under film grain and a
- * vignette, black bars that open, then the title card. With a cover.hero it
+ * vignette fades up from black, then the title card comes up. With a cover.hero it
  * fills most of the screen and carries the buttons; without one it is a
  * shorter scene over the heading, and the choices follow right after.
  *
@@ -60,7 +60,7 @@ export default function CinematicHero({
   return (
     <div
       className={`relative isolate flex flex-col overflow-hidden ${
-        full ? "min-h-[80svh] short:min-h-0" : "min-h-[46svh] short:min-h-0"
+        full ? "cine-hero-full short:min-h-0" : "cine-hero-short short:min-h-0"
       }`}
     >
       <Scene media={media} paused={paused} />
@@ -106,9 +106,6 @@ export default function CinematicHero({
         </div>
       </div>
 
-      {/* Letterbox bars, open once the scene starts. */}
-      <div aria-hidden="true" className={`pointer-events-none absolute inset-x-0 top-0 z-20 h-[7svh] origin-top bg-black ${revealed ? "cine-bar-open" : ""}`} />
-      <div aria-hidden="true" className={`pointer-events-none absolute inset-x-0 bottom-0 z-20 h-[7svh] origin-bottom bg-black ${revealed ? "cine-bar-open" : ""}`} />
     </div>
   );
 }
@@ -127,6 +124,7 @@ function Scene({ media, paused }: { media?: SceneMedia; paused: boolean }) {
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-deep-navy">
+      <div className="cine-fade-in absolute inset-0">
       {media?.kind === "video" ? (
         <video
           ref={video}
@@ -147,7 +145,9 @@ function Scene({ media, paused }: { media?: SceneMedia; paused: boolean }) {
           {/* No footage yet: low sun, haze and light in the brand's colors. */}
           <div className="cine-wash absolute -left-1/4 top-1/3 h-[70%] w-[90%]" />
           <div className="absolute left-1/2 top-[36%] aspect-square w-[min(110vw,680px)] -translate-x-1/2 -translate-y-1/2">
-            <div className="cine-glow h-full w-full rounded-full" />
+            <div className="cine-sink h-full w-full">
+              <div className="cine-glow h-full w-full rounded-full" />
+            </div>
           </div>
           <div className="cine-flare absolute left-1/2 top-[36%] h-[2px] w-[min(160vw,1100px)] -translate-x-1/2" />
           {/* Below the horizon line is darker, so the sun looks like it's setting behind it. */}
@@ -162,6 +162,7 @@ function Scene({ media, paused }: { media?: SceneMedia; paused: boolean }) {
           ))}
         </>
       )}
+      </div>
       {/* Grain, vignette, and a fade into the page so the words always read. */}
       <div className="cine-grain absolute -inset-1/2 opacity-[0.14]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,transparent_35%,rgba(0,0,0,0.55)_100%)]" />

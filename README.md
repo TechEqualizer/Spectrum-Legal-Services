@@ -54,15 +54,15 @@ the reels at that topic.
 - **Share**: the end card's "Send to someone who got hurt" shares the link
   tagged `src=share`.
 - **Opening scene**: the top of the opening screen plays like the start of
-  a trailer: black bars open, then the title comes up out of a soft blur
+  a trailer: the scene fades up from black, then the title comes up out of a soft blur
   over film grain and a vignette. Behind it plays the funnel's first reel
   with a video (or photo), muted and slowly zooming; until there is one, a
   low sun and lens flare drawn in the brand's own colors. Set
   `cover.hero` (title, tagline, Watch label, optional `media`) for a
   full-height scene with Watch and Get tickets (or Call) buttons; without
   it, the heading sits over a shorter scene and the choices follow. People
-  who turn on "reduce motion" get a still scene
-  (`src/components/CinematicHero.tsx`).
+  who turn on "reduce motion" get a still scene, and a browser that skips
+  animations still shows every word (`src/components/CinematicHero.tsx`).
 - Funnels are listed in `src/data/funnels.ts`; each one's `slug` is its
   link. Any other `/f/...` path is a 404. Each funnel gets its own link
   preview image (`src/app/f/[slug]/opengraph-image.tsx`).
