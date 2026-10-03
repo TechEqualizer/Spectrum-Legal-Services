@@ -25,6 +25,14 @@ export function nextOnSale(funnel: Funnel, now: number) {
   return upcomingEvents(funnel, now).find((e) => e.status !== "sold_out");
 }
 
+/** The reel a date's circle opens: its chosen reel, else the first reel that sells it. */
+export function openingReel(funnel: Funnel, event: FunnelEvent): Reel | undefined {
+  return (
+    (event.reelId ? funnel.reels.find((r) => r.id === event.reelId) : undefined) ??
+    funnel.reels.find((r) => r.eventId === event.id)
+  );
+}
+
 export function eventOf(funnel: Funnel, reel: Reel) {
   return reel.eventId ? funnel.events?.find((e) => e.id === reel.eventId) : undefined;
 }

@@ -27,6 +27,8 @@ type ReelEditDialogProps = {
   /** What a reel can be about, and what to call that. */
   services: readonly string[];
   topicLabel: string;
+  /** The event's dates, for "Sells tickets for" (event funnels only). */
+  dates?: { id: string; label: string }[];
   onSave: (result: ReelEditResult) => void;
   onClose: () => void;
 };
@@ -42,7 +44,7 @@ const TRIGGERS: { id: FunnelTrigger; label: string }[] = [
   { id: "skipped", label: "When skipped" },
 ];
 
-export default function ReelEditDialog({ reel, funnel, library, services, topicLabel, onSave, onClose }: ReelEditDialogProps) {
+export default function ReelEditDialog({ reel, funnel, library, services, topicLabel, dates, onSave, onClose }: ReelEditDialogProps) {
   const id = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const isNew = reel.id === "";
@@ -52,6 +54,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
     practiceArea: reel.practiceArea,
     cta: reel.cta,
     emphasis: reel.emphasis ?? "builds",
+    eventId: reel.eventId ?? "",
   });
   const [media, setMedia] = useState<ReelMedia | undefined>(reel.media);
   const [paths, setPaths] = useState(funnel.paths[reel.id] ?? {});
@@ -85,6 +88,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
         practiceArea: draft.practiceArea,
         cta: draft.cta,
         emphasis: draft.emphasis === "builds" ? undefined : draft.emphasis,
+        eventId: draft.eventId || undefined,
         media,
       },
       paths,
@@ -136,6 +140,18 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
             <textarea className="form-input min-h-20 text-sm" maxLength={300} value={draft.summary} onChange={(e) => set({ summary: e.target.value })} />
           </label>
           <MediaPicker value={media} onChange={setMedia} />
+          {dates && (
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-deep-navy">Sells tickets for</span>
+              <select className="form-input text-sm" value={draft.eventId} onChange={(e) => set({ eventId: e.target.value })} aria-describedby={`${id}-event-help`}>
+                <option value="">No date: the next one on sale</option>
+                {dates.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+              </select>
+              <span id={`${id}-event-help`} className="mt-1 block text-xs text-gray-600">
+                Its Tickets button sells this date, and tapping the date on your opening screen can play it.
+              </span>
+            </label>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-semibold text-deep-navy">Main button</span>

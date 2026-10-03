@@ -199,6 +199,7 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
       if (!text(e.venue, 80, true) || !text(e.price, 30, true)) return `"${e.name}" has a venue or price that's too long.`;
       if (!isMediaUrl(e.ticketUrl) || (e.ticketUrl as string).startsWith("/")) return `"${e.name}" needs a ticket link starting with https://.`;
       if (e.status !== undefined && !STATUSES.includes(e.status as (typeof STATUSES)[number])) return `"${e.name}" has an unknown status.`;
+      if (e.reelId !== undefined && !(typeof e.reelId === "string" && ids.has(e.reelId))) return `"${e.name}" opens a reel that isn't in the funnel.`;
       eventIds.add(e.id);
       events.push({
         id: e.id,
@@ -208,6 +209,7 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
         ...(typeof e.venue === "string" && e.venue.trim() ? { venue: e.venue.trim() } : {}),
         ...(typeof e.price === "string" && e.price.trim() ? { price: e.price.trim() } : {}),
         ...(e.status ? { status: e.status as FunnelEvent["status"] } : {}),
+        ...(e.reelId ? { reelId: e.reelId as string } : {}),
       });
     }
     publication.events = events.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));

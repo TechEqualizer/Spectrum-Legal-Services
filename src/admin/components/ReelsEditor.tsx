@@ -19,7 +19,7 @@ import {
 import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { useAdminSession } from "@/admin/session";
 import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
-import { fetchLive, publicationKey, publish, takeDown, type EditorState, type LiveState } from "@/admin/publish";
+import { fetchLive, publicationKey, publish, publishedFunnel, takeDown, type EditorState, type LiveState } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { ScreenCopy } from "@/lib/publication";
 import { sampleFor, type ReelTotals } from "@/admin/sample-data";
@@ -42,6 +42,13 @@ function slugify(title: string, taken: Set<string>) {
   let slug = base;
   for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
   return slug;
+}
+
+/** A date without a chosen reel (it opens the first reel that sells it). */
+function withoutReel(event: FunnelEvent): FunnelEvent {
+  const copy = { ...event };
+  delete copy.reelId;
+  return copy;
 }
 
 /** For telling whether anything changed. Keeps "live background" (undefined) apart from "removed" (null). */
@@ -158,6 +165,18 @@ export default function ReelsEditor() {
 
   const current: EditorState = { reels: library, funnels, heroMedia, screen, events };
   const unpublished = Boolean(live) && publicationKey(current) !== publicationKey(live!);
+  // The event's dates, for linking reels ("Sells tickets for", and the chip on each row).
+  const allDates = events ?? liveFunnel.events;
+  const dateLabel = (e: FunnelEvent) =>
+    `${new Date(e.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}: ${e.name}`;
+  const dateOptions = allDates
+    ? [...allDates].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)).map((e) => ({ id: e.id, label: dateLabel(e) }))
+    : undefined;
+  const shortDateOf = (eventId?: string) => {
+    const e = eventId ? allDates?.find((d) => d.id === eventId) : undefined;
+    return e ? new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : undefined;
+  };
+
   const showBar = unpublished || Boolean(publishing) || Boolean(publishError);
   const screenEdited = Boolean(live) && JSON.stringify(screen ?? {}) !== JSON.stringify(live!.screen ?? {});
   // Same dates in any order count as unchanged.
@@ -239,8 +258,37 @@ export default function ReelsEditor() {
       else delete nextPaths[id];
       return { ...f, order: isNew ? [...f.order, id] : f.order, topics, paths: nextPaths };
     });
+    // A new reel made for a date (or given one) becomes what that date opens, unless it already opens another.
+    if (isNew && saved.eventId) {
+      setEvents((list) =>
+        (list ?? liveFunnel.events)?.map((e) => (e.id === saved.eventId && !e.reelId ? { ...e, reelId: id } : e))
+      );
+    }
     setEditing(null);
     setToast(isNew ? "Reel added" : "Reel saved");
+  };
+
+  /**
+   * Saves a date and links its reel: the chosen reel opens it and sells its
+   * tickets (moving it off any other date), or a new reel is started for it.
+   */
+  const saveDate = (event: FunnelEvent, choice: string, isNew: boolean) => {
+    const all = events ?? liveFunnel.events ?? [];
+    const saved: FunnelEvent = choice && choice !== "new" ? { ...withoutReel(event), reelId: choice } : withoutReel(event);
+    // A reel opens one date: the date it moved from falls back to its other reels.
+    const fix = (e: FunnelEvent) => (e.id === saved.id ? saved : choice && e.reelId === choice ? withoutReel(e) : e);
+    setEvents(isNew ? [...all.map(fix), saved] : all.map(fix));
+    if (choice && choice !== "new") {
+      setLibrary((reels) => reels.map((r) => (r.id === choice ? { ...r, eventId: saved.id } : r)));
+    }
+    if (choice === "new") {
+      // New reels go into the funnel that gets published.
+      setActiveId(publishedFunnel(funnels).id);
+      setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0], title: saved.name, eventId: saved.id });
+      setToast(isNew ? "Date added. Now add its reel" : "Date saved. Now add its reel");
+    } else {
+      setToast(isNew ? "Date added" : "Date saved");
+    }
   };
 
   const newFunnel = () => {
@@ -314,11 +362,15 @@ export default function ReelsEditor() {
       {liveFunnel.events && (
         <DatesCard
           events={events ?? liveFunnel.events}
+          reels={publishedFunnel(funnels)
+            .order.map((id) => byId.get(id))
+            .filter((r): r is EditorReel => Boolean(r))}
           edited={eventsEdited}
           onChange={(next, message, undo) => {
             setEvents(next);
             setToast(message, undo);
           }}
+          onSave={saveDate}
         />
       )}
 
@@ -381,6 +433,7 @@ export default function ReelsEditor() {
               if (!reel) return null;
               return (
                 <ReelRow
+                  date={shortDateOf(reel.eventId)}
                   stats={stats.get(id)}
                   key={id}
                   reel={reel}
@@ -564,6 +617,7 @@ export default function ReelsEditor() {
           library={library}
           services={liveFunnel.brand.services}
           topicLabel={business.terms.topic}
+          dates={dateOptions}
           onSave={save}
           onClose={() => setEditing(null)}
         />
@@ -573,6 +627,8 @@ export default function ReelsEditor() {
 }
 
 type ReelRowProps = {
+  /** The date this reel sells tickets for, e.g. "Oct 4". */
+  date?: string;
   stats: ReelTotals | undefined;
   reel: EditorReel;
   index: number;
@@ -595,7 +651,7 @@ const TRIGGER_LABELS: Record<FunnelTrigger, string> = {
   skipped: "Skipped",
 };
 
-function ReelRow({ stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
+function ReelRow({ date, stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
   const [over, setOver] = useState(false);
   const overrides = Object.entries(funnel.paths[reel.id] ?? {}) as [FunnelTrigger, PathTarget][];
   const cta = reel.cta === "funnel" ? funnel.primaryCta : reel.cta;
@@ -640,6 +696,7 @@ function ReelRow({ stats: s, reel, index, count, funnel, unreachable, dragging, 
             <Chip>{reel.practiceArea}</Chip>
             <Chip tone="teal">{CTA_LABELS[cta]}</Chip>
             {topic && <Chip tone="navy">Topic: {topic}</Chip>}
+            {date && <Chip tone="teal">{date}</Chip>}
             {reel.emphasis === "quiet" && <Chip>Quiet</Chip>}
             {reel.emphasis === "bold" && <Chip tone="navy">Bold</Chip>}
             {!reel.media && <Chip tone="amber">No video yet</Chip>}

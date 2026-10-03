@@ -38,6 +38,11 @@ export type FunnelEvent = {
   price?: string;
   ticketUrl: string;
   status?: "on_sale" | "few_left" | "sold_out";
+  /**
+   * The reel this date's circle opens. Without it (or if that reel is gone),
+   * the first reel whose eventId is this date.
+   */
+  reelId?: string;
 };
 
 export type ReelEmphasis = "quiet" | "builds" | "bold";

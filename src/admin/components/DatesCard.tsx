@@ -25,15 +25,25 @@ const when = (iso: string) =>
  * The event's dates, as rows: tap one to edit it, or add the next one.
  * Each date shows on the opening screen as a story circle.
  */
+/** A reel a date can open with, in funnel order. */
+export type DateReel = { id: string; title: string; eventId?: string };
+/** Which reel a date opens: a reel id, "" for the first reel that sells it, or "new" to make one. */
+export type ReelChoice = string;
+
 export default function DatesCard({
   events,
+  reels,
   edited,
   onChange,
+  onSave,
 }: {
   events: FunnelEvent[];
+  reels: DateReel[];
   /** Differs from what's live. */
   edited: boolean;
   onChange: (events: FunnelEvent[], message: string, undo?: () => void) => void;
+  /** Saves a date and links its reel. */
+  onSave: (event: FunnelEvent, reel: ReelChoice, isNew: boolean) => void;
 }) {
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
@@ -42,9 +52,11 @@ export default function DatesCard({
   const upcoming = sorted.filter((e) => !isOver(e, now));
   const past = sorted.filter((e) => isOver(e, now)).reverse();
 
-  const save = (event: FunnelEvent) => {
-    const exists = events.some((e) => e.id === event.id);
-    onChange(exists ? events.map((e) => (e.id === event.id ? event : e)) : [...events, event], exists ? "Date saved" : "Date added");
+  /** The reel a date opens now: its chosen one, else the first reel that sells it. */
+  const opener = (e: FunnelEvent) =>
+    (e.reelId ? reels.find((r) => r.id === e.reelId) : undefined) ?? reels.find((r) => r.eventId === e.id);
+  const save = (event: FunnelEvent, reel: ReelChoice) => {
+    onSave(event, reel, !events.some((e) => e.id === event.id));
     setEditing(null);
   };
   const remove = (event: FunnelEvent) => {
@@ -77,7 +89,7 @@ export default function DatesCard({
       ) : (
         <ul role="list" className="divide-y divide-gray-100">
           {upcoming.map((e) => (
-            <DateRow key={e.id} event={e} onClick={() => setEditing({ event: e, isNew: false })} />
+            <DateRow key={e.id} event={e} reel={opener(e)?.title} onClick={() => setEditing({ event: e, isNew: false })} />
           ))}
         </ul>
       )}
@@ -90,7 +102,7 @@ export default function DatesCard({
           </summary>
           <ul role="list" className="divide-y divide-gray-100 border-t border-gray-100">
             {past.map((e) => (
-              <DateRow key={e.id} event={e} past onClick={() => setEditing({ event: e, isNew: false })} />
+              <DateRow key={e.id} event={e} reel={opener(e)?.title} past onClick={() => setEditing({ event: e, isNew: false })} />
             ))}
           </ul>
         </details>
@@ -100,6 +112,9 @@ export default function DatesCard({
         <DateSheet
           event={editing.event}
           isNew={editing.isNew}
+          reels={reels}
+          events={events}
+          initialReel={editing.isNew ? "new" : opener(editing.event)?.id ?? ""}
           onSave={save}
           onDelete={editing.isNew ? undefined : () => remove(editing.event)}
           onClose={() => setEditing(null)}
@@ -126,7 +141,7 @@ function newDate(sorted: FunnelEvent[]): FunnelEvent {
   };
 }
 
-function DateRow({ event, past = false, onClick }: { event: FunnelEvent; past?: boolean; onClick: () => void }) {
+function DateRow({ event, reel, past = false, onClick }: { event: FunnelEvent; reel?: string; past?: boolean; onClick: () => void }) {
   const d = new Date(event.startsAt);
   const status = past ? "Past" : STATUS.find((s) => s.id === (event.status ?? "on_sale"))!.label;
   return (
@@ -142,6 +157,11 @@ function DateRow({ event, past = false, onClick }: { event: FunnelEvent; past?: 
             {when(event.startsAt)}
             {event.price ? ` · ${event.price}` : ""}
           </span>
+          {!past && (
+            <span className={`block truncate text-xs ${reel ? "text-gray-500" : "font-semibold text-amber-800"}`}>
+              {reel ? <><span aria-hidden="true">&#9654; </span>{reel}</> : "No reel yet"}
+            </span>
+          )}
         </span>
         <span
           className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -159,13 +179,19 @@ function DateRow({ event, past = false, onClick }: { event: FunnelEvent; past?: 
 function DateSheet({
   event,
   isNew,
+  reels,
+  events,
+  initialReel,
   onSave,
   onDelete,
   onClose,
 }: {
   event: FunnelEvent;
   isNew: boolean;
-  onSave: (event: FunnelEvent) => void;
+  reels: DateReel[];
+  events: FunnelEvent[];
+  initialReel: ReelChoice;
+  onSave: (event: FunnelEvent, reel: ReelChoice) => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
@@ -179,7 +205,12 @@ function DateSheet({
   const [price, setPrice] = useState(event.price ?? "");
   const [ticketUrl, setTicketUrl] = useState(event.ticketUrl);
   const [status, setStatus] = useState<Status>(event.status ?? "on_sale");
+  const [reel, setReel] = useState<ReelChoice>(initialReel);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Where the chosen reel sells tickets now, if that's another date (choosing it moves it here).
+  const chosen = reels.find((r) => r.id === reel);
+  const movesFrom = chosen?.eventId && chosen.eventId !== event.id ? events.find((e) => e.id === chosen.eventId) : undefined;
+  const shortDate = (e: FunnelEvent) => new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   useEffect(() => ref.current?.showModal(), []);
 
   const submit = (e: React.FormEvent) => {
@@ -196,6 +227,7 @@ function DateSheet({
     setErrors(problems);
     if (Object.keys(problems).length) return;
     onSave({
+      ...(event.reelId ? { reelId: event.reelId } : {}),
       id: event.id,
       name: name.trim(),
       startsAt: start.toISOString(),
@@ -203,7 +235,7 @@ function DateSheet({
       ...(venue.trim() ? { venue: venue.trim() } : {}),
       ...(price.trim() ? { price: price.trim() } : {}),
       ...(status !== "on_sale" ? { status } : {}),
-    });
+    }, reel);
   };
 
   const field = "mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-charcoal focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-accent";
@@ -272,6 +304,32 @@ function DateSheet({
                 aria-describedby={errors.ticketUrl ? `${id}-ticketUrl-error` : undefined}
               />
               {err("ticketUrl")}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor={`${id}-reel`} className="mb-1.5 block px-1 text-xs font-semibold uppercase tracking-wider text-gray-500">Opens with</label>
+            <div className="rounded-xl bg-white px-4 py-3">
+              <select id={`${id}-reel`} className={field.replace("mt-1 ", "")} value={reel} onChange={(e) => setReel(e.target.value)} aria-describedby={`${id}-reel-help`}>
+                {!isNew && <option value="">First reel for this date</option>}
+                <option value="new">+ New reel for this date</option>
+                {reels.map((r, i) => {
+                  const other = r.eventId && r.eventId !== event.id ? events.find((e) => e.id === r.eventId) : undefined;
+                  return (
+                    <option key={r.id} value={r.id}>
+                      {i + 1}. {r.title}
+                      {other ? ` (now ${shortDate(other)})` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+              <p id={`${id}-reel-help`} className="mt-1.5 text-xs text-gray-500">
+                {reel === "new"
+                  ? "After saving, add its video and title. It plays when someone taps this date."
+                  : movesFrom
+                    ? `Moves this reel from ${shortDate(movesFrom)} to this date. Its Tickets button sells this date.`
+                    : "Plays when someone taps this date. Its Tickets button sells this date."}
+              </p>
             </div>
           </div>
 
