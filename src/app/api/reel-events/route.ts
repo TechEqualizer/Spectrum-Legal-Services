@@ -1,4 +1,4 @@
-import { getFunnelById } from "@/data/funnels";
+import { getLiveFunnelById } from "@/lib/server/publications";
 import { funnelReel } from "@/data/reels";
 import type { ReelEvent } from "@/lib/reel-tracking";
 import { callRpc } from "@/lib/server/supabase";
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     unknown
   >;
   // Sample funnels never log anything.
-  const funnel = typeof funnelId === "string" ? getFunnelById(funnelId) : undefined;
+  const funnel = typeof funnelId === "string" ? await getLiveFunnelById(funnelId) : undefined;
   if (
     typeof visitorId !== "string" ||
     !UUID_PATTERN.test(visitorId) ||

@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import { businesses, type AdminBusiness } from "@/admin/business";
+import PasswordSheet from "@/admin/components/PasswordSheet";
+import { mayEdit, useAdminSession } from "@/admin/session";
 
 // Which business the admin preview shows. Remembered in this browser only,
 // as a convenience; it falls back to the first business.
@@ -26,11 +28,16 @@ function subscribe(onChange: () => void) {
   };
 }
 
-const firstSlug = businesses[0].funnel.slug;
+/** The businesses this admin may edit. */
+export function useAdminBusinesses(): AdminBusiness[] {
+  const session = useAdminSession();
+  return businesses.filter((b) => mayEdit(session, b.funnel.slug));
+}
 
 export function useAdminBusiness(): AdminBusiness {
-  const slug = useSyncExternalStore(subscribe, read, () => firstSlug) ?? firstSlug;
-  return businesses.find((b) => b.funnel.slug === slug) ?? businesses[0];
+  const allowed = useAdminBusinesses();
+  const slug = useSyncExternalStore(subscribe, read, () => null);
+  return allowed.find((b) => b.funnel.slug === slug) ?? allowed[0] ?? businesses[0];
 }
 
 export function selectAdminBusiness(slug: string) {
@@ -56,6 +63,7 @@ export function AdminFrame({
 }) {
   const business = useAdminBusiness();
   const { funnel } = business;
+  const session = useAdminSession();
   return (
     <div
       className="min-h-screen bg-soft-gray text-charcoal lg:flex"
@@ -64,8 +72,8 @@ export function AdminFrame({
       {nav}
       <div className="min-w-0 flex-1">
         <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 md:px-8 md:text-left">
-          <strong>Sample data.</strong> Your reel edits save in this browser; the
-          live link updates once the admin has a login.
+          <strong>Results and leads are sample data.</strong> Reel edits save as
+          you go; Publish puts them on your live link.
           {funnel.sample && <> {funnel.brand.name} is a sample business.</>}
         </p>
         <main
@@ -75,6 +83,7 @@ export function AdminFrame({
         >
           {children}
         </main>
+        {session.mustChangePassword && <PasswordSheet firstTime />}
       </div>
     </div>
   );

@@ -146,6 +146,12 @@ export type Funnel = {
     /** Short labels for the entry reels, shown as "What happened?" choices. */
     entryLabels: Record<string, string>;
     /**
+     * What plays behind the opening screen's title, overriding the default
+     * (hero.media, else the first reel's media). null shows none: the
+     * brand-color glow. Set by the admin's opening-screen editor.
+     */
+    backdrop?: ReelMedia | null;
+    /**
      * A full-height opening scene above the choices, like a film's title
      * card: the title and tagline over footage, with Watch and Get tickets
      * (or Call) buttons. Without it, the heading and intro sit over a

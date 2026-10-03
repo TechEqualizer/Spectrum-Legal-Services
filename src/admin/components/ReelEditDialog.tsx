@@ -77,6 +77,8 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
     if (!draft.title.trim()) return setError("Give the reel a title.");
     onSave({
       reel: {
+        // Keeps what this dialog doesn't edit (the reel's event, badge, length).
+        ...reel,
         id: reel.id,
         title: draft.title.trim(),
         summary: draft.summary.trim(),

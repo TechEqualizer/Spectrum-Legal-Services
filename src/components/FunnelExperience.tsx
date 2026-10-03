@@ -1,12 +1,13 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import CinematicHero from "@/components/CinematicHero";
 import ReelViewer from "@/components/ReelViewer";
 import { site } from "@/config/site";
 import type { Funnel } from "@/data/funnel-types";
 import { getFunnelBySlug } from "@/data/funnels";
+import { applyPublication, type Publication } from "@/lib/publication";
 import { funnelReel } from "@/data/reels";
 import { eventChip, formatEventDate, isOver, nextOnSale, ticketHref, upcomingEvents } from "@/lib/events";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
@@ -17,8 +18,8 @@ import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
  * choice starts the reels at that topic. ?start=<reel id> skips straight to
  * a reel, which is how follow-up texts send someone their next video.
  */
-export default function FunnelExperience({ slug }: { slug: string }) {
-  const funnel = getFunnelBySlug(slug)!;
+export default function FunnelExperience({ slug, publication }: { slug: string; publication: Publication | null }) {
+  const funnel = useMemo(() => applyPublication(getFunnelBySlug(slug)!, publication), [slug, publication]);
   const { brand } = funnel;
   const params = useSearchParams();
   const start = params.get("start");
@@ -266,8 +267,8 @@ function ChoiceButton({ onClick, children }: { onClick: () => void; children: Re
 }
 
 /** Shown while the page loads, before the topic choices can be used. */
-export function FunnelSplash({ slug }: { slug: string }) {
-  const funnel = getFunnelBySlug(slug)!;
+export function FunnelSplash({ slug, publication }: { slug: string; publication: Publication | null }) {
+  const funnel = applyPublication(getFunnelBySlug(slug)!, publication);
   return (
     <FunnelShell funnel={funnel}>
       <FunnelCover funnel={funnel} revealed={false} />

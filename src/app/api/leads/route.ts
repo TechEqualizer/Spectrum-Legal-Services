@@ -1,7 +1,6 @@
 import { after } from "next/server";
 import { site } from "@/config/site";
 import type { Funnel } from "@/data/funnel-types";
-import { getFunnelById } from "@/data/funnels";
 import { funnelReel, getReel } from "@/data/reels";
 import {
   isCaseType,
@@ -12,6 +11,7 @@ import {
   type LeadIntent,
   type LeadSource,
 } from "@/lib/leads";
+import { getLiveFunnelById } from "@/lib/server/publications";
 import { callRpc } from "@/lib/server/supabase";
 import { normalizeSourceTag, sourceLabel } from "@/lib/source-tag";
 
@@ -37,15 +37,13 @@ type ParsedLead = { lead: LeadInput; funnel?: Funnel };
 // Returns the cleaned lead, or a message describing the first invalid field.
 // The website forms ask for an email; a funnel asks for a mobile number,
 // since its follow-ups are a call or a text.
-function parseLead(body: Record<string, unknown>): ParsedLead | string {
+// `liveFunnel` is the funnel named by body.funnelId, as published.
+function parseLead(body: Record<string, unknown>, liveFunnel: Funnel | undefined): ParsedLead | string {
   const { source, name, caseType } = body;
   if (typeof source !== "string" || !SOURCES.includes(source as LeadSource)) {
     return "Unknown form";
   }
-  const funnel =
-    source === "funnel" && typeof body.funnelId === "string"
-      ? getFunnelById(body.funnelId)
-      : undefined;
+  const funnel = source === "funnel" ? liveFunnel : undefined;
   if (source === "funnel" && !funnel) return "Unknown form";
   const intent = body.intent ?? "book";
   if (
@@ -198,7 +196,11 @@ export async function POST(request: Request) {
     return Response.json({ ok: true }, { status: 201 });
   }
 
-  const parsed = parseLead(fields);
+  const liveFunnel =
+    fields.source === "funnel" && typeof fields.funnelId === "string"
+      ? await getLiveFunnelById(fields.funnelId)
+      : undefined;
+  const parsed = parseLead(fields, liveFunnel);
   if (typeof parsed === "string") {
     return Response.json({ error: parsed }, { status: 400 });
   }
