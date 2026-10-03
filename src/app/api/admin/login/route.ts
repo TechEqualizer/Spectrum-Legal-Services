@@ -19,8 +19,8 @@ export async function POST(request: Request) {
   }
 
   const tokens = await signInWithPassword(email, password);
-  if (tokens === "unavailable") {
-    return NextResponse.json({ error: "Sign-in isn't available right now. Try again in a minute." }, { status: 503 });
+  if (typeof tokens === "object" && "problem" in tokens) {
+    return NextResponse.json({ error: `Sign-in isn't working on this site. ${tokens.problem}` }, { status: 503 });
   }
   if (tokens === "invalid") {
     return NextResponse.json({ error: "That email and password don't match." }, { status: 401 });
