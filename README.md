@@ -251,18 +251,24 @@ business's colors. It is not linked from the public site and is marked
   `ANTHROPIC_API_KEY` (`/api/admin/import-event`, `src/lib/server/flyer-import.ts`);
   without it the sheet says so. QR codes aren't read: paste those ticket
   links.
-- **Match your flyer's look**: a flyer photo or PDF also gives a look (five
-  brand colors and a title typeface from a vetted set: classic serif,
-  fashion serif, engraved capitals, bold condensed, modern sans;
-  `src/lib/look.ts`, `src/components/lookFonts.ts`). The import sheet
-  previews it; **Use this look** applies it, with Undo, optionally with
-  **Flyer as the background**: the flyer, sharp, under the logo, over a
-  blurred copy of itself (`fit: "poster"`). Colors are adjusted to stay
-  readable (white on the background and buttons, highlights on the
-  background, dark text on light sheets); a light accent such as gold keeps
-  its color and gets dark button words (`--on-accent`). The opening-screen
-  card shows the look, with **Original look** to go back. It publishes with
-  everything else and recolors the link, the reels and the browser bar.
+- **Match your flyer's style**: a flyer photo or PDF also gives three
+  ready-made styles (True to flyer, Bold, Elegant: five brand colors and a
+  title typeface each), plus the flyer's own colors. The import sheet shows
+  them in a segmented control with a preview; **Use this style** applies one
+  (with Undo), optionally with the flyer as the background. The flyer is kept
+  with the style (`look.flyer`), so it never has to be uploaded again.
+- **Style** (Opening screen card): one sheet with a live preview of the
+  opening screen (logo, title, date circles, both buttons) that updates as
+  you tap. **Suggested** styles and **Original**; **Colors** (Background,
+  Buttons, Highlights) picked from the flyer's own swatches, with
+  **Shuffle** for another good pairing; **Title** samples in all five
+  typefaces (classic serif, fashion serif, engraved capitals, bold
+  condensed, modern sans); **Background**: Flyer (sharp over a blur of
+  itself), Blurred (its colors only), or Glow. Cancel changes nothing; Done
+  saves with Undo. Colors are kept readable automatically, and the sheet
+  says when a pick was adjusted; a light accent such as gold keeps its color
+  and gets dark button words (`--on-accent`). `src/lib/look.ts`,
+  `src/admin/components/StyleSheet.tsx`, `src/components/lookFonts.ts`.
 - **One upcoming date**: the opening screen shows a single event card
   (day, time, venue, price, status; tap to watch) instead of a row of one
   circle, with **Add to calendar** (`/f/<slug>/calendar/<event id>`, an

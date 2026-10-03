@@ -55,8 +55,12 @@ export type ReelMedia =
   /** A YouTube video or Short, by its 11-character id. */
   | { kind: "youtube"; id: string }
   /** A photo, shown for a few seconds like a story. */
-  /** fit "poster": the whole picture, sharp, over a blurred copy of itself (for a flyer behind the opening screen). */
-  | { kind: "image"; src: string; fit?: "poster" };
+  /**
+   * fit, for a flyer behind the opening screen: "poster" shows the whole
+   * picture, sharp, over a blurred copy of itself; "blur" only the blurred
+   * copy, for its colors without its words.
+   */
+  | { kind: "image"; src: string; fit?: "poster" | "blur" };
 
 export type FunnelTrigger = "completed" | "skipped";
 

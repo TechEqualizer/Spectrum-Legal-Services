@@ -190,11 +190,12 @@ export default function ReelsEditor() {
   const lookEdited = Boolean(live) && JSON.stringify(look ?? null) !== JSON.stringify(live!.look ?? null);
 
   /** A look matched to a flyer, optionally with the flyer behind the opening screen. Undo puts both back. */
-  const applyLook = (next: Look, flyer?: string) => {
+  const applyLook = (next: Look, flyer?: string, asBackground = false) => {
     const before = { look, heroMedia };
-    setLook(next);
-    if (flyer) setHeroMedia({ kind: "image", src: flyer, fit: "poster" });
-    setToast(flyer ? "Look and background matched to your flyer" : "Look matched to your flyer", () => {
+    // The flyer stays with the look, so Style can put it behind the title later.
+    setLook(flyer ? { ...next, flyer } : next);
+    if (flyer && asBackground) setHeroMedia({ kind: "image", src: flyer, fit: "poster" });
+    setToast(flyer && asBackground ? "Look and background matched to your flyer" : "Look matched to your flyer", () => {
       setLook(before.look);
       setHeroMedia(before.heroMedia);
       setToast("Look put back");
@@ -370,12 +371,14 @@ export default function ReelsEditor() {
         screen={screen}
         look={look}
         edited={heroEdited || screenEdited || lookEdited}
-        onResetLook={() => {
-          const before = look;
-          setLook(undefined);
-          setToast("Original look", () => {
-            setLook(before);
-            setToast("Look put back");
+        onStyle={(nextLook, media) => {
+          const before = { look, heroMedia };
+          setLook(nextLook);
+          setHeroMedia(media);
+          setToast(nextLook ? "Style saved" : "Original style", () => {
+            setLook(before.look);
+            setHeroMedia(before.heroMedia);
+            setToast("Style put back");
           });
         }}
         onChange={(change, message, undo) => {

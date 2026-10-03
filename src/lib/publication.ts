@@ -106,7 +106,7 @@ function checkMedia(m: unknown): string | null {
   if (!isObject(m)) return "media must be an object";
   if (m.kind === "youtube") return typeof m.id === "string" && YOUTUBE_ID.test(m.id) ? null : "bad YouTube id";
   if (m.kind === "image") {
-    if (m.fit !== undefined && m.fit !== "poster") return "unknown photo fit";
+    if (m.fit !== undefined && m.fit !== "poster" && m.fit !== "blur") return "unknown photo fit";
     return isMediaUrl(m.src) ? null : "photo needs an https link";
   }
   if (m.kind === "video") {
@@ -225,7 +225,7 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
   }
 
   if (input.look !== undefined) {
-    const look = parseLook(input.look);
+    const look = parseLook(input.look, (v) => isMediaUrl(v) && !String(v).startsWith("/"));
     if (!look) return "The look's colors or typeface aren't valid.";
     publication.look = look;
   }
