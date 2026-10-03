@@ -11,6 +11,8 @@ type FunnelLeadSheetProps = {
   intent: LeadIntent;
   /** The reel on screen when the visitor tapped the button. */
   reel: Reel;
+  /** Words for this sheet instead of the brand's (e.g. a sold-out date's waitlist). */
+  copy?: { heading: string; intro: string; submit: string };
   onClose: () => void;
 };
 
@@ -18,7 +20,7 @@ type FunnelLeadSheetProps = {
  * The booking step inside the funnel: a short sheet over the reel, so
  * visitors never leave the videos to fill in a website form.
  */
-export default function FunnelLeadSheet({ funnel, intent, reel, onClose }: FunnelLeadSheetProps) {
+export default function FunnelLeadSheet({ funnel, intent, reel, copy, onClose }: FunnelLeadSheetProps) {
   const id = useId();
   const firstField = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -37,7 +39,7 @@ export default function FunnelLeadSheet({ funnel, intent, reel, onClose }: Funne
 
   const { brand } = funnel;
   const textLater = intent === "text_later";
-  const text = textLater ? brand.copy.textLater : brand.copy.book;
+  const text = copy ?? (textLater ? brand.copy.textLater : brand.copy.book);
   // Nothing is sent from the concept site or a sample funnel.
   const simulated = site.demoMode || Boolean(funnel.sample);
 

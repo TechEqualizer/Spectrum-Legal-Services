@@ -35,6 +35,7 @@ const brand: FunnelBrand = {
   smsConsent:
     "I agree that Golden Hour Sundays may text me at this number about presales and upcoming events. Up to 4 messages a month. Msg & data rates may apply. Reply STOP to opt out.",
   seriesLabel: "Golden Hour · Sundays",
+  ageLimit: "21+",
   disclaimer: "21+ with ID. Lineups and set times can change.",
   footer: "21+ with ID. Tickets are sold by our ticketing partner. Lineups and set times can change.",
   copy: {

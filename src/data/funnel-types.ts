@@ -87,6 +87,8 @@ export type FunnelBrand = {
   handle?: string;
   /** Two short lines beside the logo. */
   byline?: [string, string];
+  /** Who can come, e.g. "21+", shown with the date on sale beside the tickets button. */
+  ageLimit?: string;
   /** Optional for event organizers; without it, Call buttons are hidden. */
   phone?: { display: string; href: string };
   theme?: FunnelTheme;

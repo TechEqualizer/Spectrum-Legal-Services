@@ -269,6 +269,14 @@ business's colors. It is not linked from the public site and is marked
   says when a pick was adjusted; a light accent such as gold keeps its color
   and gets dark button words (`--on-accent`). `src/lib/look.ts`,
   `src/admin/components/StyleSheet.tsx`, `src/components/lookFonts.ts`.
+- **Selling the next date** (several dates): when the next date on sale starts
+  within 48 hours, or is "Few left", **Tickets** is the main button (orange,
+  shimmering) and says which date ("Tickets · Sun, Oct 4"); Watch steps back.
+  Under the buttons, one line says what it buys: date, time, price and the
+  age limit (`brand.ageLimit`, e.g. "21+"). Sold-out dates come after the
+  dates on sale, dimmed and marked "Waitlist"; their reels lead with
+  **Join the waitlist** (a waitlist sheet) and offer the next date by name
+  ("Get Oct 4") instead of silently selling it.
 - **One upcoming date**: the opening screen shows a single event card
   (day, time, venue, price, status; tap to watch) instead of a row of one
   circle, with **Add to calendar** (`/f/<slug>/calendar/<event id>`, an
