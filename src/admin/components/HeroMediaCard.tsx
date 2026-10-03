@@ -21,6 +21,7 @@ export default function HeroMediaCard({
   title,
   live,
   value,
+  edited = false,
   onChange,
 }: {
   /** The opening screen's title, for the preview. */
@@ -28,6 +29,8 @@ export default function HeroMediaCard({
   /** What the live link shows now. */
   live: ReelMedia | undefined;
   value: HeroMediaEdit;
+  /** Differs from what's live. */
+  edited?: boolean;
   onChange: (media: HeroMediaEdit, message: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -48,7 +51,7 @@ export default function HeroMediaCard({
         <h2 id="hero-media-title" className="font-bold text-deep-navy">Opening screen</h2>
         <p className="text-sm text-gray-600">
           {shown ? KIND_LABELS[shown.kind] : "No background: your brand colors"}
-          {value === undefined ? "" : " (edited)"}
+          {edited && <span className="font-semibold text-amber-800"> &middot; not published</span>}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
           <button

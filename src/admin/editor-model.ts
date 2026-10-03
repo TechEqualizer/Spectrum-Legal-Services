@@ -1,4 +1,4 @@
-// The reel editor's model (admin preview only; nothing is saved).
+// The reel editor's model, also used to build published funnel links.
 //
 // A funnel is an ordered list of reels. Every reel goes to the next one in
 // order unless an override says otherwise, so a simple funnel needs no
@@ -59,7 +59,7 @@ export type EditorFunnel = {
 
 /** The reel shown after `reelId`, or null for the end card. */
 export function resolveNext(
-  funnel: EditorFunnel,
+  funnel: Pick<EditorFunnel, "order" | "paths">,
   reelId: string,
   trigger: FunnelTrigger
 ): string | null {
@@ -148,10 +148,14 @@ export function removeFromFunnel(funnel: EditorFunnel, reelId: string): EditorFu
 }
 
 /**
- * The editor's funnel as a playable funnel, for previewing edits in the real
- * reel viewer. Marked as a sample, so nothing is tracked or sent.
+ * A live funnel with an editor funnel's reels and paths: what Preview plays,
+ * and what a published funnel link shows.
  */
-export function toPreviewFunnel(live: Funnel, editor: EditorFunnel, library: EditorReel[]): Funnel {
+export function withEdits(
+  live: Funnel,
+  editor: Pick<EditorFunnel, "order" | "topics" | "paths" | "primaryCta">,
+  library: EditorReel[]
+): Funnel {
   const reels = editor.order
     .map((id) => library.find((r) => r.id === id))
     .filter((r): r is EditorReel => Boolean(r));
@@ -163,14 +167,26 @@ export function toPreviewFunnel(live: Funnel, editor: EditorFunnel, library: Edi
     };
   }
   const topics = Object.keys(editor.topics).filter((id) => editor.order.includes(id));
+  // Keep the live starting points that still exist (event funnels start from their dates).
+  const liveEntries = live.entryReelIds.filter((id) => editor.order.includes(id));
   return {
     ...live,
-    id: `${live.id}-preview`,
-    sample: { notice: "Admin preview: nothing is tracked or sent." },
     primaryCta: editor.primaryCta,
     reels,
     links,
-    entryReelIds: topics.length ? topics : editor.order.slice(0, 1),
+    entryReelIds: topics.length ? topics : liveEntries.length ? liveEntries : editor.order.slice(0, 1),
     cover: { ...live.cover, entryLabels: editor.topics },
+  };
+}
+
+/**
+ * The editor's funnel as a playable funnel, for previewing edits in the real
+ * reel viewer. Marked as a sample, so nothing is tracked or sent.
+ */
+export function toPreviewFunnel(live: Funnel, editor: EditorFunnel, library: EditorReel[]): Funnel {
+  return {
+    ...withEdits(live, editor, library),
+    id: `${live.id}-preview`,
+    sample: { notice: "Admin preview: nothing is tracked or sent." },
   };
 }

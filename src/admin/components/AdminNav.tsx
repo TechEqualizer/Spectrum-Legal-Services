@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { selectAdminBusiness, useAdminBusiness } from "@/admin/AdminBusiness";
-import { businesses } from "@/admin/business";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses } from "@/admin/AdminBusiness";
+import PasswordSheet from "@/admin/components/PasswordSheet";
+import { useAdminSession } from "@/admin/session";
 import BrandLogo from "@/components/BrandLogo";
 
 // Five places at most, most used first, in a business owner's words
@@ -19,6 +21,7 @@ const links = [
 export default function AdminNav() {
   const pathname = usePathname();
   const { funnel } = useAdminBusiness();
+  const businesses = useAdminBusinesses();
   return (
     <nav
       className="bg-deep-navy text-white lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:flex-shrink-0"
@@ -34,8 +37,9 @@ export default function AdminNav() {
         </Link>
         <div className="lg:mt-5">
           <p className="text-[11px] font-bold uppercase tracking-widest text-sky-accent">
-            Reel funnel admin
+            Admin
           </p>
+          {businesses.length > 1 && (<>
           <label htmlFor="admin-business" className="sr-only">Business</label>
           <select
             id="admin-business"
@@ -49,7 +53,10 @@ export default function AdminNav() {
               </option>
             ))}
           </select>
+          </>)}
+          {businesses.length <= 1 && <p className="mt-1 text-sm font-semibold">{funnel.brand.name}</p>}
         </div>
+        <Account />
       </div>
       {/* Phones: a bottom tab bar, every place visible and in thumb reach. Desktop: the sidebar. */}
       <ul
@@ -91,5 +98,38 @@ export default function AdminNav() {
         })}
       </ul>
     </nav>
+  );
+}
+
+/** Who's signed in, with Change password and Sign out. */
+function Account() {
+  const { email } = useAdminSession();
+  const router = useRouter();
+  const [changing, setChanging] = useState(false);
+  const signOut = async () => {
+    await fetch("/api/admin/logout", { method: "POST" }).catch(() => null);
+    router.replace("/admin/login");
+    router.refresh();
+  };
+  return (
+    <details className="group relative lg:mt-4">
+      <summary
+        aria-label={`Account: ${email}`}
+        className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full bg-white/10 text-sm font-bold uppercase text-white hover:bg-white/20 lg:h-auto lg:w-full lg:justify-start lg:gap-2 lg:rounded-md lg:bg-transparent lg:px-0 lg:text-xs lg:font-semibold lg:normal-case lg:text-gray-300"
+      >
+        <span aria-hidden="true" className="lg:flex lg:h-7 lg:w-7 lg:items-center lg:justify-center lg:rounded-full lg:bg-white/10 lg:uppercase lg:text-white">{email[0]}</span>
+        <span className="hidden truncate lg:inline">{email}</span>
+      </summary>
+      <div className="absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:left-0 lg:right-auto">
+        <p className="truncate px-3 py-2 text-xs text-gray-500">{email}</p>
+        <button type="button" onClick={() => setChanging(true)} className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray">
+          Change password
+        </button>
+        <button type="button" onClick={signOut} className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-red-700 hover:bg-soft-gray">
+          Sign out
+        </button>
+      </div>
+      {changing && <PasswordSheet onClose={() => setChanging(false)} />}
+    </details>
   );
 }

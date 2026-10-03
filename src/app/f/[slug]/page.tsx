@@ -4,10 +4,13 @@ import { Suspense } from "react";
 import FunnelExperience, { FunnelSplash } from "@/components/FunnelExperience";
 import { site } from "@/config/site";
 import { funnels, getFunnelBySlug } from "@/data/funnels";
+import { getPublication } from "@/lib/server/publications";
 
 // The shareable link: a reel funnel on its own, with no website around it.
-// Only funnels listed in src/data/funnels.ts exist; any other slug is a 404.
-export const dynamicParams = false;
+// Only funnels listed in src/data/funnels.ts exist; any other slug is a 404
+// (the check below). Pages are built ahead of time and rebuilt when the
+// admin publishes; dynamicParams stays on so a page cleared by a publish can
+// be rebuilt on its next visit.
 
 export function generateStaticParams() {
   return funnels.map((funnel) => ({ slug: funnel.slug }));
@@ -48,10 +51,12 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
 export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
   const { slug } = await params;
   if (!getFunnelBySlug(slug)) notFound();
+  // Edits published from the admin; the page is rebuilt when they change.
+  const publication = (await getPublication(slug))?.publication ?? null;
   return (
     // useSearchParams (for ?start=) needs a Suspense boundary on a static page.
-    <Suspense fallback={<FunnelSplash slug={slug} />}>
-      <FunnelExperience slug={slug} />
+    <Suspense fallback={<FunnelSplash slug={slug} publication={publication} />}>
+      <FunnelExperience slug={slug} publication={publication} />
     </Suspense>
   );
 }

@@ -5,6 +5,9 @@ description: Keep every screen of this app simple to navigate. Use when adding o
 
 # Simple navigation
 
+Where things go and how people move between them. For how screens look and
+behave (layout, type, controls, motion), also follow `ui-ux-design`.
+
 People use this app on a phone, between other things. Every screen should
 answer three questions at a glance: **Where am I? What can I do here? Did it
 work?** If a screen needs explaining, simplify the screen.

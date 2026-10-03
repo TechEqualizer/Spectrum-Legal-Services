@@ -5,6 +5,7 @@ import type { Funnel, ReelMedia } from "@/data/funnel-types";
 
 /** What plays behind the opening screen's title: the hero's own media, else the first reel's video, YouTube video or photo. */
 export function sceneMediaOf(funnel: Funnel): ReelMedia | undefined {
+  if (funnel.cover.backdrop !== undefined) return funnel.cover.backdrop ?? undefined;
   if (funnel.cover.hero?.media) return funnel.cover.hero.media;
   const media = funnel.reels.map((r) => r.media).filter(Boolean) as ReelMedia[];
   return (
@@ -88,8 +89,8 @@ export function youtubeEmbedUrl(id: string, origin: string, { loop = false } = {
 }
 
 export const UPLOAD_LIMITS = {
-  /** Bytes. Long reels are better trimmed than uploaded whole. */
-  video: 500 * 1024 * 1024,
+  /** Bytes. Matches the storage bucket's 50 MB limit; trim long reels (scripts/prepare-reel.sh). */
+  video: 50 * 1024 * 1024,
   image: 25 * 1024 * 1024,
   captions: 2 * 1024 * 1024,
 };

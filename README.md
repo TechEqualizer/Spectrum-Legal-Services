@@ -199,15 +199,39 @@ each reel decides which one comes next.
   saves them with the visitor id, the reel they came from and the link's
   source tag, then optionally emails the firm through Resend.
 
-## Admin preview (`/admin`)
+## Admin (`/admin`)
 
-A UI/UX preview of the reel funnel admin, with **sample data only**
-(`src/admin/sample-data.ts`, generated per business from
-`src/admin/business.ts`). The business picker in the sidebar switches every
-page between The JLF Firm and the Aurelia Med Spa sample, in that
-business's colors; the choice is remembered in the browser. There is no login yet, so it never reads the
-real Supabase tables, and nothing on it saves or sends. It is not linked
-from the public site and is marked `noindex`.
+**Sign in** at `/admin/login` with an email and password (Supabase Auth).
+Only accounts listed in the `admin_users` table get in, and each one can
+publish only the funnels listed for it (`'*'` for all). A new admin starts
+with a temporary password and must choose their own at first sign-in;
+**Change password** and **Sign out** are in the account menu.
+
+**Publishing**: reel edits save in the browser as you go. When they differ
+from what's live, a bar offers **Publish** (or **Discard**). Publishing
+uploads any new files straight from the browser to Supabase Storage (bucket
+`reel-media`, 50 MB per file, a folder per funnel), then stores the edits in
+`funnel_publications` and refreshes the funnel link at once. Every publish
+is also kept in `funnel_publication_history`. **Take down published edits**
+(in Funnel settings) puts the link back to its built-in content. Publish
+sends the default funnel.
+
+How it's secured: the sign-in tokens are httpOnly cookies refreshed by
+`src/proxy.ts`; pages check the admin with Supabase on every visit; and
+every write is made with the admin's own token, so Supabase's row-level
+security decides what it may change (`supabase/migrations/20261006000000_admin_publishing.sql`).
+The site needs no secret key. Published content is validated on the server
+(`src/lib/publication.ts`) before it's stored and again when it's read.
+
+**Adding an admin**: create the user in Supabase (Authentication, Users,
+"Add user", with "Auto Confirm User"), then
+`insert into admin_users (email, slugs) values ('them@example.com', '{jlf}');`.
+
+Results and Leads still show **sample data** (`src/admin/sample-data.ts`,
+generated per business from `src/admin/business.ts`). The business picker
+switches every page between the businesses the admin may edit, in that
+business's colors. It is not linked from the public site and is marked
+`noindex`.
 
 - **Opening screen** (top of the Reels page): attach, swap or remove what
   plays behind the opening screen's title: upload a video or photo, or
