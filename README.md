@@ -148,7 +148,7 @@ forms re-skin without code changes.
 
 **`/f/masquerade` is a real client's link**, so its forms and tracking are
 live. Its content comes from the event flyer (`src/data/masquerade.ts`): one
-date (Sat, Oct 31, 8pm, Detroit, 21+), Eventbrite tickets, the flyer behind
+date (Sat, Oct 31, 8pm, Detroit, 30+, from $31), Eventbrite tickets, the flyer behind
 the opening screen, and two reels with photos cropped from it
 (`public/clients/masquerade`). The other reels show "Video coming soon" until
 their videos are uploaded in the admin, where Big Love Productions replaced
