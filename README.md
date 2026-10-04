@@ -192,6 +192,12 @@ that event; with several it shows a "Coming up" page with a card per night,
 soonest first; with none it shows the latest event
 (`src/lib/server/links.ts`). Dates show in the visitor's own time zone.
 
+**After the night**, once every date of an event is over, its link stops
+selling tickets that are gone. The opening scene says "Thanks for coming",
+its main button plays the recap, and the other one goes to the organizer's
+next night on another link (keeping the visitor's `?src=` tag), or opens an
+Updates sign-up when nothing is announced yet. The end card says the same.
+
 **New events** come from the admin's **Events** page
 (`POST /api/admin/events`, `src/lib/new-event.ts`), only for admins who
 manage every funnel. **New event** keeps the organizer's name, logo, look,

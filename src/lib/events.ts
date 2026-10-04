@@ -4,6 +4,12 @@
 
 import type { Funnel, FunnelEvent, Reel } from "@/data/funnel-types";
 
+/** An organizer's next night on another link, for an event that's over. */
+export type NextNight = { slug: string; name: string; startsAt: string };
+
+/** Every date is over: the link is a recap now. */
+export const allOver = (funnel: Funnel, now: number) => Boolean(funnel.events?.length) && upcomingEvents(funnel, now).length === 0;
+
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 // An event counts as over six hours after it starts.
