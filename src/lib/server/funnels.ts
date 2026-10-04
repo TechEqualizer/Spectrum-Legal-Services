@@ -63,3 +63,54 @@ export async function listEventFunnels(): Promise<{ funnel: Funnel; organizer: s
     return funnel ? [{ funnel, organizer: row.organizer_slug }] : [];
   });
 }
+
+export type Organizer = { slug: string; name: string };
+export const ORGANIZERS_TAG = "organizers";
+
+async function organizers(filter: string): Promise<Organizer[]> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return [];
+  try {
+    const res = await fetch(`${url}/rest/v1/organizers?${filter}select=slug,name`, {
+      headers: { apikey: key },
+      next: { tags: [ORGANIZERS_TAG], revalidate: 300 },
+    });
+    return res.ok ? ((await res.json()) as Organizer[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Every organizer (for the admin). */
+export const listOrganizers = () => organizers("order=name&");
+
+/** The organizer whose permanent link is /f/<slug>, or undefined. */
+export async function getOrganizer(slug: string): Promise<Organizer | undefined> {
+  if (!/^[a-z0-9-]{1,64}$/.test(slug) || builtInBySlug(slug)) return undefined;
+  return (await organizers(`slug=eq.${slug}&`))[0];
+}
+
+/** An organizer's events, as built (before published edits). */
+export async function listOrganizerEvents(organizer: string): Promise<Funnel[]> {
+  return (await query(`organizer_slug=eq.${organizer}&order=slug&`, [])).flatMap((row) => toFunnel(row) ?? []);
+}
+
+/**
+ * Whether /f/<slug> is free for a new event: not a demo, an organizer's
+ * permanent link, or another event. Checked fresh, not from the cache.
+ */
+export async function slugIsFree(slug: string): Promise<boolean> {
+  if (builtInBySlug(slug)) return false;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return false;
+  const taken = await Promise.all(
+    ["event_funnels", "organizers"].map((table) =>
+      fetch(`${url}/rest/v1/${table}?slug=eq.${slug}&select=slug`, { headers: { apikey: key }, cache: "no-store" })
+        .then((r) => (r.ok ? (r.json() as Promise<unknown[]>) : Promise.reject()))
+        .then((rows) => rows.length > 0)
+    )
+  ).catch(() => [true]);
+  return !taken.some(Boolean);
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import DatesCard from "@/admin/components/DatesCard";
 import HeroMediaCard from "@/admin/components/HeroMediaCard";
@@ -41,6 +42,25 @@ const blankReel: EditorReel = {
   practiceArea: "Car Accident",
   cta: "funnel",
 };
+
+const IMPORT_KEY = "admin_open_import";
+
+/** Asks the editor of a new event to open Import flyer when it first shows. */
+export function requestImport(slug: string) {
+  try {
+    sessionStorage.setItem(IMPORT_KEY, slug);
+  } catch {
+    // Storage blocked: the organizer opens Import flyer themselves.
+  }
+}
+
+function importRequested(slug: string) {
+  try {
+    return sessionStorage.getItem(IMPORT_KEY) === slug;
+  } catch {
+    return false;
+  }
+}
 
 function slugify(title: string, taken: Set<string>) {
   const base =
@@ -112,6 +132,12 @@ export default function ReelsEditor() {
   const prompts = usePrompts(slug);
   // A short confirmation near the bottom, with Undo when something was deleted.
   const [toast, setToastState] = useState<{ text: string; undo?: () => void; id: number } | null>(null);
+  // A new event opens on Import flyer, once (see Events). Keyed by its link, so
+  // the editor of whichever event shows while the list refreshes leaves it alone.
+  const [openImport] = useState(() => importRequested(liveFunnel.slug));
+  useEffect(() => {
+    if (openImport) sessionStorage.removeItem(IMPORT_KEY);
+  }, [openImport]);
   const setToast = (text: string, undo?: () => void) => setToastState(text ? { text, undo, id: Date.now() } : null);
   // What's on the live link now (null while it loads).
   const [live, setLive] = useState<LiveState | null>(null);
@@ -520,6 +546,7 @@ export default function ReelsEditor() {
           onLook={applyLook}
           onDraft={applyDraft}
           inStudio={wide}
+          openImport={openImport}
         />
       )}
     </>
@@ -684,6 +711,12 @@ export default function ReelsEditor() {
           Default funnel: shown when no other funnel matches the visitor
         </label>
         <p className="mt-1 text-xs text-gray-600">Publish sends the default funnel to your live link.</p>
+        <p className="mt-3 text-sm text-gray-600">
+          <Link href="/admin/funnel" className="inline-flex min-h-10 items-center font-semibold text-deep-navy underline-offset-2 hover:underline">
+            See every path
+          </Link>
+          <span className="block text-xs">Every route a visitor can take through your reels, on one map.</span>
+        </p>
         {live?.publishedAt && (
           <div className="mt-4 border-t border-gray-100 pt-4">
             <button type="button" onClick={restoreOriginal} className="min-h-10 text-sm font-semibold text-red-700 hover:underline">

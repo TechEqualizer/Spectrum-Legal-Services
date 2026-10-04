@@ -11,11 +11,11 @@ import BrandLogo from "@/components/BrandLogo";
 // Five places at most, most used first, in a business owner's words
 // (see .claude/skills/simple-navigation).
 const links = [
+  { href: "/admin/events", label: "Events", icon: "M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2zM8 13h3v3H8z" },
   { href: "/admin", label: "Reels", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zM10 9l5 3-5 3V9z" },
   { href: "/admin/leads", label: "Leads", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
   { href: "/admin/overview", label: "Results", icon: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" },
   { href: "/admin/links", label: "Share", icon: "M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1" },
-  { href: "/admin/funnel", label: "Paths", icon: "M4 6h4v4H4zM16 6h4v4h-4zM10 15h4v4h-4zM8 8h8M6 10v3a2 2 0 002 2h2M18 10v3a2 2 0 01-2 2h-2" },
 ];
 
 // Desktop only: the sidebar can fold down to its icons, for more room (the

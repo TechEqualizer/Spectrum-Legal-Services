@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { sampleFor } from "@/admin/sample-data";
 import { formatNumber, viz } from "@/admin/viz";
 import { funnelReel } from "@/data/reels";
@@ -27,6 +27,9 @@ export default function Links() {
   const business = useAdminBusiness();
   const { funnel } = business;
   const origin = useOrigin();
+  // An organizer's event: their permanent link (the one for their bio) always shows the next event.
+  const organizer = useAdminEvents().find((e) => e.funnel.slug === funnel.slug)?.organizer;
+  const [bioCopied, setBioCopied] = useState(false);
   const [preset, setPreset] = useState<string>(SOURCE_PRESETS[0].tag);
   const [custom, setCustom] = useState("");
   const [start, setStart] = useState("");
@@ -73,6 +76,36 @@ export default function Links() {
           The reel funnel as its own link. Give each place you share it its own tag, so you can see which one brings calls and bookings.
         </p>
       </div>
+
+      {organizer && (
+        <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="bio-title">
+          <h2 id="bio-title" className="text-base font-bold text-deep-navy">Your bio link</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Always shows your next event, so it never needs changing. Put this one in your Instagram and TikTok bio.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <code className="min-w-0 flex-1 truncate rounded-lg bg-soft-gray px-3 py-2.5 text-sm font-semibold text-deep-navy">
+              {`${origin}/f/${organizer.slug}`}
+            </code>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`${origin}/f/${organizer.slug}`);
+                  setBioCopied(true);
+                  setTimeout(() => setBioCopied(false), 2000);
+                } catch {
+                  // Clipboard blocked: the link is on screen to copy by hand.
+                }
+              }}
+              className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+            >
+              {bioCopied ? "Copied ✓" : "Copy"}
+            </button>
+            <span role="status" className="sr-only">{bioCopied ? "Bio link copied" : ""}</span>
+          </div>
+        </section>
+      )}
 
       <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="builder-title">
         <h2 id="builder-title" className="mb-4 text-base font-bold text-deep-navy">Build a link</h2>

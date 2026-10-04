@@ -42,6 +42,7 @@ export default function DatesCard({
   onLook,
   onDraft,
   inStudio = false,
+  openImport = false,
 }: {
   slug: string;
   events: FunnelEvent[];
@@ -57,12 +58,14 @@ export default function DatesCard({
   onDraft: (draft: FunnelDraft) => void;
   /** In the studio, where its story step names it. */
   inStudio?: boolean;
+  /** Open Import flyer right away (a new event, made to be filled from its flyer). */
+  openImport?: boolean;
 }) {
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
   const [editing, setEditing] = useState<{ event: FunnelEvent; isNew: boolean; imported?: number } | null>(null);
   // Flyer import: the sheet is open, what it found, and which of those are added.
-  const [importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState(openImport);
   const [found, setFound] = useState<FlyerFound | null>(null);
   const [added, setAdded] = useState<Set<number>>(() => new Set());
   const sorted = [...events].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
