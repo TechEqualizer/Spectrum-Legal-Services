@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { sampleFor } from "@/admin/sample-data";
 import { formatNumber, viz } from "@/admin/viz";
 import { funnelReel } from "@/data/reels";
@@ -27,6 +27,9 @@ export default function Links() {
   const business = useAdminBusiness();
   const { funnel } = business;
   const origin = useOrigin();
+  // An organizer's event: their permanent link (the one for their bio) always shows the next event.
+  const organizer = useAdminEvents().find((e) => e.funnel.slug === funnel.slug)?.organizer;
+  const [bioCopied, setBioCopied] = useState(false);
   const [preset, setPreset] = useState<string>(SOURCE_PRESETS[0].tag);
   const [custom, setCustom] = useState("");
   const [start, setStart] = useState("");
@@ -51,8 +54,12 @@ export default function Links() {
     }
   };
 
+  // An event sells tickets: its sample "bookings" are ticket clicks, and it takes no calls.
+  const tickets = funnel.primaryCta === "tickets";
+  const won = (r: { calls: number; bookings: number }) => (tickets ? r.bookings : r.calls + r.bookings);
+  const wonLabel = tickets ? "ticket clicks" : "calls and bookings";
   const rows = sampleFor(business).sourceTotals(range.days)
-    .map((r) => ({ ...r, per100: ((r.calls + r.bookings) / r.visitors) * 100 }))
+    .map((r) => ({ ...r, per100: (won(r) / r.visitors) * 100 }))
     .sort((a, b) => b.per100 - a.per100);
   const maxPer100 = Math.max(...rows.map((r) => r.per100));
   const totals = rows.reduce(
@@ -70,12 +77,42 @@ export default function Links() {
       <div>
         <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Share</h1>
         <p className="text-sm text-gray-600">
-          The reel funnel as its own link. Give each place you share it its own tag, so you can see which one brings calls and bookings.
+          {organizer ? "Your bio link, and a tagged link for each other place you share" : "The reel funnel as its own link. Give each place you share it its own tag"}, so you can see which one brings {wonLabel}.
         </p>
       </div>
 
+      {organizer && (
+        <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="bio-title">
+          <h2 id="bio-title" className="text-base font-bold text-deep-navy">Your bio link</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Always shows your next event, so it never needs changing. Put this one in your Instagram and TikTok bio.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <code className="min-w-0 flex-1 truncate rounded-lg bg-soft-gray px-3 py-2.5 text-sm font-semibold text-deep-navy">
+              {`${origin}/f/${organizer.slug}`}
+            </code>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`${origin}/f/${organizer.slug}`);
+                  setBioCopied(true);
+                  setTimeout(() => setBioCopied(false), 2000);
+                } catch {
+                  // Clipboard blocked: the link is on screen to copy by hand.
+                }
+              }}
+              className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue"
+            >
+              {bioCopied ? "Copied ✓" : "Copy"}
+            </button>
+            <span role="status" className="sr-only">{bioCopied ? "Bio link copied" : ""}</span>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="builder-title">
-        <h2 id="builder-title" className="mb-4 text-base font-bold text-deep-navy">Build a link</h2>
+        <h2 id="builder-title" className="mb-4 text-base font-bold text-deep-navy">{organizer ? "A link for this event" : "Build a link"}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="link-source" className="mb-1 block text-sm font-semibold text-deep-navy">
@@ -93,7 +130,7 @@ export default function Links() {
                 <input
                   id="link-custom"
                   className="form-input text-sm"
-                  placeholder="e.g. bus-bench or chiro-partner"
+                  placeholder="e.g. bus-bench or flyer-drop"
                   maxLength={40}
                   value={custom}
                   onChange={(e) => { setCustom(e.target.value); setCopied(false); }}
@@ -128,7 +165,15 @@ export default function Links() {
             {url}
           </code>
           <div className="flex gap-2">
-            <button type="button" onClick={copy} className="min-h-11 rounded-md bg-teal-accent px-4 text-sm font-bold text-white hover:brightness-110">
+            <button
+              type="button"
+              onClick={copy}
+              className={
+                organizer
+                  ? "min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50"
+                  : "min-h-11 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
+              }
+            >
               <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
             </button>
             <a href={path} target="_blank" rel="noopener" className="flex min-h-11 items-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50">
@@ -146,9 +191,9 @@ export default function Links() {
       <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="sources-title">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="sources-title" className="text-base font-bold text-deep-navy">Which links bring calls and bookings</h2>
+            <h2 id="sources-title" className="text-base font-bold text-deep-navy">Which links bring {wonLabel}</h2>
             <p className="text-sm text-gray-600">
-              Calls and booking requests per 100 visitors, by where the link was shared. Sample data.
+              {tickets ? "Ticket clicks" : "Calls and booking requests"} per 100 visitors, by where the link was shared. Sample data.
             </p>
           </div>
           <div className="flex rounded-md border border-gray-300 bg-white p-1" role="group" aria-label="Date range">
@@ -158,7 +203,7 @@ export default function Links() {
                 type="button"
                 onClick={() => setRange(r)}
                 aria-pressed={range.days === r.days}
-                className={`min-h-9 rounded px-3 text-sm font-semibold transition-colors ${range.days === r.days ? "bg-deep-navy text-white" : "text-gray-700 hover:bg-soft-gray"}`}
+                className={`min-h-11 rounded px-3 text-sm font-semibold transition-colors ${range.days === r.days ? "bg-deep-navy text-white" : "text-gray-700 hover:bg-soft-gray"}`}
               >
                 {r.label}
               </button>
@@ -166,15 +211,15 @@ export default function Links() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className={`w-full text-left text-sm ${tickets ? "min-w-[560px]" : "min-w-[720px]"}`}>
             <thead className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-600">
               <tr>
                 <th className="py-2 pr-4 font-semibold">Source</th>
                 <th className="py-2 pr-4 text-right font-semibold">Visitors</th>
-                <th className="py-2 pr-4 text-right font-semibold">Calls</th>
-                <th className="py-2 pr-4 text-right font-semibold">Booking requests</th>
-                <th className="py-2 pr-4 text-right font-semibold">Text me later</th>
-                <th className="w-64 py-2 font-semibold">Calls + bookings per 100</th>
+                {!tickets && <th className="py-2 pr-4 text-right font-semibold">Calls</th>}
+                <th className="py-2 pr-4 text-right font-semibold">{tickets ? "Ticket clicks" : "Booking requests"}</th>
+                <th className="py-2 pr-4 text-right font-semibold">{tickets ? "Updates sign-ups" : "Text me later"}</th>
+                <th className="w-64 py-2 font-semibold">{tickets ? "Ticket clicks" : "Calls + bookings"} per 100</th>
               </tr>
             </thead>
             <tbody style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -182,10 +227,10 @@ export default function Links() {
                 <tr key={r.tag ?? "direct"} className="border-b border-gray-100">
                   <td className="py-2.5 pr-4">
                     <span className="font-medium text-deep-navy">{sourceLabel(r.tag)}</span>
-                    {r.tag && <span className="ml-2 text-xs text-gray-500">src={r.tag}</span>}
+                    {r.tag && <span className="ml-2 text-xs text-gray-600">src={r.tag}</span>}
                   </td>
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.visitors)}</td>
-                  <td className="py-2.5 pr-4 text-right">{formatNumber(r.calls)}</td>
+                  {!tickets && <td className="py-2.5 pr-4 text-right">{formatNumber(r.calls)}</td>}
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.bookings)}</td>
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.textLater)}</td>
                   <td className="py-2.5">
@@ -203,18 +248,20 @@ export default function Links() {
               <tr className="font-semibold text-deep-navy">
                 <td className="py-2.5 pr-4">All sources</td>
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.visitors)}</td>
-                <td className="py-2.5 pr-4 text-right">{formatNumber(totals.calls)}</td>
+                {!tickets && <td className="py-2.5 pr-4 text-right">{formatNumber(totals.calls)}</td>}
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.bookings)}</td>
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.textLater)}</td>
                 <td className="py-2.5 text-right">
-                  {(((totals.calls + totals.bookings) / totals.visitors) * 100).toFixed(1)}
+                  {((won(totals) / totals.visitors) * 100).toFixed(1)}
                 </td>
               </tr>
             </tfoot>
           </table>
         </div>
         <p className="mt-3 text-xs text-gray-600">
-          &ldquo;Text me later&rdquo; requests get the next video by text and aren&apos;t counted as calls until they call or book.
+          {tickets
+            ? "Updates sign-ups get event news by text and aren't counted until they click Tickets."
+            : "“Text me later” requests get the next video by text and aren't counted as calls until they call or book."}
         </p>
       </section>
     </div>

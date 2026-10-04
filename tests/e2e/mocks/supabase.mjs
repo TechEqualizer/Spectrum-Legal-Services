@@ -104,12 +104,25 @@ http.createServer((req, res) => {
       if (req.method === 'POST') { publications.set(body.slug, body); return json(res, 201); }
       if (req.method === 'DELETE') { publications.delete(slug); return json(res, 204); }
     }
+    const eq = (k) => (url.searchParams.get(k) || '').replace(/^eq\./, '');
     if (p === '/rest/v1/event_funnels' && req.method === 'GET') {
-      const eq = (k) => (url.searchParams.get(k) || '').replace(/^eq\./, '');
-      const rows = [...eventFunnels.values()].filter((r) => (!eq('slug') || r.slug === eq('slug')) && (!eq('funnel_id') || r.funnel_id === eq('funnel_id')));
+      const rows = [...eventFunnels.values()].filter((r) => (!eq('slug') || r.slug === eq('slug')) && (!eq('funnel_id') || r.funnel_id === eq('funnel_id')) && (!eq('organizer_slug') || r.organizer_slug === eq('organizer_slug')));
       return json(res, 200, rows.sort((a, b) => a.slug.localeCompare(b.slug)));
     }
-    if (p === '/rest/v1/organizers' && req.method === 'GET') return json(res, 200, [...organizers.values()]);
+    // Like the real policy: only admins who manage every funnel add events.
+    if (p === '/rest/v1/event_funnels' && req.method === 'POST') {
+      const email = emailOf(req);
+      if (!email || !users[email]?.admin) return json(res, 403, { message: 'new row violates row-level security policy' });
+      if (eventFunnels.has(body.slug) || [...eventFunnels.values()].some((r) => r.funnel_id === body.funnel_id)) return json(res, 409, { message: 'duplicate key' });
+      if (!organizers.has(body.organizer_slug)) return json(res, 409, { message: 'foreign key' });
+      eventFunnels.set(body.slug, { slug: body.slug, funnel_id: body.funnel_id, organizer_slug: body.organizer_slug, data: body.data });
+      return json(res, 201);
+    }
+    if (p === '/rest/v1/organizers' && req.method === 'GET') {
+      return json(res, 200, [...organizers.values()].filter((o) => !eq('slug') || o.slug === eq('slug')));
+    }
+    // Test control: add an event straight to the table (a second organizer event, dated).
+    if (p === '/__event' && req.method === 'POST') { eventFunnels.set(body.slug, body); return json(res, 201); }
     if (p.startsWith('/rest/v1/rpc/')) return json(res, 204);
 
     // Storage

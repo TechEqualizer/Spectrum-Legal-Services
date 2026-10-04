@@ -30,23 +30,32 @@ function subscribe(onChange: () => void) {
   };
 }
 
-// Organizers' events from the database, loaded on the server (see
-// src/app/admin/(app)/layout.tsx).
-const EventFunnelsContext = createContext<Funnel[]>([]);
+/**
+ * An organizer's event, loaded on the server (see src/app/admin/(app)/layout.tsx):
+ * the funnel as built (what the editor starts from) and as visitors see it now.
+ */
+export type AdminEvent = { funnel: Funnel; live: Funnel; organizer: { slug: string; name: string } };
 
-export function AdminBusinessesProvider({ eventFunnels, children }: { eventFunnels: Funnel[]; children: React.ReactNode }) {
-  return <EventFunnelsContext.Provider value={eventFunnels}>{children}</EventFunnelsContext.Provider>;
+const EventsContext = createContext<AdminEvent[]>([]);
+
+export function AdminBusinessesProvider({ events, children }: { events: AdminEvent[]; children: React.ReactNode }) {
+  return <EventsContext.Provider value={events}>{children}</EventsContext.Provider>;
+}
+
+/** The organizers' events this admin may edit, for the Events page. */
+export function useAdminEvents(): AdminEvent[] {
+  return useContext(EventsContext);
 }
 
 /** The businesses this admin may edit: organizers' events first, then the demos. */
 export function useAdminBusinesses(): AdminBusiness[] {
   const session = useAdminSession();
-  const eventFunnels = useContext(EventFunnelsContext);
+  const adminEvents = useContext(EventsContext);
   return useMemo(() => {
     const builtIn = new Set(builtInBusinesses.map((b) => b.funnel.slug));
-    const events = eventFunnels.filter((f) => !builtIn.has(f.slug)).map(eventBusiness);
+    const events = adminEvents.filter((e) => !builtIn.has(e.funnel.slug)).map((e) => eventBusiness(e.funnel));
     return [...events, ...builtInBusinesses].filter((b) => mayEdit(session, b.funnel.slug));
-  }, [eventFunnels, session]);
+  }, [adminEvents, session]);
 }
 
 export function useAdminBusiness(): AdminBusiness {

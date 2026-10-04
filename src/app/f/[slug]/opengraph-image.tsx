@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 import { isConcept } from "@/config/site";
 import { funnels } from "@/data/funnels";
-import { getFunnel } from "@/lib/server/funnels";
+import { applyPublication } from "@/lib/publication";
+import { resolveLink } from "@/lib/server/links";
 
 // The preview card people see when a funnel link is pasted into a text, DM
 // or post. One per funnel: built-in ones at build time, organizers'
@@ -19,8 +20,10 @@ export function generateStaticParams() {
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
-  const funnel = await getFunnel((await params).slug);
-  if (!funnel) notFound();
+  const target = await resolveLink((await params).slug);
+  if (!target) notFound();
+  // An organizer's permanent link previews the night it shows (or the soonest one).
+  const funnel = target.kind === "event" ? applyPublication(target.funnel, target.publication) : target.events[0].funnel;
   const { brand } = funnel;
   const dark = brand.theme?.["--deep-navy"] ?? "#0E1A2B";
   const mid = brand.theme?.["--royal-blue"] ?? "#1E3A5F";

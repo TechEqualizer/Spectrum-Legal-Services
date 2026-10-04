@@ -186,6 +186,20 @@ before a page shows it. The admin loads the events its signed-in admin may
 edit; edits published from the admin still go to `funnel_publications` on
 top.
 
+**An organizer's permanent link** (`/f/<organizer>`, e.g. `/f/biglove`) is
+the one to put in a bio. It never changes: with one upcoming event it shows
+that event; with several it shows a "Coming up" page with a card per night,
+soonest first; with none it shows the latest event
+(`src/lib/server/links.ts`). Dates show in the visitor's own time zone.
+
+**New events** come from the admin's **Events** page
+(`POST /api/admin/events`, `src/lib/new-event.ts`), only for admins who
+manage every funnel. **New event** keeps the organizer's name, logo, look,
+phone and ticketing, starts the words over, and opens the studio on
+**Import from flyer**. **Duplicate** copies an event's published reels and
+paths under a new name and link, without its dates or share text. Links
+are checked against built-in demos, organizers and events first.
+
 **`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
 Spa doesn't exist: the page always says so, is never indexed, uses a
 555-01xx phone number reserved for fiction, and its forms and tracking send
@@ -396,11 +410,17 @@ business's colors. It is not linked from the public site and is marked
   and what viewers did with each reel, for the last 7, 30 or 90 days.
 - **Share**: a builder for tagged funnel links, and which sources bring
   calls and call-back requests per 100 visitors.
-- **Paths**: the live paths from `src/data/reels.ts` as a diagram.
+- **Events** (`/admin/events`, the first tab): each organizer's events with
+  their date and status (Upcoming, No dates yet, Ended), the organizer's
+  permanent link with Copy, **New event** and **Duplicate**. Built-in demos
+  are listed apart.
+- **Paths** (`/admin/funnel`, linked from Funnel settings as "See every
+  path"): the live paths as a diagram.
   Selecting a reel shows its numbers; changing where it leads redraws the map
   (preview only).
 - **Leads**: sample leads with the videos each one watched before booking.
-- **Navigation**: on phones the five places sit in a bottom tab bar; on
+- **Navigation**: Events, Reels, Leads, Results, Share. On phones they sit
+  in a bottom tab bar; on
   desktop, a sidebar. Screens follow `.claude/skills/simple-navigation`.
 
 Next steps to make it real: an admin login (Supabase Auth), reading the
