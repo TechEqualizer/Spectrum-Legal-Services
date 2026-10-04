@@ -58,10 +58,9 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
   go live on Publish, with undo.
 - Stack: Next.js 16 App Router, React 19, Tailwind 4, Supabase (auth,
   publications, storage, leads), Claude API for flyers and drafts, Vercel.
-- Organizers and their events are currently defined in code
-  (`src/data/*.ts`); moving them into the database, with several events per
-  organizer and one permanent organizer link, is planned and undecided in
-  detail.
+- Organizers and their events live in the database (`organizers`,
+  `event_funnels`); the demos stay in code. Several events per organizer and
+  one permanent organizer link are planned next.
 - Results and leads shown in the admin are sample numbers until real
   tracking data is wired in.
 - Video generation inside the product is not built; organizers copy prompts
@@ -80,8 +79,8 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
 ## Evidence on Hand
 
 - One live client: Big Love Productions, Masquerade on the Runway
-  (`/f/masquerade`, `src/data/masquerade.ts`), with its flyer and Eventbrite
-  details (`public/clients/masquerade`).
+  (`/f/masquerade`, seeded from `supabase/seed/biglove.json`), with its flyer
+  and Eventbrite details (`public/clients/masquerade`).
 - Sample funnels, always labeled as samples: Golden Hour Sundays
   (`/f/events`), Aurelia Med Spa (`/f/medspa`), and The JLF Firm concept
   (`/f/jlf`).

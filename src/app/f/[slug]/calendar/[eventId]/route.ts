@@ -1,4 +1,4 @@
-import { getFunnelBySlug } from "@/data/funnels";
+import { getFunnel } from "@/lib/server/funnels";
 import { applyPublication } from "@/lib/publication";
 import { getPublication } from "@/lib/server/publications";
 
@@ -14,7 +14,7 @@ const stamp = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").re
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string; eventId: string }> }) {
   const { slug, eventId } = await params;
-  const base = getFunnelBySlug(slug);
+  const base = await getFunnel(slug);
   if (!base) return new Response("Not found", { status: 404 });
   const funnel = applyPublication(base, (await getPublication(slug))?.publication);
   const event = funnel.events?.find((e) => e.id === eventId);

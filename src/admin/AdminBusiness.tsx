@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
-import { businesses, type AdminBusiness } from "@/admin/business";
+import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
+import { builtInBusinesses, eventBusiness, type AdminBusiness } from "@/admin/business";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { mayEdit, useAdminSession } from "@/admin/session";
+import type { Funnel } from "@/data/funnel-types";
 
 // Which business the admin preview shows. Remembered in this browser only,
 // as a convenience; it falls back to the first business.
@@ -29,17 +30,32 @@ function subscribe(onChange: () => void) {
   };
 }
 
-/** The businesses this admin may edit. */
+// Organizers' events from the database, loaded on the server (see
+// src/app/admin/(app)/layout.tsx).
+const EventFunnelsContext = createContext<Funnel[]>([]);
+
+export function AdminBusinessesProvider({ eventFunnels, children }: { eventFunnels: Funnel[]; children: React.ReactNode }) {
+  return <EventFunnelsContext.Provider value={eventFunnels}>{children}</EventFunnelsContext.Provider>;
+}
+
+/** The businesses this admin may edit: organizers' events first, then the demos. */
 export function useAdminBusinesses(): AdminBusiness[] {
   const session = useAdminSession();
-  return businesses.filter((b) => mayEdit(session, b.funnel.slug));
+  const eventFunnels = useContext(EventFunnelsContext);
+  return useMemo(() => {
+    const builtIn = new Set(builtInBusinesses.map((b) => b.funnel.slug));
+    const events = eventFunnels.filter((f) => !builtIn.has(f.slug)).map(eventBusiness);
+    return [...events, ...builtInBusinesses].filter((b) => mayEdit(session, b.funnel.slug));
+  }, [eventFunnels, session]);
 }
 
 export function useAdminBusiness(): AdminBusiness {
   const allowed = useAdminBusinesses();
   const slug = useSyncExternalStore(subscribe, read, () => null);
-  return allowed.find((b) => b.funnel.slug === slug) ?? allowed[0] ?? businesses[0];
+  return allowed.find((b) => b.funnel.slug === slug) ?? allowed[0] ?? builtInBusinesses[0];
 }
+
+const noSubscribe = () => () => {};
 
 export function selectAdminBusiness(slug: string) {
   memory = slug;
@@ -65,6 +81,10 @@ export function AdminFrame({
   const business = useAdminBusiness();
   const { funnel } = business;
   const session = useAdminSession();
+  // The page itself renders in the browser only: which business it shows is
+  // remembered there, and its dates and times are in the admin's own time
+  // zone, so a server render would show the wrong ones for a moment.
+  const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
   // The Reels page is a full-width studio on wide screens.
   const studio = usePathname() === "/admin";
   return (
@@ -84,7 +104,7 @@ export function AdminFrame({
           id="main-content"
           className={`mx-auto max-w-6xl px-4 pb-24 pt-6 md:px-8 md:pt-8 lg:pb-8 ${studio ? "xl:max-w-none xl:px-6 xl:pb-0 xl:pt-4" : ""}`}
         >
-          {children}
+          {inBrowser ? children : <div className="min-h-[60vh]" aria-busy="true" />}
         </main>
         {session.mustChangePassword && <PasswordSheet firstTime />}
       </div>

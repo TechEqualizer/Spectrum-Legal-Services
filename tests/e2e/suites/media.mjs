@@ -13,7 +13,9 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await p.route(/youtube-nocookie\.com/, r=>r.fulfill({status:200, contentType:'text/html', body:'<html></html>'}));
   await p.route(/ytimg\.com/, r=>r.fulfill({status:200, contentType:'image/png', path: D+'/sample-photo.png'}));
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
-  check(w+': JLF by default', await p.locator('#admin-business').inputValue()==='jlf' && (await p.locator('ol > li').count())===8);
+  // Organizers' events (from the database) come before the demos.
+  check(w+': Big Love by default', await p.locator('#admin-business').inputValue()==='masquerade' && (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
+  check(w+': organizers first, then demos', (await p.locator('#admin-business option').allTextContents()).join('|')==='Big Love Productions|The JLF Firm|Aurelia Med Spa', (await p.locator('#admin-business option').allTextContents()).join('|'));
 
   // Switch business
   await p.selectOption('#admin-business','medspa');

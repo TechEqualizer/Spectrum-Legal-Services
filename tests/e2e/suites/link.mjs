@@ -6,6 +6,8 @@ const b = await chromium.launch();
 for (const [w,h] of [[390,844],[1440,900]]) {
   const mobile = w<1024;
   const ctx = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile, deviceScaleFactor: mobile?2:1 });
+  // These checks use the JLF demo; organizers' events come first by default.
+  await ctx.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
   const p = await ctx.newPage();
   p.on('pageerror',e=>errs.push(w+' '+e.message)); p.on('console',m=>{if(m.type()==='error')errs.push(w+' '+m.text())});
   const events=[];

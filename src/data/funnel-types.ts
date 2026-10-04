@@ -117,9 +117,11 @@ export type FunnelBrand = {
     coverCallPrompt: string;
     coverCall: string;
     book: { heading: string; intro: string; submit: string };
-    bookDone: (name: string, phone: string) => string;
+    /** After booking; {name} and {phone} are filled in (see fillIn). */
+    bookDone: string;
     textLater: { heading: string; intro: string; submit: string };
-    textLaterDone: (name: string, phone: string) => string;
+    /** After a "text me later" sign-up; {name} and {phone} are filled in. */
+    textLaterDone: string;
     /** Under the booking form. */
     formFinePrint: string;
     endHeading: string;
@@ -200,3 +202,8 @@ export type Funnel = {
   entryReelIds: string[];
   links: Record<string, Record<FunnelTrigger, string | null>>;
 };
+
+/** A copy template with its {name} and {phone} filled in. */
+export function fillIn(template: string, values: { name: string; phone: string }) {
+  return template.replace(/\{(name|phone)\}/g, (_, key: "name" | "phone") => values[key]);
+}

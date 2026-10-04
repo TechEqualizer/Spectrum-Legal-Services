@@ -1,15 +1,15 @@
-// Every shareable funnel link. Add a business by writing its funnel (see
-// src/data/medspa.ts) and listing it here; its link is /f/<slug>. Private
-// DM demos come from src/data/demos (scripts/new-demo.mjs).
+// The built-in funnel links: demos and samples (made-up businesses), and the
+// JLF concept. Real organizers' events live in the database (event_funnels;
+// see src/lib/server/funnels.ts), not here. Private DM demos come from
+// src/data/demos (scripts/new-demo.mjs).
 
 import { demoFunnels } from "@/data/demos";
 import type { Funnel } from "@/data/funnel-types";
 import { eventsFunnel } from "@/data/events-sample";
-import { masqueradeFunnel } from "@/data/masquerade";
 import { medspaFunnel } from "@/data/medspa";
 import { defaultFunnel } from "@/data/reels";
 
-export const funnels: Funnel[] = [defaultFunnel, medspaFunnel, eventsFunnel, masqueradeFunnel, ...demoFunnels];
+export const funnels: Funnel[] = [defaultFunnel, medspaFunnel, eventsFunnel, ...demoFunnels];
 
 export function getFunnelBySlug(slug: string) {
   return funnels.find((funnel) => funnel.slug === slug);

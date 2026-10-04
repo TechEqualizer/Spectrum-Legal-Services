@@ -3,6 +3,8 @@ const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  
 const errs=[];
 const b = await chromium.launch();
 const ctx = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:1440,height:900}, timezoneId:'America/New_York' });
+// These checks use the JLF demo; organizers' events come first by default.
+await ctx.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
 const p = await ctx.newPage();
 p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{if(m.type()==='error'||m.type()==='warning')errs.push(m.type()+': '+m.text().slice(0,160))});
 const base='http://localhost:3002';
@@ -47,6 +49,8 @@ check('lead detail journey', await p.getByText('Video journey before booking').i
 await p.screenshot({path:'admin-leads.jpg', type:'jpeg', quality:70, fullPage:true});
 // Mobile
 const m = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:390,height:844}, isMobile:true, hasTouch:true, deviceScaleFactor:2, timezoneId:'Asia/Tokyo' });
+// These checks use the JLF demo; organizers' events come first by default.
+await m.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
 const mp = await m.newPage();
 mp.on('pageerror',e=>errs.push('mobile '+e.message)); mp.on('console',x=>{if(x.type()==='error')errs.push('mobile: '+x.text().slice(0,160))});
 for (const path of ['/admin','/admin/funnel','/admin/leads']) {

@@ -1,8 +1,8 @@
-// The businesses the admin preview can show, with their sample content:
-// the words they use and how their reels tend to perform. All of it is
-// SAMPLE data.
+// The businesses the admin can show, with their sample content: the words
+// they use and how their reels tend to perform. All of it is SAMPLE data.
+// The demos are defined here; organizers' events come from the database
+// (see eventBusiness).
 
-import { masqueradeFunnel } from "@/data/masquerade";
 import { medspaFunnel } from "@/data/medspa";
 import { defaultFunnel } from "@/data/reels";
 import type { Funnel } from "@/data/funnel-types";
@@ -87,25 +87,39 @@ const medspa: AdminBusiness = {
   editorOrder: medspaFunnel.reels.map((r) => r.id),
 };
 
-// A real client. Its results and leads here are still sample numbers.
-const masquerade: AdminBusiness = {
-  funnel: masqueradeFunnel,
-  seeds: { days: 20261031, leads: 1031 },
-  profile: {
-    "mr-masks-on": { entryViews: 64, watch: 0.71, book: 0.07 },
-    "mr-runway": { entryViews: 0, watch: 0.74, book: 0.06 },
-    "mr-performances": { entryViews: 0, watch: 0.63, book: 0.05 },
-    "mr-dress": { entryViews: 0, watch: 0.66, book: 0.06 },
-    "mr-tickets": { entryViews: 0, watch: 0.7, book: 0.11 },
-  },
-  terms: {
-    topic: "Interest",
-    leadsIntro: "Update sign-ups, with the videos each person watched first. Ticket sales show in your Eventbrite report.",
-    wonStatus: "Bought tickets",
-    hasWebsiteForm: false,
-  },
-  funnelName: "Masquerade",
-  editorOrder: masqueradeFunnel.reels.map((r) => r.id),
-};
+/** A number from a slug, so each organizer's sample numbers stay put between visits. */
+function seedOf(slug: string) {
+  let h = 2166136261;
+  for (const c of slug) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return Math.abs(h) % 100000;
+}
 
-export const businesses: AdminBusiness[] = [jlf, medspa, masquerade];
+/**
+ * An organizer's event (from the database) as an admin business. Its
+ * results and leads are sample numbers until real tracking is wired in.
+ */
+export function eventBusiness(funnel: Funnel): AdminBusiness {
+  const seed = seedOf(funnel.slug);
+  return {
+    funnel,
+    seeds: { days: 20260000 + seed, leads: seed },
+    // Entry reels get the visits; the rest are reached from them.
+    profile: Object.fromEntries(
+      funnel.reels.map((r, i) => [
+        r.id,
+        { entryViews: funnel.entryReelIds.includes(r.id) ? 60 : 0, watch: 0.62 + (i % 3) * 0.04, book: 0.05 + (i % 2) * 0.02 },
+      ])
+    ),
+    terms: {
+      topic: "Interest",
+      leadsIntro: "Update sign-ups, with the videos each person watched first. Ticket sales show in your ticketing report.",
+      wonStatus: "Bought tickets",
+      hasWebsiteForm: false,
+    },
+    funnelName: funnel.brand.seriesLabel,
+    editorOrder: funnel.reels.map((r) => r.id),
+  };
+}
+
+/** The built-in businesses (demos); organizers' events come from the database. */
+export const builtInBusinesses: AdminBusiness[] = [jlf, medspa];

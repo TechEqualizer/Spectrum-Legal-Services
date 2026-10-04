@@ -3,7 +3,7 @@
 // minutes old otherwise.
 
 import type { Funnel } from "@/data/funnel-types";
-import { getFunnelById, getFunnelBySlug } from "@/data/funnels";
+import { getFunnel, getFunnelById } from "@/lib/server/funnels";
 import { applyPublication, parsePublication, type Publication } from "@/lib/publication";
 
 export const publicationTag = (slug: string) => `funnel-publication:${slug}`;
@@ -14,7 +14,7 @@ export type StoredPublication = { publication: Publication; publishedAt: string;
 export async function getPublication(slug: string): Promise<StoredPublication | null> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-  const base = getFunnelBySlug(slug);
+  const base = await getFunnel(slug);
   if (!url || !key || !base) return null;
   try {
     const res = await fetch(
@@ -37,7 +37,7 @@ export async function getPublication(slug: string): Promise<StoredPublication | 
 
 /** The funnel as visitors see it: built-in content with any published edits. */
 export async function getLiveFunnelById(id: string): Promise<Funnel | undefined> {
-  const base = getFunnelById(id);
+  const base = await getFunnelById(id);
   if (!base) return undefined;
   return applyPublication(base, (await getPublication(base.slug))?.publication);
 }

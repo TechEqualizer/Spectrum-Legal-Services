@@ -115,15 +115,13 @@ const jlfBrand: FunnelBrand = {
       intro: "Leave your number and Attorney Jeff's team will call you back.",
       submit: "Request my call back",
     },
-    bookDone: (name, phone) =>
-      `Thanks, ${name}. Attorney Jeff's team will call you at ${phone}.`,
+    bookDone: "Thanks, {name}. Attorney Jeff's team will call you at {phone}.",
     textLater: {
       heading: "Not ready to talk?",
       intro: "We'll text you the next video, so you can keep watching when it suits you.",
       submit: "Text me the next video",
     },
-    textLaterDone: (name, phone) =>
-      `Thanks, ${name}. The next video is on its way to ${phone}. Reply STOP any time to opt out.`,
+    textLaterDone: "Thanks, {name}. The next video is on its way to {phone}. Reply STOP any time to opt out.",
     formFinePrint:
       "Your case review is free. Sending this does not create an attorney-client relationship.",
     endHeading: "Have a question about your situation?",

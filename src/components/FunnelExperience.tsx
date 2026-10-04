@@ -6,7 +6,6 @@ import CinematicHero from "@/components/CinematicHero";
 import ReelViewer from "@/components/ReelViewer";
 import { isConcept } from "@/config/site";
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
-import { getFunnelBySlug } from "@/data/funnels";
 import { applyPublication, type Publication } from "@/lib/publication";
 import { funnelReel } from "@/data/reels";
 import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents } from "@/lib/events";
@@ -50,13 +49,14 @@ function singleHook(event: FunnelEvent, untilStart: number) {
  * a reel, which is how follow-up texts send someone their next video.
  */
 export default function FunnelExperience({
-  slug,
+  funnel: base,
   publication,
   startReelId,
   startEnded = false,
   onMoment,
 }: {
-  slug: string;
+  /** The funnel as built (from code or the database), before published edits. */
+  funnel: Funnel;
   publication: Publication | null;
   /** Opens straight into this reel, like ?start= (the admin preview uses it). */
   startReelId?: string;
@@ -65,7 +65,7 @@ export default function FunnelExperience({
   /** Told what's on screen: the opening (no reel), a reel, or the end card. */
   onMoment?: (moment: { reelId: string | null; ended: boolean }) => void;
 }) {
-  const funnel = useMemo(() => applyPublication(getFunnelBySlug(slug)!, publication), [slug, publication]);
+  const funnel = useMemo(() => applyPublication(base, publication), [base, publication]);
   const { brand } = funnel;
   const params = useSearchParams();
   const start = startReelId ?? params.get("start");
@@ -375,8 +375,8 @@ function ChoiceButton({ onClick, children }: { onClick: () => void; children: Re
 }
 
 /** Shown while the page loads, before the topic choices can be used. */
-export function FunnelSplash({ slug, publication }: { slug: string; publication: Publication | null }) {
-  const funnel = applyPublication(getFunnelBySlug(slug)!, publication);
+export function FunnelSplash({ funnel: base, publication }: { funnel: Funnel; publication: Publication | null }) {
+  const funnel = applyPublication(base, publication);
   return (
     <FunnelShell funnel={funnel}>
       <FunnelCover funnel={funnel} revealed={false} />

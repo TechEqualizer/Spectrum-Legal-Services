@@ -52,15 +52,13 @@ const brand: FunnelBrand = {
       intro: "Leave your number and we'll call you to find a time that works.",
       submit: "Request my consultation",
     },
-    bookDone: (name, number) =>
-      `Thanks, ${name}. We'll call you at ${number} to set up your consultation.`,
+    bookDone: "Thanks, {name}. We'll call you at {phone} to set up your consultation.",
     textLater: {
       heading: "Still deciding?",
       intro: "We'll text you the next video, so you can keep watching when it suits you.",
       submit: "Text me the next video",
     },
-    textLaterDone: (name, number) =>
-      `Thanks, ${name}. The next video is on its way to ${number}. Reply STOP any time to opt out.`,
+    textLaterDone: "Thanks, {name}. The next video is on its way to {phone}. Reply STOP any time to opt out.",
     formFinePrint: "Consultations are free and there's no obligation to book a treatment.",
     endHeading: "Ready to talk it through?",
     endBody:

@@ -27,6 +27,8 @@ await sheet.getByRole('button', { name: 'Text me updates' }).click(); await p.wa
 check('lead actually sent', leads.length === 1 && leads[0].funnelId === 'masquerade-v1', JSON.stringify(leads).slice(0, 200));
 await ctx.close(); const ctx2 = await b.newContext({ storageState: S + '/auth.json' }); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(B + '/admin'); await p2.waitForTimeout(800);
 check('admin lists Big Love, not Golden Hour', (await p2.locator('#admin-business option').allTextContents()).join('|').includes('Big Love') && !(await p2.locator('#admin-business option').allTextContents()).join('|').includes('Golden Hour'));
+const missing = await fetch(B + '/f/no-such-event');
+check('unknown link is a 404', missing.status === 404, String(missing.status));
 check('no page errors', errs.length === 0, errs.join(' | '));
 console.log(res.join('\n')); console.log(res.filter(r => r.startsWith('FAIL')).length ? 'SOME FAILED' : 'ALL PASS');
 await b.close();

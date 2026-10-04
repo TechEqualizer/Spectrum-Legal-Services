@@ -5,6 +5,8 @@ const b = await chromium.launch();
 for (const [w,h] of [[390,844],[1279,900]]) {
   const mobile=w<1024;
   const p = await b.newPage({ storageState: process.argv[2] + '/auth.json', viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile, deviceScaleFactor: mobile?2:1 });
+  // These checks use the JLF demo; organizers' events come first by default.
+  await p.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
   p.on('pageerror',e=>errs.push(w+' '+e.message)); p.on('console',m=>{if(m.type()==='error' && !m.text().includes('404'))errs.push(w+' '+m.text())});
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
   const rows = p.locator('section[aria-labelledby="order-title"] ol > li');

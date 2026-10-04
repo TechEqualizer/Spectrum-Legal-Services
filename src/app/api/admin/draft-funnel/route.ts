@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canPublish, getAdmin } from "@/lib/server/admin-auth";
-import { getFunnelBySlug } from "@/data/funnels";
+import { getFunnel } from "@/lib/server/funnels";
 import { flyerInputFrom } from "@/lib/server/flyer-import";
 import { draftFunnel } from "@/lib/server/funnel-draft";
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     | { slug?: unknown; type?: unknown; data?: unknown; text?: unknown; today?: unknown; dates?: unknown; photos?: unknown }
     | null;
   const slug = typeof body?.slug === "string" ? body.slug : "";
-  const funnel = getFunnelBySlug(slug);
+  const funnel = await getFunnel(slug);
   if (!funnel || !canPublish(admin, slug)) {
     return NextResponse.json({ error: "You can't edit this funnel." }, { status: 403 });
   }

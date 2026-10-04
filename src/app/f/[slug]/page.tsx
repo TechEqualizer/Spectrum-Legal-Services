@@ -3,14 +3,15 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import FunnelExperience, { FunnelSplash } from "@/components/FunnelExperience";
 import { isConcept } from "@/config/site";
-import { funnels, getFunnelBySlug } from "@/data/funnels";
+import { funnels } from "@/data/funnels";
+import { getFunnel } from "@/lib/server/funnels";
 import { getPublication } from "@/lib/server/publications";
 
 // The shareable link: a reel funnel on its own, with no website around it.
-// Only funnels listed in src/data/funnels.ts exist; any other slug is a 404
-// (the check below). Pages are built ahead of time and rebuilt when the
-// admin publishes; dynamicParams stays on so a page cleared by a publish can
-// be rebuilt on its next visit.
+// A slug is a built-in demo (src/data/funnels.ts) or an organizer's event in
+// the database (see getFunnel); anything else is a 404. Demo pages are built
+// ahead of time, events on their first visit; both are rebuilt when the
+// admin publishes, and dynamicParams stays on for exactly that.
 
 export function generateStaticParams() {
   return funnels.map((funnel) => ({ slug: funnel.slug }));
@@ -18,7 +19,7 @@ export function generateStaticParams() {
 
 export async function generateViewport({ params }: PageProps<"/f/[slug]">): Promise<Viewport> {
   const { slug } = await params;
-  const funnel = getFunnelBySlug(slug);
+  const funnel = await getFunnel(slug);
   // A published look (e.g. matched to a flyer) recolors it too.
   const look = funnel ? (await getPublication(slug))?.publication?.look : undefined;
   // Colors the browser bar (and in-app browsers that honor it) to match.
@@ -33,7 +34,7 @@ export async function generateViewport({ params }: PageProps<"/f/[slug]">): Prom
 }
 
 export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Promise<Metadata> {
-  const funnel = getFunnelBySlug((await params).slug);
+  const funnel = await getFunnel((await params).slug);
   if (!funnel) return {};
   const title = `${funnel.brand.seriesLabel} | ${funnel.brand.name}`;
   const description = `${funnel.cover.heading} ${funnel.cover.intro}`;
@@ -54,13 +55,14 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
 
 export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
   const { slug } = await params;
-  if (!getFunnelBySlug(slug)) notFound();
+  const funnel = await getFunnel(slug);
+  if (!funnel) notFound();
   // Edits published from the admin; the page is rebuilt when they change.
   const publication = (await getPublication(slug))?.publication ?? null;
   return (
     // useSearchParams (for ?start=) needs a Suspense boundary on a static page.
-    <Suspense fallback={<FunnelSplash slug={slug} publication={publication} />}>
-      <FunnelExperience slug={slug} publication={publication} />
+    <Suspense fallback={<FunnelSplash funnel={funnel} publication={publication} />}>
+      <FunnelExperience funnel={funnel} publication={publication} />
     </Suspense>
   );
 }

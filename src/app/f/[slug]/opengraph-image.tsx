@@ -1,11 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 import { isConcept } from "@/config/site";
-import { funnels, getFunnelBySlug } from "@/data/funnels";
+import { funnels } from "@/data/funnels";
+import { getFunnel } from "@/lib/server/funnels";
 
 // The preview card people see when a funnel link is pasted into a text, DM
-// or post. One per funnel, generated at build time.
+// or post. One per funnel: built-in ones at build time, organizers'
+// events (from the database) on first request.
 
 export const alt = "Short videos, then book or call";
 export const size = { width: 1200, height: 630 };
@@ -16,17 +19,18 @@ export function generateStaticParams() {
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
-  const funnel = getFunnelBySlug((await params).slug)!;
+  const funnel = await getFunnel((await params).slug);
+  if (!funnel) notFound();
   const { brand } = funnel;
   const dark = brand.theme?.["--deep-navy"] ?? "#0E1A2B";
   const mid = brand.theme?.["--royal-blue"] ?? "#1E3A5F";
   const accent = brand.theme?.["--sky-accent"] ?? "#6CB4D8";
   const logo =
-    brand.logo.kind === "image"
-      ? `data:image/png;base64,${(
-          await readFile(join(process.cwd(), "public", brand.logo.src))
-        ).toString("base64")}`
-      : null;
+    brand.logo.kind !== "image"
+      ? null
+      : brand.logo.src.startsWith("/")
+        ? `data:image/png;base64,${(await readFile(join(process.cwd(), "public", brand.logo.src))).toString("base64")}`
+        : brand.logo.src;
   const tagline = funnel.sample?.preparedFor
     ? `Prepared for ${funnel.sample.preparedFor}`
     : funnel.sample

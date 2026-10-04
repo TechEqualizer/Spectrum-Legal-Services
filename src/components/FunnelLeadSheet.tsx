@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { isConcept } from "@/config/site";
+import { fillIn } from "@/data/funnel-types";
 import type { Funnel, Reel } from "@/data/reels";
 import { isValidPhone, type LeadIntent } from "@/lib/leads";
 import { isPreviewMode } from "@/lib/reel-tracking";
@@ -110,8 +111,8 @@ export default function FunnelLeadSheet({ funnel, intent, reel, copy, onClose }:
                 {simulated
                   ? "Demo: nothing was sent. On a live link, this request goes straight to the business."
                   : textLater
-                    ? brand.copy.textLaterDone(name.trim(), phone.trim())
-                    : brand.copy.bookDone(name.trim(), phone.trim())}
+                    ? fillIn(brand.copy.textLaterDone, { name: name.trim(), phone: phone.trim() })
+                    : fillIn(brand.copy.bookDone, { name: name.trim(), phone: phone.trim() })}
               </p>
               {brand.phone && (
                 <a
