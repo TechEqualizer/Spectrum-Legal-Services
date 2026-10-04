@@ -8,7 +8,9 @@ import { isConcept } from "@/config/site";
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
 import { applyPublication, type Publication } from "@/lib/publication";
 import { funnelReel } from "@/data/reels";
-import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents } from "@/lib/events";
+import FunnelLeadSheet from "@/components/FunnelLeadSheet";
+import SourceLink from "@/components/SourceLink";
+import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
 
@@ -54,6 +56,7 @@ export default function FunnelExperience({
   startReelId,
   startEnded = false,
   onMoment,
+  nextNight,
 }: {
   /** The funnel as built (from code or the database), before published edits. */
   funnel: Funnel;
@@ -64,6 +67,8 @@ export default function FunnelExperience({
   startEnded?: boolean;
   /** Told what's on screen: the opening (no reel), a reel, or the end card. */
   onMoment?: (moment: { reelId: string | null; ended: boolean }) => void;
+  /** The organizer's next night on another link, for when this one is over. */
+  nextNight?: NextNight;
 }) {
   const funnel = useMemo(() => applyPublication(base, publication), [base, publication]);
   const { brand } = funnel;
@@ -96,6 +101,20 @@ export default function FunnelExperience({
       })
     : undefined;
   const onSale = isEvents ? nextOnSale(funnel, now) : undefined;
+  // After the night: every date is over. The link thanks people, plays the
+  // recap, and sends them to the organizer's next night (or takes their
+  // number for it) instead of selling tickets that are gone.
+  const over = isEvents && upcoming.length === 0;
+  const lastNight = over ? [...funnel.events!].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0] : undefined;
+  // The page can be a few minutes old: only a night that's still to come.
+  const next = over && nextNight && Date.parse(nextNight.startsAt) + 6 * HOUR > now ? nextNight : undefined;
+  const nextWhen = next && new Date(next.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const [updates, setUpdates] = useState(false);
+  // Its words were about getting tickets; now they're about the night that was.
+  const afterLine = next ? "Relive the night, then see what's next." : "Relive the night.";
+  const coverFunnel = over
+    ? { ...funnel, cover: { ...funnel.cover, intro: afterLine, ...(funnel.cover.hero ? { hero: { ...funnel.cover.hero, tagline: afterLine } } : {}) } }
+    : funnel;
   const hero = funnel.cover.hero;
   // One upcoming date: a single event card instead of a row of one circle.
   const single = hero && isEvents && upcoming.length === 1 ? upcoming[0] : undefined;
@@ -110,7 +129,9 @@ export default function FunnelExperience({
   // The scene names the next date on sale, with a live dot. With one date,
   // the card carries the details, so this is just the hook (or a countdown).
   let eyebrow: React.ReactNode = brand.seriesLabel;
-  if (single) {
+  if (lastNight) {
+    eyebrow = `Thanks for coming \u00b7 ${formatEventDate(lastNight)}`;
+  } else if (single) {
     eyebrow = (
       <span className="inline-flex items-center gap-2">
         <span className="cine-live h-1.5 w-1.5 rounded-full bg-sky-accent" />
@@ -135,7 +156,33 @@ export default function FunnelExperience({
 
   // A full opening scene is the whole first screen: the dates as story
   // circles, one main button into the reels, tickets beside it, fine print.
-  const actions = hero && (
+  const recapReel = recap?.id ?? entries[0];
+  // After the night: the recap first, then the next night or Updates.
+  const afterActions = (
+    <>
+      <div className="flex gap-2.5">
+        <button type="button" onClick={() => startAt(recapReel)} className={`${PRIMARY} flex-1 gap-2.5 px-4`}>
+          <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
+          Watch the recap
+        </button>
+        {next ? (
+          <SourceLink href={`/f/${next.slug}`} aria-label={`Next: ${next.name}, ${nextWhen}`} className={`${GLASS} px-5 max-[380px]:px-4`}>
+            Next &middot; {new Date(next.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </SourceLink>
+        ) : (
+          <button type="button" onClick={() => setUpdates(true)} className={`${GLASS} px-5 max-[380px]:px-4`}>
+            {brand.copy.textLaterButton ?? "Updates"}
+          </button>
+        )}
+      </div>
+      <p className="mt-2.5 text-center text-xs font-medium text-white/75">
+        {next ? `Next up: ${next.name} \u00b7 ${nextWhen}` : "Hear about the next night first."}
+      </p>
+      <p className="mt-2 text-center text-[11px] leading-snug text-white/60">{brand.footer}</p>
+    </>
+  );
+
+  const actions = over && hero ? afterActions : hero && (
     <>
       {single ? (
         <SingleDate
@@ -257,12 +304,12 @@ export default function FunnelExperience({
   return (
     <FunnelShell funnel={funnel}>
       <FunnelCover
-        funnel={funnel}
+        funnel={coverFunnel}
         revealed
         eyebrow={eyebrow}
         actions={actions}
         paused={Boolean(visit)}
-        onSwipeUp={hero && !visit ? () => startAt(peekReel) : undefined}
+        onSwipeUp={hero && !visit ? () => startAt(over ? recapReel : peekReel) : undefined}
       >
         {!hero && (<>
         <ul className="mt-1 grid gap-2" role="list">
@@ -353,6 +400,20 @@ export default function FunnelExperience({
           startEnded={startEnded && visit.key === 0}
           onMoment={onMoment}
           onClose={() => setVisit(null)}
+          after={over ? { next } : undefined}
+        />
+      )}
+      {updates && funnelReel(funnel, recapReel) && (
+        <FunnelLeadSheet
+          funnel={funnel}
+          intent="text_later"
+          reel={funnelReel(funnel, recapReel)!}
+          copy={{
+            heading: "Hear about the next night",
+            intro: "We'll text you when the next one is announced, before anyone else.",
+            submit: brand.copy.textLater.submit,
+          }}
+          onClose={() => setUpdates(false)}
         />
       )}
     </FunnelShell>

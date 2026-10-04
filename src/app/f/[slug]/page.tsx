@@ -74,11 +74,11 @@ export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
   if (!target) notFound();
   if (target.kind === "choose") return <OrganizerEvents organizer={target.organizer} events={target.events} />;
   // Edits published from the admin are applied on top; the page is rebuilt when they change.
-  const { funnel, publication } = target;
+  const { funnel, publication, nextNight } = target;
   return (
     // useSearchParams (for ?start=) needs a Suspense boundary on a static page.
     <Suspense fallback={<FunnelSplash funnel={funnel} publication={publication} />}>
-      <FunnelExperience funnel={funnel} publication={publication} />
+      <FunnelExperience funnel={funnel} publication={publication} nextNight={nextNight} />
     </Suspense>
   );
 }

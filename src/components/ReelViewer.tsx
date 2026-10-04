@@ -11,8 +11,9 @@ import {
 } from "@/data/reels";
 import type { ReelMedia } from "@/data/funnel-types";
 import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
-import { eventChip, eventOf, formatEventDate, isOver, ticketHref, ticketTarget } from "@/lib/events";
+import { eventChip, eventOf, formatEventDate, isOver, ticketHref, ticketTarget, type NextNight } from "@/lib/events";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
+import SourceLink from "@/components/SourceLink";
 import type { LeadIntent } from "@/lib/leads";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
@@ -30,6 +31,8 @@ type ReelViewerProps = {
   startEnded?: boolean;
   /** Told which reel is on screen, or that the end card is (the admin preview follows along). */
   onMoment?: (moment: { reelId: string | null; ended: boolean }) => void;
+  /** Every date is over: the end card thanks people and points to the next night, if there is one. */
+  after?: { next?: NextNight };
 };
 
 // How far through a "builds" reel the main action fills with the brand color.
@@ -64,6 +67,7 @@ export default function ReelViewer({
   onClose,
   startEnded = false,
   onMoment,
+  after,
 }: ReelViewerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
@@ -393,6 +397,7 @@ export default function ReelViewer({
               funnel={funnel}
               reel={reel}
               ctas={ctas}
+              after={after}
               closeLabel={closeLabel}
               onClose={close}
             />
@@ -671,15 +676,19 @@ function EndCard({
   funnel,
   reel,
   ctas,
+  after,
   closeLabel,
   onClose,
 }: {
   funnel: Funnel;
   reel: Reel;
   ctas: CtaHandlers;
+  after?: { next?: NextNight };
   closeLabel: string;
   onClose: () => void;
 }) {
+  const next = after?.next;
+  const nextWhen = next && new Date(next.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   return (
     <div className="absolute inset-0 overflow-y-auto bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-6 py-16 text-center short:py-12">
       <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center">
@@ -687,13 +696,22 @@ function EndCard({
           {reel.practiceArea}
         </span>
         <h2 className="mt-4 text-2xl font-bold text-white short:mt-2 short:text-xl">
-          {funnel.brand.copy.endHeading}
+          {after ? "Thanks for coming" : funnel.brand.copy.endHeading}
         </h2>
         <p className="mt-3 text-gray-200 short:mt-1 short:text-sm">
-          {funnel.brand.copy.endBody}
+          {after ? (next ? `Next up: ${next.name}, ${nextWhen}.` : "Get updates and hear about the next night first.") : funnel.brand.copy.endBody}
         </p>
         <div className="mt-6 text-left short:mt-3">
-          <CtaButtons brand={funnel.brand} primary={funnel.primaryCta} {...ctas} />
+          {next ? (
+            <SourceLink
+              href={`/f/${next.slug}`}
+              className="flex min-h-12 w-full items-center justify-center rounded-md bg-teal-accent px-5 font-semibold text-on-accent shadow-md hover:brightness-110"
+            >
+              See the next night
+            </SourceLink>
+          ) : (
+            <CtaButtons brand={funnel.brand} primary={funnel.primaryCta} {...ctas} />
+          )}
         </div>
         <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-5 short:mt-3 short:flex-row short:pt-3">
           <ShareButton funnel={funnel} reel={reel} />
