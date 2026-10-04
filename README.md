@@ -403,9 +403,11 @@ business's colors. It is not linked from the public site and is marked
   reel viewer, with nothing tracked or sent. **Saving**: every change saves
   in this browser as you go, per business, uploaded files included
   (`src/admin/drafts.ts`: localStorage, with files in IndexedDB), and
-  survives a reload; **Reset to live** discards it. The live link changes
-  once the admin has a login and a database. The model is
-  `src/admin/editor-model.ts`; it starts from the live funnel.
+  survives a reload; **Reset to live** discards it. The model is
+  `src/admin/editor-model.ts`; it starts from the live funnel. In code, the
+  studio (`src/admin/components/ReelsEditor.tsx`) wires its steps to
+  `useEditor` (`src/admin/use-editor.ts`: the edited state, saving, Undo and
+  Redo, publishing); its pieces live in `src/admin/components/reels/`.
 - **Results** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,
   and what viewers did with each reel, for the last 7, 30 or 90 days.
 - **Share**: a builder for tagged funnel links, and which sources bring
