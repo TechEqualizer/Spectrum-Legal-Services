@@ -34,13 +34,40 @@ check('stored as a small square', size[0] === 320 && size[1] === 320, size.join(
 check('Change photo offered', await p.getByRole('button', { name: 'Change photo' }).isVisible());
 await p.screenshot({ path: S + '/settings-1440.jpg', fullPage: true });
 
-await p.getByRole('button', { name: 'Remove' }).click(); await p.waitForTimeout(1200);
+await p.getByRole('button', { name: 'Remove photo' }).click(); await p.waitForTimeout(1200);
 check('photo removed: initial again', await p.locator('nav summary img').count() === 0 && await p.getByRole('button', { name: 'Add photo' }).isVisible());
 
 const wrong = await p.request.post(B + '/api/admin/avatar', { headers: { 'Content-Type': 'text/plain' }, data: 'not a photo' });
 check('only photos accepted', wrong.status() === 415, String(wrong.status()));
 const anon = await (await b.newContext()).request.post(B + '/api/admin/profile', { data: { name: 'x' } });
 check('signed out: refused', anon.status() === 401, String(anon.status()));
+
+// Superadmin: every account, and managing their access.
+await p.reload(); await p.waitForTimeout(1500);
+const accounts = p.getByRole('region', { name: 'Accounts' });
+let list = await accounts.innerText();
+check('accounts listed', list.includes('tester@example.com') && list.includes('You') && list.includes('organizer@example.com') && list.includes('Big Love Productions'), list.slice(0, 300));
+check("can't change yourself", await accounts.getByRole('button', { name: 'Change access for tester@example.com' }).count() === 0);
+await accounts.getByRole('button', { name: 'Add account' }).click();
+const sheet = p.locator('dialog[open]');
+await sheet.getByLabel('Email').fill('Promoter@Example.com');
+await sheet.getByRole('button', { name: 'Add account' }).click(); await p.waitForTimeout(500);
+check('needs some access', await sheet.getByRole('alert').filter({ hasText: 'at least one organizer' }).isVisible());
+await sheet.getByLabel(/Big Love Productions/).check();
+await sheet.getByRole('button', { name: 'Add account' }).click(); await p.waitForTimeout(1200);
+list = await accounts.innerText();
+check('account added with its organizer', /promoter@example\.com\s*Big Love Productions/.test(list), list.slice(0, 400));
+check('says to create their login', list.includes('Create their login in Supabase'));
+await accounts.getByRole('button', { name: 'Change access for promoter@example.com' }).click();
+await sheet.getByLabel(/^Full access/).check();
+await sheet.getByRole('button', { name: 'Save' }).click(); await p.waitForTimeout(1200);
+check('access changed to full', /promoter@example\.com\s*Full access/.test(await accounts.innerText()));
+await accounts.getByRole('button', { name: 'Remove promoter@example.com' }).click();
+await accounts.getByRole('button', { name: 'Remove', exact: true }).click(); await p.waitForTimeout(1200);
+check('account removed', !(await accounts.getByRole('list').innerText()).includes('promoter@example.com') && (await accounts.innerText()).includes("can't sign in to the admin any more"));
+const self = await p.request.post(B + '/api/admin/accounts', { data: { email: 'tester@example.com', full: false, organizers: ['biglove'] } });
+check("can't demote yourself", self.status() === 400, String(self.status()));
+await p.screenshot({ path: S + '/accounts-1440.jpg', fullPage: true });
 
 // Phone: Settings from the account menu, nothing sideways.
 const phone = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -58,6 +85,8 @@ await org.request.post(B + '/api/admin/login', { data: { email: 'organizer@examp
 const o = await org.newPage(); o.on('pageerror', (e) => errs.push(e.message));
 await o.goto(B + '/admin/settings'); await o.waitForTimeout(1000);
 const access = await o.locator('main').innerText();
+check('organizer: no Accounts', await o.getByRole('region', { name: 'Accounts' }).count() === 0);
+check('organizer: accounts API refused', (await o.request.get(B + '/api/admin/accounts')).status() === 403);
 check("organizer: their organizer listed", access.includes('Big Love Productions') && access.includes('/f/biglove') && !access.includes('Full access'));
 
 check('no page errors', !errs.length, errs.join(' | ').slice(0, 300));

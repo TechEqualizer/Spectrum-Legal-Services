@@ -17,13 +17,14 @@ function seed() {
   }
 }
 seed();
-const users = {
+const initialUsers = () => ({
   'owner@example.com': { password: 'temp-password-1', admin: true, mustChange: true, slugs: ['*'], organizers: [] },
   'tester@example.com': { password: 'tester-pass-1', admin: true, mustChange: false, slugs: ['*'], organizers: [] },
   // Runs Big Love Productions' events only.
   'organizer@example.com': { password: 'organizer-pass-1', admin: true, mustChange: false, slugs: [], organizers: ['biglove'] },
   'stranger@example.com': { password: 'stranger-pass-1', admin: false, mustChange: false },
-};
+});
+let users = initialUsers();
 // Like the database's manages_organizer and can_publish_funnel.
 const managesOrganizer = (email, org) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].organizers.includes(org));
 const canPublishFunnel = (email, slug) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].slugs.includes(slug) || users[email].organizers.includes(eventFunnels.get(slug)?.organizer_slug));
@@ -69,7 +70,7 @@ http.createServer((req, res) => {
     if (p === '/__log') return json(res, 200, log);
     if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()] });
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; for (const u of Object.values(users)) delete u.meta; users['owner@example.com'].mustChange = true; users['owner@example.com'].password = 'temp-password-1'; accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -100,9 +101,29 @@ http.createServer((req, res) => {
     if (p === '/auth/v1/logout') { sessions.delete((req.headers.authorization || '').replace('Bearer ', '')); return json(res, 204); }
 
     // REST
+    // Like the real policies: everyone reads their own row; full admins read
+    // and manage everyone's, but never change or remove their own.
     if (p === '/rest/v1/admin_users') {
       const email = emailOf(req);
-      return json(res, 200, email && users[email]?.admin ? [{ email, slugs: users[email].slugs, organizers: users[email].organizers }] : []);
+      const me = email && users[email]?.admin ? users[email] : null;
+      const full = Boolean(me?.slugs.includes('*'));
+      const rowOf = (e) => ({ email: e, slugs: users[e].slugs, organizers: users[e].organizers, created_at: users[e].created ?? '2026-10-01T00:00:00Z' });
+      const target = (url.searchParams.get('email') || '').replace(/^eq\./, '');
+      if (req.method === 'GET') {
+        const visible = Object.keys(users).filter((e) => users[e].admin && (e === email || full));
+        return json(res, 200, visible.filter((e) => !target || e === target).map(rowOf));
+      }
+      if (!full) return json(res, 403, { message: 'new row violates row-level security policy' });
+      if (req.method === 'POST') {
+        if (body.email === email) return json(res, 403, { message: 'new row violates row-level security policy' });
+        users[body.email] = { password: null, mustChange: true, ...users[body.email], admin: true, slugs: body.slugs, organizers: body.organizers, created: users[body.email]?.created ?? new Date().toISOString() };
+        return json(res, 201);
+      }
+      if (req.method === 'DELETE') {
+        if (target === email) return json(res, 204);
+        if (users[target]) users[target].admin = false;
+        return json(res, 204);
+      }
     }
     if (p === '/rest/v1/funnel_publications') {
       const slug = (url.searchParams.get('slug') || '').replace('eq.', '') || body?.slug;

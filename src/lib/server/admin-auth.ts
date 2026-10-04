@@ -152,7 +152,8 @@ export async function getAdmin(): Promise<Admin | null> {
   if (!user.email) return null;
   try {
     // Every column, so a database without organizers yet still signs admins in.
-    const res = await fetch(`${url()}/rest/v1/admin_users?select=*`, {
+    // Their own row by email: a full admin can read everyone's (Accounts).
+    const res = await fetch(`${url()}/rest/v1/admin_users?select=*&email=eq.${encodeURIComponent(user.email.toLowerCase())}`, {
       headers: { apikey: key()!, Authorization: `Bearer ${token}` },
       cache: "no-store",
     });

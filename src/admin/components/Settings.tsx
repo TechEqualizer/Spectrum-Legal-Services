@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { useAdminEvents } from "@/admin/AdminBusiness";
+import Accounts from "@/admin/components/Accounts";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import Avatar from "@/admin/components/ui/Avatar";
 import { CheckIcon } from "@/admin/components/ui/icons";
@@ -96,7 +97,7 @@ export default function Settings() {
     <div className="max-w-2xl space-y-8">
       <div>
         <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Settings</h1>
-        <p className="mt-1 text-sm text-gray-600">Your profile and account.</p>
+        <p className="mt-1 text-sm text-gray-600">{fullAccess ? "Your profile and account, and everyone's access." : "Your profile and account."}</p>
       </div>
 
       <section aria-labelledby={`${id}-profile`}>
@@ -134,7 +135,7 @@ export default function Settings() {
                 {busy === "photo" ? "Uploading…" : session.avatarUrl ? "Change photo" : "Add photo"}
               </button>
               {session.avatarUrl && busy !== "photo" && (
-                <button type="button" onClick={removePhoto} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-red-700 hover:bg-red-50">
+                <button type="button" onClick={removePhoto} aria-label="Remove photo" className="min-h-11 rounded-lg px-3 text-sm font-semibold text-red-700 hover:bg-red-50">
                   Remove
                 </button>
               )}
@@ -215,6 +216,9 @@ export default function Settings() {
           )}
         </div>
       </section>
+
+      {/* Superadmin: full admins manage everyone's access. */}
+      {fullAccess && <Accounts />}
 
       {changing && <PasswordSheet onClose={() => setChanging(false)} />}
     </div>
