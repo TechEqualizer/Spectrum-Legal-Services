@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   );
   return (
     <AdminSessionProvider
-      session={{ email: admin.email, slugs: admin.slugs, organizers: admin.organizers, mustChangePassword: admin.mustChangePassword }}
+      session={{ email: admin.email, ...admin.profile, slugs: admin.slugs, organizers: admin.organizers, mustChangePassword: admin.mustChangePassword }}
     >
       <AdminBusinessesProvider events={events}>
         <AdminFrame nav={<AdminNav />}>{children}</AdminFrame>

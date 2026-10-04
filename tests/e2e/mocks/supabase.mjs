@@ -69,7 +69,7 @@ http.createServer((req, res) => {
     if (p === '/__log') return json(res, 200, log);
     if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()] });
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; users['owner@example.com'].mustChange = true; users['owner@example.com'].password = 'temp-password-1'; accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; for (const u of Object.values(users)) delete u.meta; users['owner@example.com'].mustChange = true; users['owner@example.com'].password = 'temp-password-1'; accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -88,11 +88,14 @@ http.createServer((req, res) => {
     if (p === '/auth/v1/user') {
       const email = emailOf(req);
       if (!email) return json(res, 401, { msg: 'invalid token' });
+      const u = users[email];
       if (req.method === 'PUT') {
-        users[email].password = body.password;
-        users[email].mustChange = body.data?.must_change_password ?? users[email].mustChange;
+        if (body.password) u.password = body.password;
+        u.mustChange = body.data?.must_change_password ?? u.mustChange;
+        // Like Supabase: data merges into user_metadata; null clears a key.
+        u.meta = { ...u.meta, ...Object.fromEntries(Object.entries(body.data ?? {}).filter(([k]) => k !== 'must_change_password')) };
       }
-      return json(res, 200, { email, user_metadata: { must_change_password: users[email].mustChange } });
+      return json(res, 200, { id: `user-${email.split('@')[0]}`, email, user_metadata: { must_change_password: u.mustChange, ...u.meta } });
     }
     if (p === '/auth/v1/logout') { sessions.delete((req.headers.authorization || '').replace('Bearer ', '')); return json(res, 204); }
 
@@ -174,6 +177,22 @@ http.createServer((req, res) => {
     if (sign && req.method === 'PUT') {
       files.set(sign[1], { type: req.headers['content-type'], body: raw });
       return json(res, 200, { Key: sign[1] });
+    }
+    // Profile photos: each admin writes only their own folder (like the avatars policies).
+    const avatar = p.match(/^\/storage\/v1\/object\/avatars\/(.+)$/);
+    if (avatar && (req.method === 'POST' || req.method === 'DELETE')) {
+      const email = emailOf(req);
+      if (!email || avatar[1].split('/')[0] !== `user-${email.split('@')[0]}`) return json(res, 403, { message: 'new row violates row-level security policy' });
+      if (req.method === 'DELETE') { files.delete('avatars/' + avatar[1]); return json(res, 200, {}); }
+      files.set('avatars/' + avatar[1], { type: req.headers['content-type'], body: raw });
+      return json(res, 200, { Key: 'avatars/' + avatar[1] });
+    }
+    const avatarPub = p.match(/^\/storage\/v1\/object\/public\/avatars\/(.+)$/);
+    if (avatarPub) {
+      const f = files.get('avatars/' + avatarPub[1]);
+      if (!f) return json(res, 404, { message: 'not found' });
+      res.writeHead(200, { 'Content-Type': f.type, ...cors });
+      return res.end(f.body);
     }
     const pub = p.match(/^\/storage\/v1\/object\/public\/reel-media\/(.+)$/);
     if (pub) {

@@ -5,6 +5,9 @@ import { createContext, useContext } from "react";
 /** The signed-in admin, from the server (see src/app/admin/(app)/layout.tsx). */
 export type AdminSession = {
   email: string;
+  /** Their name and photo, from Settings. */
+  name?: string;
+  avatarUrl?: string;
   /** Funnel slugs this admin may publish; "*" means all. */
   slugs: string[];
   /** Organizers whose events this admin runs, adding new ones too. */

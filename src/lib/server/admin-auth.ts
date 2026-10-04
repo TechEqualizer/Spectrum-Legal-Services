@@ -106,8 +106,27 @@ export async function updatePassword(accessToken: string, password: string): Pro
   return Boolean(res?.ok);
 }
 
+/** The admin's name and photo, kept on their sign-in account (Settings). */
+export type Profile = { name?: string; avatarUrl?: string };
+
+/** Changes the signed-in admin's name or photo link; undefined leaves a field, null clears it. */
+export async function updateProfile(accessToken: string, change: { name?: string | null; avatarUrl?: string | null }): Promise<boolean> {
+  const data: Record<string, string | null> = {};
+  if (change.name !== undefined) data.display_name = change.name;
+  if (change.avatarUrl !== undefined) data.avatar_url = change.avatarUrl;
+  const res = await authCall("user", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ data }),
+  });
+  return Boolean(res?.ok);
+}
+
 export type Admin = {
+  /** The sign-in account's id (their photo's folder). */
+  id: string;
   email: string;
+  profile: Profile;
   /** Funnel slugs this admin may publish; "*" means all. */
   slugs: string[];
   /** Organizers whose events this admin runs: all of them, and adding new ones. */
@@ -125,7 +144,11 @@ export async function getAdmin(): Promise<Admin | null> {
   if (!token) return null;
   const userRes = await authCall("user", { headers: { Authorization: `Bearer ${token}` } });
   if (!userRes?.ok) return null;
-  const user = (await userRes.json()) as { email?: string; user_metadata?: { must_change_password?: boolean } };
+  const user = (await userRes.json()) as {
+    id?: string;
+    email?: string;
+    user_metadata?: { must_change_password?: boolean; display_name?: string | null; avatar_url?: string | null };
+  };
   if (!user.email) return null;
   try {
     // Every column, so a database without organizers yet still signs admins in.
@@ -136,8 +159,11 @@ export async function getAdmin(): Promise<Admin | null> {
     if (!res.ok) return null;
     const rows = (await res.json()) as { email: string; slugs: string[]; organizers?: string[] }[];
     if (!rows[0]) return null;
+    const meta = user.user_metadata ?? {};
     return {
+      id: user.id ?? "",
       email: user.email,
+      profile: { ...(meta.display_name ? { name: meta.display_name } : {}), ...(meta.avatar_url ? { avatarUrl: meta.avatar_url } : {}) },
       slugs: rows[0].slugs,
       organizers: rows[0].organizers ?? [],
       mustChangePassword: Boolean(user.user_metadata?.must_change_password),
