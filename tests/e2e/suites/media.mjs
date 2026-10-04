@@ -91,7 +91,8 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await p.getByRole('button',{name:`Preview ${third}`}).click();
   await p.waitForTimeout(300);
   check(w+': photo reel shows', await p.getByRole('dialog',{name:/Video:/}).locator('img[src^="blob:"]').evaluate(i=>i.complete && i.naturalWidth>0));
-  check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=')).length===0, api.join(','));
+  // Only the admin's own reads (what's live, its results); no tracking or leads.
+  check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=') && !u.includes('/api/admin/stats?')).length===0, api.join(','));
   await p.keyboard.press('Escape');
 
   // Switch back to JLF

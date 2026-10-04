@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
-import { sampleFor } from "@/admin/sample-data";
+import { useResults } from "@/admin/results";
 import CopyButton from "@/admin/components/ui/CopyButton";
 import { formatNumber, viz } from "@/admin/viz";
 import { funnelReel } from "@/data/reels";
@@ -44,14 +44,15 @@ export default function Links() {
   const url = `${origin}${path}`;
 
 
-  // An event sells tickets: its sample "bookings" are ticket clicks, and it takes no calls.
+  // An event sells tickets: its "bookings" are ticket clicks, and it takes no calls.
   const tickets = funnel.primaryCta === "tickets";
   const won = (r: { calls: number; bookings: number }) => (tickets ? r.bookings : r.calls + r.bookings);
   const wonLabel = tickets ? "ticket clicks" : "calls and bookings";
-  const rows = sampleFor(business).sourceTotals(range.days)
-    .map((r) => ({ ...r, per100: (won(r) / r.visitors) * 100 }))
-    .sort((a, b) => b.per100 - a.per100);
-  const maxPer100 = Math.max(...rows.map((r) => r.per100));
+  const per100 = (r: { calls: number; bookings: number; visitors: number }) => (r.visitors ? (won(r) / r.visitors) * 100 : 0);
+  const { results, real, error } = useResults(range.days);
+  const rows = (results?.sources ?? []).map((r) => ({ ...r, per100: per100(r) })).sort((a, b) => b.per100 - a.per100 || b.visitors - a.visitors);
+  // At least 1, so bars are never divided by zero.
+  const maxPer100 = Math.max(1, ...rows.map((r) => r.per100));
   const totals = rows.reduce(
     (t, r) => ({
       visitors: t.visitors + r.visitors,
@@ -173,7 +174,7 @@ export default function Links() {
           <div>
             <h2 id="sources-title" className="text-base font-bold text-deep-navy">Which links bring {wonLabel}</h2>
             <p className="text-sm text-gray-600">
-              {tickets ? "Ticket clicks" : "Calls and booking requests"} per 100 visitors, by where the link was shared. Sample data.
+              {tickets ? "Ticket clicks" : "Calls and booking requests"} per 100 visitors, by where the link was shared.{real ? "" : " Sample data."}
             </p>
           </div>
           <div className="flex rounded-md border border-gray-300 bg-white p-1" role="group" aria-label="Date range">
@@ -191,6 +192,11 @@ export default function Links() {
             ))}
           </div>
         </div>
+        {!results || !rows.length ? (
+          <p role={error ? "alert" : "status"} className={`rounded-lg px-4 py-5 text-sm ${error ? "bg-amber-50 text-amber-900" : "bg-soft-gray text-gray-600"}`}>
+            {error || (results ? "No visits in this period yet. Share your link and they'll show up here." : "Loading results…")}
+          </p>
+        ) : (
         <div className="overflow-x-auto">
           <table className={`w-full text-left text-sm ${tickets ? "" : "min-w-[720px]"}`}>
             <thead className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-600">
@@ -237,12 +243,13 @@ export default function Links() {
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.bookings)}</td>
                 <td className={`py-2.5 pr-4 text-right ${tickets ? "hidden sm:table-cell" : ""}`}>{formatNumber(totals.textLater)}</td>
                 <td className="py-2.5 text-right">
-                  {((won(totals) / totals.visitors) * 100).toFixed(1)}
+                  {per100(totals).toFixed(1)}
                 </td>
               </tr>
             </tfoot>
           </table>
         </div>
+        )}
         <p className="mt-3 text-xs text-gray-600">
           {tickets
             ? "Updates sign-ups get event news by text and aren't counted until they click Tickets."

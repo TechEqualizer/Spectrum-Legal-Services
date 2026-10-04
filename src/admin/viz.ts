@@ -32,7 +32,8 @@ export function labelInk(fill: string) {
 export const formatNumber = (n: number) =>
   n >= 10000 ? `${(n / 1000).toFixed(1)}K` : n.toLocaleString("en-US");
 
-export const formatPercent = (n: number) => `${(n * 100).toFixed(0)}%`;
+/** A share as a percent; a share of nothing (0/0) shows as a dash, never "NaN%". */
+export const formatPercent = (n: number) => (Number.isFinite(n) ? `${(n * 100).toFixed(0)}%` : "\u2013");
 
 // Pinned to the firm's time zone so server and browser render the same text.
 export const FIRM_TIME_ZONE = "America/Los_Angeles";

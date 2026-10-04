@@ -30,8 +30,11 @@ type ReelRowProps = {
   onRemove: () => void;
 };
 
-export default function ReelRow({ date, hasPrompt, stats: s, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
+export default function ReelRow({ date, hasPrompt, stats, reel, index, count, funnel, unreachable, dragging, pathLabel, onDragStart, onDragEnd, onDropHere, onMove, onEdit, onPlay, onRemove }: ReelRowProps) {
   const [over, setOver] = useState(false);
+  // No views yet counts as no results (and never "NaN%").
+  const s = stats && stats.views > 0 ? stats : undefined;
+  const won = funnel.primaryCta === "tickets" ? { short: "ticket clicks", label: "Tickets" } : { short: "booked", label: "Booked" };
   const overrides = Object.entries(funnel.paths[reel.id] ?? {}) as [FunnelTrigger, PathTarget][];
   const cta = reel.cta === "funnel" ? funnel.primaryCta : reel.cta;
   const topic = funnel.topics[reel.id];
@@ -97,7 +100,7 @@ export default function ReelRow({ date, hasPrompt, stats: s, reel, index, count,
         {/* Phones: one line of text; wider screens: three columns. */}
         <p className="text-xs text-gray-600 @2xl:hidden" style={{ fontVariantNumeric: "tabular-nums" }}>
           {s
-            ? `${formatNumber(s.views)} views · ${formatPercent(s.completed / s.views)} watched · ${formatNumber(s.booked)} booked`
+            ? `${formatNumber(s.views)} views · ${formatPercent(s.completed / s.views)} watched · ${formatNumber(s.booked)} ${won.short}`
             : "No results yet"}
         </p>
         <dl className="hidden grid-cols-3 gap-4 text-right text-xs @2xl:grid" style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -105,7 +108,7 @@ export default function ReelRow({ date, hasPrompt, stats: s, reel, index, count,
             <>
               <Stat label="Views" value={formatNumber(s.views)} />
               <Stat label="Watched" value={formatPercent(s.completed / s.views)} />
-              <Stat label="Booked" value={formatNumber(s.booked)} />
+              <Stat label={won.label} value={formatNumber(s.booked)} />
             </>
           ) : (
             <p className="col-span-3 text-gray-600">No results yet</p>

@@ -91,6 +91,8 @@ export function AdminFrame({
   const business = useAdminBusiness();
   const { funnel } = business;
   const session = useAdminSession();
+  // An organizer's event shows its real results; leads stay sample data for now.
+  const realResults = useContext(EventsContext).some((e) => e.funnel.slug === funnel.slug);
   // The page itself renders in the browser only: which business it shows is
   // remembered there, and its dates and times are in the admin's own time
   // zone, so a server render would show the wrong ones for a moment.
@@ -105,7 +107,7 @@ export function AdminFrame({
       {nav}
       <div className="min-w-0 flex-1">
         <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 md:px-8 md:text-left">
-          <strong>Results and leads are sample data.</strong> Reel edits save as
+          <strong>{realResults ? "Leads are sample data." : "Results and leads are sample data."}</strong> Reel edits save as
           you go; Publish puts them on your live link.
           {funnel.sample && <> {funnel.brand.name} is a sample business.</>}
         </p>
