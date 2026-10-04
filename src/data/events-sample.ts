@@ -9,10 +9,16 @@
 
 import type { Funnel, FunnelBrand, FunnelEvent, Reel } from "@/data/funnel-types";
 
-/** The Sunday `weeks` from this one, at `hour` local time, as an ISO string. */
+/**
+ * The Sunday `weeks` from this one, at `hour` local time, as an ISO string.
+ * "This one" is today until today's day party is over (3pm, plus the six
+ * hours an event counts as on), then next Sunday, so the sample always has
+ * a this-Sunday to sell.
+ */
 function sunday(weeks: number, hour: number) {
   const d = new Date();
-  d.setDate(d.getDate() + ((7 - d.getDay()) % 7) + weeks * 7);
+  const ahead = (7 - d.getDay()) % 7 || (d.getHours() >= 21 ? 7 : 0);
+  d.setDate(d.getDate() + ahead + weeks * 7);
   d.setHours(hour, 0, 0, 0);
   return d.toISOString();
 }

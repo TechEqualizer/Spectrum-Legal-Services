@@ -51,6 +51,38 @@ const tabs = mp.locator('nav ul a');
 check('phone: 6 tabs with labels', await tabs.count() === 6 && await tabs.first().getByText('Home').isVisible());
 check('phone: no collapse button', !(await mp.getByRole('button', { name: /sidebar$/ }).isVisible()));
 check('phone: business picker shown', await mp.locator('#admin-business').isVisible());
+// The account menu closes on a tap outside and when a tab is chosen.
+const phoneMenu = mp.locator('details:has(summary[aria-label^="Account"])').first();
+await mp.locator('summary[aria-label^="Account"]').first().tap(); await settle(mp, 300);
+check('phone: account menu opens', await phoneMenu.evaluate((d) => d.open));
+await mp.locator('main').tap({ position: { x: 20, y: 300 } }); await settle(mp, 300);
+check('phone: tap outside closes it', !(await phoneMenu.evaluate((d) => d.open)));
+await mp.locator('summary[aria-label^="Account"]').first().tap(); await settle(mp, 300);
+await tabs.filter({ hasText: 'Events' }).tap(); await mp.waitForURL(/\/admin\/events$/); await settle(mp, 500);
+check('phone: choosing a tab closes it', await mp.locator('details[open]:has(summary[aria-label^="Account"])').count() === 0);
 await m.close();
+
+// Desktop: the account menu closes on a click outside, Escape and a page change.
+const d = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 1440, height: 900 } });
+const dp = await d.newPage(); dp.on('pageerror', (e) => errs.push(e.message));
+await dp.goto(B + '/admin/home'); await settle(dp, 800);
+const account = dp.getByRole('navigation', { name: 'Admin' }).locator('summary[aria-label^="Account"]');
+const isOpen = () => account.locator('xpath=..').evaluate((el) => el.open);
+await account.click(); await settle(dp, 200);
+check('desktop: account menu opens', await isOpen());
+await dp.locator('main').click({ position: { x: 400, y: 300 } }); await settle(dp, 200);
+check('desktop: click outside closes it', !(await isOpen()));
+await account.click(); await dp.keyboard.press('Escape'); await settle(dp, 200);
+check('desktop: Escape closes it, focus back on its button', !(await isOpen()) && await account.evaluate((el) => el === document.activeElement));
+await account.click(); await settle(dp, 200);
+// (The menu covers the links just below it, so pick one further down.)
+await dp.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Share' }).click(); await dp.waitForURL(/\/admin\/links$/); await settle(dp, 500);
+check('desktop: another page closes it', !(await isOpen()));
+await account.click(); await settle(dp, 200);
+await dp.getByRole('button', { name: 'Change password' }).click(); await settle(dp, 300);
+check('desktop: Change password opens its sheet, menu closed', !(await isOpen()) && await dp.locator('dialog[open]').count() === 1);
+await dp.keyboard.press('Escape'); await settle(dp, 300);
+check('desktop: no errors', !errs.length, errs.join(' | '));
+await d.close();
 
 await b.close(); console.log(res.join('\n'));

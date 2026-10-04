@@ -7,6 +7,7 @@ import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses } from "@/adm
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
 import Avatar from "@/admin/components/ui/Avatar";
+import { closeMenu, useDismiss } from "@/admin/components/ui/use-dismiss";
 import BrandLogo from "@/components/BrandLogo";
 
 // Five places at most, most used first, in a business owner's words
@@ -186,42 +187,49 @@ function Account({ collapsed = false }: { collapsed?: boolean }) {
   const { email, name, avatarUrl } = useAdminSession();
   const router = useRouter();
   const [changing, setChanging] = useState(false);
+  const menu = useDismiss();
   const signOut = async () => {
     await fetch("/api/admin/logout", { method: "POST" }).catch(() => null);
     router.replace("/admin/login");
     router.refresh();
   };
   return (
-    <details className="group relative lg:mt-4">
-      <summary
-        aria-label={`Account: ${name ?? email}`}
-        className={`flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full bg-white/10 text-sm font-bold uppercase text-white hover:bg-white/20 lg:h-auto lg:gap-2 lg:rounded-md lg:bg-transparent lg:px-0 lg:text-xs lg:font-semibold lg:normal-case lg:text-gray-300 ${collapsed ? "lg:min-h-11 lg:w-11 lg:justify-center" : "lg:w-full lg:justify-start"}`}
-      >
-        <Avatar name={name} email={email} url={avatarUrl} className="h-11 w-11 text-sm lg:h-7 lg:w-7 lg:text-xs" />
-        <span className={`hidden truncate ${collapsed ? "" : "lg:inline"}`}>{name ?? email}</span>
-      </summary>
-      <div className="absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:left-0 lg:right-auto">
-        <p className="truncate px-3 pt-2 text-sm font-semibold text-deep-navy">{name ?? email}</p>
-        {name && <p className="truncate px-3 text-xs text-gray-600">{email}</p>}
-        <div className="h-2" />
-        <Link
-          href="/admin/settings"
-          onClick={(e) => {
-            // Close the menu behind it.
-            const menu = e.currentTarget.closest("details");
-            if (menu) menu.open = false;
-          }}
-          className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray">
-          Settings
-        </Link>
-        <button type="button" onClick={() => setChanging(true)} className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray">
-          Change password
-        </button>
-        <button type="button" onClick={signOut} className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-red-700 hover:bg-soft-gray">
-          Sign out
-        </button>
-      </div>
+    <>
+      <details ref={menu} className="group relative lg:mt-4">
+        <summary
+          aria-label={`Account: ${name ?? email}`}
+          className={`flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full bg-white/10 text-sm font-bold uppercase text-white hover:bg-white/20 lg:h-auto lg:gap-2 lg:rounded-md lg:bg-transparent lg:px-0 lg:text-xs lg:font-semibold lg:normal-case lg:text-gray-300 ${collapsed ? "lg:min-h-11 lg:w-11 lg:justify-center" : "lg:w-full lg:justify-start"}`}
+        >
+          <Avatar name={name} email={email} url={avatarUrl} className="h-11 w-11 text-sm lg:h-7 lg:w-7 lg:text-xs" />
+          <span className={`hidden truncate ${collapsed ? "" : "lg:inline"}`}>{name ?? email}</span>
+        </summary>
+        <div className="absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:left-0 lg:right-auto">
+          <p className="truncate px-3 pt-2 text-sm font-semibold text-deep-navy">{name ?? email}</p>
+          {name && <p className="truncate px-3 text-xs text-gray-600">{email}</p>}
+          <div className="h-2" />
+          <Link
+            href="/admin/settings"
+            onClick={(e) => closeMenu(e.currentTarget)}
+            className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray">
+            Settings
+          </Link>
+          <button
+            type="button"
+            onClick={(e) => {
+              closeMenu(e.currentTarget);
+              setChanging(true);
+            }}
+            className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+          >
+            Change password
+          </button>
+          <button type="button" onClick={signOut} className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-red-700 hover:bg-soft-gray">
+            Sign out
+          </button>
+        </div>
+      </details>
+      {/* Outside the menu, so it stays up once the menu closes. */}
       {changing && <PasswordSheet onClose={() => setChanging(false)} />}
-    </details>
+    </>
   );
 }

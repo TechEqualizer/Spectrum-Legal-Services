@@ -18,7 +18,8 @@ work?** If a screen needs explaining, simplify the screen.
    Everything else is an outline button, a link or an icon.
 2. **Most-used first.** Put what people come to do at the top. Settings and
    rarely used options go below it, folded away (`<details>`) until needed.
-3. **Five places, at most.** The admin menu has five items or fewer. On a
+3. **Six places, at most.** The admin menu has six items or fewer (Home,
+   Events, Reels, Leads, Results, Share; Settings sits apart). On a
    phone they sit in a bottom tab bar, always visible within thumb reach:
    never a hidden menu, never a row that scrolls sideways.
 4. **Show where you are.** The current tab is highlighted and marked
@@ -36,6 +37,13 @@ work?** If a screen needs explaining, simplify the screen.
    Restore) instead of stacking confirmations.
 9. **Fit the phone.** 44px touch targets, nothing wider than the screen, and
    the main action visible without scrolling on a 390×844 screen.
+10. **Pop-ups close themselves.** A menu or pop-over closes when people
+    click or tap outside it, press Escape (focus returns to its button),
+    tab out of it, pick an item, or go to another page. Nothing stays open
+    behind the next thing they do. For a `<details>` menu, use
+    `useDismiss()` and `closeMenu()` from
+    `src/admin/components/ui/use-dismiss.ts`. (Folded sections inside a page,
+    like Funnel settings, are not pop-ups: they stay open while in use.)
 
 ## Before you finish
 
@@ -45,6 +53,7 @@ Open the changed screen at 390×844 and at 1440×900 and check:
 - [ ] Is the main action on screen without scrolling (on the phone)?
 - [ ] Does every button and save give visible feedback?
 - [ ] Are all menu items visible on the phone with no sideways scroll?
+- [ ] Does every menu close on an outside click, Escape and a page change?
 - [ ] Would a business owner understand every label without asking?
 
 If a box isn't ticked, fix the screen before adding anything else to it.
