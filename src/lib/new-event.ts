@@ -4,7 +4,8 @@
 // typeface, ticketing platform) and starts the event's words over, because
 // the source's words carry its own facts (its date, prices, age limit, dress
 // code). The studio then fills it from the new flyer: Import flyer for the
-// dates and look, Draft my funnel for the reels.
+// dates and look, Draft my funnel for the opening scene and the three core
+// reels (The Night, Your People, Last Call).
 //
 // "copy" (Duplicate) keeps everything the visitor sees, as published, for a
 // night that repeats; only its dates go, since they're over.

@@ -268,7 +268,7 @@ export default function ReelsEditor() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Reels</h1>
-          <p className="text-sm text-gray-600">Put reels in order. Each one plays the next.</p>
+          <p className="text-sm text-gray-600">Three reels sell the night: The Night makes them want it, Your People shows it&apos;s for them, Last Call gives the reason to buy now. Each one plays the next.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
@@ -514,7 +514,7 @@ export default function ReelsEditor() {
                 {datesEl}
               </StoryStep>
             )}
-            <StoryStep n={liveFunnel.events ? 3 : 2} title="Reels" hint="Each one plays the next" onShow={() => funnel.order[0] && setGo((g) => ({ reelId: funnel.order[0], key: g.key + 1 }))}>
+            <StoryStep n={liveFunnel.events ? 3 : 2} title="Reels" hint="The Night, Your People, Last Call" onShow={() => funnel.order[0] && setGo((g) => ({ reelId: funnel.order[0], key: g.key + 1 }))}>
               {funnelsEl}
               {orderEl}
               <button

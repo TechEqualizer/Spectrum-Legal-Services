@@ -281,7 +281,7 @@ function NewEventSheet({
             <p className="mt-0.5 text-sm text-gray-600">
               {mode === "copy"
                 ? `Copies ${source?.live.brand.seriesLabel}'s reels, look and words as published. Dates start empty.`
-                : "Starts with your logo and colors. Next, import the flyer to fill in the dates, look and reels."}
+                : "Starts with your logo and colors. Next, import the flyer: it fills in the dates and look, and drafts your opening scene and three reels that sell the night."}
             </p>
           </div>
           <button type="button" onClick={() => ref.current?.close()} aria-label="Close" className="-mr-2 -mt-1 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-white hover:text-deep-navy">

@@ -7,8 +7,8 @@ import { draftFunnel } from "@/lib/server/funnel-draft";
 // Planning a whole funnel takes longer than reading dates.
 export const maxDuration = 120;
 
-// Drafts the funnel from a flyer (opening words, reels in selling order,
-// and a video prompt for each), for the admin to review. Nothing is saved.
+// Drafts the funnel from a flyer (the opening scene and the three core
+// reels, each with a video prompt), for the admin to review. Nothing is saved.
 export async function POST(request: Request) {
   const admin = await getAdmin();
   if (!admin) return NextResponse.json({ error: "Sign in again." }, { status: 401 });
@@ -27,8 +27,15 @@ export async function POST(request: Request) {
   const dates = (Array.isArray(body?.dates) ? body.dates : [])
     .slice(0, 20)
     .flatMap((d) => {
-      const x = (d ?? {}) as { date?: unknown; name?: unknown };
-      return typeof x.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? [{ date: x.date, name: typeof x.name === "string" ? x.name.slice(0, 80) : "" }] : [];
+      const x = (d ?? {}) as { date?: unknown; name?: unknown; price?: unknown; status?: unknown };
+      if (typeof x.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(x.date)) return [];
+      const status = x.status === "few_left" || x.status === "sold_out" || x.status === "on_sale" ? (x.status as "few_left" | "sold_out" | "on_sale") : undefined;
+      return [{
+        date: x.date,
+        name: typeof x.name === "string" ? x.name.slice(0, 80) : "",
+        ...(typeof x.price === "string" && x.price ? { price: x.price.slice(0, 40) } : {}),
+        ...(status ? { status } : {}),
+      }];
     });
   const result = await draftFunnel(input, { brand: funnel.brand.name, today, dates, photos: body?.photos === true });
   if ("problem" in result) return NextResponse.json({ error: result.problem }, { status: 502 });

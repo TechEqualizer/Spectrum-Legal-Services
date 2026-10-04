@@ -40,9 +40,12 @@ check('draft preview', await sheet.getByRole('heading', { name: 'Your funnel, dr
 const req = await last();
 check('draft request: model, schema, flyer image resent', req.body.model === 'claude-opus-5-5' && req.body.output_config?.format?.type === 'json_schema' && req.body.messages[0].content[0].type === 'image');
 check('draft request: dates and brand in prompt', /2026-10-31/.test(req.body.system) && /creative director/.test(req.body.system));
+check('draft request: the three core drivers', /the_night/.test(req.body.system) && /your_people/.test(req.body.system) && /last_call/.test(req.body.system) && /Never invent testimonials/.test(req.body.system));
+check('draft request: price for true urgency', /From \$30/.test(req.body.system), req.body.system.slice(0, 400));
 const items = sheet.locator('section ol > li');
-check('5 reels, bad role dropped', await items.count() === 5, String(await items.count()));
-check('roles and dates shown', await sheet.getByText('Hook · Oct 31 · Start from your photo').isVisible() && await sheet.getByText('Last call · Oct 31 · From words').isVisible());
+check('three core reels, one per role', await items.count() === 3, String(await items.count()));
+check('in driver order with dates', await sheet.getByText('The Night · Oct 31 · Start from your photo').isVisible() && await sheet.getByText('Your People · Start from your photo').isVisible() && await sheet.getByText('Last Call · Oct 31 · From words').isVisible());
+check('each says what it answers, with its hook', await sheet.getByText('Will this be amazing?').isVisible() && await sheet.getByText('Why buy now?').isVisible() && await sheet.getByText('A gold mask turns to camera.').isVisible());
 check('opening words shown', await sheet.getByText('Masks on, Detroit').isVisible() && await sheet.getByText('Step inside the night').isVisible());
 await sheet.getByRole('heading', { name: 'Your funnel, drafted' }).scrollIntoViewIfNeeded();
 await p.screenshot({ path: S + `/draft-preview-${W}.jpg` });
@@ -51,16 +54,17 @@ await sheet.getByRole('button', { name: 'Use this draft' }).click(); await p.wai
 check('sheet stays for the look/date left', await sheet.getByText('Funnel drafted').isVisible());
 await sheet.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
 const titles = await orderRows().locator('p.font-bold').allTextContents();
-check('funnel order replaced', JSON.stringify(titles) === JSON.stringify(['Masks on', 'The Runway', 'The Inner Circle', 'Dress to impress', 'Last call']), JSON.stringify(titles));
-check('Needs video chips', await orderRows().filter({ hasText: 'Needs video' }).count() === 5);
-check('date chip on linked reels', await orderRows().nth(0).getByText('Oct 31').isVisible() && await orderRows().nth(4).getByText('Oct 31').isVisible());
-check('last call is bold', await orderRows().nth(4).getByText('Bold', { exact: true }).isVisible());
-check('toast', await p.getByText('Funnel drafted: 5 reels, each with a video prompt').isVisible());
+check('funnel order replaced', JSON.stringify(titles) === JSON.stringify(['Masks on', 'Bring your crew', 'Last call']), JSON.stringify(titles));
+check('Needs video chips', await orderRows().filter({ hasText: 'Needs video' }).count() === 3);
+check('date chip on linked reels', await orderRows().nth(0).getByText('Oct 31').isVisible() && await orderRows().nth(2).getByText('Oct 31').isVisible());
+check('last call is bold', await orderRows().nth(2).getByText('Bold', { exact: true }).isVisible());
+check('toast', await p.getByText('Funnel drafted: 3 reels, each with a video prompt').isVisible());
 const hero = p.locator('section[aria-labelledby="hero-media-title"]');
 check('opening title updated', await hero.getByText('“Masks on, Detroit”').isVisible());
 check('hero prompt on opening card', await hero.getByText('Video prompt').isVisible());
 const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('admin_prompts_masquerade') || '{}'));
-check('prompts kept', Object.keys(stored).length === 6 && /seamless loop/.test(stored['#opening']) && /Avoid: on-screen text/.test(stored['masks-on']), Object.keys(stored).join(','));
+check('captions ride with the prompt', /Captions to add when editing \(not in the video\): "\$31 GA ends Oct 30"/.test(stored['last-call'] ?? ''), (stored['last-call'] ?? '').slice(-120));
+check('prompts kept', Object.keys(stored).length === 4 && /seamless loop/.test(stored['#opening']) && /Avoid: on-screen text/.test(stored['masks-on']), Object.keys(stored).join(','));
 check('prompt assembled', /^Camera: rack focus\. Length: 6s, vertical 9:16\./.test(stored['masks-on']) && /Style: Anamorphic/.test(stored['masks-on']));
 await p.screenshot({ path: S + `/draft-applied-${W}.jpg`, fullPage: W < 1000 });
 

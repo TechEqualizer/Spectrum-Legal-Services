@@ -5,7 +5,7 @@ import { ScenePreview, Swatches } from "@/admin/components/HeroMediaCard";
 import { keepUpload } from "@/admin/drafts";
 import { LOOK_FONTS, type Look } from "@/lib/look";
 import type { ImportedDate } from "@/lib/server/flyer-import";
-import { REEL_ROLES, type FunnelDraft } from "@/lib/funnel-draft";
+import { REEL_DRIVERS, REEL_ROLES, type FunnelDraft } from "@/lib/funnel-draft";
 import { CheckIcon } from "@/admin/components/ui/icons";
 
 export type { FunnelDraft, ImportedDate };
@@ -428,8 +428,9 @@ const SOURCE_LABELS: Record<FunnelDraft["reels"][number]["source"], string> = {
 };
 
 /**
- * "Draft your whole funnel": Claude plans the opening words and the reels
- * in selling order, each with a video prompt. Shown for review first;
+ * "Draft your whole funnel": Claude plans four things from the flyer, the
+ * opening scene and the three core reels (The Night, Your People, Last
+ * Call), each with a video prompt. Shown for review first;
  * "Use this draft" puts it in the editor, where Undo takes it back.
  */
 function DraftOffer({
@@ -455,7 +456,7 @@ function DraftOffer({
       const res = await fetch("/api/admin/draft-funnel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, today: localDay(new Date()), dates: found.dates.map((d) => ({ date: d.date, name: d.name })), ...found.source }),
+        body: JSON.stringify({ slug, today: localDay(new Date()), dates: found.dates.map((d) => ({ date: d.date, name: d.name, price: d.price })), ...found.source }),
       }).catch(() => null);
       if (!res) throw new Error("Couldn't reach the server. Check your connection and try again.");
       const body = (await res.json().catch(() => ({}))) as Partial<FunnelDraft> & { error?: string };
@@ -483,7 +484,7 @@ function DraftOffer({
       <section aria-labelledby={`${id}-title`} aria-busy={busy} className="rounded-xl bg-white p-4">
         <h3 id={`${id}-title`} className="font-bold text-deep-navy">Draft your whole funnel?</h3>
         <p className="mt-1 text-sm text-gray-600">
-          From this flyer: your opening words, 4 to 6 reels in selling order, and a video prompt for each one.
+          From this flyer, four things: your opening scene, and three reels that sell the night. The Night makes them want it, Your People shows it&apos;s for them, Last Call gives the reason to buy now. Each comes with a video prompt.
         </p>
         {error && <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{error}</p>}
         <button
@@ -524,7 +525,9 @@ function DraftOffer({
               <span className="block text-xs text-gray-600">
                 {[REEL_ROLES[r.role], dayOf(r.date), SOURCE_LABELS[r.source]].filter(Boolean).join(" · ")}
               </span>
+              <span className="block text-xs text-gray-600">{REEL_DRIVERS[r.role].question}</span>
               {r.summary && <span className="mt-0.5 block text-sm text-charcoal">{r.summary}</span>}
+              {r.hook && <span className="mt-0.5 block text-sm text-charcoal"><span className="font-semibold">Hook:</span> {r.hook}</span>}
             </span>
           </li>
         ))}

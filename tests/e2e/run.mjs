@@ -42,6 +42,8 @@ const env = {
   NEXT_TELEMETRY_DISABLED: "1",
 };
 for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) delete env[key];
+// The mock's own secret key, for Send login (Settings → Accounts) only.
+env.SUPABASE_SECRET_KEY = "test-secret";
 
 const children = [];
 const start = (cmd, cmdArgs, opts = {}) => {

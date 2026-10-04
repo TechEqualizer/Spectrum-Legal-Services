@@ -23,10 +23,14 @@ web
 ## Product Purpose
 
 Event Reels turns an event's link into a short story of vertical video reels
-that sells the night and ends on Tickets. An organizer drops in a flyer;
-Claude reads the dates, the look and the selling points, drafts the opening
-words, the reels and a video prompt for each, and the organizer reviews and
-publishes. Success is ticket sales the organizer can trace to the reel and
+that sells the night and ends on Tickets. An organizer drops in a flyer and
+gets four things: the opening scene, and three core reels built on the
+proven reasons people buy a ticket. **The Night** (desire and self-image:
+"Will this be amazing?"), **Your People** (belonging and real social proof:
+"Is this for someone like me?") and **Last Call** (fear of missing out, from
+true deadlines: "Why buy now?"). Claude reads the dates, the look and the
+selling points and drafts all four with a video prompt each; the organizer
+reviews and publishes. Success is ticket sales the organizer can trace to the reel and
 source that made them, and organizers who can do all of this themselves.
 
 ## Positioning
@@ -53,8 +57,8 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
   presale) and an end card. Several dates of one event are supported; a
   single date gets its own card.
 - Admin: Reels studio (opening scene, dates, reels, style, live phone
-  preview, path strip), flyer import (dates, look, whole-funnel draft with
-  video prompts), Leads, Results, Share, Paths. Edits save in the browser and
+  preview, path strip), flyer import (dates, look, and the four-part draft:
+  opening scene, The Night, Your People, Last Call, with video prompts), Leads, Results, Share, Paths. Edits save in the browser and
   go live on Publish, with undo.
 - Stack: Next.js 16 App Router, React 19, Tailwind 4, Supabase (auth,
   publications, storage, leads), Claude API for flyers and drafts, Vercel.

@@ -57,7 +57,28 @@ await sheet.getByLabel(/Big Love Productions/).check();
 await sheet.getByRole('button', { name: 'Add account' }).click(); await p.waitForTimeout(1200);
 list = await accounts.innerText();
 check('account added with its organizer', /promoter@example\.com\s*Big Love Productions/.test(list), list.slice(0, 400));
-check('says to create their login', list.includes('Create their login in Supabase'));
+check('says to send their login', list.includes('Send their login next') && /promoter@example\.com\s*Big Love Productions · No login yet/.test(list), list.slice(0, 400));
+
+// Send login: a temporary password, shown once, that really signs them in.
+await accounts.getByRole('button', { name: 'Send login to promoter@example.com' }).click(); await p.waitForTimeout(1500);
+const card = await accounts.innerText();
+const temp = card.match(/temporary password\s+([A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4})/)?.[1];
+check('login created, password shown once', Boolean(temp) && card.includes("Email isn't set up") && card.includes('/admin/login'), card.slice(0, 300));
+check('copy login details offered', await accounts.getByRole('button', { name: 'Copy login details' }).isVisible());
+const promo = await b.newContext({ viewport: { width: 1280, height: 900 } });
+const signIn = await promo.request.post(B + '/api/admin/login', { data: { email: 'promoter@example.com', password: temp ?? 'x' } });
+check('they can sign in with it', signIn.ok(), String(signIn.status()));
+const pp = await promo.newPage();
+await pp.goto(B + '/admin/events'); await pp.waitForTimeout(1200);
+check('they must choose their own password', await pp.locator('dialog[open]').count() === 1 && /password/i.test(await pp.locator('dialog[open]').innerText()));
+await promo.close();
+await accounts.getByRole('button', { name: 'Done' }).click();
+await p.reload(); await p.waitForTimeout(1500);
+list = await accounts.innerText();
+check('now shows their sign-in', /promoter@example\.com\s*Big Love Productions · Last signed in/.test(list), list.slice(0, 400));
+check('reset offered once they have a login', await accounts.getByRole('button', { name: 'Reset password for promoter@example.com' }).isVisible());
+const notListed = await p.request.post(B + '/api/admin/accounts/invite', { data: { email: 'nobody@example.com' } });
+check('only listed accounts get logins', notListed.status() === 404, String(notListed.status()));
 await accounts.getByRole('button', { name: 'Change access for promoter@example.com' }).click();
 await sheet.getByLabel(/^Full access/).check();
 await sheet.getByRole('button', { name: 'Save' }).click(); await p.waitForTimeout(1200);
@@ -87,6 +108,7 @@ await o.goto(B + '/admin/settings'); await o.waitForTimeout(1000);
 const access = await o.locator('main').innerText();
 check('organizer: no Accounts', await o.getByRole('region', { name: 'Accounts' }).count() === 0);
 check('organizer: accounts API refused', (await o.request.get(B + '/api/admin/accounts')).status() === 403);
+check('organizer: cannot send logins', (await o.request.post(B + '/api/admin/accounts/invite', { data: { email: 'promoter@example.com' } })).status() === 403);
 check("organizer: their organizer listed", access.includes('Big Love Productions') && access.includes('/f/biglove') && !access.includes('Full access'));
 
 check('no page errors', !errs.length, errs.join(' | ').slice(0, 300));
