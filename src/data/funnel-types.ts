@@ -1,6 +1,7 @@
 // Types for reel funnels. Each funnel is one business's shareable link
 // (/f/<slug>): its reels, the paths between them, and its brand.
 
+import type { ReelRole } from "@/lib/funnel-draft";
 import type { LookFont } from "@/lib/look";
 
 export type Reel = {
@@ -27,6 +28,8 @@ export type Reel = {
    * a recap and its Tickets button points at the next event.
    */
   eventId?: string;
+  /** Which of the three core reels this is (The Night, Your People, Last Call), when it's one of them. */
+  role?: ReelRole;
 };
 
 /** One date of an event series, sold on the organizer's own ticketing page. */

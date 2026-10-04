@@ -30,7 +30,7 @@ import { clearImportRequest, importRequested } from "@/admin/import-request";
 import { useAdminSession } from "@/admin/session";
 import { useEditor } from "@/admin/use-editor";
 import type { Look } from "@/lib/look";
-import type { FunnelDraft } from "@/lib/funnel-draft";
+import { REEL_ORDER, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
 import { HERO_PROMPT, keepPrompts, usePrompts } from "@/admin/prompts";
 import { publishedFunnel, toPublication } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
@@ -72,6 +72,8 @@ export default function ReelsEditor() {
   const { results, real: realResults } = useResults(30);
   const stats = new Map((results?.reels ?? []).map((t) => [t.reel.id, t]));
   const [editing, setEditing] = useState<EditorReel | null>(null);
+  // Where a new reel goes in the order, when it was added from a + on the path strip.
+  const [insertAt, setInsertAt] = useState<number | null>(null);
   // Plays the funnel as edited, from one of its reels.
   const [preview, setPreview] = useState<{ reelId: string; key: number } | null>(null);
   // Read out after a move, for keyboard and screen reader users.
@@ -144,6 +146,7 @@ export default function ReelsEditor() {
         practiceArea: liveFunnel.brand.services[0],
         cta: "funnel",
         ...(event ? { eventId: event.id } : {}),
+        role: d.role,
         ...(d.role === "last_call" ? { emphasis: "bold" as const } : {}),
       };
     });
@@ -207,7 +210,9 @@ export default function ReelsEditor() {
       const nextPaths = { ...f.paths };
       if (Object.keys(paths).length) nextPaths[id] = paths;
       else delete nextPaths[id];
-      return { ...f, order: isNew ? [...f.order, id] : f.order, topics, paths: nextPaths };
+      const order = [...f.order];
+      if (isNew) order.splice(insertAt ?? order.length, 0, id);
+      return { ...f, order, topics, paths: nextPaths };
     });
     // A new reel made for a date (or given one) becomes what that date opens, unless it already opens another.
     if (isNew && saved.eventId) {
@@ -216,6 +221,7 @@ export default function ReelsEditor() {
       );
     }
     setEditing(null);
+    setInsertAt(null);
     setToast(isNew ? "Reel added" : "Reel saved");
   };
 
@@ -437,7 +443,10 @@ export default function ReelsEditor() {
           dates={dateOptions}
           videoPrompt={prompts[editing.id]}
           onSave={save}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            setInsertAt(null);
+          }}
         />
       )}
     </>
@@ -474,6 +483,37 @@ export default function ReelsEditor() {
     }),
     { id: "end", kind: "end", title: `End: ${CTA_LABELS[shown.primaryCta]}` },
   ];
+  /**
+   * The core reels (The Night, Your People, Last Call) the shown funnel is
+   * missing, each placed before the first reel that comes after it. Reels
+   * without a role (made before roles, or by hand) fill the earliest slots,
+   * so an event with two such reels is missing only Last Call. Event
+   * funnels only: the demos aren't nights out.
+   */
+  const missingCore = (() => {
+    if (!liveFunnel.events) return [];
+    const inOrder = shown.order.map((id) => byId.get(id)).filter((r): r is EditorReel => Boolean(r));
+    const has = new Set(inOrder.map((r) => r.role).filter(Boolean));
+    const untagged = inOrder.filter((r) => !r.role).length;
+    return REEL_ORDER.filter((role) => !has.has(role))
+      .slice(untagged)
+      .map((role) => {
+        const later = inOrder.findIndex((r) => r.role && REEL_ORDER.indexOf(r.role) > REEL_ORDER.indexOf(role));
+        return { role, index: later === -1 ? inOrder.length : later };
+      });
+  })();
+  /** A new reel at this place in the shown funnel, as a core reel if given. */
+  const addAt = (index: number, role?: ReelRole) => {
+    setActiveId(shown.id);
+    setInsertAt(index);
+    setEditing({
+      ...blankReel,
+      practiceArea: liveFunnel.brand.services[0],
+      ...(role ? { role, ...(role === "last_call" ? { emphasis: "bold" as const } : {}) } : {}),
+      // With one date, every reel sells it.
+      ...(allDates?.length === 1 ? { eventId: allDates[0].id } : {}),
+    });
+  };
   const goTo = (stop: PathStop) =>
     setGo((g) =>
       stop.kind === "opening"
@@ -493,7 +533,7 @@ export default function ReelsEditor() {
         go={go}
         onRestart={() => setGo((g) => ({ key: g.key + 1 }))}
         onMoment={setMoment}
-        strip={shown.order.length > 0 ? <PathStrip stops={stops} current={onScreen} onGo={goTo} /> : undefined}
+        strip={shown.order.length > 0 ? <PathStrip stops={stops} current={onScreen} onGo={goTo} onAdd={addAt} missing={missingCore} /> : undefined}
         canUndo={editor.history.canUndo}
         canRedo={editor.history.canRedo}
         onUndo={editor.history.undo}

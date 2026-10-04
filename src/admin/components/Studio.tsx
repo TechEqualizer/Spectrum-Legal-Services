@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react"
 import type { PreviewMessage, PreviewMoment } from "@/admin/components/PreviewFrame";
 import type { ReelTotals } from "@/admin/sample-data";
 import { formatNumber, formatPercent } from "@/admin/viz";
+import { PlusIcon } from "@/admin/components/ui/icons";
+import { REEL_DRIVERS, REEL_ROLES, type ReelRole } from "@/lib/funnel-draft";
 import type { Publication } from "@/lib/publication";
 
 // The desktop studio around the reel editor: the story on the left, the
@@ -414,12 +416,35 @@ export type PathStop = {
   unreachable?: boolean;
 };
 
+const chevronIcon = (className = "mt-6") => (
+  <svg className={`${className} h-3.5 w-3.5 flex-shrink-0 text-gray-400`} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+);
+const chevron = chevronIcon();
+
 /**
  * The funnel as a path, under the phone: the opening, each reel in order
  * with any detours, then the end card. Tap a stop to play it; the stop on
  * screen is highlighted as the admin taps through the phone.
+ *
+ * Between stops, a + adds a reel right there (shown on hover on desktop,
+ * always on touch screens). A core reel the funnel is missing shows as a
+ * dashed card in its place ("+ Last Call") instead of a plain +.
  */
-export function PathStrip({ stops, current, onGo }: { stops: PathStop[]; current: string; onGo: (stop: PathStop) => void }) {
+export function PathStrip({
+  stops,
+  current,
+  onGo,
+  onAdd,
+  missing = [],
+}: {
+  stops: PathStop[];
+  current: string;
+  onGo: (stop: PathStop) => void;
+  /** Adds a reel at this place in the order (from 0), as one of the core reels if given. */
+  onAdd?: (index: number, role?: ReelRole) => void;
+  /** Core reels the funnel is missing, and where each goes in the order. */
+  missing?: { role: ReelRole; index: number }[];
+}) {
   const list = useRef<HTMLOListElement>(null);
   // Keep the stop on screen in view, scrolling the strip only (never the page).
   useEffect(() => {
@@ -431,6 +456,46 @@ export function PathStrip({ stops, current, onGo }: { stops: PathStop[]; current
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
     });
   }, [current]);
+  const reelCount = stops.filter((st) => st.kind === "reel").length;
+  /** What sits before the stop at this place in the order: a chevron with a +, or the missing core reels. */
+  const gap = (index: number) => {
+    const here = onAdd ? missing.filter((m) => m.index === index) : [];
+    if (here.length) {
+      return here.map((m) => (
+        <span key={m.role} className="flex items-start gap-1.5">
+          {chevron}
+          <button
+            type="button"
+            onClick={() => onAdd?.(index, m.role)}
+            aria-label={`Add ${REEL_ROLES[m.role]}: ${REEL_DRIVERS[m.role].question}`}
+            className="flex w-[5.5rem] flex-col items-center gap-1 rounded-xl p-1.5 text-center transition hover:bg-white/70"
+          >
+            <span className="flex h-12 w-9 items-center justify-center rounded-md border border-dashed border-gray-400 text-gray-600" aria-hidden="true">
+              <PlusIcon />
+            </span>
+            <span className="text-[11px] font-semibold leading-tight text-deep-navy">{REEL_ROLES[m.role]}</span>
+            <span className="line-clamp-2 text-[11px] leading-tight text-gray-600">{REEL_DRIVERS[m.role].question}</span>
+          </button>
+          {chevron}
+        </span>
+      ));
+    }
+    if (!onAdd) return chevron;
+    return (
+      <button
+        type="button"
+        onClick={() => onAdd(index)}
+        aria-label={`Add a reel here, as reel ${index + 1}`}
+        title="Add a reel here"
+        className="group/gap -mx-1.5 mt-2 flex h-11 w-7 flex-shrink-0 items-center justify-center rounded-full text-gray-400 hover:text-deep-navy focus-visible:text-deep-navy"
+      >
+        <span className="group-hover/gap:hidden group-focus-visible/gap:hidden [@media(hover:none)]:hidden">{chevronIcon("")}</span>
+        <span className="hidden h-6 w-6 items-center justify-center rounded-full border border-gray-400 bg-white group-hover/gap:flex group-focus-visible/gap:flex [@media(hover:none)]:flex">
+          <PlusIcon className="h-3.5 w-3.5" />
+        </span>
+      </button>
+    );
+  };
   return (
     <nav aria-label="Path through your link" className="mt-3">
       <ol ref={list} role="list" className="relative flex items-start gap-1.5 overflow-x-auto px-1 pb-2 pt-1 [scrollbar-width:thin]">
@@ -438,9 +503,7 @@ export function PathStrip({ stops, current, onGo }: { stops: PathStop[]; current
           const on = stop.id === current;
           return (
             <li key={stop.id} className="flex flex-shrink-0 items-start gap-1.5">
-              {i > 0 && (
-                <svg className="mt-6 h-3.5 w-3.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-              )}
+              {i > 0 && gap(stop.kind === "reel" ? stop.n! - 1 : reelCount)}
               <button
                 type="button"
                 onClick={() => onGo(stop)}

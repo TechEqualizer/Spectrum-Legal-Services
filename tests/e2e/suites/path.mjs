@@ -14,7 +14,7 @@ for (const [w, h] of [[1440, 900], [1280, 800]]) {
   await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(4000);
   const strip = p.getByRole('navigation', { name: 'Path through your link' });
   const phone = p.frameLocator('iframe[title="Live preview of your link"]');
-  const stops = strip.getByRole('button');
+  const stops = strip.getByRole('button', { name: /^(Opening|Reel \d+|End:)/ });
   const labels = await stops.evaluateAll(els => els.map(e => e.getAttribute('aria-label')));
   const tag = `${w}:`;
   check(`${tag} strip: opening, reels, end`, /^Opening/.test(labels[0]) && /^End: Tickets/.test(labels.at(-1)) && labels.filter(l => /^Reel \d+/.test(l)).length >= 5, labels.length + ' stops');

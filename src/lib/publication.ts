@@ -5,6 +5,7 @@
 import { withEdits, type EditorFunnel, type EditorReel, type PathTarget, type ReelCta } from "@/admin/editor-model";
 import type { Funnel, FunnelCta, FunnelEvent, ReelEmphasis, ReelMedia } from "@/data/funnel-types";
 import { parseLook, themeOf, type Look } from "@/lib/look";
+import { REEL_ROLES, type ReelRole } from "@/lib/funnel-draft";
 
 export type Publication = {
   version: 1;
@@ -135,6 +136,7 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
     if (!REEL_CTAS.includes(r.cta as ReelCta)) return `Reel "${r.id}" has an unknown button.`;
     if (r.emphasis !== undefined && !EMPHASES.includes(r.emphasis as ReelEmphasis)) return `Reel "${r.id}" has an unknown selling style.`;
     if (!text(r.badge, 40, true) || !text(r.duration, 20, true) || !text(r.eventId, 80, true)) return `Reel "${r.id}" has a bad field.`;
+    if (r.role !== undefined && !(typeof r.role === "string" && r.role in REEL_ROLES)) return `Reel "${r.id}" has an unknown role.`;
     if (r.media !== undefined) {
       const problem = checkMedia(r.media);
       if (problem) return `Reel "${r.title}": ${problem}.`;
@@ -150,6 +152,7 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
       ...(r.duration ? { duration: r.duration as string } : {}),
       ...(r.eventId ? { eventId: r.eventId as string } : {}),
       ...(r.emphasis ? { emphasis: r.emphasis as ReelEmphasis } : {}),
+      ...(r.role ? { role: r.role as ReelRole } : {}),
       ...(r.media ? { media: r.media as ReelMedia } : {}),
     });
   }
