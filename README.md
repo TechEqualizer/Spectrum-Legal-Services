@@ -464,7 +464,16 @@ business's colors. It is not linked from the public site and is marked
   Selecting a reel shows its numbers; changing where it leads redraws the map
   (preview only).
 - **Leads**: sample leads with the videos each one watched before booking.
-- **Navigation**: Events, Reels, Leads, Results, Share. On phones they sit
+- **Home** (`/admin/home`, where signing in lands): every event the admin
+  runs at a glance. The last 30 days across all of them (reel views, ticket
+  clicks, views to tickets, update sign-ups), **Next up** (the next night
+  and its four things: the opening scene and The Night, Your People, Last
+  Call, each Ready, Needs video or Missing), where visitors came from, the
+  top reels and views by day. Each event's numbers come from
+  `/api/admin/stats`, fetched side by side and added up in the browser
+  (`useAllResults` in `src/admin/results.ts`); every part opens the event in
+  the studio.
+- **Navigation**: Home, Events, Reels, Leads, Results, Share. On phones they sit
   in a bottom tab bar; on
   desktop, a sidebar. Screens follow `.claude/skills/simple-navigation`.
 

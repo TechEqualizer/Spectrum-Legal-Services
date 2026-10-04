@@ -28,7 +28,7 @@ export default function LoginForm() {
       return setError(body?.error ?? "Couldn't reach the server. Check your connection and try again.");
     }
     // Only paths inside the admin.
-    router.replace(next?.startsWith("/admin") && !next.startsWith("//") ? next : "/admin");
+    router.replace(next?.startsWith("/admin") && !next.startsWith("//") ? next : "/admin/home");
     router.refresh();
   };
 

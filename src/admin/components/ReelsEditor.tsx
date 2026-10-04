@@ -30,7 +30,7 @@ import { clearImportRequest, importRequested } from "@/admin/import-request";
 import { useAdminSession } from "@/admin/session";
 import { useEditor } from "@/admin/use-editor";
 import type { Look } from "@/lib/look";
-import { REEL_ORDER, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
+import { REEL_ORDER, coreReels, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
 import { HERO_PROMPT, keepPrompts, usePrompts } from "@/admin/prompts";
 import { publishedFunnel, toPublication } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
@@ -493,11 +493,9 @@ export default function ReelsEditor() {
   const missingCore = (() => {
     if (!liveFunnel.events) return [];
     const inOrder = shown.order.map((id) => byId.get(id)).filter((r): r is EditorReel => Boolean(r));
-    const has = new Set(inOrder.map((r) => r.role).filter(Boolean));
-    const untagged = inOrder.filter((r) => !r.role).length;
-    return REEL_ORDER.filter((role) => !has.has(role))
-      .slice(untagged)
-      .map((role) => {
+    return coreReels(inOrder)
+      .filter((slot) => !slot.reel)
+      .map(({ role }) => {
         const later = inOrder.findIndex((r) => r.role && REEL_ORDER.indexOf(r.role) > REEL_ORDER.indexOf(role));
         return { role, index: later === -1 ? inOrder.length : later };
       });
