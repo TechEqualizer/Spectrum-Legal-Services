@@ -74,11 +74,31 @@ http.createServer((req, res) => {
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
+    // Auth admin (the secret key only): list, create and reset logins.
+    if (p.startsWith('/auth/v1/admin/users')) {
+      if (req.headers.apikey !== 'test-secret') return json(res, 401, { msg: 'secret key required' });
+      const idOf = (e) => `user-${e.split('@')[0]}`;
+      const withLogin = Object.keys(users).filter((e) => users[e].password);
+      if (req.method === 'GET') return json(res, 200, { users: withLogin.map((e) => ({ id: idOf(e), email: e, last_sign_in_at: users[e].lastSignIn ?? null })) });
+      if (req.method === 'POST') {
+        if (users[body.email]?.password) return json(res, 422, { code: 'email_exists', msg: 'A user with this email address has already been registered' });
+        users[body.email] = { admin: false, slugs: [], organizers: [], ...users[body.email], password: body.password, mustChange: Boolean(body.user_metadata?.must_change_password) };
+        return json(res, 200, { id: idOf(body.email), email: body.email });
+      }
+      if (req.method === 'PUT') {
+        const email = withLogin.find((e) => p.endsWith('/' + idOf(e)));
+        if (!email) return json(res, 404, { msg: 'not found' });
+        users[email].password = body.password;
+        users[email].mustChange = Boolean(body.user_metadata?.must_change_password);
+        return json(res, 200, { id: idOf(email), email });
+      }
+    }
     // Auth
     if (p === '/auth/v1/token') {
       if (url.searchParams.get('grant_type') === 'password') {
         const u = users[body?.email];
         if (!u || u.password !== body.password) return json(res, 400, { error: 'invalid_grant' });
+        u.lastSignIn = new Date().toISOString();
         return json(res, 200, tokenFor(body.email));
       }
       const email = refreshes.get(body?.refresh_token);

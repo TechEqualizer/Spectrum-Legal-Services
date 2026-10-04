@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { asAdmin, getAdmin, type Admin } from "@/lib/server/admin-auth";
+import { invitesEnabled, listLogins } from "@/lib/server/auth-admin";
 import { listOrganizers } from "@/lib/server/funnels";
 
 // Superadmin (Settings → Accounts): full admins see every admin account and
@@ -25,9 +26,18 @@ export async function GET() {
   const res = await asAdmin("/rest/v1/admin_users?select=*&order=created_at", admin.accessToken);
   if (!res?.ok) return NextResponse.json({ error: "Couldn't load accounts. Reload to try again." }, { status: 502 });
   const rows = (await res.json()) as AccountRow[];
+  // With the server key: who has a login yet, and when they last signed in.
+  const logins = invitesEnabled() ? await listLogins() : null;
   return NextResponse.json({
     me: admin.email.toLowerCase(),
-    accounts: rows.map((r) => ({ email: r.email, slugs: r.slugs, organizers: r.organizers ?? [], created_at: r.created_at })),
+    canInvite: Boolean(logins),
+    accounts: rows.map((r) => ({
+      email: r.email,
+      slugs: r.slugs,
+      organizers: r.organizers ?? [],
+      created_at: r.created_at,
+      ...(logins ? { login: logins.has(r.email) ? { lastSignInAt: logins.get(r.email)!.lastSignInAt } : null } : {}),
+    })),
     organizers: await listOrganizers(),
   });
 }

@@ -1,11 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import CopyButton from "@/admin/components/ui/CopyButton";
 import { PlusIcon } from "@/admin/components/ui/icons";
 
-type Account = { email: string; slugs: string[]; organizers: string[] };
+/** login: undefined when invites aren't set up (unknown), null when they have none yet. */
+type Account = { email: string; slugs: string[]; organizers: string[]; login?: { lastSignInAt: string | null } | null };
 type Organizer = { slug: string; name: string };
-type Data = { me: string; accounts: Account[]; organizers: Organizer[] };
+type Data = { me: string; canInvite: boolean; accounts: Account[]; organizers: Organizer[] };
+type Sent = { email: string; reset: boolean; emailed: boolean; password: string; loginUrl: string };
+
+/** Whether they can sign in yet, in words. */
+function loginOf(a: Account) {
+  if (a.login === undefined) return "";
+  if (!a.login) return "No login yet";
+  if (!a.login.lastSignInAt) return "Hasn't signed in yet";
+  return `Last signed in ${new Date(a.login.lastSignInAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
 
 /** What an account can edit, in words. */
 function accessOf(a: Account, organizers: Organizer[]) {
@@ -27,6 +38,24 @@ export default function Accounts() {
   const [editing, setEditing] = useState<Account | "new" | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [sending, setSending] = useState<string | null>(null);
+  const [sent, setSent] = useState<Sent | null>(null);
+
+  const sendLogin = async (email: string) => {
+    setNotice("");
+    setSent(null);
+    setSending(email);
+    const res = await fetch("/api/admin/accounts/invite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    }).catch(() => null);
+    const body = (await res?.json().catch(() => null)) as (Sent & { error?: string }) | null;
+    setSending(null);
+    if (!res?.ok || !body?.password) return setNotice(body?.error ?? `Couldn't send ${email} a login. Try again.`);
+    setSent(body);
+    void load();
+  };
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/accounts").catch(() => null);
@@ -37,7 +66,6 @@ export default function Accounts() {
   }, []);
   useEffect(() => {
     // Loads once; saving reloads.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch result, not derived state
     void load();
   }, [load]);
 
@@ -68,6 +96,31 @@ export default function Accounts() {
         )}
       </div>
       {notice && <p role="status" className="mb-2 px-1 text-sm font-semibold text-deep-navy">{notice}</p>}
+      {sent && (
+        <div role="status" className="mb-3 rounded-xl border border-teal-accent/30 bg-white px-4 py-4 text-sm sm:px-5">
+          <p className="font-semibold text-deep-navy">
+            {sent.emailed
+              ? `${sent.reset ? "New password" : "Login"} emailed to ${sent.email}.`
+              : `${sent.reset ? "Password reset" : "Login created"} for ${sent.email}. Email isn't set up, so send them this yourself:`}
+          </p>
+          <p className="mt-2 text-gray-600">
+            Sign in at <span className="font-semibold text-deep-navy">{sent.loginUrl}</span> with their email and the temporary password{" "}
+            <code className="rounded bg-soft-gray px-1.5 py-0.5 font-semibold text-deep-navy">{sent.password}</code>. They&apos;ll choose their own when they sign in.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <CopyButton
+              text={`Sign in to Event Reels: ${sent.loginUrl}\nEmail: ${sent.email}\nTemporary password: ${sent.password}\nYou'll choose your own password when you sign in.`}
+              label="Copy login details"
+              announce="Login details copied"
+              className="min-h-11 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+            />
+            <button type="button" onClick={() => setSent(null)} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-gray-700 hover:bg-soft-gray">
+              Done
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-gray-600">This password is shown once. Send login again to make a new one.</p>
+        </div>
+      )}
       {!data ? (
         <p role={error ? "alert" : "status"} className={`rounded-xl border px-5 py-5 text-sm ${error ? "border-amber-200 bg-amber-50 text-amber-900" : "border-gray-200 bg-white text-gray-600"}`}>
           {error || "Loading accounts…"}
@@ -83,10 +136,24 @@ export default function Accounts() {
                     {a.email}
                     {me && <span className="ml-2 rounded-md bg-soft-gray px-2 py-0.5 text-xs font-semibold text-gray-700">You</span>}
                   </p>
-                  <p className="truncate text-sm text-gray-600">{accessOf(a, data.organizers)}</p>
+                  <p className="truncate text-sm text-gray-600">
+                    {accessOf(a, data.organizers)}
+                    {loginOf(a) && <> &middot; {loginOf(a)}</>}
+                  </p>
                 </div>
                 {!me && removing !== a.email && (
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
+                    {data.canInvite && (
+                      <button
+                        type="button"
+                        disabled={sending === a.email}
+                        onClick={() => sendLogin(a.email)}
+                        className="min-h-11 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray disabled:cursor-wait disabled:opacity-60"
+                        aria-label={`${a.login ? "Reset password for" : "Send login to"} ${a.email}`}
+                      >
+                        {sending === a.email ? "Sending…" : a.login ? "Reset password" : "Send login"}
+                      </button>
+                    )}
                     <button type="button" onClick={() => setEditing(a)} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray" aria-label={`Change access for ${a.email}`}>
                       Change
                     </button>
@@ -111,6 +178,11 @@ export default function Accounts() {
           })}
         </ul>
       )}
+      {data && !data.canInvite && (
+        <p className="mt-2 px-1 text-xs text-gray-600">
+          To send logins from here, add the Supabase secret key to the site as SUPABASE_SECRET_KEY. Until then, create logins in Supabase → Authentication → Add user.
+        </p>
+      )}
       {editing && data && (
         <AccountSheet
           account={editing === "new" ? undefined : editing}
@@ -118,7 +190,13 @@ export default function Accounts() {
           onClose={() => setEditing(null)}
           onSaved={(email, isNew) => {
             setEditing(null);
-            setNotice(isNew ? `${email} added. Create their login in Supabase (Authentication → Add user) with this email.` : `${email} updated.`);
+            setNotice(
+              isNew
+                ? data.canInvite
+                  ? `${email} added. Send their login next.`
+                  : `${email} added. Create their login in Supabase (Authentication → Add user) with this email.`
+                : `${email} updated.`
+            );
             void load();
           }}
         />

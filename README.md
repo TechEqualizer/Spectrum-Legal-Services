@@ -279,6 +279,16 @@ publish only the funnels listed for it (`'*'` for all). A new admin starts
 with a temporary password and must choose their own at first sign-in;
 **Change password** and **Sign out** are in the account menu.
 
+**Settings** (`/admin/settings`) holds the admin's photo and name, their
+account, and what they can edit. Full admins also get **Accounts**: every
+admin account, what each can edit (full access or chosen organizers), and
+**Send login**, which creates the person's login with a temporary password
+(emailed through Resend when `RESEND_API_KEY` and `LEAD_FROM_EMAIL` are set,
+and shown once to copy) that they replace at first sign-in. Send login needs
+`SUPABASE_SECRET_KEY` on the server (`src/lib/server/auth-admin.ts` is the
+only code that uses it); without it, create logins in Supabase →
+Authentication → Add user.
+
 **Publishing**: reel edits save in the browser as you go. When they differ
 from what's live, a bar offers **Publish** (or **Discard**). Publishing
 uploads any new files straight from the browser to Supabase Storage (bucket
