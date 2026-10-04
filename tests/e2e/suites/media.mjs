@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[]; const B='http://localhost:3002'; const D=process.cwd();
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const b = await chromium.launch();
 for (const [w,h] of [[1279,900],[390,844]]) {
   const mobile=w<1024;
   const ctx = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile });
@@ -13,7 +13,9 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await p.route(/youtube-nocookie\.com/, r=>r.fulfill({status:200, contentType:'text/html', body:'<html></html>'}));
   await p.route(/ytimg\.com/, r=>r.fulfill({status:200, contentType:'image/png', path: D+'/sample-photo.png'}));
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
-  check(w+': JLF by default', await p.locator('#admin-business').inputValue()==='jlf' && (await p.locator('ol > li').count())===8);
+  // Organizers' events (from the database) come before the demos.
+  check(w+': Big Love by default', await p.locator('#admin-business').inputValue()==='masquerade' && (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
+  check(w+': organizers first, then demos', (await p.locator('#admin-business option').allTextContents()).join('|')==='Big Love Productions|The JLF Firm|Aurelia Med Spa', (await p.locator('#admin-business option').allTextContents()).join('|'));
 
   // Switch business
   await p.selectOption('#admin-business','medspa');

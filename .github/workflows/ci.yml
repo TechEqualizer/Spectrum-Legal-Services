@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # Route types (PageProps and friends) are generated, not committed.
+      - run: npx next typegen
       - run: npx tsc --noEmit
 
   e2e:
@@ -50,14 +52,17 @@ jobs:
           name: e2e-output
           path: tests/e2e/.out
           retention-days: 7
+          include-hidden-files: true
 
   design:
     name: Design detector (report only)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Findings are advisory for now (DESIGN.md debt is tracked for the next
-    # critique pass), so they show in the log without failing the PR.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - run: .claude/skills/impeccable/scripts/impeccable detect src
+      # Findings are advisory for now (DESIGN.md debt is tracked for the next
+      # critique pass): they show in the log and as a warning, not a failure.
+      - run: |
+          .claude/skills/impeccable/scripts/impeccable detect src || {
+            echo "::warning title=Design detector::Findings above (advisory). See DESIGN.md."
+          }

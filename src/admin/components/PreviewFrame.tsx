@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import FunnelExperience from "@/components/FunnelExperience";
+import type { Funnel } from "@/data/funnel-types";
 import type { Publication } from "@/lib/publication";
 import { setPreviewMode } from "@/lib/reel-tracking";
 
@@ -18,7 +19,7 @@ export type PreviewMoment = { reelId: string | null; ended: boolean };
  * The funnel as visitors get it, with the editor's edits: the studio posts
  * the draft publication in, and where to start. Nothing here is tracked.
  */
-export default function PreviewFrame({ slug }: { slug: string }) {
+export default function PreviewFrame({ funnel }: { funnel: Funnel }) {
   const [publication, setPublication] = useState<Publication | null>(null);
   const [go, setGo] = useState<{ reelId?: string; end?: boolean; key: number }>({ key: 0 });
   const onMoment = useCallback((moment: PreviewMoment) => {
@@ -45,7 +46,7 @@ export default function PreviewFrame({ slug }: { slug: string }) {
   return (
     <FunnelExperience
       key={go.key}
-      slug={slug}
+      funnel={funnel}
       publication={publication}
       startReelId={go.reelId}
       startEnded={go.end}

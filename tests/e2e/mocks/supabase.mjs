@@ -1,5 +1,22 @@
 // A stand-in for Supabase (Auth, REST, Storage) for end-to-end tests.
 import http from 'node:http';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Organizers and their events, from the same seed files the real database gets.
+const seedDir = join(dirname(fileURLToPath(import.meta.url)), '../../../supabase/seed');
+const organizers = new Map();
+const eventFunnels = new Map(); // slug -> row
+function seed() {
+  organizers.clear(); eventFunnels.clear();
+  for (const file of readdirSync(seedDir).filter((f) => f.endsWith('.json'))) {
+    const { organizer, events } = JSON.parse(readFileSync(join(seedDir, file), 'utf8'));
+    organizers.set(organizer.slug, organizer);
+    for (const e of events) eventFunnels.set(e.slug, { ...e, organizer_slug: organizer.slug });
+  }
+}
+seed();
 const users = {
   'owner@example.com': { password: 'temp-password-1', admin: true, mustChange: true },
   'tester@example.com': { password: 'tester-pass-1', admin: true, mustChange: false },
@@ -42,9 +59,9 @@ http.createServer((req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     // Test controls
     if (p === '/__log') return json(res, 200, log);
-    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()] });
+    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()] });
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { publications.clear(); files.clear(); users['owner@example.com'].mustChange = true; users['owner@example.com'].password = 'temp-password-1'; accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); files.clear(); users['owner@example.com'].mustChange = true; users['owner@example.com'].password = 'temp-password-1'; accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -87,6 +104,12 @@ http.createServer((req, res) => {
       if (req.method === 'POST') { publications.set(body.slug, body); return json(res, 201); }
       if (req.method === 'DELETE') { publications.delete(slug); return json(res, 204); }
     }
+    if (p === '/rest/v1/event_funnels' && req.method === 'GET') {
+      const eq = (k) => (url.searchParams.get(k) || '').replace(/^eq\./, '');
+      const rows = [...eventFunnels.values()].filter((r) => (!eq('slug') || r.slug === eq('slug')) && (!eq('funnel_id') || r.funnel_id === eq('funnel_id')));
+      return json(res, 200, rows.sort((a, b) => a.slug.localeCompare(b.slug)));
+    }
+    if (p === '/rest/v1/organizers' && req.method === 'GET') return json(res, 200, [...organizers.values()]);
     if (p.startsWith('/rest/v1/rpc/')) return json(res, 204);
 
     // Storage

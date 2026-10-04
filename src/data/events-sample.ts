@@ -47,14 +47,13 @@ const brand: FunnelBrand = {
     coverCallPrompt: "Already know you're coming?",
     coverCall: "Get tickets for the next one",
     book: { heading: "Get tickets", intro: "", submit: "Continue" },
-    bookDone: (name) => `Thanks, ${name}.`,
+    bookDone: "Thanks, {name}.",
     textLater: {
       heading: "Get presale access",
       intro: "We'll text you before tickets go on sale, so you're first in line.",
       submit: "Text me the presale",
     },
-    textLaterDone: (name, number) =>
-      `You're on the list, ${name}. Presale links go to ${number}. Reply STOP any time to opt out.`,
+    textLaterDone: "You're on the list, {name}. Presale links go to {phone}. Reply STOP any time to opt out.",
     formFinePrint: "No spam: presales and big announcements only.",
     endHeading: "See you on the roof?",
     endBody: "Tickets go fast once the lineup drops. Grab yours, or get first access to the next presale.",

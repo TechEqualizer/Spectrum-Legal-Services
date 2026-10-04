@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored skills and their bundled scripts, and test output.
+    ".claude/**",
+    ".impeccable/**",
+    "tests/e2e/.out/**",
   ]),
 ]);
 

@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[];
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const b = await chromium.launch();
 for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   const p = await b.newPage({ viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile });
   p.on('pageerror',e=>errs.push(e.message));

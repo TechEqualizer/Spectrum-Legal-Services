@@ -90,7 +90,7 @@ const text = (v: unknown, max: number, optional = false) =>
   (optional && v === undefined) || (typeof v === "string" && v.length <= max);
 
 /** A link media may use: https, or a path on this site. Never a blob: link from one browser. */
-function isMediaUrl(v: unknown) {
+export function isMediaUrl(v: unknown) {
   if (typeof v !== "string" || v.length > 2000) return false;
   if (v.startsWith("/") && !v.startsWith("//")) return true;
   try {
@@ -102,7 +102,7 @@ function isMediaUrl(v: unknown) {
   }
 }
 
-function checkMedia(m: unknown): string | null {
+export function checkMedia(m: unknown): string | null {
   if (!isObject(m)) return "media must be an object";
   if (m.kind === "youtube") return typeof m.id === "string" && YOUTUBE_ID.test(m.id) ? null : "bad YouTube id";
   if (m.kind === "image") {

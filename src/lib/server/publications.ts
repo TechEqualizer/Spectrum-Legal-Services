@@ -1,8 +1,9 @@
-// Published funnel edits, read on the server. Cached per funnel and refreshed
-// the moment the admin publishes (see /api/admin/publish).
+// Published funnel edits, read on the server. Cached per funnel, refreshed
+// the moment the admin publishes (see /api/admin/publish), and at most five
+// minutes old otherwise.
 
 import type { Funnel } from "@/data/funnel-types";
-import { getFunnelById, getFunnelBySlug } from "@/data/funnels";
+import { getFunnel, getFunnelById } from "@/lib/server/funnels";
 import { applyPublication, parsePublication, type Publication } from "@/lib/publication";
 
 export const publicationTag = (slug: string) => `funnel-publication:${slug}`;
@@ -13,12 +14,14 @@ export type StoredPublication = { publication: Publication; publishedAt: string;
 export async function getPublication(slug: string): Promise<StoredPublication | null> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-  const base = getFunnelBySlug(slug);
+  const base = await getFunnel(slug);
   if (!url || !key || !base) return null;
   try {
     const res = await fetch(
       `${url}/rest/v1/funnel_publications?slug=eq.${encodeURIComponent(slug)}&select=data,published_at,published_by`,
-      { headers: { apikey: key }, cache: "force-cache", next: { tags: [publicationTag(slug)] } }
+      // Refreshed at once on publish (by tag), and every few minutes in case
+      // the row changed some other way (an edit made in the database itself).
+      { headers: { apikey: key }, next: { tags: [publicationTag(slug)], revalidate: 300 } }
     );
     if (!res.ok) return null;
     const rows = (await res.json()) as { data: unknown; published_at: string; published_by: string }[];
@@ -34,7 +37,7 @@ export async function getPublication(slug: string): Promise<StoredPublication | 
 
 /** The funnel as visitors see it: built-in content with any published edits. */
 export async function getLiveFunnelById(id: string): Promise<Funnel | undefined> {
-  const base = getFunnelById(id);
+  const base = await getFunnelById(id);
   if (!base) return undefined;
   return applyPublication(base, (await getPublication(base.slug))?.publication);
 }

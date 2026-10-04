@@ -167,13 +167,24 @@ forms re-skin without code changes.
 | `/f/masquerade` | Big Love Productions: Masquerade on the Runway (**client**) | Tickets |
 
 **`/f/masquerade` is a real client's link**, so its forms and tracking are
-live. Its content comes from the event flyer (`src/data/masquerade.ts`): one
+live. Its content lives in the database (`event_funnels`), seeded from the
+event flyer and its Eventbrite page (`supabase/seed/biglove.json`): one
 date (Sat, Oct 31, 8pm, Detroit, 30+, from $31), Eventbrite tickets, the flyer behind
 the opening screen, and two reels with photos cropped from it
 (`public/clients/masquerade`). The other reels show "Video coming soon" until
 their videos are uploaded in the admin, where Big Love Productions replaced
 Golden Hour Sundays. Golden Hour stays at `/f/events` as a sample to show
 other organizers.
+
+**Organizers and events live in the database**
+(`supabase/migrations/20261007000000_organizers_events.sql`): `organizers`,
+and `event_funnels` with one row per event link and its funnel definition.
+`getFunnel(slug)` (`src/lib/server/funnels.ts`) looks in the built-in demos
+(`src/data/funnels.ts`) first, then the database; every row is checked
+(`src/lib/funnel-record.ts`: https links, text limits, paths that resolve)
+before a page shows it. The admin loads the events its signed-in admin may
+edit; edits published from the admin still go to `funnel_publications` on
+top.
 
 **`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
 Spa doesn't exist: the page always says so, is never indexed, uses a
