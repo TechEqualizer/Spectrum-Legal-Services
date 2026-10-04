@@ -20,13 +20,13 @@ const draft = {
   styleLock: 'Anamorphic 35mm look, candlelit gold and deep plum, soft film grain, 24fps, vertical 9:16.',
   avoid: 'on-screen text, letters, logos, watermarks, warped hands, melting faces, flicker, sudden cuts',
   hero: clip('slow push in', 8, 'A woman in a gold filigree mask turns to camera as candlelight flickers; the bottom third falls into shadow.'),
+  // Out of order, with a duplicate and an unknown role: the app keeps one of each, in order.
   reels: [
-    { role: 'hook', title: 'Masks on', summary: 'Eye contact through gold filigree. Who is behind the mask?', date: '2026-10-31', source: 'photo', ...clip('rack focus', 6, 'Close on the mask, eyes open.') },
-    { role: 'spectacle', title: 'The Runway', summary: 'Couples walk the runway under a rain of light.', date: null, source: 'photo', ...clip('dolly out', 7, 'A couple walks toward camera.') },
-    { role: 'belonging', title: 'The Inner Circle', summary: 'Your people, masked, on velvet sofas.', date: null, source: 'flyer_art', ...clip('arc', 6, 'A masked group laughs on a sofa.') },
-    { role: 'dare', title: 'Dress to impress', summary: 'Black tie, gold masks. Come as your boldest self.', date: null, source: 'text', ...clip('crane down', 6, 'Hands tie a mask ribbon.') },
-    { role: 'last_call', title: 'Last call', summary: 'Tickets are going. Halloween night, 21+.', date: '2026-10-31', source: 'text', ...clip('slow push in', 6, 'An empty runway glows; room for a button below.') },
-    { role: 'nope', title: 'Dropped', summary: '', date: null, source: 'text', camera: '', seconds: 5, prompt: '' },
+    { role: 'last_call', title: 'Last call', summary: 'GA ends Oct 30. After that, the door price.', hook: 'GA ends Thursday.', captions: ['$31 GA ends Oct 30', 'VIP is limited', 'Masks on, Detroit'], date: '2026-10-31', source: 'text', ...clip('slow push in', 6, 'An empty runway glows; room for a button below.') },
+    { role: 'the_night', title: 'Masks on', summary: 'You, in gold, on the runway. Who is behind the mask?', hook: 'A gold mask turns to camera.', captions: ['You, in gold.', 'Masks on.', 'Secrets revealed.'], date: '2026-10-31', source: 'photo', ...clip('rack focus', 6, 'Close on the mask, eyes open.') },
+    { role: 'your_people', title: 'Bring your crew', summary: 'Grown and sexy, 30+. Your people, masked, all night.', hook: 'Friends tie each other\'s masks in a mirror.', captions: ['Bring your crew', 'Grown and sexy, 30+'], date: null, source: 'photo', ...clip('handheld', 6, 'Friends laugh as they arrive.') },
+    { role: 'the_night', title: 'Second night reel', summary: 'Dropped: one per role.', hook: '', captions: [], date: null, source: 'text', ...clip('arc', 6, 'x') },
+    { role: 'hook', title: 'Old role', summary: '', hook: '', captions: [], date: null, source: 'text', camera: '', seconds: 5, prompt: '' },
   ],
 };
 http.createServer((req, res) => {

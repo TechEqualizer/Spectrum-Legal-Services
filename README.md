@@ -334,10 +334,21 @@ business's colors. It is not linked from the public site and is marked
   without it the sheet says so. QR codes aren't read: paste those ticket
   links.
 - **Draft my funnel** (in the import sheet, after reading a flyer): Claude
-  plans the whole funnel from the same flyer, with no re-upload: the opening
-  screen's words, and 4 to 6 reels in selling order (hook, the show, who's
-  there, details, the dare, last call), each linked to its date. Each reel,
-  and the opening scene, also gets a ready-to-paste video prompt (camera
+  plans the whole funnel from the same flyer, with no re-upload: four
+  things. The **opening scene** (its words and looping background), then
+  three core reels, each answering one question a buyer has, in this order
+  (`src/lib/funnel-draft.ts`):
+  - **The Night** ("Will this be amazing?"): desire and self-image, who
+    they get to be that night. Cinematic.
+  - **Your People** ("Is this for someone like me?"): belonging and real
+    social proof. Feels phone-shot; never invented testimonials or quotes,
+    the organizer's own photos first.
+  - **Last Call** ("Why buy now?"): fear of missing out, from true facts
+    only (the date, a price, a deadline, few left). Set to Bold.
+
+  Each reel gets a title, a summary, its hook (the first two seconds) and 2
+  to 4 caption lines, and is linked to its date. Each reel, and the opening
+  scene, also gets a ready-to-paste video prompt (camera
   move, length, 9:16, the scene, a shared style lock, and what to avoid,
   such as on-screen text or warped hands). "Use this draft" replaces the
   published funnel's reels (the old ones stay in the library; Undo puts
