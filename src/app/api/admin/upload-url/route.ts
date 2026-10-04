@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { asAdmin, canPublish, getAdmin, supabaseUrl } from "@/lib/server/admin-auth";
-import { getFunnel } from "@/lib/server/funnels";
+import { getFunnel, organizerOf } from "@/lib/server/funnels";
 
 const TYPES = new Set(["video/mp4", "video/quicktime", "video/webm", "image/jpeg", "image/png", "image/webp", "image/gif", "text/vtt"]);
 /** The storage bucket's limit (supabase/migrations/*_admin_publishing.sql). */
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (!admin) return NextResponse.json({ error: "Sign in again." }, { status: 401 });
   const body = (await request.json().catch(() => null)) as { slug?: unknown; name?: unknown; type?: unknown; size?: unknown } | null;
   const slug = typeof body?.slug === "string" ? body.slug : "";
-  if (!(await getFunnel(slug)) || !canPublish(admin, slug)) {
+  if (!(await getFunnel(slug)) || !canPublish(admin, slug, await organizerOf(slug))) {
     return NextResponse.json({ error: "You can't publish this funnel." }, { status: 403 });
   }
   const type = typeof body?.type === "string" ? body.type : "";

@@ -54,7 +54,8 @@ export function useAdminBusinesses(): AdminBusiness[] {
   return useMemo(() => {
     const builtIn = new Set(builtInBusinesses.map((b) => b.funnel.slug));
     const events = adminEvents.filter((e) => !builtIn.has(e.funnel.slug)).map((e) => eventBusiness(e.funnel));
-    return [...events, ...builtInBusinesses].filter((b) => mayEdit(session, b.funnel.slug));
+    // Events come checked from the server (including those an organizer's admin runs); demos are checked here.
+    return [...events, ...builtInBusinesses.filter((b) => mayEdit(session, b.funnel.slug))];
   }, [adminEvents, session]);
 }
 

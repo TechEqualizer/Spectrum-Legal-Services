@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   const names = new Map(organizers.map((o) => [o.slug, o.name]));
   const events = await Promise.all(
     rows
-      .filter(({ funnel }) => canPublish(admin, funnel.slug))
+      .filter(({ funnel, organizer }) => canPublish(admin, funnel.slug, organizer))
       .map(async ({ funnel, organizer }) => ({
         funnel,
         live: applyPublication(funnel, (await getPublication(funnel.slug))?.publication),
@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   );
   return (
     <AdminSessionProvider
-      session={{ email: admin.email, slugs: admin.slugs, mustChangePassword: admin.mustChangePassword }}
+      session={{ email: admin.email, slugs: admin.slugs, organizers: admin.organizers, mustChangePassword: admin.mustChangePassword }}
     >
       <AdminBusinessesProvider events={events}>
         <AdminFrame nav={<AdminNav />}>{children}</AdminFrame>

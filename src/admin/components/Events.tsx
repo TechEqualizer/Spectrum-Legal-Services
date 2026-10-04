@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react"
 import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
 import { builtInBusinesses } from "@/admin/business";
 import { requestImport } from "@/admin/import-request";
-import { useAdminSession } from "@/admin/session";
+import { runsOrganizer, useAdminSession } from "@/admin/session";
 import LocalDate from "@/components/LocalDate";
 import type { Funnel } from "@/data/funnel-types";
 import { isOver, upcomingEvents } from "@/lib/events";
@@ -43,7 +43,9 @@ export default function Events() {
   const origin = useOrigin();
   const [now] = useState(() => Date.now());
   const [sheet, setSheet] = useState<{ mode: NewEventMode; source?: AdminEvent } | null>(null);
-  const canAdd = session.slugs.includes("*") && events.length > 0;
+  // Events this admin can start new ones from: those of organizers they run.
+  const sources = events.filter((e) => runsOrganizer(session, e.organizer.slug));
+  const canAdd = sources.length > 0;
 
   const organizers = [...new Map(events.map((e) => [e.organizer.slug, e.organizer])).values()];
   const demos = builtInBusinesses.filter((b) => allowed.some((a) => a.funnel.slug === b.funnel.slug));
@@ -96,7 +98,7 @@ export default function Events() {
                   current={current.funnel.slug === e.funnel.slug}
                   status={e.standing}
                   onOpen={() => open(e.funnel.slug)}
-                  onDuplicate={canAdd ? () => setSheet({ mode: "copy", source: e }) : undefined}
+                  onDuplicate={runsOrganizer(session, e.organizer.slug) ? () => setSheet({ mode: "copy", source: e }) : undefined}
                 />
               ))}
             </ul>
@@ -128,7 +130,7 @@ export default function Events() {
         <NewEventSheet
           mode={sheet.mode}
           source={sheet.source}
-          events={events}
+          events={sources}
           onClose={() => setSheet(null)}
           onCreated={(slug, mode) => {
             selectAdminBusiness(slug);

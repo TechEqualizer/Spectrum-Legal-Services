@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canPublish, getAdmin } from "@/lib/server/admin-auth";
-import { getFunnel } from "@/lib/server/funnels";
+import { getFunnel, organizerOf } from "@/lib/server/funnels";
 import { flyerInputFrom, readFlyer } from "@/lib/server/flyer-import";
 
 // Reading a flyer can take a little while.
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     | null;
   const slug = typeof body?.slug === "string" ? body.slug : "";
   const funnel = await getFunnel(slug);
-  if (!funnel || !canPublish(admin, slug)) {
+  if (!funnel || !canPublish(admin, slug, await organizerOf(slug))) {
     return NextResponse.json({ error: "You can't edit this funnel." }, { status: 403 });
   }
 

@@ -18,10 +18,15 @@ function seed() {
 }
 seed();
 const users = {
-  'owner@example.com': { password: 'temp-password-1', admin: true, mustChange: true },
-  'tester@example.com': { password: 'tester-pass-1', admin: true, mustChange: false },
+  'owner@example.com': { password: 'temp-password-1', admin: true, mustChange: true, slugs: ['*'], organizers: [] },
+  'tester@example.com': { password: 'tester-pass-1', admin: true, mustChange: false, slugs: ['*'], organizers: [] },
+  // Runs Big Love Productions' events only.
+  'organizer@example.com': { password: 'organizer-pass-1', admin: true, mustChange: false, slugs: [], organizers: ['biglove'] },
   'stranger@example.com': { password: 'stranger-pass-1', admin: false, mustChange: false },
 };
+// Like the database's manages_organizer and can_publish_funnel.
+const managesOrganizer = (email, org) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].organizers.includes(org));
+const canPublishFunnel = (email, slug) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].slugs.includes(slug) || users[email].organizers.includes(eventFunnels.get(slug)?.organizer_slug));
 const publications = new Map(); // slug -> row
 const files = new Map(); // path -> {type, body}
 const sessions = new Map(); // token -> email
@@ -91,7 +96,7 @@ http.createServer((req, res) => {
     // REST
     if (p === '/rest/v1/admin_users') {
       const email = emailOf(req);
-      return json(res, 200, email && users[email]?.admin ? [{ email, slugs: ['*'] }] : []);
+      return json(res, 200, email && users[email]?.admin ? [{ email, slugs: users[email].slugs, organizers: users[email].organizers }] : []);
     }
     if (p === '/rest/v1/funnel_publications') {
       const slug = (url.searchParams.get('slug') || '').replace('eq.', '') || body?.slug;
@@ -100,7 +105,7 @@ http.createServer((req, res) => {
         return json(res, 200, row ? [row] : []);
       }
       const email = emailOf(req);
-      if (!email || !users[email]?.admin) return json(res, 403, { message: 'new row violates row-level security policy' });
+      if (!email || !canPublishFunnel(email, slug)) return json(res, 403, { message: 'new row violates row-level security policy' });
       if (req.method === 'POST') { publications.set(body.slug, body); return json(res, 201); }
       if (req.method === 'DELETE') { publications.delete(slug); return json(res, 204); }
     }
@@ -109,10 +114,10 @@ http.createServer((req, res) => {
       const rows = [...eventFunnels.values()].filter((r) => (!eq('slug') || r.slug === eq('slug')) && (!eq('funnel_id') || r.funnel_id === eq('funnel_id')) && (!eq('organizer_slug') || r.organizer_slug === eq('organizer_slug')));
       return json(res, 200, rows.sort((a, b) => a.slug.localeCompare(b.slug)));
     }
-    // Like the real policy: only admins who manage every funnel add events.
+    // Like the real policy: an organizer's admins add its events.
     if (p === '/rest/v1/event_funnels' && req.method === 'POST') {
       const email = emailOf(req);
-      if (!email || !users[email]?.admin) return json(res, 403, { message: 'new row violates row-level security policy' });
+      if (!email || !managesOrganizer(email, body.organizer_slug)) return json(res, 403, { message: 'new row violates row-level security policy' });
       if (eventFunnels.has(body.slug) || [...eventFunnels.values()].some((r) => r.funnel_id === body.funnel_id)) return json(res, 409, { message: 'duplicate key' });
       if (!organizers.has(body.organizer_slug)) return json(res, 409, { message: 'foreign key' });
       eventFunnels.set(body.slug, { slug: body.slug, funnel_id: body.funnel_id, organizer_slug: body.organizer_slug, data: body.data });
@@ -129,7 +134,7 @@ http.createServer((req, res) => {
     const sign = p.match(/^\/storage\/v1\/object\/upload\/sign\/reel-media\/(.+)$/);
     if (sign && req.method === 'POST') {
       const email = emailOf(req);
-      if (!email || !users[email]?.admin) return json(res, 403, { message: 'denied' });
+      if (!email || !canPublishFunnel(email, sign[1].split('/')[0])) return json(res, 403, { message: 'denied' });
       return json(res, 200, { url: `/object/upload/sign/reel-media/${sign[1]}?token=t${++seq}` });
     }
     if (sign && req.method === 'PUT') {

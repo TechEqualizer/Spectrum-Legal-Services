@@ -1,0 +1,54 @@
+// An organizer's own login: they see only their events, add and duplicate
+// them, and publish them, but nothing of anyone else's.
+import { chromium } from 'playwright';
+const S = process.argv[2]; const B = 'http://localhost:3002';
+const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'America/Detroit' });
+const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+
+const login = await ctx.request.post(B + '/api/admin/login', { data: { email: 'organizer@example.com', password: 'organizer-pass-1' } });
+check('organizer signs in', login.ok(), String(login.status()));
+
+// 1. Only their events; the demos aren't theirs.
+await p.goto(B + '/admin/events'); await p.waitForTimeout(1200);
+check('sees their event', await p.getByRole('button', { name: 'Open Masquerade on the Runway' }).isVisible());
+check('no demos', await p.getByRole('region', { name: 'Demos' }).count() === 0);
+const options = await p.locator('#admin-business option').allTextContents();
+// One business: no switcher at all (it appears once they have a second event).
+check('nothing else to switch to', options.length === 0, options.join(' | '));
+check('can add events', await p.getByRole('button', { name: 'New event' }).isVisible() && await p.getByRole('button', { name: 'Duplicate Masquerade on the Runway' }).isVisible());
+
+// 2. New event from their login: it's theirs to edit and publish.
+await p.getByRole('button', { name: 'New event' }).click();
+const sheet = p.locator('dialog[open]');
+await sheet.getByLabel('Event name').fill('Spring Gala');
+await sheet.getByRole('button', { name: 'Create event' }).click();
+await p.waitForURL(/\/admin$/); await p.waitForTimeout(1500);
+const now = await p.locator('#admin-business option').allTextContents();
+check('new event opens in their studio, beside only their own', (await p.locator('#admin-business').inputValue()) === 'spring-gala' && now.length === 2 && now.every((o) => /Big Love/.test(o)), now.join(' | '));
+await p.keyboard.press('Escape');
+const reel = { id: 'spring-gala-welcome', practiceArea: 'The night', title: 'Spring Gala', summary: 'Details coming soon.', cta: 'funnel' };
+const pub = await p.request.post(B + '/api/admin/publish', { data: { slug: 'spring-gala', publication: {
+  version: 1, reels: [reel], funnel: { order: [reel.id], topics: {}, paths: {}, primaryCta: 'tickets' },
+} } });
+check('publishes the event they made', pub.ok(), String(pub.status()));
+
+// 3. Nobody else's: not the demos, not someone else's event.
+const other = await p.request.post(B + '/api/admin/publish', { data: { slug: 'jlf', publication: {
+  version: 1, reels: [], funnel: { order: [], topics: {}, paths: {}, primaryCta: 'call' },
+} } });
+check("can't publish a demo", other.status() === 403 || other.status() === 404, String(other.status()));
+const fromDemo = await p.request.post(B + '/api/admin/events', { data: { source: 'jlf', name: 'Mine now', slug: 'mine-now', mode: 'copy' } });
+check("can't copy a funnel that isn't theirs", fromDemo.status() === 400, String(fromDemo.status()));
+await p.goto(B + '/admin/preview/medspa'); await p.waitForTimeout(500);
+check("can't preview a demo", (await p.locator('body').innerText()).includes('404') || (await p.title()).includes('404'));
+
+// 4. The bio link keeps showing the one dated night until the new event gets a date.
+const v = await (await b.newContext()).newPage();
+await v.goto(B + '/f/biglove'); await v.waitForTimeout(1000);
+check('bio link unchanged until the new event has a date', /masquerade on the runway/i.test(await v.locator('h1').innerText()));
+
+check('no page errors', !errs.length, errs.join(' | ').slice(0, 300));
+console.log(res.join('\n'));
+await b.close();
