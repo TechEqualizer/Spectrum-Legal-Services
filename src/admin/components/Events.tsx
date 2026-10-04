@@ -17,11 +17,16 @@ const useOrigin = () => useSyncExternalStore(() => () => {}, () => window.locati
 /** Where an event stands, from its dates as visitors see them. */
 function standing(live: Funnel, now: number) {
   const next = upcomingEvents(live, now)[0];
-  if (next) return { next, label: "Upcoming", tone: "bg-teal-accent/15 text-deep-navy" };
+  if (next) {
+    const today = new Date(next.startsAt).toDateString() === new Date(now).toDateString();
+    return { next, label: today ? "Tonight" : "Upcoming", tone: "bg-teal-accent/15 text-deep-navy" };
+  }
   const dates = live.events ?? [];
   if (!dates.length) return { label: "No dates yet", tone: "bg-amber-50 text-amber-800" };
   const last = [...dates].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
-  return { last, label: isOver(last, now) ? "Ended" : "Upcoming", tone: "bg-gray-100 text-gray-600" };
+  // Started and not over yet: the night is on.
+  if (!isOver(last, now)) return { last, label: "On now", tone: "bg-teal-accent/15 text-deep-navy" };
+  return { last, label: "Ended", tone: "bg-gray-100 text-gray-600" };
 }
 
 /**
@@ -101,8 +106,11 @@ export default function Events() {
 
       {!events.length && (
         <p className="rounded-xl border border-gray-200 bg-white px-5 py-6 text-sm text-gray-600">
-          No events yet. Event Reels adds your first one with you; after that, New event starts the next from it.
+          No events yet. Send Event Reels your flyer and we&apos;ll set up your first one with you.
         </p>
+      )}
+      {events.length > 0 && !canAdd && (
+        <p className="px-1 text-sm text-gray-600">Next event coming up? Send Event Reels the flyer and we&apos;ll add it here.</p>
       )}
 
       {demos.length > 0 && (
@@ -148,9 +156,11 @@ function PermanentLink({ href }: { href: string }) {
   };
   return (
     <p className="flex min-w-0 items-center gap-2 text-sm text-gray-600">
-      <span className="hidden sm:inline">Bio link, always the next event:</span>
+      <span className="flex-shrink-0">
+        Bio link<span className="hidden sm:inline">, always the next event</span>:
+      </span>
       <span className="truncate font-semibold text-deep-navy">{href.replace(/^https?:\/\//, "")}</span>
-      <button type="button" onClick={copy} className="min-h-10 rounded-md px-2 text-sm font-semibold text-deep-navy underline underline-offset-2 hover:bg-white">
+      <button type="button" onClick={copy} className="min-h-11 flex-shrink-0 rounded-md px-2 text-sm font-semibold text-deep-navy underline underline-offset-2 hover:bg-white">
         {copied ? "Copied ✓" : "Copy"}
       </button>
       <span role="status" className="sr-only">{copied ? "Link copied" : ""}</span>
@@ -194,7 +204,7 @@ function EventRow({
           </span>
           <span className="mt-1 flex flex-wrap gap-1.5">
             {status && <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${status.tone}`}>{status.label}</span>}
-            {current && <span className="rounded-md bg-deep-navy px-2 py-0.5 text-xs font-semibold text-white">Open now</span>}
+            {current && <span className="rounded-md bg-deep-navy px-2 py-0.5 text-xs font-semibold text-white">Editing</span>}
           </span>
         </span>
       </button>
@@ -228,11 +238,12 @@ function NewEventSheet({
   const ref = useRef<HTMLDialogElement>(null);
   const organizers = [...new Map(events.map((e) => [e.organizer.slug, e.organizer])).values()];
   const [organizer, setOrganizer] = useState(source?.organizer.slug ?? organizers[0]?.slug ?? "");
-  const [name, setName] = useState(source ? `${source.live.brand.seriesLabel} (copy)` : "");
-  const [slug, setSlug] = useState(source ? `${source.funnel.slug}-2` : "");
+  const [name, setName] = useState(source?.live.brand.seriesLabel ?? "");
+  const [slug, setSlug] = useState(() => (source ? freeSlug(source.funnel.slug, events) : ""));
   const [slugEdited, setSlugEdited] = useState(Boolean(source));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  // An error belongs to the field it's about; anything else shows under the card.
+  const [error, setError] = useState<{ field: "name" | "slug" | "form"; text: string } | null>(null);
   useEffect(() => ref.current?.showModal(), []);
 
   // A fresh event starts from the organizer's latest event (their look and name).
@@ -245,11 +256,11 @@ function NewEventSheet({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return setError("Give the event a name.");
-    if (!EVENT_SLUG.test(slug)) return setError("Use lowercase letters, numbers and dashes for the link.");
-    if (!from) return setError("Choose an organizer.");
+    if (!name.trim()) return setError({ field: "name", text: "Give the event a name." });
+    if (!EVENT_SLUG.test(slug)) return setError({ field: "slug", text: "Use lowercase letters, numbers and dashes for the link." });
+    if (!from) return setError({ field: "form", text: "Choose an organizer." });
     setBusy(true);
-    setError("");
+    setError(null);
     const res = await fetch("/api/admin/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -258,7 +269,10 @@ function NewEventSheet({
     const body = (await res?.json().catch(() => ({}))) as { slug?: string; error?: string } | undefined;
     if (res?.ok && body?.slug) return onCreated(body.slug, mode);
     setBusy(false);
-    setError(!res ? "Couldn't reach the server. Check your connection and try again." : res.status === 401 ? "Your sign-in expired. Sign in again, then try." : body?.error ?? "Couldn't add the event. Try again.");
+    setError({
+      field: res?.status === 409 ? "slug" : "form",
+      text: !res ? "Couldn't reach the server. Check your connection and try again." : res.status === 401 ? "Your sign-in expired. Sign in again, then try." : body?.error ?? "Couldn't add the event. Try again.",
+    });
   };
 
   return (
@@ -279,7 +293,7 @@ function NewEventSheet({
                 : "Starts with your logo and colors. Next, import the flyer to fill in the dates, look and reels."}
             </p>
           </div>
-          <button type="button" onClick={() => ref.current?.close()} aria-label="Close" className="-mr-2 -mt-1 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-white hover:text-deep-navy">
+          <button type="button" onClick={() => ref.current?.close()} aria-label="Close" className="-mr-2 -mt-1 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-white hover:text-deep-navy">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -301,18 +315,23 @@ function NewEventSheet({
                 className={field}
                 maxLength={80}
                 autoFocus
+                onFocus={(e) => mode === "copy" && e.target.select()}
+                aria-invalid={error?.field === "name"}
+                aria-describedby={error?.field === "name" ? `${id}-name-error` : undefined}
                 placeholder="New Year's Masquerade"
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
+                  if (error?.field === "name") setError(null);
                   if (!slugEdited) setSlug(slugFromName(e.target.value));
                 }}
               />
+              {error?.field === "name" && <p id={`${id}-name-error`} role="alert" className="mt-1.5 text-sm font-semibold text-red-700">{error.text}</p>}
             </div>
             <div className="px-4 py-3">
               <label htmlFor={`${id}-slug`} className="text-sm font-semibold text-deep-navy">Link</label>
               <div className="mt-1 flex items-center rounded-lg border border-gray-300 bg-white focus-within:border-transparent focus-within:ring-2 focus-within:ring-teal-accent">
-                <span className="pl-3 text-base text-gray-500">/f/</span>
+                <span className="pl-3 text-base text-gray-600">/f/</span>
                 <input
                   id={`${id}-slug`}
                   className="min-w-0 flex-1 rounded-lg bg-transparent py-2.5 pr-3 text-base text-charcoal focus:outline-none"
@@ -320,19 +339,23 @@ function NewEventSheet({
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
+                  aria-invalid={error?.field === "slug"}
+                  aria-describedby={`${id}-slug-help`}
                   value={slug}
                   onChange={(e) => {
                     setSlugEdited(true);
+                    if (error?.field === "slug") setError(null);
                     setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"));
                   }}
                 />
               </div>
-              <p className="mt-1.5 text-xs text-gray-500">
+              {error?.field === "slug" && <p role="alert" className="mt-1.5 text-sm font-semibold text-red-700">{error.text}</p>}
+              <p id={`${id}-slug-help`} className="mt-1.5 text-xs text-gray-600">
                 This event&apos;s own link, for ads and flyers.{org ? ` Your bio link, /f/${org.slug}, stays the same.` : ""}
               </p>
             </div>
           </div>
-          {error && <p role="alert" className="px-1 text-sm font-semibold text-red-700">{error}</p>}
+          {error?.field === "form" && <p role="alert" className="px-1 text-sm font-semibold text-red-700">{error.text}</p>}
         </div>
 
         <div className="sticky bottom-0 flex items-center gap-3 border-t border-gray-200 bg-soft-gray/95 px-5 py-3 backdrop-blur">
@@ -351,6 +374,13 @@ function NewEventSheet({
       </form>
     </dialog>
   );
+}
+
+/** The first "<slug>-N" no listed event uses (the server checks every link again). */
+function freeSlug(base: string, events: AdminEvent[]) {
+  const taken = new Set(events.map((e) => e.funnel.slug));
+  const stem = base.replace(/-\d+$/, "");
+  for (let n = 2; ; n++) if (!taken.has(`${stem}-${n}`)) return `${stem}-${n}`.slice(0, 64);
 }
 
 const lastStart = (f: Funnel) => Math.max(0, ...(f.events ?? []).map((e) => Date.parse(e.startsAt)));

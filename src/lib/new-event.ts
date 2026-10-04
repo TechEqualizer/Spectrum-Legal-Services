@@ -49,7 +49,7 @@ function freshCopy(brandName: string, name: string): FunnelBrand["copy"] {
     textLaterDone: "You're on the list, {name}. Updates go to {phone}. Reply STOP any time to opt out.",
     formFinePrint: "No spam: event updates only.",
     endHeading: "See you there?",
-    endBody: "Tickets are limited. Grab yours before they're gone.",
+    endBody: "Grab your tickets and bring your crew.",
     shareButton: "Send to the group chat",
     shareText: `${name}, by ${brandName}.`,
   };

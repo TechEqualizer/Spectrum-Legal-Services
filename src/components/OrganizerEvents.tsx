@@ -1,6 +1,6 @@
-import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import LocalDate from "@/components/LocalDate";
+import SourceLink from "@/components/SourceLink";
 import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
@@ -28,7 +28,8 @@ export default function OrganizerEvents({
       <div className="mx-auto max-w-md">
         <header>
           <BrandLogo brand={lead.brand} eager />
-          <h1 className="mt-8 text-[11px] font-bold uppercase tracking-[0.2em] text-sky-accent">
+          {/* The logo already names the organizer; the heading names the page. */}
+          <h1 className={`${titleFontClass(lead.cover.titleFont)} mt-8 text-3xl leading-tight text-white`}>
             <span className="sr-only">{organizer.name}: </span>Coming up
           </h1>
           <p className="mt-2 text-sm text-gray-300">Tap a night to watch, then get tickets.</p>
@@ -40,7 +41,7 @@ export default function OrganizerEvents({
             const details = [next.venue, next.price].filter(Boolean).join(" · ");
             return (
               <li key={funnel.slug}>
-                <Link
+                <SourceLink
                   href={`/f/${funnel.slug}`}
                   className="group block overflow-hidden rounded-2xl bg-white/5 ring-1 ring-white/10 transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-accent"
                   style={funnel.brand.theme as React.CSSProperties}
@@ -65,6 +66,7 @@ export default function OrganizerEvents({
                       <p className="mt-1 text-sm font-semibold text-sky-accent">
                         <LocalDate iso={next.startsAt} />
                         {next.status === "few_left" && " · Few left"}
+                        {next.status === "sold_out" && " · Sold out"}
                       </p>
                       {details && <p className="mt-0.5 truncate text-sm text-gray-300">{details}</p>}
                     </div>
@@ -72,7 +74,7 @@ export default function OrganizerEvents({
                       <path d="M9 6l6 6-6 6" />
                     </svg>
                   </div>
-                </Link>
+                </SourceLink>
               </li>
             );
           })}

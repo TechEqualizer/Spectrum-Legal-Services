@@ -20,7 +20,7 @@ check('Events is the first tab', (await p.locator('nav ul a').first().textConten
 check('page title matches the tab', (await p.getByRole('heading', { level: 1 }).textContent()).trim() === 'Events');
 const org = p.getByRole('region', { name: 'Big Love Productions' });
 check('event listed under its organizer, upcoming', await org.getByRole('button', { name: 'Open Masquerade on the Runway' }).isVisible() && await org.getByText('Upcoming').isVisible());
-check('bio link shown', await org.getByText('/f/biglove').isVisible());
+check('bio link shown, labeled on a phone', await org.getByText('/f/biglove').isVisible() && await org.getByText('Bio link', { exact: false }).first().isVisible());
 check('demos listed apart', await p.getByRole('region', { name: 'Demos' }).getByRole('button', { name: /^Open / }).count() === 2);
 await p.screenshot({ path: S + '/events-390.jpg', fullPage: true });
 
@@ -41,6 +41,8 @@ await visitor.goto(B + '/f/new-years-masquerade'); await visitor.waitForTimeout(
 const body = await visitor.locator('body').innerText();
 check('new event link works', body.toLowerCase().includes("new year's masquerade") && body.includes('Big Love'));
 check('fresh event carries none of the old facts', !/30\+|\$31|Oct 31|1600 East Grand/.test(body), body.slice(0, 200));
+const fresh = await (await visitor.request.get(B + '/f/new-years-masquerade')).text();
+check('fresh event claims no scarcity', !/limited|before they.re gone/i.test(fresh));
 
 // 5. Two upcoming events: the bio link becomes a choice, soonest first.
 const reel = { id: 'new-years-masquerade-welcome', practiceArea: 'The night', title: "New Year's Masquerade", summary: 'Details coming soon.', cta: 'funnel', eventId: 'nye' };
@@ -49,7 +51,7 @@ const pub = await p.request.post(B + '/api/admin/publish', { data: { slug: 'new-
   events: [{ id: 'nye', name: "New Year's Masquerade", startsAt: '2026-12-31T21:00:00-05:00', venue: 'Detroit', price: 'From $45', ticketUrl: 'https://example.com/nye' }],
 } } });
 check('date published for the new event', pub.ok(), String(pub.status()));
-await visitor.goto(B + '/f/biglove'); await visitor.waitForTimeout(1500);
+await visitor.goto(B + '/f/biglove?src=instagram&start=x'); await visitor.waitForTimeout(1500);
 const cards = visitor.getByRole('listitem');
 const names = await cards.allInnerTexts();
 check('bio link offers both nights', names.length === 2, String(names.length));
@@ -57,24 +59,29 @@ check('soonest first', /masquerade on the runway/i.test(names[0] ?? '') && /new 
 check('dates in the visitor\'s time', (names[0] ?? '').includes('Sat, Oct 31 · 8 PM') && (names[1] ?? '').includes('Thu, Dec 31 · 9 PM'), names.join(' | '));
 check('fits the phone', await visitor.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 await visitor.screenshot({ path: S + '/bio-link-choice-390.jpg', fullPage: true });
+check('chooser names the organizer', (await visitor.getByRole('heading', { level: 1 }).textContent()).includes('Big Love Productions'));
 await cards.nth(1).getByRole('link').click(); await visitor.waitForURL(/\/f\/new-years-masquerade/);
-check('a card opens its night', true);
+check('a card opens its night, keeping where the visitor came from', visitor.url().endsWith('/f/new-years-masquerade?src=instagram'), visitor.url());
 
 // 6. Duplicate keeps the reels, drops the dates.
 await p.goto(B + '/admin/events'); await p.waitForTimeout(1200);
 await p.getByRole('button', { name: 'Duplicate Masquerade on the Runway' }).click();
-check('duplicate prefilled', (await sheet.getByLabel('Event name').inputValue()) === 'Masquerade on the Runway (copy)' && (await sheet.getByLabel('Link').inputValue()) === 'masquerade-2');
+check('duplicate prefilled', (await sheet.getByLabel('Event name').inputValue()) === 'Masquerade on the Runway' && (await sheet.getByLabel('Link').inputValue()) === 'masquerade-2');
 await sheet.getByRole('button', { name: 'Duplicate', exact: true }).click();
 await p.waitForURL(/\/admin$/); await p.waitForTimeout(1500);
 check('duplicate opens in the studio', (await p.locator('#admin-business').inputValue()) === 'masquerade-2' && await p.locator('dialog[open]').count() === 0);
 check('duplicate keeps the reels', await p.locator('section[aria-labelledby="order-title"] ol > li').count() === 5);
+await p.goto(B + '/admin/events'); await p.waitForTimeout(1200);
+await p.getByRole('button', { name: 'Duplicate Masquerade on the Runway' }).first().click();
+check('next duplicate gets a free link', (await sheet.getByLabel('Link').inputValue()) === 'masquerade-3');
+await sheet.getByRole('button', { name: 'Cancel' }).click();
 
 // 7. A taken link is explained, and nothing is made.
 await p.goto(B + '/admin/events'); await p.waitForTimeout(1000);
 await p.getByRole('button', { name: 'New event' }).click();
 await sheet.getByLabel('Event name').fill('Masquerade');
 await sheet.getByRole('button', { name: 'Create event' }).click(); await p.waitForTimeout(800);
-check('taken link explained', await sheet.getByRole('alert').filter({ hasText: '/f/masquerade is taken' }).isVisible());
+check('taken link explained at the link', await sheet.getByRole('alert').filter({ hasText: '/f/masquerade is taken' }).isVisible() && await sheet.getByLabel('Link').getAttribute('aria-invalid') === 'true');
 await sheet.getByRole('button', { name: 'Cancel' }).click();
 const anon = await visitor.request.post(B + '/api/admin/events', { data: { source: 'masquerade', name: 'X', slug: 'x', mode: 'fresh' } });
 check('signed-out create refused', anon.status() === 401);
@@ -83,6 +90,8 @@ check('signed-out create refused', anon.status() === 401);
 await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(500);
 await p.goto(B + '/admin/links'); await p.waitForTimeout(1000);
 check('Share shows the bio link', await p.getByRole('region', { name: 'Your bio link' }).getByText('/f/biglove').isVisible());
+check('Share speaks tickets, not calls', await p.getByRole('heading', { name: 'Which links bring ticket clicks' }).isVisible() && await p.getByRole('columnheader', { name: 'Calls', exact: true }).count() === 0);
+check('Share has one filled button', await p.getByRole('region', { name: 'Your bio link' }).getByRole('button', { name: 'Copy' }).evaluate((el) => getComputedStyle(el).color === 'rgb(255, 255, 255)'));
 await p.goto(B + '/admin'); await p.waitForTimeout(1200);
 await p.getByText('Funnel settings').click();
 await p.getByRole('link', { name: 'See every path' }).click(); await p.waitForURL(/\/admin\/funnel/);
