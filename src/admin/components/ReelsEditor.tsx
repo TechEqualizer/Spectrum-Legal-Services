@@ -1059,7 +1059,7 @@ function Thumb({ reel }: { reel: EditorReel }) {
         </svg>
       )}
       {poster && broken === poster && (
-        <span className="absolute inset-x-0 bottom-0 bg-red-700 py-0.5 text-center text-[10px] font-bold uppercase text-white">
+        <span className="absolute inset-x-0 bottom-0 bg-red-700 py-0.5 text-center text-[11px] font-bold uppercase text-white">
           Broken<span className="sr-only">: cover image didn&apos;t load</span>
         </span>
       )}

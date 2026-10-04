@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T00:00:00Z",
+  "title": "Design System: Event Reels",
+  "extensions": {
+    "colorMeta": {
+      "night": { "role": "primary", "displayName": "Night", "canonical": "var(--deep-navy)", "tonalRamp": ["#05090f", "#0e1a2b", "#1a2c45", "#2a405f", "#43597a", "#667b98", "#98a8bd", "#d3dbe6"] },
+      "door": { "role": "primary", "displayName": "Door", "canonical": "var(--teal-accent)", "tonalRamp": ["#0c2533", "#143a50", "#1d5370", "#28719a", "#4b8db3", "#78acc9", "#a9cade", "#dbeaf3"] },
+      "depth": { "role": "secondary", "displayName": "Depth", "canonical": "var(--royal-blue)", "tonalRamp": ["#0a1422", "#13253c", "#1e3a5f", "#2f5079", "#4a6b93", "#7290b2", "#a3bad2", "#d7e2ee"] },
+      "spotlight": { "role": "secondary", "displayName": "Spotlight", "canonical": "var(--sky-accent)", "tonalRamp": ["#1b3a4a", "#28586f", "#367895", "#4796b8", "#6cb4d8", "#92c8e3", "#bbdeef", "#e3f2f9"] },
+      "house-lights": { "role": "neutral", "displayName": "House Lights", "canonical": "var(--soft-gray)", "tonalRamp": ["#2b2f35", "#4a5059", "#6b727d", "#9198a3", "#b8bec7", "#d6dbe1", "#eaedf1", "#f2f4f7"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "var(--charcoal)" },
+      "paper": { "role": "neutral", "displayName": "Paper" },
+      "hairline": { "role": "neutral", "displayName": "Hairline" },
+      "hint": { "role": "neutral", "displayName": "Hint" },
+      "warning": { "role": "neutral", "displayName": "Warning" },
+      "danger": { "role": "neutral", "displayName": "Danger" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The event's title on the opening scene and in previews, in the organizer's chosen title face." },
+      "headline": { "displayName": "Headline", "purpose": "Admin page and sheet titles." },
+      "title": { "displayName": "Title", "purpose": "Card titles, reel titles in lists, date names." },
+      "body": { "displayName": "Body", "purpose": "Admin copy and help text." },
+      "label": { "displayName": "Label", "purpose": "Eyebrows, section labels, chips and tab labels; uppercase." }
+    },
+    "shadows": [
+      { "name": "sheet", "value": "0 25px 50px -12px rgba(0,0,0,0.25)", "purpose": "Sheets and dialogs over a dimmed backdrop." },
+      { "name": "tickets-lift", "value": "0 10px 15px -3px rgba(0,0,0,0.4)", "purpose": "Lifts the visitor's Tickets button off the scene." },
+      { "name": "menu", "value": "0 20px 25px -5px rgba(0,0,0,0.1)", "purpose": "Menus and toasts." }
+    ],
+    "motion": [
+      { "name": "state", "value": "150ms ease", "purpose": "Hover, press and color changes." },
+      { "name": "rail", "value": "200ms ease", "purpose": "The sidebar folding to an icon rail." },
+      { "name": "scene", "value": "9s to 26s ease-in-out, alternate", "purpose": "Slow glows and drifts on the opening scene; off with reduced motion." }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "390px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "studio", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Tickets Button",
+      "kind": "button",
+      "refersTo": "button-tickets",
+      "description": "The one filled action on a visitor screen.",
+      "html": "<button class=\"ds-tickets\">Get tickets</button>",
+      "css": ".ds-tickets { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 28px; border: none; border-radius: 9999px; background: var(--teal-accent, #28719A); color: var(--on-accent, #fff); font: 600 17px/1 Montserrat, system-ui, sans-serif; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); cursor: pointer; transition: filter 150ms ease; } .ds-tickets:hover { filter: brightness(1.1); } .ds-tickets:focus-visible { outline: 2px solid var(--sky-accent, #6CB4D8); outline-offset: 3px; }"
+    },
+    {
+      "name": "Watch Button (glass)",
+      "kind": "button",
+      "refersTo": "button-watch-glass",
+      "description": "The visitor's secondary action, glass over the scene.",
+      "html": "<div class=\"ds-scene\"><button class=\"ds-glass\">Sneak peek inside</button></div>",
+      "css": ".ds-scene { padding: 24px; background: var(--deep-navy, #0E1A2B); } .ds-glass { min-height: 56px; padding: 0 20px; border: 1px solid rgba(255,255,255,0.25); border-radius: 9999px; background: rgba(255,255,255,0.1); color: #fff; font: 600 16px/1 Montserrat, system-ui, sans-serif; backdrop-filter: blur(12px); cursor: pointer; transition: background 150ms ease; } .ds-glass:hover { background: rgba(255,255,255,0.2); } .ds-glass:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }"
+    },
+    {
+      "name": "Admin Primary Button",
+      "kind": "button",
+      "refersTo": "button-admin-primary",
+      "description": "The one main action on an admin screen.",
+      "html": "<button class=\"ds-admin-primary\">Publish</button>",
+      "css": ".ds-admin-primary { min-height: 44px; padding: 0 24px; border: none; border-radius: 8px; background: var(--deep-navy, #0E1A2B); color: #fff; font: 700 14px/1 Montserrat, system-ui, sans-serif; cursor: pointer; transition: background 150ms ease; } .ds-admin-primary:hover { background: var(--royal-blue, #1E3A5F); } .ds-admin-primary:focus-visible { outline: 2px solid var(--teal-accent, #28719A); outline-offset: 2px; }"
+    },
+    {
+      "name": "Admin Outline Button",
+      "kind": "button",
+      "refersTo": "button-admin-outline",
+      "description": "Secondary admin actions.",
+      "html": "<button class=\"ds-admin-outline\">Import flyer</button>",
+      "css": ".ds-admin-outline { min-height: 40px; padding: 0 16px; border: 1px solid #D1D5DB; border-radius: 6px; background: #fff; color: var(--deep-navy, #0E1A2B); font: 600 14px/1 Montserrat, system-ui, sans-serif; cursor: pointer; transition: background 150ms ease; } .ds-admin-outline:hover { background: var(--soft-gray, #F2F4F7); } .ds-admin-outline:focus-visible { outline: 2px solid var(--teal-accent, #28719A); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Admin and visitor form fields.",
+      "html": "<label class=\"ds-field\"><span>Ticket link</span><input class=\"ds-input\" placeholder=\"https://\" /></label>",
+      "css": ".ds-field { display: grid; gap: 6px; font: 600 14px/1.2 Montserrat, system-ui, sans-serif; color: var(--deep-navy, #0E1A2B); } .ds-input { padding: 12px 16px; border: 1px solid #D1D5DB; border-radius: 6px; background: #fff; color: #2E3440; font: 400 16px/1.4 Montserrat, system-ui, sans-serif; transition: box-shadow 150ms ease; } .ds-input:focus { outline: none; border-color: transparent; box-shadow: 0 0 0 2px var(--teal-accent, #28719A); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Informative tags on reel and date rows.",
+      "html": "<span class=\"ds-chip ds-chip-teal\">Oct 31</span> <span class=\"ds-chip ds-chip-amber\">Needs video</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font: 600 12px/1.4 Montserrat, system-ui, sans-serif; } .ds-chip-teal { background: rgba(40,113,154,0.12); color: #1d5370; } .ds-chip-amber { background: #FFFBEB; color: #92400E; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Admin content cards on House Lights.",
+      "html": "<div class=\"ds-page\"><section class=\"ds-card\"><h3>Dates</h3><p>Shown as circles on your opening screen.</p></section></div>",
+      "css": ".ds-page { padding: 16px; background: var(--soft-gray, #F2F4F7); } .ds-card { padding: 16px 20px; border: 1px solid #E5E7EB; border-radius: 12px; background: #fff; font-family: Montserrat, system-ui, sans-serif; } .ds-card h3 { margin: 0; font: 700 16px/1.3 Montserrat, system-ui, sans-serif; color: var(--deep-navy, #0E1A2B); } .ds-card p { margin: 4px 0 0; font-size: 12px; color: #4B5563; }"
+    },
+    {
+      "name": "Bottom Tab Bar",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "The admin's five places on a phone.",
+      "html": "<nav class=\"ds-tabs\"><a aria-current=\"page\">Reels</a><a>Leads</a><a>Results</a><a>Share</a><a>Paths</a></nav>",
+      "css": ".ds-tabs { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--deep-navy, #0E1A2B); border-top: 1px solid rgba(255,255,255,0.1); } .ds-tabs a { display: flex; align-items: center; justify-content: center; min-height: 56px; font: 600 11px/1 Montserrat, system-ui, sans-serif; color: #9CA3AF; text-decoration: none; cursor: pointer; } .ds-tabs a:hover { color: #fff; } .ds-tabs a[aria-current=page] { color: #fff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Velvet Rope",
+    "overview": "An event's link is the entrance to the night. It is dark and cinematic, with the organizer's brand in the light: their flyer, their colors, their title typeface. Every screen leads toward one door, Tickets. The visitor never feels the product, only the event.\n\nThe admin is the quiet back office behind the rope. It is refined and restrained: white cards on soft house lights, plain words, one filled button per screen, and the brand color used only where it means something. It borrows the organizer's palette so the back office and the night feel like one place, but it never competes with the live phone preview, which is the most colorful thing on any admin screen.\n\nThere is no product logo on a visitor's screen and no decoration for its own sake. Elegance comes from restraint, type and light, not ornament.",
+    "keyCharacteristics": [
+      "Two rooms, one palette: a dark, cinematic visitor link and a light, calm admin, both colored by the organizer's five color roles.",
+      "The organizer's brand leads; Event Reels recedes.",
+      "Tickets is the one filled, brand-colored action on every visitor screen.",
+      "Phone first: 44px targets, thumb-reach actions, nothing wider than the screen."
+    ],
+    "rules": [
+      { "name": "The One Door Rule", "body": "On a visitor screen, only Tickets is filled with the Door color. Watch is glass; everything else is text or outline.", "section": "colors" },
+      { "name": "The Readable Brand Rule", "body": "Organizer colors never ship as typed: every look passes through readableColors so text meets WCAG AA on every screen. Never bypass it to match a flyer more exactly.", "section": "colors" },
+      { "name": "The 11px Floor Rule", "body": "No text below 11px anywhere a person reads, on any screen.", "section": "typography" },
+      { "name": "The One Display Face Rule", "body": "One display face per funnel, chosen by the organizer. Never mix two display faces on one screen.", "section": "typography" },
+      { "name": "The Float Only Rule", "body": "A shadow means \"this is above the page\". Cards in the page never get one.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do take every color from the five roles (bg-deep-navy, bg-teal-accent, text-on-accent, ...), so each organizer's look applies everywhere.",
+      "Do keep one filled button per screen: Tickets on visitor screens, the main action in the admin.",
+      "Do make touch targets at least 44px and keep the main action on screen at 390×844.",
+      "Do answer every action where the person is looking: a toast with Undo, \"Saved\", or an error beside the field.",
+      "Do honor reduced motion: every animation has a still version that shows all the content."
+    ],
+    "donts": [
+      "Don't hard-code hex colors in components; use the roles.",
+      "Don't add a second filled or Door-colored button to a visitor screen.",
+      "Don't put shadows on cards in the page.",
+      "Don't show the Event Reels brand on a visitor's screen.",
+      "Don't go below 11px text, or lighter than gray-600 for text on white."
+    ]
+  }
+}

@@ -201,7 +201,7 @@ export default function FunnelMap() {
                       {reel.practiceArea}
                     </span>
                     {isEntry && (
-                      <span className="flex-shrink-0 rounded bg-soft-gray px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-600">
+                      <span className="flex-shrink-0 rounded bg-soft-gray px-1.5 py-0.5 text-[11px] font-semibold uppercase text-gray-600">
                         Entry
                       </span>
                     )}

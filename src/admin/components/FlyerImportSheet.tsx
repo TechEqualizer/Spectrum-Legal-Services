@@ -213,7 +213,7 @@ export default function FlyerImportSheet({
                   return (
                     <li key={i} className="flex items-center gap-3 px-4 py-3">
                       <span className="flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-lg bg-soft-gray leading-none text-deep-navy">
-                        <span className="text-[10px] font-bold uppercase tracking-wide">{at.toLocaleDateString("en-US", { month: "short" })}</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide">{at.toLocaleDateString("en-US", { month: "short" })}</span>
                         <span className="mt-0.5 text-lg font-bold">{at.getDate()}</span>
                       </span>
                       <span className="min-w-0 flex-1">

@@ -1,0 +1,63 @@
+# Checks every pull request (and every push to a pull request's branch):
+# lint and types, the end-to-end tests against the mocks, and the Impeccable
+# design detector as a report. See tests/e2e/README.md and DESIGN.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [claude/attorney-landing-page-01Madn1xWpGe9gq5pva1LDww]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Keep logs and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-output
+          path: tests/e2e/.out
+          retention-days: 7
+
+  design:
+    name: Design detector (report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Findings are advisory for now (DESIGN.md debt is tracked for the next
+    # critique pass), so they show in the log without failing the PR.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: .claude/skills/impeccable/scripts/impeccable detect src

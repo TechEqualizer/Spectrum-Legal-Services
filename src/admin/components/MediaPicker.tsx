@@ -110,7 +110,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
             <img src={thumb} alt="" className="h-full w-full object-cover" onError={() => setBroken(true)} />
           ) : null}
           {kindLabel && (
-            <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{kindLabel}</span>
+            <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-bold uppercase text-white">{kindLabel}</span>
           )}
         </div>
 
