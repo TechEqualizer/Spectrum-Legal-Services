@@ -86,6 +86,8 @@ export type FunnelBrand = {
   logo:
     | { kind: "image"; src: string; width: number; height: number; alt: string }
     | { kind: "wordmark"; text: string; tagline?: string };
+  /** The organizer's profile photo, in the circle beside the name on each reel (their initial without it). */
+  avatar?: string;
   /** Shown beside the avatar on each reel, like a channel name ("@aurelia.medspa"); defaults to the name. */
   handle?: string;
   /** Two short lines beside the logo. */

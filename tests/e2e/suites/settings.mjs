@@ -25,17 +25,17 @@ check('sidebar shows the name', (await p.locator('nav').innerText()).includes('D
 check('account menu named', await p.locator('summary[aria-label="Account: Devante W"]').count() === 1);
 
 // Photo: a big photo goes up as a small square and shows in the sidebar.
-await p.locator('input[type="file"]').setInputFiles(PHOTO); await p.waitForTimeout(2000);
+await p.getByLabel('Choose a photo', { exact: true }).setInputFiles(PHOTO); await p.waitForTimeout(2000);
 const navImg = p.locator('nav summary img');
 const src = await navImg.getAttribute('src').catch(() => null);
 check('photo in the sidebar', Boolean(src && src.includes('/storage/v1/object/public/avatars/user-tester/')), String(src));
 const size = await navImg.evaluate((i) => [i.naturalWidth, i.naturalHeight]).catch(() => [0, 0]);
 check('stored as a small square', size[0] === 320 && size[1] === 320, size.join('x'));
-check('Change photo offered', await p.getByRole('button', { name: 'Change photo' }).isVisible());
+check('Change photo offered', await p.getByRole('button', { name: 'Change photo', exact: true }).isVisible());
 await p.screenshot({ path: S + '/settings-1440.jpg', fullPage: true });
 
 await p.getByRole('button', { name: 'Remove photo' }).click(); await p.waitForTimeout(1200);
-check('photo removed: initial again', await p.locator('nav summary img').count() === 0 && await p.getByRole('button', { name: 'Add photo' }).isVisible());
+check('photo removed: initial again', await p.locator('nav summary img').count() === 0 && await p.getByRole('button', { name: 'Add photo', exact: true }).isVisible());
 
 const wrong = await p.request.post(B + '/api/admin/avatar', { headers: { 'Content-Type': 'text/plain' }, data: 'not a photo' });
 check('only photos accepted', wrong.status() === 415, String(wrong.status()));
@@ -90,6 +90,30 @@ const self = await p.request.post(B + '/api/admin/accounts', { data: { email: 't
 check("can't demote yourself", self.status() === 400, String(self.status()));
 await p.screenshot({ path: S + '/accounts-1440.jpg', fullPage: true });
 
+// Organizers: each one's photo, shown beside their name on every reel.
+const orgs = p.getByRole('region', { name: 'Organizers' });
+check('organizers listed with their initial', (await orgs.innerText()).includes('Big Love Productions') && await orgs.getByRole('button', { name: 'Add photo for Big Love Productions' }).isVisible());
+await orgs.locator('input[type="file"]').first().setInputFiles(PHOTO); await p.waitForTimeout(2000);
+const orgImg = orgs.locator('img').first();
+const orgSrc = await orgImg.getAttribute('src').catch(() => null);
+check('organizer photo saved', Boolean(orgSrc && orgSrc.includes('/storage/v1/object/public/avatars/organizers/biglove/')), String(orgSrc));
+check('Change and Remove offered', await orgs.getByRole('button', { name: 'Change photo for Big Love Productions' }).isVisible() && await orgs.getByRole('button', { name: 'Remove photo for Big Love Productions' }).isVisible());
+const visitor = await (await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage();
+await visitor.goto(B + '/f/masquerade'); await visitor.waitForTimeout(1000);
+await visitor.getByRole('button', { name: /Sneak peek/ }).first().click(); await visitor.waitForTimeout(1500);
+check('reels show the organizer photo instead of the initial', await visitor.locator(`img[src="${orgSrc}"]`).count() > 0);
+await orgs.getByRole('button', { name: 'Remove photo for Big Love Productions' }).click(); await p.waitForTimeout(1500);
+check('organizer photo removed: initial again', await orgs.locator('img').count() === 0 && await orgs.getByRole('button', { name: 'Add photo for Big Love Productions' }).isVisible());
+await visitor.reload(); await visitor.waitForTimeout(1000);
+await visitor.getByRole('button', { name: /Sneak peek/ }).first().click(); await visitor.waitForTimeout(1500);
+check('reels back to the initial', await visitor.locator('img[src*="/avatars/organizers/"]').count() === 0);
+await visitor.context().close();
+const strangerCtx = await b.newContext();
+await strangerCtx.request.post(B + '/api/admin/login', { data: { email: 'stranger@example.com', password: 'stranger-pass-1' } });
+const notTheirs = await strangerCtx.request.post(B + '/api/admin/organizer-photo?organizer=biglove', { headers: { 'Content-Type': 'image/jpeg' }, data: Buffer.from('x') });
+check("someone else's organizer: refused", [401, 403].includes(notTheirs.status()), String(notTheirs.status()));
+await strangerCtx.close();
+
 // Phone: Settings from the account menu, nothing sideways.
 const phone = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const m = await phone.newPage(); m.on('pageerror', (e) => errs.push(e.message));
@@ -110,6 +134,7 @@ check('organizer: no Accounts', await o.getByRole('region', { name: 'Accounts' }
 check('organizer: accounts API refused', (await o.request.get(B + '/api/admin/accounts')).status() === 403);
 check('organizer: cannot send logins', (await o.request.post(B + '/api/admin/accounts/invite', { data: { email: 'promoter@example.com' } })).status() === 403);
 check("organizer: their organizer listed", access.includes('Big Love Productions') && access.includes('/f/biglove') && !access.includes('Full access'));
+check('organizer: can set their photo', await o.getByRole('button', { name: 'Add photo for Big Love Productions' }).isVisible());
 
 check('no page errors', !errs.length, errs.join(' | ').slice(0, 300));
 console.log(res.join('\n'));

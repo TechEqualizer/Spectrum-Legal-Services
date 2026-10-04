@@ -205,7 +205,13 @@ export default function ReelViewer({
   const slideKey = `${step}:${reel?.id}`;
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const expanded = expandedKey === slideKey;
-  const initial = brand.name.replace(/^The\s+/i, "").charAt(0);
+  // The organizer's photo when they've set one (Settings), else their initial.
+  const initial = brand.avatar ? (
+    // eslint-disable-next-line @next/next/no-img-element -- the organizer's own photo
+    <img src={brand.avatar} alt="" className="absolute inset-0 h-full w-full object-cover" />
+  ) : (
+    brand.name.replace(/^The\s+/i, "").charAt(0)
+  );
 
   // Latest handlers for listeners registered once per visit.
   const handlers = useRef({ goNext, goPrev, close, sheet });
@@ -360,7 +366,7 @@ export default function ReelViewer({
         <path d={SHARE} />
       </RailButton>
       <span
-        className={`mt-1 flex items-center justify-center bg-teal-accent text-sm font-bold text-on-accent ring-2 ring-white short:hidden ${
+        className={`relative mt-1 flex items-center justify-center overflow-hidden bg-teal-accent text-sm font-bold text-on-accent ring-2 ring-white short:hidden ${
           placement === "overlay" ? "h-[34px] w-[34px] rounded-[7px]" : "h-10 w-10 rounded-lg"
         }`}
         aria-hidden="true"
@@ -477,7 +483,7 @@ export default function ReelViewer({
                 <div>
                   {reelEvent && <EventChip chip={eventChip(reelEvent, now)} />}
                   <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-accent text-sm font-bold text-on-accent ring-1 ring-white/70" aria-hidden="true">
+                    <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-teal-accent text-sm font-bold text-on-accent ring-1 ring-white/70" aria-hidden="true">
                       {initial}
                     </span>
                     <span className="min-w-0 truncate text-[15px] font-semibold text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">

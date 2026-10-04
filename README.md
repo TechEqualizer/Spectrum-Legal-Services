@@ -280,7 +280,12 @@ with a temporary password and must choose their own at first sign-in;
 **Change password** and **Sign out** are in the account menu.
 
 **Settings** (`/admin/settings`) holds the admin's photo and name, their
-account, and what they can edit. Full admins also get **Accounts**: every
+account, and what they can edit. **Organizers** lists each organizer the
+admin runs with its photo: the circle beside the organizer's name on every
+reel of every event (their initial until one is added). It's stored in the
+`avatars` bucket under `organizers/<organizer>/` and linked from
+`organizers.avatar_url` by `set_organizer_avatar` (migration
+`20261013000000_organizer_photos.sql`). Full admins also get **Accounts**: every
 admin account, what each can edit (full access or chosen organizers), and
 **Send login**, which creates the person's login with a temporary password
 (emailed through Resend when `RESEND_API_KEY` and `LEAD_FROM_EMAIL` are set,
@@ -413,7 +418,12 @@ business's colors. It is not linked from the public site and is marked
   "Watched → End"), and fades if no topic, date or path reaches it. Tap a
   stop to play it in the phone; as you tap through the phone, the stop on
   screen is highlighted ("On screen"). The preview reports what's on screen
-  with `postMessage`; the End stop opens the end card directly.
+  with `postMessage`; the End stop opens the end card directly. A **+**
+  between stops (on hover on desktop, always on touch screens) adds a reel
+  right there. On event funnels, a core reel the funnel is missing (The
+  Night, Your People, Last Call) shows in its place as a dashed card ("+
+  Last Call") that opens Add reel set up for it; reels remember their core
+  role (`role`), and reels without one fill the earliest slots.
 - **Reels** (the admin home): each funnel as an ordered list. Every reel goes
   to the next one unless it has its own path for "watched to the end" or
   "skipped", so branching is added only where it helps. Rows show the reel's

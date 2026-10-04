@@ -206,6 +206,16 @@ http.createServer((req, res) => {
         updates: [...group(leadRows.filter((l) => l.funnel === funnel && l.intent === 'text_later' && l.at >= since), (l) => l.tag)].map(([tag, l]) => ({ tag, n: l.length })),
       });
     }
+    // Like the real set_organizer_avatar: the organizer's admins, a photo from its own folder.
+    if (p === '/rest/v1/rpc/set_organizer_avatar') {
+      const email = emailOf(req);
+      if (!email || !managesOrganizer(email, body.p_organizer)) return json(res, 403, { message: 'Only this organizer\'s admins can change its photo.' });
+      if (body.p_url !== null && !body.p_url.includes(`/storage/v1/object/public/avatars/organizers/${body.p_organizer}/`)) return json(res, 400, { message: 'not its folder' });
+      const o = organizers.get(body.p_organizer);
+      if (!o) return json(res, 404, { message: 'No such organizer.' });
+      organizers.set(o.slug, { ...o, avatar_url: body.p_url });
+      return json(res, 204);
+    }
     if (p.startsWith('/rest/v1/rpc/')) return json(res, 204);
 
     // Storage
@@ -223,7 +233,9 @@ http.createServer((req, res) => {
     const avatar = p.match(/^\/storage\/v1\/object\/avatars\/(.+)$/);
     if (avatar && (req.method === 'POST' || req.method === 'DELETE')) {
       const email = emailOf(req);
-      if (!email || avatar[1].split('/')[0] !== `user-${email.split('@')[0]}`) return json(res, 403, { message: 'new row violates row-level security policy' });
+      const [folder, sub] = avatar[1].split('/');
+      const allowed = folder === 'organizers' ? managesOrganizer(email, sub) : folder === `user-${email?.split('@')[0]}`;
+      if (!email || !allowed) return json(res, 403, { message: 'new row violates row-level security policy' });
       if (req.method === 'DELETE') { files.delete('avatars/' + avatar[1]); return json(res, 200, {}); }
       files.set('avatars/' + avatar[1], { type: req.headers['content-type'], body: raw });
       return json(res, 200, { Key: 'avatars/' + avatar[1] });

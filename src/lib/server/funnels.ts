@@ -40,12 +40,24 @@ function toFunnel(row: Row | undefined): Funnel | undefined {
   return funnel;
 }
 
+/** Rows as funnels, each wearing its organizer's profile photo (set in Settings) when it has one. */
+async function withOrganizers(rows: Row[]): Promise<{ funnel: Funnel; organizer: string }[]> {
+  const parsed = rows.flatMap((row) => {
+    const funnel = toFunnel(row);
+    return funnel ? [{ funnel, organizer: row.organizer_slug }] : [];
+  });
+  if (!parsed.length) return parsed;
+  const photos = new Map((await listOrganizers()).map((o) => [o.slug, o.avatarUrl]));
+  // Always the organizer's photo, never one stored with the event (a copy of an older event could carry one).
+  return parsed.map(({ funnel, organizer }) => ({ funnel: { ...funnel, brand: { ...funnel.brand, avatar: photos.get(organizer) } }, organizer }));
+}
+
 /** The funnel at /f/<slug>, or undefined. */
 export async function getFunnel(slug: string): Promise<Funnel | undefined> {
   const builtIn = builtInBySlug(slug);
   if (builtIn) return builtIn;
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) return undefined;
-  return toFunnel((await query(`slug=eq.${slug}&`, [funnelTag(slug)]))[0]);
+  return (await withOrganizers(await query(`slug=eq.${slug}&`, [funnelTag(slug)])))[0]?.funnel;
 }
 
 /** The funnel with this id (stored with leads and reel events), or undefined. */
@@ -53,15 +65,12 @@ export async function getFunnelById(id: string): Promise<Funnel | undefined> {
   const builtIn = builtInById(id);
   if (builtIn) return builtIn;
   if (!/^[a-z0-9-]{1,80}$/.test(id)) return undefined;
-  return toFunnel((await query(`funnel_id=eq.${id}&`, []))[0]);
+  return (await withOrganizers(await query(`funnel_id=eq.${id}&`, [])))[0]?.funnel;
 }
 
 /** Every event funnel in the database, with its organizer (for the admin). */
 export async function listEventFunnels(): Promise<{ funnel: Funnel; organizer: string }[]> {
-  return (await query("order=slug&", [])).flatMap((row) => {
-    const funnel = toFunnel(row);
-    return funnel ? [{ funnel, organizer: row.organizer_slug }] : [];
-  });
+  return withOrganizers(await query("order=slug&", []));
 }
 
 /** The organizer an event funnel belongs to (undefined for the built-in demos). */
@@ -70,7 +79,7 @@ export async function organizerOf(slug: string): Promise<string | undefined> {
   return (await listEventFunnels()).find(({ funnel }) => funnel.slug === slug)?.organizer;
 }
 
-export type Organizer = { slug: string; name: string };
+export type Organizer = { slug: string; name: string; avatarUrl?: string };
 export const ORGANIZERS_TAG = "organizers";
 
 async function organizers(filter: string): Promise<Organizer[]> {
@@ -78,11 +87,14 @@ async function organizers(filter: string): Promise<Organizer[]> {
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return [];
   try {
-    const res = await fetch(`${url}/rest/v1/organizers?${filter}select=slug,name`, {
+    // Every column (*), so this works before and after the photo column was added.
+    const res = await fetch(`${url}/rest/v1/organizers?${filter}select=*`, {
       headers: { apikey: key },
       next: { tags: [ORGANIZERS_TAG], revalidate: 300 },
     });
-    return res.ok ? ((await res.json()) as Organizer[]) : [];
+    if (!res.ok) return [];
+    const rows = (await res.json()) as { slug: string; name: string; avatar_url?: string | null }[];
+    return rows.map((o) => ({ slug: o.slug, name: o.name, ...(o.avatar_url ? { avatarUrl: o.avatar_url } : {}) }));
   } catch {
     return [];
   }
@@ -99,7 +111,7 @@ export async function getOrganizer(slug: string): Promise<Organizer | undefined>
 
 /** An organizer's events, as built (before published edits). */
 export async function listOrganizerEvents(organizer: string): Promise<Funnel[]> {
-  return (await query(`organizer_slug=eq.${organizer}&order=slug&`, [])).flatMap((row) => toFunnel(row) ?? []);
+  return (await withOrganizers(await query(`organizer_slug=eq.${organizer}&order=slug&`, []))).map(({ funnel }) => funnel);
 }
 
 /**
