@@ -190,3 +190,35 @@ export function toPreviewFunnel(live: Funnel, editor: EditorFunnel, library: Edi
     sample: { notice: "Admin preview: nothing is tracked or sent." },
   };
 }
+
+export const TRIGGER_LABELS: Record<FunnelTrigger, string> = {
+  completed: "Watched",
+  skipped: "Skipped",
+};
+
+/** A reel id from its title, unique among the taken ones. */
+export function slugify(title: string, taken: Set<string>) {
+  const base =
+    title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "reel";
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+  return slug;
+}
+
+/** Reels a visitor can reach from the funnel's starting points: its topics, and the reels date circles open. */
+export function reachable(funnel: EditorFunnel, extraStarts: string[] = []) {
+  const starts = [...Object.keys(funnel.topics), ...extraStarts].filter((id, i, all) => funnel.order.includes(id) && all.indexOf(id) === i);
+  const queue = starts.length ? starts : funnel.order.slice(0, 1);
+  const seen = new Set<string>(queue);
+  while (queue.length) {
+    const id = queue.shift()!;
+    for (const trigger of ["completed", "skipped"] as const) {
+      const next = resolveNext(funnel, id, trigger);
+      if (next && !seen.has(next)) {
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return seen;
+}

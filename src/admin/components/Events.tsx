@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
 import { builtInBusinesses } from "@/admin/business";
-import { requestImport } from "@/admin/components/ReelsEditor";
+import { requestImport } from "@/admin/import-request";
 import { useAdminSession } from "@/admin/session";
 import LocalDate from "@/components/LocalDate";
 import type { Funnel } from "@/data/funnel-types";
