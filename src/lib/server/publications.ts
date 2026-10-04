@@ -1,5 +1,6 @@
-// Published funnel edits, read on the server. Cached per funnel and refreshed
-// the moment the admin publishes (see /api/admin/publish).
+// Published funnel edits, read on the server. Cached per funnel, refreshed
+// the moment the admin publishes (see /api/admin/publish), and at most five
+// minutes old otherwise.
 
 import type { Funnel } from "@/data/funnel-types";
 import { getFunnelById, getFunnelBySlug } from "@/data/funnels";
@@ -18,7 +19,9 @@ export async function getPublication(slug: string): Promise<StoredPublication | 
   try {
     const res = await fetch(
       `${url}/rest/v1/funnel_publications?slug=eq.${encodeURIComponent(slug)}&select=data,published_at,published_by`,
-      { headers: { apikey: key }, cache: "force-cache", next: { tags: [publicationTag(slug)] } }
+      // Refreshed at once on publish (by tag), and every few minutes in case
+      // the row changed some other way (an edit made in the database itself).
+      { headers: { apikey: key }, next: { tags: [publicationTag(slug)], revalidate: 300 } }
     );
     if (!res.ok) return null;
     const rows = (await res.json()) as { data: unknown; published_at: string; published_by: string }[];
