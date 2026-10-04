@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
@@ -7,7 +7,7 @@ const adm = await b.newContext({ storageState: S + '/auth.json' }); await adm.re
 const ctx = await b.newContext({ timezoneId: 'America/Detroit', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
 const leads = []; await p.route('**/api/leads', async (r) => { leads.push(JSON.parse(r.request().postData())); await r.fulfill({ status: 201, contentType: 'application/json', body: '{"ok":true}' }); });
-await p.goto(B + '/f/masquerade'); await p.waitForTimeout(1200);
+await p.goto(B + '/f/masquerade'); await settle(p, 1200);
 check('no concept banner', await p.getByText(/Concept preview/).count() === 0);
 check('title', await p.getByRole('heading', { name: 'Masquerade on the Runway' }).isVisible());
 check('date in Detroit time', await p.getByText('Saturday · 8 PM').isVisible());
@@ -16,16 +16,16 @@ check('Eventbrite link with tracking', href.startsWith('https://www.eventbrite.c
 check('price and age on the date card', (await p.getByRole('button', { name: /Masquerade on the Runway, .*Watch$/ }).innerText()).includes('From $31') && (await p.locator('body').innerText()).includes('30+'));
 check('no 21+ left', !(await p.locator('body').innerText()).includes('21+'));
 check('flyer behind the title', await p.locator('img[src*="masquerade"][src*="flyer"]').count() > 0);
-await p.getByRole('button', { name: /Sneak peek inside/ }).click(); await p.waitForTimeout(1000);
+await p.getByRole('button', { name: /Sneak peek inside/ }).click(); await settle(p, 1000);
 check('first reel: masks on', await p.getByText('Masks on. Secrets revealed.').first().isVisible());
-await p.getByRole('button', { name: 'Updates' }).first().click(); await p.waitForTimeout(500);
+await p.getByRole('button', { name: 'Updates' }).first().click(); await settle(p, 500);
 const sheet = p.locator('form').last();
 check('updates sheet', await p.getByRole('heading', { name: 'Get event updates' }).isVisible());
 await sheet.getByLabel('First name').fill('Ava'); await sheet.getByLabel('Mobile number').fill('(313) 555-0123');
 await sheet.getByRole('checkbox').first().check().catch(() => {});
-await sheet.getByRole('button', { name: 'Text me updates' }).click(); await p.waitForTimeout(800);
+await sheet.getByRole('button', { name: 'Text me updates' }).click(); await settle(p, 800);
 check('lead actually sent', leads.length === 1 && leads[0].funnelId === 'masquerade-v1', JSON.stringify(leads).slice(0, 200));
-await ctx.close(); const ctx2 = await b.newContext({ storageState: S + '/auth.json' }); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(B + '/admin'); await p2.waitForTimeout(800);
+await ctx.close(); const ctx2 = await b.newContext({ storageState: S + '/auth.json' }); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(B + '/admin'); await settle(p2, 800);
 check('admin lists Big Love, not Golden Hour', (await p2.locator('#admin-business option').allTextContents()).join('|').includes('Big Love') && !(await p2.locator('#admin-business option').allTextContents()).join('|').includes('Golden Hour'));
 const missing = await fetch(B + '/f/no-such-event');
 check('unknown link is a 404', missing.status === 404, String(missing.status));

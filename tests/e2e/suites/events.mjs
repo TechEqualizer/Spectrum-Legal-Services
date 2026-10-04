@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[]; const B='http://localhost:3002';
 const b = await chromium.launch();
@@ -91,7 +91,7 @@ for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   // Admin
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
   await p.selectOption('#admin-business','masquerade');
-  await p.waitForTimeout(300);
+  await settle(p, 300);
   check(w+': admin shows Big Love reels', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
   await p.goto(B+'/admin/links',{waitUntil:'networkidle'});
   check(w+': admin links for masquerade', (await p.getByLabel('Your link').textContent()).includes('/f/masquerade?src=instagram'));

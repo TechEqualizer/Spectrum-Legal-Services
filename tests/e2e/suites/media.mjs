@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[]; const B='http://localhost:3002'; const D=process.cwd();
 const b = await chromium.launch();
@@ -59,7 +59,7 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await d2.getByLabel('Upload a video or photo').setInputFiles(D+'/sample-reel.mp4');
   check(w+': mp4 accepted', await d2.getByText('sample-reel.mp4').isVisible() && await d2.getByText('Cover image').isVisible());
   await d2.getByLabel('Upload a video or photo').setInputFiles(D+'/sample-reel.webm');
-  await p.waitForTimeout(500);
+  await settle(p, 500);
   check(w+': webm preview loads', await d2.locator('video').evaluate(v=>v.readyState>=1 && !v.error));
   await p.screenshot({path:`media-dialog-${w}.jpg`, quality:70});
   await d2.getByRole('button',{name:'Save reel'}).click();
@@ -84,12 +84,12 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await p.getByRole('button',{name:`Preview ${second}`}).click();
   const vid = p.getByRole('dialog',{name:/Video:/}).locator('video');
   await vid.waitFor({timeout:3000});
-  await p.waitForTimeout(800);
+  await settle(p, 800);
   check(w+': uploaded video plays', await vid.evaluate(v=>!v.paused && v.readyState>=2));
   await p.screenshot({path:`preview-video-${w}.jpg`, quality:70});
   await p.keyboard.press('Escape');
   await p.getByRole('button',{name:`Preview ${third}`}).click();
-  await p.waitForTimeout(300);
+  await settle(p, 300);
   check(w+': photo reel shows', await p.getByRole('dialog',{name:/Video:/}).locator('img[src^="blob:"]').evaluate(i=>i.complete && i.naturalWidth>0));
   // Only the admin's own reads (what's live, its results); no tracking or leads.
   check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=') && !u.includes('/api/admin/stats?')).length===0, api.join(','));
@@ -97,7 +97,7 @@ for (const [w,h] of [[1279,900],[390,844]]) {
 
   // Switch back to JLF
   await p.selectOption('#admin-business','jlf');
-  await p.waitForTimeout(300);
+  await settle(p, 300);
   check(w+': back to JLF', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===8 && await p.getByLabel('Funnel name').inputValue()==='Injury Insights');
   await ctx.close();
 }

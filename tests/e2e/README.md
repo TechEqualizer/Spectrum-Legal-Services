@@ -31,6 +31,13 @@ Building replaces the app's `.next` folder with a test build, so run
   - The rest: the admin (dates, flyer import, the "Draft my funnel" draft,
     look and style, opening screen, studio and path strip, publishing,
     saving, media).
+- `browser.mjs`: Playwright's `chromium` for the suites, plus waits.
+  `settle(page, ms)` returns as soon as the page is quiet (no requests in
+  flight, no `setTimeout` of up to 1s pending, in any frame), and never
+  later than `ms`, so use it instead of `page.waitForTimeout`. It doesn't
+  wait for CSS animations (the event pages always run some); a check about
+  one calls `animationsDone(page, ms)` first. `SETTLE_DEBUG=1` logs each
+  settle that ran out of time and what was still busy.
 - `mocks/supabase.mjs`: auth, the publications table and storage, kept in
   memory. Test accounts: `tester@example.com` / `tester-pass-1` (signed in
   for the suites) and `owner@example.com` (first sign-in flow). Control

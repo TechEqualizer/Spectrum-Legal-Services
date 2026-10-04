@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -28,33 +28,33 @@ check('non-admin gets no session', (await ctx.cookies()).every(c => c.name !== '
 await p.getByLabel('Email').fill('owner@example.com');
 await p.getByLabel('Password', { exact: true }).fill('temp-password-1');
 await p.getByRole('button', { name: 'Sign in' }).click();
-await p.waitForURL(/\/admin\/leads/); await p.waitForTimeout(800);
+await p.waitForURL(/\/admin\/leads/); await settle(p, 800);
 check('signed in -> back to Leads', p.url().endsWith('/admin/leads'));
 const cookies = await ctx.cookies();
 check('session cookies are httpOnly', cookies.filter(c => c.name.startsWith('admin_')).every(c => c.httpOnly) && cookies.some(c => c.name === 'admin_at'));
 const sheet = p.locator('dialog[open]');
 check('first sign-in asks for a password', await sheet.getByText('Choose your password').isVisible());
-await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+await p.keyboard.press('Escape'); await settle(p, 200);
 check("can't skip it", await sheet.isVisible());
 await sheet.getByLabel('New password').fill('short');
 await sheet.getByRole('button', { name: 'Save password' }).click();
 check('too-short password explained', await sheet.getByRole('alert').filter({ hasText: 'at least 10' }).isVisible());
 await sheet.getByLabel('New password').fill('my-own-password-42');
-await sheet.getByRole('button', { name: 'Save password' }).click(); await p.waitForTimeout(500);
+await sheet.getByRole('button', { name: 'Save password' }).click(); await settle(p, 500);
 check('password changed', await sheet.getByText('Password changed').isVisible());
-await sheet.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(800);
+await sheet.getByRole('button', { name: 'Done' }).click(); await settle(p, 800);
 check('prompt gone after refresh', await p.locator('dialog[open]').count() === 0);
 
 // 4. Reels: events business, nothing published yet
-await p.goto(B + '/admin'); await p.waitForTimeout(600);
-await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(1200);
+await p.goto(B + '/admin'); await settle(p, 600);
+await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1200);
 check('live: original reels', await p.getByText(/Live\s*·\s*original reels/).isVisible());
 check('no publish bar yet', await p.getByRole('region', { name: 'Publish' }).count() === 0);
 // 5. Edit: YouTube link on reel 1, uploaded video as the opening background
 await p.getByRole('button', { name: 'Edit Burlesque, performances and a live DJ' }).click();
 await p.getByRole('button', { name: 'Paste a link' }).click();
 await p.getByPlaceholder(/youtube\.com\/shorts/).fill('https://youtube.com/shorts/8U1ok3oEq8Q');
-await p.getByRole('button', { name: 'Save reel' }).click(); await p.waitForTimeout(400);
+await p.getByRole('button', { name: 'Save reel' }).click(); await settle(p, 400);
 const bar = p.getByRole('region', { name: 'Publish' });
 check('publish bar appears', await bar.getByText('Unpublished edits').isVisible());
 const card = p.locator('section[aria-labelledby="hero-media-title"]');
@@ -62,14 +62,14 @@ await card.getByRole('button', { name: 'Edit', exact: true }).click();
 const dlg = p.locator('dialog[open]');
 await dlg.getByRole('group', { name: 'Add media by' }).getByRole('button', { name: 'Upload' }).click();
 await dlg.getByLabel('Upload a video or photo').setInputFiles(S + '/sample-reel.webm');
-await dlg.getByRole('button', { name: 'Save', exact: true }).click(); await p.waitForTimeout(400);
+await dlg.getByRole('button', { name: 'Save', exact: true }).click(); await settle(p, 400);
 check('opening screen marked not published', await card.getByText('not published').isVisible());
 await p.screenshot({ path: S + '/publish-bar-390.jpg' });
 const bb = await bar.boundingBox();
 check('publish bar above the tab bar', bb.y + bb.height <= 844 - 56, JSON.stringify(bb));
 // 6. Publish
 await bar.getByRole('button', { name: 'Publish' }).click();
-await p.waitForTimeout(1500);
+await settle(p, 1500);
 check('published toast', await p.getByRole('status').filter({ hasText: 'Published' }).isVisible());
 check('bar gone after publish', await p.getByRole('region', { name: 'Publish' }).count() === 0);
 check('live: published time', await p.getByText(/Live\s*·\s*published/).isVisible());
@@ -85,17 +85,17 @@ const v = await b.newContext({ timezoneId: 'America/Detroit',  viewport: { width
 await v.route(/i\.ytimg\.com/, r => r.fulfill({ status: 200, contentType: 'image/png', body: png }));
 await v.route(/youtube-nocookie\.com/, r => r.fulfill({ status: 200, contentType: 'text/html', body: '<body></body>' }));
 const vp = await v.newPage();
-await vp.goto(B + '/f/masquerade'); await vp.waitForTimeout(1500);
+await vp.goto(B + '/f/masquerade'); await settle(vp, 1500);
 check('live link plays the uploaded background', await vp.evaluate(() => document.querySelector('video')?.src || '').then(s => s.includes('/reel-media/masquerade/')));
-await vp.goto(B + '/f/masquerade?start=mr-performances'); await vp.waitForTimeout(1500);
+await vp.goto(B + '/f/masquerade?start=mr-performances'); await settle(vp, 1500);
 check('live reel uses the published YouTube link', await vp.evaluate(() => [...document.querySelectorAll('iframe')].some(f => f.src.includes('/embed/8U1ok3oEq8Q'))));
 await vp.screenshot({ path: S + '/live-after-publish.jpg' });
 // 8. Reload admin: in sync, nothing to publish
-await p.reload(); await p.waitForTimeout(1500);
+await p.reload(); await settle(p, 1500);
 check('after reload: nothing unpublished', await p.getByRole('region', { name: 'Publish' }).count() === 0);
 // 9. Discard an edit
-await p.getByRole('button', { name: "Move Haute couture Halloween looks up" }).click(); await p.waitForTimeout(300);
-await bar.getByRole('button', { name: 'Discard' }).click(); await p.waitForTimeout(400);
+await p.getByRole('button', { name: "Move Haute couture Halloween looks up" }).click(); await settle(p, 300);
+await bar.getByRole('button', { name: 'Discard' }).click(); await settle(p, 400);
 check('discard goes back to live', await p.getByRole('region', { name: 'Publish' }).count() === 0 && (await p.locator('section[aria-labelledby="order-title"] ol > li').first().textContent()).includes('Masks on'));
 // 10. New reels are accepted by the tracking API once published (JLF, a real funnel)
 const r = await p.request.post(B + '/api/admin/publish', { data: { slug: 'jlf', publication: { version: 1, reels: [{ id: 'brand-new-reel', title: 'New', summary: '', practiceArea: 'Car Accident', cta: 'funnel' }], funnel: { order: ['brand-new-reel'], topics: {}, paths: {}, primaryCta: 'call' } } } });
@@ -108,9 +108,9 @@ const down = await p.request.delete(B + '/api/admin/publish?slug=jlf');
 check('JLF test publication taken down', down.ok());
 // 11. Take down
 await p.getByText('Funnel settings').click();
-await p.getByRole('button', { name: 'Take down published edits' }).click(); await p.waitForTimeout(800);
+await p.getByRole('button', { name: 'Take down published edits' }).click(); await settle(p, 800);
 check('taken down', !(await (await fetch(M + '/__state')).json()).publications.some(x => x.slug === 'masquerade'));
-await vp.goto(B + '/f/masquerade'); await vp.waitForTimeout(1500);
+await vp.goto(B + '/f/masquerade'); await settle(vp, 1500);
 check('live link back to original', await vp.evaluate(() => !document.querySelector('video')));
 // 12. Sign out
 await p.getByRole('group').first().evaluate(() => {}).catch(() => {});
@@ -125,8 +125,8 @@ check('API refuses signed-out publish', anon.status() === 401);
 await fetch(M + '/__ttl?s=30');
 await p.getByLabel('Email').fill('owner@example.com');
 await p.getByLabel('Password', { exact: true }).fill('my-own-password-42');
-await p.getByRole('button', { name: 'Sign in' }).click(); await p.waitForURL(/\/admin$/); await p.waitForTimeout(500);
-await p.goto(B + '/admin/overview'); await p.waitForTimeout(500);
+await p.getByRole('button', { name: 'Sign in' }).click(); await p.waitForURL(/\/admin$/); await settle(p, 500);
+await p.goto(B + '/admin/overview'); await settle(p, 500);
 const log = await (await fetch(M + '/__log')).json();
 check('expiring token refreshed', log.some(l => l.includes('grant_type=refresh_token')) && p.url().endsWith('/admin/overview'));
 check('no errors', !errs.length, errs.join(' | '));

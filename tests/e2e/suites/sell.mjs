@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -8,7 +8,7 @@ for (const [w, h] of [[390, 844], [360, 640], [1440, 900]]) {
   await ctx.route(/i\.ytimg\.com/, r => r.fulfill({ status: 200, contentType: 'image/png', body: png }));
   await ctx.route(/youtube-nocookie\.com/, r => r.fulfill({ status: 200, contentType: 'text/html', body: '<body></body>' }));
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(B + '/f/events'); await p.waitForTimeout(3000);
+  await p.goto(B + '/f/events'); await settle(p, 3000);
   const tag = `${w}x${h}`;
   const tickets = p.locator('main a', { hasText: /^Tickets/ }).first();
   const tClass = await tickets.getAttribute('class');
@@ -27,12 +27,12 @@ for (const [w, h] of [[390, 844], [360, 640], [1440, 900]]) {
   await p.screenshot({ path: `${S}/sell-${tag}.jpg` });
   if (w === 390) {
     // Sold-out date: waitlist first
-    await p.locator('main ul > li').filter({ hasText: 'Sold out' }).getByRole('button').click(); await p.waitForTimeout(1200);
+    await p.locator('main ul > li').filter({ hasText: 'Sold out' }).getByRole('button').click(); await settle(p, 1200);
     check('sold-out reel: Waitlist is the main action', await p.getByRole('button', { name: 'Join the waitlist', exact: true }).first().isVisible());
     check('sold-out reel: no silent Tickets pill', await p.getByRole('link', { name: /^Get tickets$/ }).count() === 0);
     check('sold-out reel: other date named', await p.getByRole('link', { name: 'Get Oct 4' }).first().isVisible());
     await p.screenshot({ path: `${S}/sell-soldout-reel.jpg` });
-    await p.getByRole('button', { name: 'Join the waitlist', exact: true }).first().click(); await p.waitForTimeout(500);
+    await p.getByRole('button', { name: 'Join the waitlist', exact: true }).first().click(); await settle(p, 500);
     check('waitlist sheet says so', await p.getByRole('heading', { name: 'Join the waitlist' }).isVisible() && await p.getByText(/sold out\. If tickets come back/).isVisible());
     await p.screenshot({ path: `${S}/sell-waitlist-sheet.jpg` });
   }

@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -10,9 +10,9 @@ await ctx.route(/youtube-nocookie\.com/, r => r.fulfill({ status: 200, contentTy
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
 process.on('uncaughtException', e => { console.log(res.join('\n')); console.log('ERR', e.message.split('\n')[0]); process.exit(1); });
-await p.goto(B + '/admin'); await p.waitForTimeout(500);
-await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(500);
-await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(1300);
+await p.goto(B + '/admin'); await settle(p, 500);
+await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 500);
+await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
 const dates = p.locator('section[aria-labelledby="dates-title"]');
 const card = p.locator('section[aria-labelledby="hero-media-title"]');
 const dlg = p.locator('dialog[open]');
@@ -30,12 +30,12 @@ await dlg.getByRole('radio', { name: 'Bold' }).click();
 check('import preview follows choice', await dlg.getByText('Bold condensed titles').isVisible());
 await dlg.getByLabel('Flyer as the background').uncheck();
 await p.screenshot({ path: S + '/style-import-390.jpg' });
-await dlg.getByRole('button', { name: 'Use this style' }).click(); await p.waitForTimeout(200);
-await dlg.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
+await dlg.getByRole('button', { name: 'Use this style' }).click(); await settle(p, 200);
+await dlg.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 check('card: bold style, background untouched', await card.getByText('Bold condensed').isVisible() && (await card.locator('p.text-sm.text-gray-600').first().innerText()).startsWith(kindBefore.split(' ·')[0]), kindBefore);
 
 // 2. Style sheet
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await p.waitForTimeout(300);
+await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 300);
 check('style sheet opens', await dlg.getByRole('heading', { name: 'Style' }).isVisible());
 const sugg = dlg.getByRole('radiogroup', { name: 'Suggested styles' });
 check('4 cards incl. Original', await sugg.getByRole('radio').count() === 4);
@@ -77,54 +77,54 @@ await dlg.getByRole('radio', { name: 'Blurred', exact: true }).click();
 check('preview shows blurred flyer', await dlg.getByRole('img', { name: 'Preview of your opening screen' }).locator('img').count() === 1);
 
 // Cancel keeps everything as it was
-await dlg.getByRole('button', { name: 'Cancel' }).click(); await p.waitForTimeout(300);
+await dlg.getByRole('button', { name: 'Cancel' }).click(); await settle(p, 300);
 check('cancel changes nothing', await card.getByText('Bold condensed').isVisible());
 
 // Again, and Done
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await p.waitForTimeout(300);
+await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 300);
 await sugg.getByRole('radio', { name: 'Elegant' }).click();
 await dlg.getByRole('radiogroup', { name: 'Title typeface' }).getByRole('radio', { name: /Engraved capitals/ }).click();
 await dlg.getByRole('radio', { name: 'Blurred', exact: true }).click();
-await dlg.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
+await dlg.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 check('done: card updated', await card.getByText('Engraved capitals').isVisible() && await card.getByText('Photo').isVisible());
 check('toast with undo', await p.getByRole('status').filter({ hasText: 'Style saved' }).getByRole('button', { name: 'Undo' }).isVisible());
 
 // Publish
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await p.waitForTimeout(2500);
+await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
 check('stored: palette + suggestions', pub?.look?.palette?.length === 7 && pub?.look?.suggestions?.length === 3, JSON.stringify(pub?.look)?.slice(0, 200));
 check('stored: flyer as public link', /^http:\/\/localhost:54321\/storage/.test(pub?.look?.flyer ?? ''), pub?.look?.flyer);
 check('stored: blurred backdrop', pub?.backdrop?.fit === 'blur' && pub.backdrop.src === pub.look.flyer, JSON.stringify(pub?.backdrop));
 
 // After a reload (fresh browser): the Style sheet still has everything
-await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(800);
-await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(1500);
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await p.waitForTimeout(300);
+await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 800);
+await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1500);
+await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 300);
 check('after reload: suggestions kept', await sugg.getByRole('radio').count() === 4);
 check('after reload: flyer kept', await dlg.getByRole('radio', { name: 'Flyer', exact: true }).isEnabled() && (await dlg.getByRole('radio', { name: 'Blurred', exact: true }).getAttribute('aria-checked')) === 'true');
-await dlg.getByRole('button', { name: 'Cancel' }).click(); await p.waitForTimeout(200);
+await dlg.getByRole('button', { name: 'Cancel' }).click(); await settle(p, 200);
 
 // Visitor
 const v = await b.newContext({ timezoneId: 'America/Detroit',  viewport: { width: 390, height: 844 } });
 const vp = await v.newPage();
-await vp.goto(B + '/f/masquerade'); await vp.waitForTimeout(3000);
+await vp.goto(B + '/f/masquerade'); await settle(vp, 3000);
 check('visitor: blurred flyer only', await vp.locator('img[src*="reel-media"]').count() === 1);
 check('visitor: Cinzel title', /Cinzel/.test(await vp.locator('h1').evaluate(e => getComputedStyle(e).fontFamily)));
 await vp.screenshot({ path: S + '/style-visitor-390.jpg' });
 
 // Original
 await p.screenshot({ path: S + '/style-dbg.jpg' });
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await p.waitForTimeout(600);
+await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 600);
 await p.screenshot({ path: S + '/style-dbg2.jpg' });
 await sugg.getByRole('radio', { name: 'Original' }).click();
 await dlg.getByRole('radio', { name: 'Glow', exact: true }).click();
-await dlg.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
+await dlg.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 check('original: look removed', await card.getByText('Engraved capitals').count() === 0 && await card.getByText('No background').isVisible());
 
 // Desktop
 await p.setViewportSize({ width: 1279, height: 900 });
-await p.getByRole('status').getByRole('button', { name: 'Undo' }).click().catch(() => {}); await p.waitForTimeout(200);
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await p.waitForTimeout(400);
+await p.getByRole('status').getByRole('button', { name: 'Undo' }).click().catch(() => {}); await settle(p, 200);
+await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 400);
 await p.screenshot({ path: S + '/style-sheet-1440.jpg' });
 await dlg.getByRole('button', { name: 'Cancel' }).click();
 

@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -10,9 +10,9 @@ await ctx.route(/i\.ytimg\.com/, r => r.fulfill({ status: 200, contentType: 'ima
 await ctx.route(/youtube-nocookie\.com/, r => r.fulfill({ status: 200, contentType: 'text/html', body: '<body></body>' }));
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-await p.goto(B + '/admin'); await p.waitForTimeout(600);
-await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(600);
-await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(1300);
+await p.goto(B + '/admin'); await settle(p, 600);
+await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 600);
+await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
 const dates = p.locator('section[aria-labelledby="dates-title"]');
 const card = p.locator('section[aria-labelledby="hero-media-title"]');
 
@@ -37,26 +37,26 @@ check('light sheet readable', contrast(get('--soft-gray'), '#1F2937') >= 11, get
 await p.screenshot({ path: S + '/look-offer-390.jpg' });
 
 // 2. Use it
-await sheet.getByRole('button', { name: 'Use this style' }).click(); await p.waitForTimeout(300);
+await sheet.getByRole('button', { name: 'Use this style' }).click(); await settle(p, 300);
 check('applied state', await sheet.getByText('Applied.', { exact: false }).isVisible());
 check('toast with undo', await p.getByRole('status').filter({ hasText: 'Look and background matched' }).isVisible());
 // Dates still to review
 check('dates still listed', await sheet.getByText('Found 2 dates').isVisible());
-await sheet.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
+await sheet.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 check('card shows look', await card.getByText('Engraved capitals').isVisible() && await card.getByText('not published').isVisible());
 await p.screenshot({ path: S + '/look-card-390.jpg' });
 
 // 3. Undo from the toast
-await p.getByRole('status').getByRole('button', { name: 'Undo' }).click(); await p.waitForTimeout(600);
+await p.getByRole('status').getByRole('button', { name: 'Undo' }).click(); await settle(p, 600);
 check('undo removes look', await card.getByText('Engraved capitals').count() === 0);
 await dates.getByRole('button', { name: 'Import flyer' }).click();
 await sheet.locator('input[type=file]').setInputFiles(S + '/flyer-masquerade.jpg');
 await sheet.getByRole('button', { name: 'Read flyer' }).click();
 await sheet.getByRole('button', { name: 'Use this style' }).waitFor({ timeout: 8000 });
-await sheet.getByRole('button', { name: 'Use this style' }).click(); await p.waitForTimeout(200);
-await sheet.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
+await sheet.getByRole('button', { name: 'Use this style' }).click(); await settle(p, 200);
+await sheet.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 // 4. Survives reload
-await p.reload(); await p.waitForTimeout(1500);
+await p.reload(); await settle(p, 1500);
 check('after reload: look kept', await card.getByText('Engraved capitals').isVisible());
 
 // 5. Opening screen sheet preview uses the look
@@ -64,10 +64,10 @@ await card.getByRole('button', { name: 'Edit', exact: true }).click();
 const os = p.locator('dialog[open]');
 check('sheet preview recolored', ((await os.locator('[style*="--deep-navy"]').count()) > 0));
 await p.screenshot({ path: S + '/look-sheet-390.jpg' });
-await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+await p.keyboard.press('Escape'); await settle(p, 200);
 
 // 6. Publish
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await p.waitForTimeout(2500);
+await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
 check('stored look', pub?.look?.font === 'regal' && /^#[0-9A-F]{6}$/.test(pub?.look?.colors?.['--deep-navy']), JSON.stringify(pub?.look));
 check('stored poster backdrop with public link', pub?.backdrop?.kind === 'image' && pub.backdrop.fit === 'poster' && /^https?:\/\//.test(pub.backdrop.src), JSON.stringify(pub?.backdrop));
@@ -76,7 +76,7 @@ check('stored poster backdrop with public link', pub?.backdrop?.kind === 'image'
 const v = await b.newContext({ timezoneId: 'America/Detroit',  viewport: { width: 390, height: 844 } });
 await v.route(/i\.ytimg\.com/, r => r.fulfill({ status: 200, contentType: 'image/png', body: png }));
 const vp = await v.newPage(); const verrs = []; vp.on('pageerror', e => verrs.push(e.message));
-await vp.goto(B + '/f/masquerade'); await vp.waitForTimeout(3000);
+await vp.goto(B + '/f/masquerade'); await settle(vp, 3000);
 const rootStyle = await vp.locator('[style*="--deep-navy"]').first().getAttribute('style');
 check('visitor colors = look', rootStyle.includes(pub.look.colors['--deep-navy']), rootStyle);
 const h1Font = await vp.locator('h1').evaluate(e => getComputedStyle(e).fontFamily);

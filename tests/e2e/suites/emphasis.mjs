@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[];
 const b = await chromium.launch();
@@ -18,22 +18,22 @@ for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   check(w+': builds starts quiet (rail)', !(await bg(railBook())).includes('164, 64, 92'), await bg(railBook()));
   const r1 = await railBook().boundingBox();
   await p.clock.runFor(4500);
-  await p.waitForTimeout(800);
+  await settle(p, 800);
   check(w+': builds fills at 60% (pill)', (await pill().evaluate(e=>getComputedStyle(e).backgroundColor))==='rgb(164, 64, 92)');
   check(w+': builds fills at 60% (rail)', (await bg(railBook()))==='rgb(164, 64, 92)');
   const r2 = await railBook().boundingBox();
   check(w+': rail does not move when filled', Math.abs(r1.y-r2.y)<1 && Math.abs(r1.height-r2.height)<1, `${r1.y},${r1.height} -> ${r2.y},${r2.height}`);
   // completed -> natural results (quiet)
   await p.clock.runFor(3000);
-  await p.waitForTimeout(300);
+  await settle(p, 300);
   check(w+': on quiet reel', await p.getByRole('region',{name:/Will I look frozen/}).isVisible());
   check(w+': quiet has no pill', await pill().count()===0);
-  await p.clock.runFor(5500); await p.waitForTimeout(800);
+  await p.clock.runFor(5500); await settle(p, 800);
   check(w+': past 60%, quiet reel', await p.getByRole('region',{name:/Will I look frozen/}).isVisible());
   check(w+': quiet rail stays plain', !(await bg(railBook())).includes('164, 64, 92'));
   check(w+': Book still reachable on quiet reel', await railBook().isVisible());
   // completed -> pricing (bold)
-  await p.clock.runFor(2500); await p.waitForTimeout(800);
+  await p.clock.runFor(2500); await settle(p, 800);
   check(w+': on bold reel', await p.getByRole('region',{name:/How pricing works/}).isVisible());
   check(w+': bold highlighted from start', (await pill().evaluate(e=>getComputedStyle(e).backgroundColor))==='rgb(164, 64, 92)' && (await bg(railBook()))==='rgb(164, 64, 92)');
   await p.screenshot({path:`emphasis-bold-${w}.jpg`, quality:65});

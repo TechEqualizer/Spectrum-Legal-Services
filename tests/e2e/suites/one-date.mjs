@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
@@ -21,7 +21,7 @@ const view = async (w, h, name) => {
   const v = await b.newContext({ timezoneId: 'America/Detroit',  viewport: { width: w, height: h }, deviceScaleFactor: 2 });
   await v.route(/i\.ytimg\.com|youtube-nocookie/, r => r.fulfill({ status: 404 }));
   const p = await v.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(B + '/f/masquerade'); await p.waitForTimeout(2800);
+  await p.goto(B + '/f/masquerade'); await settle(p, 2800);
   if (name) await p.screenshot({ path: `${S}/${name}.jpg` });
   return { p, v, errs };
 };
@@ -40,7 +40,7 @@ check('A: fits one screen', await p.evaluate(() => document.documentElement.scro
 const ics = await p.request.get(B + (await p.getByRole('link', { name: 'Add to calendar' }).getAttribute('href')));
 const body = await ics.text();
 check('calendar file', ics.headers()['content-type'].startsWith('text/calendar') && body.includes('SUMMARY:Masquerade on the Runway') && body.includes('LOCATION:Grand Blvd') && /DTSTART:\d{8}T\d{6}Z/.test(body), body.split('\r\n').slice(5, 9).join(' | '));
-await card.click(); await p.waitForTimeout(700);
+await card.click(); await settle(p, 700);
 check('A: card plays the date\'s reel', (await p.locator('body').innerText()).includes('Masks on. Secrets revealed.'));
 check('A: no errors', !errs.length, errs.join('|')); await v.close();
 
