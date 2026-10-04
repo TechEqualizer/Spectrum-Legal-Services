@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -11,8 +11,8 @@ await ctx.route(/youtube-nocookie\.com/, r => r.fulfill({ status: 200, contentTy
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
 
-await p.goto(B + '/admin'); await p.waitForTimeout(600);
-await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(1300);
+await p.goto(B + '/admin'); await settle(p, 600);
+await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
 const dates = p.locator('section[aria-labelledby="dates-title"]');
 const rows = () => dates.locator(':scope > ul > li').count();
 const before = await rows();
@@ -48,19 +48,19 @@ check('venue, price, https link', (await ds.getByLabel('Venue').inputValue()) ==
 check('from-flyer banner', await ds.getByText('Filled in from your flyer.').isVisible());
 check('opens with: first reel', (await ds.getByLabel('Opens with').inputValue()) === '');
 await p.screenshot({ path: S + '/flyer-review-390.jpg' });
-await ds.getByRole('button', { name: 'Add date' }).click(); await p.waitForTimeout(400);
+await ds.getByRole('button', { name: 'Add date' }).click(); await settle(p, 400);
 check('back to list, first marked added', await sheet.getByText('Added', { exact: true }).isVisible());
 check('row added', await rows() === before + 1);
 
 // 3. Second: missing details
 await sheet.getByRole('button', { name: /Review Golden Hour/ }).click();
 check('banner lists what is missing', await ds.getByText(/didn’t show the start time, venue, price and ticket link/).isVisible());
-await ds.getByRole('button', { name: 'Add date' }).click(); await p.waitForTimeout(200);
+await ds.getByRole('button', { name: 'Add date' }).click(); await settle(p, 200);
 check('ticket link still required', await ds.getByRole('alert').filter({ hasText: 'https://' }).isVisible());
 await ds.getByLabel('Ticket link').fill('https://example.com/t/nov8');
-await ds.getByRole('button', { name: 'Add date' }).click(); await p.waitForTimeout(400);
+await ds.getByRole('button', { name: 'Add date' }).click(); await settle(p, 400);
 check('all added: back to the unused look offer', await sheet.getByText('Match your flyer’s style?').isVisible() && await rows() === before + 2);
-await sheet.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
+await sheet.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 check('Done closes', await p.locator('dialog[open]').count() === 0);
 
 // 4. Pasted text, single date: straight to review
@@ -71,21 +71,21 @@ await sheet.getByRole('button', { name: 'Read flyer' }).click();
 await ds.getByRole('heading', { name: 'Add date' }).waitFor({ timeout: 8000 }).catch(() => {});
 check('single date opens review directly', (await ds.getByLabel('Name').inputValue()) === 'Golden Hour: Day Party');
 check('text sent as text', (await last()).body.messages[0].content[0].type === 'text');
-await ds.getByRole('button', { name: 'Close' }).click(); await p.waitForTimeout(300);
+await ds.getByRole('button', { name: 'Close' }).click(); await settle(p, 300);
 check('closing review closes import (single)', await p.locator('dialog[open]').count() === 0 && await rows() === before + 2);
 
 // 5. Nothing found, and a refusal
 await mode('none');
 await dates.getByRole('button', { name: 'Import flyer' }).click();
 await sheet.getByLabel('Paste the event details').fill('Brunch menu: eggs $12');
-await sheet.getByRole('button', { name: 'Read flyer' }).click(); await p.waitForTimeout(1500);
+await sheet.getByRole('button', { name: 'Read flyer' }).click(); await settle(p, 1500);
 check('none found explained', await sheet.getByRole('alert').filter({ hasText: 'menu' }).isVisible());
 await sheet.getByRole('button', { name: 'Import another' }).click();
 await mode('refusal');
 await sheet.getByLabel('Paste the event details').fill('something');
-await sheet.getByRole('button', { name: 'Read flyer' }).click(); await p.waitForTimeout(1500);
+await sheet.getByRole('button', { name: 'Read flyer' }).click(); await settle(p, 1500);
 check('refusal explained', await sheet.getByRole('alert').filter({ hasText: 'by hand' }).isVisible());
-await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+await p.keyboard.press('Escape'); await settle(p, 200);
 
 // 6. Signed out: rejected
 const anon = await b.newContext();

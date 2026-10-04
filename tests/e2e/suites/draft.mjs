@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -13,9 +13,9 @@ await ctx.route(/youtube-nocookie\.com/, r => r.fulfill({ status: 200, contentTy
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
 
-await p.goto(B + '/admin'); await p.waitForTimeout(600);
+await p.goto(B + '/admin'); await settle(p, 600);
 await p.evaluate(() => { localStorage.removeItem('admin_prompts_masquerade'); localStorage.removeItem('admin_draft_masquerade'); });
-await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(1300);
+await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
 const dates = p.locator('section[aria-labelledby="dates-title"]');
 const sheet = p.locator('dialog[open]');
 const orderRows = () => p.locator('ol > li').filter({ has: p.getByRole('button', { name: /^Move .* down$/ }) });
@@ -30,7 +30,7 @@ check('draft offer shown after reading', await sheet.getByRole('heading', { name
 
 // Add the Oct 31 date first, so reels can link to it.
 await sheet.getByRole('button', { name: /Review Golden Hour: Halloween/ }).click();
-await sheet.getByRole('button', { name: 'Add date' }).click(); await p.waitForTimeout(400);
+await sheet.getByRole('button', { name: 'Add date' }).click(); await settle(p, 400);
 check('back to the sheet after adding', await sheet.getByRole('heading', { name: 'Draft your whole funnel?' }).isVisible());
 
 await sheet.getByRole('button', { name: 'Draft my funnel' }).click();
@@ -50,9 +50,9 @@ check('opening words shown', await sheet.getByText('Masks on, Detroit').isVisibl
 await sheet.getByRole('heading', { name: 'Your funnel, drafted' }).scrollIntoViewIfNeeded();
 await p.screenshot({ path: S + `/draft-preview-${W}.jpg` });
 
-await sheet.getByRole('button', { name: 'Use this draft' }).click(); await p.waitForTimeout(500);
+await sheet.getByRole('button', { name: 'Use this draft' }).click(); await settle(p, 500);
 check('sheet stays for the look/date left', await sheet.getByText('Funnel drafted').isVisible());
-await sheet.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
+await sheet.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 const titles = await orderRows().locator('p.font-bold').allTextContents();
 check('funnel order replaced', JSON.stringify(titles) === JSON.stringify(['Masks on', 'Bring your crew', 'Last call']), JSON.stringify(titles));
 check('Needs video chips', await orderRows().filter({ hasText: 'Needs video' }).count() === 3);
@@ -72,15 +72,15 @@ await p.screenshot({ path: S + `/draft-applied-${W}.jpg`, fullPage: W < 1000 });
 await p.getByRole('button', { name: 'Edit Masks on' }).click();
 const dlg = p.locator('dialog[open]');
 await dlg.getByText('Video prompt').click();
-await dlg.getByRole('button', { name: 'Copy prompt' }).click(); await p.waitForTimeout(200);
+await dlg.getByRole('button', { name: 'Copy prompt' }).click(); await settle(p, 200);
 check('copied', await dlg.getByRole('button', { name: 'Copied' }).isVisible());
 check('clipboard has the prompt', (await p.evaluate(() => navigator.clipboard.readText())).startsWith('Camera: rack focus'));
 await dlg.getByText('Video prompt').scrollIntoViewIfNeeded();
 await p.screenshot({ path: S + `/draft-reel-prompt-${W}.jpg` });
-await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+await p.keyboard.press('Escape'); await settle(p, 300);
 
 // Undo puts everything back
-await p.getByRole('button', { name: 'Undo' }).first().click(); await p.waitForTimeout(400);
+await p.getByRole('button', { name: 'Undo' }).first().click(); await settle(p, 400);
 const back = await orderRows().locator('p.font-bold').allTextContents();
 check('undo restores reels', JSON.stringify(back) === JSON.stringify(beforeTitles), JSON.stringify(back));
 check('undo restores title', await hero.getByText('“Masquerade on the Runway”').isVisible() && !(await hero.getByText('“Masks on, Detroit”').isVisible()));

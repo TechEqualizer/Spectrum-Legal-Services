@@ -4,26 +4,17 @@ import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { useAdminEvents } from "@/admin/AdminBusiness";
 import Accounts from "@/admin/components/Accounts";
+import OrganizerPhotos from "@/admin/components/OrganizerPhotos";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import Avatar from "@/admin/components/ui/Avatar";
 import { CheckIcon } from "@/admin/components/ui/icons";
 import { useAdminSession } from "@/admin/session";
-
-/** A photo as a small centered square, so uploads stay tiny whatever the camera made. */
-async function squareJpeg(file: File, size = 320): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  canvas.getContext("2d")!.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
-  bitmap.close();
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode"))), "image/jpeg", 0.88));
-}
+import { squareJpeg } from "@/admin/square-photo";
 
 /**
  * The signed-in admin's own settings: their photo and name (shown in the
- * sidebar), their account (email, password, sign out), and what they can
- * edit.
+ * sidebar), their account (email, password, sign out), what they can
+ * edit, and the photo of each organizer they run.
  */
 export default function Settings() {
   const id = useId();
@@ -38,8 +29,9 @@ export default function Settings() {
   const [changing, setChanging] = useState(false);
 
   const fullAccess = session.slugs.includes("*");
-  const organizers = [...new Map(events.map((e) => [e.organizer.slug, e.organizer.name])).entries()].filter(
-    ([slug]) => fullAccess || session.organizers.includes(slug)
+  // The organizers this admin runs, each with the photo its reels show.
+  const organizers = [...new Map(events.map((e) => [e.organizer.slug, { ...e.organizer, avatarUrl: e.funnel.brand.avatar }])).values()].filter(
+    (o) => fullAccess || session.organizers.includes(o.slug)
   );
 
   const uploadPhoto = async (file: File) => {
@@ -204,9 +196,9 @@ export default function Settings() {
             <>
               <p>You run these organizers&apos; events: you can add, edit and publish them.</p>
               <ul className="mt-2 space-y-1" role="list">
-                {organizers.map(([slug, orgName]) => (
-                  <li key={slug} className="font-semibold text-deep-navy">
-                    {orgName} <span className="font-normal text-gray-600">/f/{slug}</span>
+                {organizers.map((o) => (
+                  <li key={o.slug} className="font-semibold text-deep-navy">
+                    {o.name} <span className="font-normal text-gray-600">/f/{o.slug}</span>
                   </li>
                 ))}
               </ul>
@@ -216,6 +208,8 @@ export default function Settings() {
           )}
         </div>
       </section>
+
+      <OrganizerPhotos organizers={organizers} />
 
       {/* Superadmin: full admins manage everyone's access. */}
       {fullAccess && <Accounts />}

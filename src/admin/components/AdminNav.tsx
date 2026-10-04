@@ -71,9 +71,14 @@ export default function AdminNav() {
           <span
             title={funnel.brand.name}
             aria-hidden="true"
-            className="hidden h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-lg font-bold text-white lg:flex"
+            className="relative hidden h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-white/10 text-lg font-bold text-white lg:flex"
           >
-            {funnel.brand.name[0]}
+            {funnel.brand.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element -- the organizer's own photo
+              <img src={funnel.brand.avatar} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              funnel.brand.name[0]
+            )}
           </span>
         )}
         <div className={`lg:mt-5 ${folded("lg:hidden")}`}>

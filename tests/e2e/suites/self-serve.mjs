@@ -1,6 +1,6 @@
 // An organizer's own login: they see only their events, add and duplicate
 // them, and publish them, but nothing of anyone else's.
-import { chromium } from 'playwright';
+import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
@@ -12,7 +12,7 @@ check('organizer signs in', login.ok(), String(login.status()));
 
 // 1. Only their events; the demos aren't theirs. (Events other suites made
 // may still be in the app's event list cache: they're Big Love's too.)
-await p.goto(B + '/admin/events'); await p.waitForTimeout(1200);
+await p.goto(B + '/admin/events'); await settle(p, 1200);
 check('sees their event', await p.getByRole('button', { name: 'Open Masquerade on the Runway' }).first().isVisible());
 check('no demos', await p.getByRole('region', { name: 'Demos' }).count() === 0);
 const options = await p.locator('#admin-business option').allTextContents();
@@ -25,7 +25,7 @@ await p.getByRole('button', { name: 'New event' }).click();
 const sheet = p.locator('dialog[open]');
 await sheet.getByLabel('Event name').fill('Spring Gala');
 await sheet.getByRole('button', { name: 'Create event' }).click();
-await p.waitForURL(/\/admin$/); await p.waitForTimeout(1500);
+await p.waitForURL(/\/admin$/); await settle(p, 1500);
 const now = await p.locator('#admin-business option').allTextContents();
 check('new event opens in their studio, beside only their own', (await p.locator('#admin-business').inputValue()) === 'spring-gala' && now.length >= 2 && now.every((o) => /Big Love/.test(o)), now.join(' | '));
 await p.keyboard.press('Escape');
@@ -42,12 +42,12 @@ const other = await p.request.post(B + '/api/admin/publish', { data: { slug: 'jl
 check("can't publish a demo", other.status() === 403 || other.status() === 404, String(other.status()));
 const fromDemo = await p.request.post(B + '/api/admin/events', { data: { source: 'jlf', name: 'Mine now', slug: 'mine-now', mode: 'copy' } });
 check("can't copy a funnel that isn't theirs", fromDemo.status() === 400, String(fromDemo.status()));
-await p.goto(B + '/admin/preview/medspa'); await p.waitForTimeout(500);
+await p.goto(B + '/admin/preview/medspa'); await settle(p, 500);
 check("can't preview a demo", (await p.locator('body').innerText()).includes('404') || (await p.title()).includes('404'));
 
 // 4. The bio link keeps showing the one dated night until the new event gets a date.
 const v = await (await b.newContext()).newPage();
-await v.goto(B + '/f/biglove'); await v.waitForTimeout(1000);
+await v.goto(B + '/f/biglove'); await settle(v, 1000);
 check('bio link unchanged until the new event has a date', /masquerade on the runway/i.test(await v.locator('h1').innerText()));
 
 check('no page errors', !errs.length, errs.join(' | ').slice(0, 300));

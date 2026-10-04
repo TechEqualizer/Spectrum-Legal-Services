@@ -12,6 +12,7 @@ import {
 } from "@/admin/editor-model";
 import type { ReelEmphasis, ReelMedia } from "@/data/funnel-types";
 import type { FunnelTrigger } from "@/data/reels";
+import { REEL_DRIVERS, REEL_ROLES } from "@/lib/funnel-draft";
 
 export type ReelEditResult = {
   reel: EditorReel;
@@ -108,9 +109,16 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
     >
       <form onSubmit={save} className="space-y-6 p-5 md:p-6">
         <div className="flex items-start justify-between gap-4">
-          <h2 id={`${id}-title`} className="text-xl font-black uppercase tracking-tight text-deep-navy">
-            {isNew ? "Add reel" : "Edit reel"}
-          </h2>
+          <div>
+            <h2 id={`${id}-title`} className="text-xl font-black uppercase tracking-tight text-deep-navy">
+              {isNew ? (reel.role ? `Add ${REEL_ROLES[reel.role]}` : "Add reel") : reel.role ? `Edit ${REEL_ROLES[reel.role]}` : "Edit reel"}
+            </h2>
+            {reel.role && (
+              <p className="mt-1 text-sm text-gray-600">
+                Answers &ldquo;{REEL_DRIVERS[reel.role].question}&rdquo; {REEL_DRIVERS[reel.role].driver}.
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}
