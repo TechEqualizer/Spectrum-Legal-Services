@@ -64,6 +64,12 @@ export async function listEventFunnels(): Promise<{ funnel: Funnel; organizer: s
   });
 }
 
+/** The organizer an event funnel belongs to (undefined for the built-in demos). */
+export async function organizerOf(slug: string): Promise<string | undefined> {
+  if (builtInBySlug(slug)) return undefined;
+  return (await listEventFunnels()).find(({ funnel }) => funnel.slug === slug)?.organizer;
+}
+
 export type Organizer = { slug: string; name: string };
 export const ORGANIZERS_TAG = "organizers";
 

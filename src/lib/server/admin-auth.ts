@@ -110,6 +110,8 @@ export type Admin = {
   email: string;
   /** Funnel slugs this admin may publish; "*" means all. */
   slugs: string[];
+  /** Organizers whose events this admin runs: all of them, and adding new ones. */
+  organizers: string[];
   mustChangePassword: boolean;
   accessToken: string;
 };
@@ -126,16 +128,18 @@ export async function getAdmin(): Promise<Admin | null> {
   const user = (await userRes.json()) as { email?: string; user_metadata?: { must_change_password?: boolean } };
   if (!user.email) return null;
   try {
-    const res = await fetch(`${url()}/rest/v1/admin_users?select=email,slugs`, {
+    // Every column, so a database without organizers yet still signs admins in.
+    const res = await fetch(`${url()}/rest/v1/admin_users?select=*`, {
       headers: { apikey: key()!, Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
-    const rows = (await res.json()) as { email: string; slugs: string[] }[];
+    const rows = (await res.json()) as { email: string; slugs: string[]; organizers?: string[] }[];
     if (!rows[0]) return null;
     return {
       email: user.email,
       slugs: rows[0].slugs,
+      organizers: rows[0].organizers ?? [],
       mustChangePassword: Boolean(user.user_metadata?.must_change_password),
       accessToken: token,
     };
@@ -144,7 +148,16 @@ export async function getAdmin(): Promise<Admin | null> {
   }
 }
 
-export const canPublish = (admin: Pick<Admin, "slugs">, slug: string) => admin.slugs.includes("*") || admin.slugs.includes(slug);
+/** Whether this admin runs this organizer's events (or manages every funnel). Matches the database's manages_organizer. */
+export const managesOrganizer = (admin: Pick<Admin, "slugs" | "organizers">, organizer: string) =>
+  admin.slugs.includes("*") || admin.organizers.includes(organizer);
+
+/**
+ * Whether this admin may publish this funnel: granted on its own, or as one
+ * of an organizer's events they run. Matches the database's can_publish_funnel.
+ */
+export const canPublish = (admin: Pick<Admin, "slugs" | "organizers">, slug: string, organizer?: string) =>
+  admin.slugs.includes("*") || admin.slugs.includes(slug) || (organizer !== undefined && admin.organizers.includes(organizer));
 
 /** When a JWT expires, in seconds since the epoch, without verifying it (Supabase verifies on use). */
 export function tokenExpiry(token: string): number {

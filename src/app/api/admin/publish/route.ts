@@ -1,6 +1,6 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { getFunnel } from "@/lib/server/funnels";
+import { getFunnel, organizerOf } from "@/lib/server/funnels";
 import { parsePublication } from "@/lib/publication";
 import { asAdmin, canPublish, getAdmin } from "@/lib/server/admin-auth";
 import { publicationTag } from "@/lib/server/publications";
@@ -9,7 +9,7 @@ async function authorize(slug: string) {
   const admin = await getAdmin();
   if (!admin) return { error: NextResponse.json({ error: "Sign in again." }, { status: 401 }) };
   const funnel = await getFunnel(slug);
-  if (!funnel || !canPublish(admin, slug)) {
+  if (!funnel || !canPublish(admin, slug, await organizerOf(slug))) {
     return { error: NextResponse.json({ error: "You can't publish this funnel." }, { status: 403 }) };
   }
   return { admin, funnel };
