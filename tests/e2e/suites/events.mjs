@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[]; const B='http://localhost:3002';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const b = await chromium.launch();
 for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   const ctx = await b.newContext({ timezoneId: 'America/Detroit',  storageState: process.argv[2] + '/auth.json', viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile });
   const p = await ctx.newPage();
