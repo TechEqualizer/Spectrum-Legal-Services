@@ -41,6 +41,26 @@ End-to-end tests run the built app against stand-ins for Supabase and the
 Claude API, so they need no keys and touch nothing real. See
 [`tests/e2e/README.md`](tests/e2e/README.md).
 
+Every pull request runs lint, types, the end-to-end tests and the design
+detector (`.github/workflows/ci.yml`).
+
+## Design and quality
+
+- [`PRODUCT.md`](PRODUCT.md): who Event Reels is for, what it does, and its
+  principles. [`DESIGN.md`](DESIGN.md): the design system ("The Velvet
+  Rope"): color roles, type, components and rules. Read both before changing
+  a screen; Impeccable and the design skills in `.claude/skills` read them
+  too.
+- **Every UI edit:** the Impeccable detector runs automatically in Claude
+  Code (`.claude/settings.json`) and reports problems such as off-system
+  colors, text under 11px and contrast failures.
+- **Before a PR that changes a screen:** run `/critique <that screen>` and
+  fix its top-priority findings.
+- **Before a client launch:** `/impeccable audit` on their link, then
+  `/impeccable harden` and `/impeccable polish`.
+- `bolder`, `delight` and `overdrive` only for one screen that feels flat,
+  never across the app.
+
 ## Shareable funnel link (`/f/jlf`)
 
 The reel funnel on its own, with no website around it: the link to put in an

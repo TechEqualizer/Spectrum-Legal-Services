@@ -529,7 +529,7 @@ function SingleDate({
         className="flex w-full items-center gap-3 rounded-2xl bg-white/10 p-3 text-left ring-1 ring-white/15 backdrop-blur-md transition hover:bg-white/15"
       >
         <span className="flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-black/30 leading-none">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-accent">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-sky-accent">
             {d.toLocaleDateString("en-US", { month: "short" })}
           </span>
           <span className="mt-1 text-xl font-bold text-white">{d.getDate()}</span>

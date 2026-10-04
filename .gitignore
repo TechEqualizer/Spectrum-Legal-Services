@@ -41,9 +41,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Impeccable (design skill) runtime files
+# Impeccable (design skill) runtime and per-machine files
 **/.impeccable/hook.cache.json
 .impeccable/live/
 
 # End-to-end test output (screenshots, logs, sign-in state)
 tests/e2e/.out/
+.impeccable/config.local.json
+.claude/settings.local.json

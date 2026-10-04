@@ -245,7 +245,7 @@ function DateRow({ event, reel, past = false, onClick }: { event: FunnelEvent; r
     <li>
       <button type="button" onClick={onClick} className="flex min-h-16 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-soft-gray sm:px-5">
         <span className={`flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl leading-none ${past ? "bg-gray-100 text-gray-500" : "bg-deep-navy text-white"}`}>
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${past ? "" : "text-sky-accent"}`}>{d.toLocaleDateString("en-US", { month: "short" })}</span>
+          <span className={`text-[11px] font-bold uppercase tracking-wider ${past ? "" : "text-sky-accent"}`}>{d.toLocaleDateString("en-US", { month: "short" })}</span>
           <span className="mt-0.5 text-lg font-bold">{d.getDate()}</span>
         </span>
         <span className="min-w-0 flex-1">
