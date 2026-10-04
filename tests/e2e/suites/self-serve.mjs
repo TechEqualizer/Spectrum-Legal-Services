@@ -10,14 +10,15 @@ const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.pu
 const login = await ctx.request.post(B + '/api/admin/login', { data: { email: 'organizer@example.com', password: 'organizer-pass-1' } });
 check('organizer signs in', login.ok(), String(login.status()));
 
-// 1. Only their events; the demos aren't theirs.
+// 1. Only their events; the demos aren't theirs. (Events other suites made
+// may still be in the app's event list cache: they're Big Love's too.)
 await p.goto(B + '/admin/events'); await p.waitForTimeout(1200);
-check('sees their event', await p.getByRole('button', { name: 'Open Masquerade on the Runway' }).isVisible());
+check('sees their event', await p.getByRole('button', { name: 'Open Masquerade on the Runway' }).first().isVisible());
 check('no demos', await p.getByRole('region', { name: 'Demos' }).count() === 0);
 const options = await p.locator('#admin-business option').allTextContents();
-// One business: no switcher at all (it appears once they have a second event).
-check('nothing else to switch to', options.length === 0, options.join(' | '));
-check('can add events', await p.getByRole('button', { name: 'New event' }).isVisible() && await p.getByRole('button', { name: 'Duplicate Masquerade on the Runway' }).isVisible());
+// With one event there's no switcher at all; with more, only their own.
+check('nothing else to switch to', options.every((o) => /Big Love/.test(o)), options.join(' | '));
+check('can add events', await p.getByRole('button', { name: 'New event' }).isVisible() && await p.getByRole('button', { name: 'Duplicate Masquerade on the Runway' }).first().isVisible());
 
 // 2. New event from their login: it's theirs to edit and publish.
 await p.getByRole('button', { name: 'New event' }).click();
@@ -26,7 +27,7 @@ await sheet.getByLabel('Event name').fill('Spring Gala');
 await sheet.getByRole('button', { name: 'Create event' }).click();
 await p.waitForURL(/\/admin$/); await p.waitForTimeout(1500);
 const now = await p.locator('#admin-business option').allTextContents();
-check('new event opens in their studio, beside only their own', (await p.locator('#admin-business').inputValue()) === 'spring-gala' && now.length === 2 && now.every((o) => /Big Love/.test(o)), now.join(' | '));
+check('new event opens in their studio, beside only their own', (await p.locator('#admin-business').inputValue()) === 'spring-gala' && now.length >= 2 && now.every((o) => /Big Love/.test(o)), now.join(' | '));
 await p.keyboard.press('Escape');
 const reel = { id: 'spring-gala-welcome', practiceArea: 'The night', title: 'Spring Gala', summary: 'Details coming soon.', cta: 'funnel' };
 const pub = await p.request.post(B + '/api/admin/publish', { data: { slug: 'spring-gala', publication: {
