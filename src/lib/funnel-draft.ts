@@ -49,3 +49,18 @@ export type FunnelDraft = {
   /** The three core reels, in REEL_ORDER (one may be missing if the flyer gave nothing for it). */
   reels: DraftReel[];
 };
+
+/**
+ * Which reel fills each core role, in REEL_ORDER: reels marked with a role
+ * take theirs, and reels without one (made before roles, or by hand) fill
+ * the earliest open slots in order. A slot without a reel is missing.
+ */
+export function coreReels<R extends { role?: ReelRole }>(reels: R[]): { role: ReelRole; reel?: R }[] {
+  const slots = new Map<ReelRole, R | undefined>(REEL_ORDER.map((role) => [role, reels.find((r) => r.role === role)]));
+  const open = REEL_ORDER.filter((role) => !slots.get(role));
+  for (const reel of reels.filter((r) => !r.role)) {
+    const role = open.shift();
+    if (role) slots.set(role, reel);
+  }
+  return REEL_ORDER.map((role) => ({ role, reel: slots.get(role) }));
+}

@@ -5,7 +5,7 @@
 // one shape, so the screens don't care which.
 
 import { useEffect, useState } from "react";
-import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
+import { useAdminBusiness, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
 import { sampleFor, type DailyReelStats, type ReelTotals, type SourceTotals } from "@/admin/sample-data";
 import type { Funnel } from "@/data/funnel-types";
 
@@ -111,4 +111,39 @@ export function useResults(days: number): { results: Results | null; real: boole
   if (!event) return { results: sampleResults(business, days), real: false, error: "" };
   // Until this business and period's numbers arrive, show nothing rather than the last ones.
   return state.key === key ? { results: state.results, real: true, error: state.error } : { results: null, real: true, error: "" };
+}
+
+/** One event's results, for Home. */
+export type EventResults = { event: AdminEvent; results: Results };
+
+/**
+ * Results for every organizer's event this admin runs, over the last `days`
+ * days, fetched side by side. `results` is null while they load; events whose
+ * numbers couldn't load are left out and counted in `failed`.
+ */
+export function useAllResults(days: number): { results: EventResults[] | null; failed: number } {
+  const events = useAdminEvents();
+  const [state, setState] = useState<{ key: string; results: EventResults[] | null; failed: number }>({ key: "", results: null, failed: 0 });
+  const key = `${events.map((e) => e.funnel.slug).join(",")}:${days}`;
+
+  useEffect(() => {
+    let current = true;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    Promise.all(
+      events.map((event) =>
+        fetch(`/api/admin/stats?slug=${encodeURIComponent(event.funnel.slug)}&days=${days}&tz=${encodeURIComponent(tz)}`)
+          .then(async (res) => (res.ok ? { event, results: realResults((await res.json()) as StatsResponse, event.live, days) } : null))
+          .catch(() => null)
+      )
+    ).then((all) => {
+      if (!current) return;
+      const results = all.filter((r): r is EventResults => r !== null);
+      setState({ key, results, failed: all.length - results.length });
+    });
+    return () => {
+      current = false;
+    };
+  }, [events, days, key]);
+
+  return state.key === key ? { results: state.results, failed: state.failed } : { results: null, failed: 0 };
 }

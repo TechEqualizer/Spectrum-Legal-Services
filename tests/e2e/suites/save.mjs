@@ -47,7 +47,7 @@ await p.reload(); await settle(p, 1200);
 check('reset survives reload', await p.getByText(/Live\s*·\s*original reels/).isVisible());
 // 5. Nav
 const tabs = p.locator('nav ul a');
-check('5 tabs', await tabs.count()===5, (await tabs.allTextContents()).join(','));
+check('6 tabs', await tabs.count()===6, (await tabs.allTextContents()).join(','));
 const boxes = await tabs.evaluateAll(as=>as.map(a=>{const r=a.getBoundingClientRect(); return [r.left,r.right,r.bottom]}));
 check('all tabs on screen at the bottom', boxes.every(([l,r,bt])=>l>=0 && r<=390 && bt<=844 && bt>780), JSON.stringify(boxes));
 check('current tab marked', (await p.locator('nav [aria-current=page]').textContent())==='Reels');

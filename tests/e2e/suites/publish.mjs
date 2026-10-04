@@ -125,7 +125,7 @@ check('API refuses signed-out publish', anon.status() === 401);
 await fetch(M + '/__ttl?s=30');
 await p.getByLabel('Email').fill('owner@example.com');
 await p.getByLabel('Password', { exact: true }).fill('my-own-password-42');
-await p.getByRole('button', { name: 'Sign in' }).click(); await p.waitForURL(/\/admin$/); await settle(p, 500);
+await p.getByRole('button', { name: 'Sign in' }).click(); await p.waitForURL(/\/admin\/home$/); await settle(p, 500);
 await p.goto(B + '/admin/overview'); await settle(p, 500);
 const log = await (await fetch(M + '/__log')).json();
 check('expiring token refreshed', log.some(l => l.includes('grant_type=refresh_token')) && p.url().endsWith('/admin/overview'));

@@ -48,7 +48,7 @@ const m = await b.newContext({ storageState: S + '/auth.json', viewport: { width
 const mp = await m.newPage();
 await mp.goto(B + '/admin/overview'); await mp.evaluate(() => localStorage.setItem('admin_nav_collapsed', '1')); await mp.reload(); await settle(mp, 800);
 const tabs = mp.locator('nav ul a');
-check('phone: 5 tabs with labels', await tabs.count() === 5 && await tabs.first().getByText('Events').isVisible());
+check('phone: 6 tabs with labels', await tabs.count() === 6 && await tabs.first().getByText('Home').isVisible());
 check('phone: no collapse button', !(await mp.getByRole('button', { name: /sidebar$/ }).isVisible()));
 check('phone: business picker shown', await mp.locator('#admin-business').isVisible());
 await m.close();

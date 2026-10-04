@@ -36,8 +36,8 @@ export default function ViewsChart({ data }: { data: Point[] }) {
   const line = data.map((d, i) => `${i ? "L" : "M"}${x(i)},${y(d.views)}`).join("");
   const area = `${line}L${x(data.length - 1)},${y(0)}L${x(0)},${y(0)}Z`;
 
-  // About five date labels, evenly spaced.
-  const labelEvery = Math.max(1, Math.ceil(data.length / 5));
+  // Up to five date labels, evenly spaced, as many as fit (about 72px each).
+  const labelEvery = Math.max(1, Math.ceil(data.length / Math.max(2, Math.min(5, Math.floor(innerW / 72)))));
   const last = data.length - 1;
 
   const pick = (clientX: number) => {
@@ -79,7 +79,7 @@ export default function ViewsChart({ data }: { data: Point[] }) {
         ))}
         {/* X labels */}
         {data.map((d, i) =>
-          i % labelEvery === 0 || i === last ? (
+          (i % labelEvery === 0 && last - i >= labelEvery / 2) || i === last ? (
             <text key={i} x={x(i)} y={HEIGHT - 8} textAnchor={i === 0 ? "start" : i === last ? "end" : "middle"} fontSize={11} fill={viz.textSecondary}>
               {formatDay(d.date)}
             </text>
