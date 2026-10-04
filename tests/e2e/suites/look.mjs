@@ -38,7 +38,7 @@ await p.screenshot({ path: S + '/look-offer-390.jpg' });
 
 // 2. Use it
 await sheet.getByRole('button', { name: 'Use this style' }).click(); await p.waitForTimeout(300);
-check('applied state', await sheet.getByText('Applied ✓').isVisible());
+check('applied state', await sheet.getByText('Applied.', { exact: false }).isVisible());
 check('toast with undo', await p.getByRole('status').filter({ hasText: 'Look and background matched' }).isVisible());
 // Dates still to review
 check('dates still listed', await sheet.getByText('Found 2 dates').isVisible());

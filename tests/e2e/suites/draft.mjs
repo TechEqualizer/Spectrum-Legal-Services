@@ -48,7 +48,7 @@ await sheet.getByRole('heading', { name: 'Your funnel, drafted' }).scrollIntoVie
 await p.screenshot({ path: S + `/draft-preview-${W}.jpg` });
 
 await sheet.getByRole('button', { name: 'Use this draft' }).click(); await p.waitForTimeout(500);
-check('sheet stays for the look/date left', await sheet.getByText('Funnel drafted ✓').isVisible());
+check('sheet stays for the look/date left', await sheet.getByText('Funnel drafted').isVisible());
 await sheet.getByRole('button', { name: 'Done' }).click(); await p.waitForTimeout(300);
 const titles = await orderRows().locator('p.font-bold').allTextContents();
 check('funnel order replaced', JSON.stringify(titles) === JSON.stringify(['Masks on', 'The Runway', 'The Inner Circle', 'Dress to impress', 'Last call']), JSON.stringify(titles));
@@ -69,7 +69,7 @@ await p.getByRole('button', { name: 'Edit Masks on' }).click();
 const dlg = p.locator('dialog[open]');
 await dlg.getByText('Video prompt').click();
 await dlg.getByRole('button', { name: 'Copy prompt' }).click(); await p.waitForTimeout(200);
-check('copied', await dlg.getByRole('button', { name: 'Copied ✓' }).isVisible());
+check('copied', await dlg.getByRole('button', { name: 'Copied' }).isVisible());
 check('clipboard has the prompt', (await p.evaluate(() => navigator.clipboard.readText())).startsWith('Camera: rack focus'));
 await dlg.getByText('Video prompt').scrollIntoViewIfNeeded();
 await p.screenshot({ path: S + `/draft-reel-prompt-${W}.jpg` });

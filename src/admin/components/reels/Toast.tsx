@@ -1,3 +1,4 @@
+import { CheckIcon } from "@/admin/components/ui/icons";
 import type { Toast as ToastState } from "@/admin/use-editor";
 
 /** A short confirmation near the bottom of the screen, with Undo when something can be put back. */
@@ -21,7 +22,7 @@ export default function Toast({
     >
       {toast && (
         <>
-          <span><span aria-hidden="true">&#10003; </span>{toast.text}</span>
+          <span className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-sky-accent" />{toast.text}</span>
           {toast.undo && (
             <button
               type="button"
@@ -29,7 +30,7 @@ export default function Toast({
                 toast.undo!();
                 onDismiss();
               }}
-              className="min-h-9 rounded-full px-3 font-bold text-sky-accent hover:bg-white/10"
+              className="-my-1 min-h-11 rounded-full px-3 font-bold text-sky-accent hover:bg-white/10"
             >
               Undo
             </button>

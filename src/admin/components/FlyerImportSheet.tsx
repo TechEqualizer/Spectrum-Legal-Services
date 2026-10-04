@@ -6,6 +6,7 @@ import { keepUpload } from "@/admin/drafts";
 import { LOOK_FONTS, type Look } from "@/lib/look";
 import type { ImportedDate } from "@/lib/server/flyer-import";
 import { REEL_ROLES, type FunnelDraft } from "@/lib/funnel-draft";
+import { CheckIcon } from "@/admin/components/ui/icons";
 
 export type { FunnelDraft, ImportedDate };
 
@@ -224,7 +225,7 @@ export default function FlyerImportSheet({
                         {!d.ticketUrl && !done && <span className="block text-xs font-semibold text-amber-800">Needs a ticket link</span>}
                       </span>
                       {done ? (
-                        <span className="flex-shrink-0 text-sm font-semibold text-teal-700">Added ✓</span>
+                        <span className="inline-flex flex-shrink-0 items-center gap-1.5 text-sm font-semibold text-teal-700">Added <CheckIcon /></span>
                       ) : (
                         <button
                           type="button"
@@ -406,7 +407,7 @@ function LookOffer({
           )}
           <div className="mt-auto pt-3">
             {used ? (
-              <p className="text-sm font-semibold text-teal-700">Applied ✓ Fine-tune it in Style.</p>
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-teal-700"><CheckIcon />Applied. Fine-tune it in Style.</p>
             ) : (
               <button type="button" onClick={() => onUse(shown)} className="min-h-11 w-full rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue">
                 Use this style
@@ -471,7 +472,7 @@ function DraftOffer({
   if (found.draftUsed) {
     return (
       <section aria-labelledby={`${id}-title`} className="rounded-xl bg-white p-4">
-        <h3 id={`${id}-title`} className="font-bold text-deep-navy">Funnel drafted ✓</h3>
+        <h3 id={`${id}-title`} className="flex items-center gap-1.5 font-bold text-deep-navy">Funnel drafted <CheckIcon /></h3>
         <p className="mt-1 text-sm text-gray-600">Your reels are in the editor, each marked Needs video with its prompt.</p>
       </section>
     );

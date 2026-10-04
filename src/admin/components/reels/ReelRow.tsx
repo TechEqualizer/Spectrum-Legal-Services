@@ -108,7 +108,7 @@ export default function ReelRow({ date, hasPrompt, stats: s, reel, index, count,
               <Stat label="Booked" value={formatNumber(s.booked)} />
             </>
           ) : (
-            <p className="col-span-3 text-gray-500">No results yet</p>
+            <p className="col-span-3 text-gray-600">No results yet</p>
           )}
         </dl>
         <div className="flex items-center">
@@ -164,7 +164,7 @@ function Chip({ children, tone = "gray" }: { children: React.ReactNode; tone?: k
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-gray-500">{label}</dt>
+      <dt className="text-gray-600">{label}</dt>
       <dd className="text-sm font-bold text-deep-navy">{value}</dd>
     </div>
   );
@@ -178,7 +178,7 @@ function IconButton({ label, d, onClick, disabled, danger }: { label: string; d:
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`flex h-10 w-10 items-center justify-center rounded-md hover:bg-soft-gray disabled:opacity-30 ${danger ? "text-red-700" : "text-gray-600 hover:text-deep-navy"}`}
+      className={`flex h-11 w-11 items-center justify-center rounded-md hover:bg-soft-gray disabled:opacity-30 ${danger ? "text-red-700" : "text-gray-600 hover:text-deep-navy"}`}
     >
       <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
         <path d={d} />

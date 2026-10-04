@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
 import { builtInBusinesses } from "@/admin/business";
+import CopyButton from "@/admin/components/ui/CopyButton";
+import { PlusIcon } from "@/admin/components/ui/icons";
 import { requestImport } from "@/admin/import-request";
 import { runsOrganizer, useAdminSession } from "@/admin/session";
 import LocalDate from "@/components/LocalDate";
@@ -67,7 +69,7 @@ export default function Events() {
             onClick={() => setSheet({ mode: "fresh" })}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            <PlusIcon />
             New event
           </button>
         )}
@@ -146,26 +148,13 @@ export default function Events() {
 }
 
 function PermanentLink({ href }: { href: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked: the link is on screen to copy by hand.
-    }
-  };
   return (
     <p className="flex min-w-0 items-center gap-2 text-sm text-gray-600">
       <span className="flex-shrink-0">
         Bio link<span className="hidden sm:inline">, always the next event</span>:
       </span>
       <span className="truncate font-semibold text-deep-navy">{href.replace(/^https?:\/\//, "")}</span>
-      <button type="button" onClick={copy} className="min-h-11 flex-shrink-0 rounded-md px-2 text-sm font-semibold text-deep-navy underline underline-offset-2 hover:bg-white">
-        {copied ? "Copied ✓" : "Copy"}
-      </button>
-      <span role="status" className="sr-only">{copied ? "Link copied" : ""}</span>
+      <CopyButton text={href} announce="Bio link copied" className="min-h-11 flex-shrink-0 rounded-md px-2 text-sm font-semibold text-deep-navy underline underline-offset-2 hover:bg-white" />
     </p>
   );
 }

@@ -10,7 +10,7 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   await p.selectOption('#admin-business', 'masquerade'); await p.waitForTimeout(900);
   const card = p.locator('section[aria-labelledby="hero-media-title"]');
   check(w+': card shows the live flyer photo', await card.getByText('Photo',{exact:true}).isVisible());
-  const add = await p.getByRole('button',{name:'+ Add reel'}).boundingBox();
+  const add = await p.getByRole('button',{name:'Add reel',exact:true}).boundingBox();
   const cb = await card.boundingBox();
   check(w+': main action + card on screen', add.y+add.height<=h && cb.y+cb.height<=h, JSON.stringify({add:add.y,card:cb.y+cb.height}));
   await p.screenshot({path:`${S}/hero-admin-${w}.jpg`});
