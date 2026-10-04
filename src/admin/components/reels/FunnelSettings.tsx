@@ -47,14 +47,14 @@ export default function FunnelSettings({
     </label>
     <p className="mt-1 text-xs text-gray-600">Publish sends the default funnel to your live link.</p>
     <p className="mt-3 text-sm text-gray-600">
-      <Link href="/admin/funnel" className="inline-flex min-h-10 items-center font-semibold text-deep-navy underline-offset-2 hover:underline">
+      <Link href="/admin/funnel" className="inline-flex min-h-11 items-center font-semibold text-deep-navy underline-offset-2 hover:underline">
         See every path
       </Link>
       <span className="block text-xs">Every route a visitor can take through your reels, on one map.</span>
     </p>
     {live?.publishedAt && (
       <div className="mt-4 border-t border-gray-100 pt-4">
-        <button type="button" onClick={onTakeDown} className="min-h-10 text-sm font-semibold text-red-700 hover:underline">
+        <button type="button" onClick={onTakeDown} className="min-h-11 text-sm font-semibold text-red-700 hover:underline">
           Take down published edits
         </button>
         <p className="text-xs text-gray-600">Your link goes back to its original reels. Your edits stay here.</p>

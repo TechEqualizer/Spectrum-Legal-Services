@@ -30,7 +30,7 @@ await ds.getByRole('button', { name: 'Save', exact: true }).click(); await p.wai
 check('Oct 31 now opens the runway reel', (await row('Oct 31').textContent()).includes('Haute couture'));
 
 // 2. New date with a new reel
-await dates.getByRole('button', { name: '+ Add date' }).click();
+await dates.getByRole('button', { name: 'Add date', exact: true }).click();
 check('new date defaults to a new reel', (await pick.inputValue()) === 'new' && await ds.getByText('After saving, add its video').isVisible());
 await ds.getByLabel('Name').fill('Masquerade on the Runway: After Party');
 await ds.getByLabel('Ticket link').fill('https://example.com/tickets/after-party');

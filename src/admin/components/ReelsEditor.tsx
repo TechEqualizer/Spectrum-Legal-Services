@@ -12,6 +12,7 @@ import Toast from "@/admin/components/reels/Toast";
 import StyleSheet from "@/admin/components/StyleSheet";
 import { PathStrip, ResultsPanel, StoryStep, Studio, useWideScreen, type PathStop } from "@/admin/components/Studio";
 import type { PreviewMoment } from "@/admin/components/PreviewFrame";
+import { PlusIcon } from "@/admin/components/ui/icons";
 import ReelViewer from "@/components/ReelViewer";
 import {
   CTA_LABELS,
@@ -287,9 +288,10 @@ export default function ReelsEditor() {
           <button
             type="button"
             onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
-            className="min-h-11 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
           >
-            + Add reel
+            <PlusIcon />
+            Add reel
           </button>
         </div>
       </div>
@@ -515,9 +517,10 @@ export default function ReelsEditor() {
               <button
                 type="button"
                 onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
-                className="min-h-11 w-full rounded-xl border border-dashed border-gray-400 text-sm font-semibold text-deep-navy hover:bg-white"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-400 text-sm font-semibold text-deep-navy hover:bg-white"
               >
-                + Add reel
+                <PlusIcon />
+            Add reel
               </button>
             </StoryStep>
             {liveErrorEl}

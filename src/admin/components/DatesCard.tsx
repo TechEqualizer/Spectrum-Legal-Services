@@ -5,6 +5,7 @@ import type { FunnelEvent } from "@/data/funnel-types";
 import { isOver } from "@/lib/events";
 import FlyerImportSheet, { type FlyerFound, type FunnelDraft, type ImportedDate } from "@/admin/components/FlyerImportSheet";
 import type { Look } from "@/lib/look";
+import { PlusIcon } from "@/admin/components/ui/icons";
 
 type Status = NonNullable<FunnelEvent["status"]>;
 
@@ -132,9 +133,10 @@ export default function DatesCard({
           <button
             type="button"
             onClick={() => setEditing({ event: newDate(sorted), isNew: true })}
-            className="min-h-10 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
           >
-            + Add date
+            <PlusIcon />
+            Add date
           </button>
         </div>
       </div>

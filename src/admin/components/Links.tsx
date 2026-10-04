@@ -3,14 +3,15 @@
 import { useState, useSyncExternalStore } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { sampleFor } from "@/admin/sample-data";
+import CopyButton from "@/admin/components/ui/CopyButton";
 import { formatNumber, viz } from "@/admin/viz";
 import { funnelReel } from "@/data/reels";
 import { normalizeSourceTag, SOURCE_PRESETS, sourceLabel } from "@/lib/source-tag";
 
 const ranges = [
-  { days: 7, label: "Last 7 days" },
-  { days: 30, label: "Last 30 days" },
-  { days: 90, label: "Last 90 days" },
+  { days: 7, label: "7 days" },
+  { days: 30, label: "30 days" },
+  { days: 90, label: "90 days" },
 ];
 
 const CUSTOM = "__custom";
@@ -29,11 +30,9 @@ export default function Links() {
   const origin = useOrigin();
   // An organizer's event: their permanent link (the one for their bio) always shows the next event.
   const organizer = useAdminEvents().find((e) => e.funnel.slug === funnel.slug)?.organizer;
-  const [bioCopied, setBioCopied] = useState(false);
   const [preset, setPreset] = useState<string>(SOURCE_PRESETS[0].tag);
   const [custom, setCustom] = useState("");
   const [start, setStart] = useState("");
-  const [copied, setCopied] = useState(false);
   const [range, setRange] = useState(ranges[1]);
 
   const customTag = normalizeSourceTag(custom.replace(/\s+/g, "-"));
@@ -44,15 +43,6 @@ export default function Links() {
   const path = `/f/${funnel.slug}${query.size ? `?${query}` : ""}`;
   const url = `${origin}${path}`;
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked: the link is still selectable on screen.
-    }
-  };
 
   // An event sells tickets: its sample "bookings" are ticket clicks, and it takes no calls.
   const tickets = funnel.primaryCta === "tickets";
@@ -88,25 +78,14 @@ export default function Links() {
             Always shows your next event, so it never needs changing. Put this one in your Instagram and TikTok bio.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <code className="min-w-0 flex-1 truncate rounded-lg bg-soft-gray px-3 py-2.5 text-sm font-semibold text-deep-navy">
-              {`${origin}/f/${organizer.slug}`}
+            <code className="min-w-0 flex-1 basis-full truncate rounded-lg bg-soft-gray sm:basis-auto px-3 py-2.5 text-sm font-semibold text-deep-navy">
+              {`${origin}/f/${organizer.slug}`.replace(/^https?:\/\//, "")}
             </code>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(`${origin}/f/${organizer.slug}`);
-                  setBioCopied(true);
-                  setTimeout(() => setBioCopied(false), 2000);
-                } catch {
-                  // Clipboard blocked: the link is on screen to copy by hand.
-                }
-              }}
+            <CopyButton
+              text={`${origin}/f/${organizer.slug}`}
+              announce="Bio link copied"
               className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue"
-            >
-              {bioCopied ? "Copied ✓" : "Copy"}
-            </button>
-            <span role="status" className="sr-only">{bioCopied ? "Bio link copied" : ""}</span>
+            />
           </div>
         </section>
       )}
@@ -118,7 +97,7 @@ export default function Links() {
             <label htmlFor="link-source" className="mb-1 block text-sm font-semibold text-deep-navy">
               Where will you share it?
             </label>
-            <select id="link-source" className="form-input text-sm" value={preset} onChange={(e) => { setPreset(e.target.value); setCopied(false); }}>
+            <select id="link-source" className="form-input text-sm" value={preset} onChange={(e) => { setPreset(e.target.value); }}>
               {SOURCE_PRESETS.map((p) => (
                 <option key={p.tag} value={p.tag}>{p.label}</option>
               ))}
@@ -133,7 +112,7 @@ export default function Links() {
                   placeholder="e.g. bus-bench or flyer-drop"
                   maxLength={40}
                   value={custom}
-                  onChange={(e) => { setCustom(e.target.value); setCopied(false); }}
+                  onChange={(e) => { setCustom(e.target.value); }}
                   aria-describedby="link-custom-help"
                 />
                 <p id="link-custom-help" className="mt-1 text-xs text-gray-600">
@@ -148,7 +127,7 @@ export default function Links() {
             <label htmlFor="link-start" className="mb-1 block text-sm font-semibold text-deep-navy">
               Opens on
             </label>
-            <select id="link-start" className="form-input text-sm" value={start} onChange={(e) => { setStart(e.target.value); setCopied(false); }}>
+            <select id="link-start" className="form-input text-sm" value={start} onChange={(e) => { setStart(e.target.value); }}>
               <option value="">&ldquo;{funnel.cover.heading}&rdquo; topic choices</option>
               {funnel.reels.map((r) => (
                 <option key={r.id} value={r.id}>Video: {r.title}</option>
@@ -165,17 +144,18 @@ export default function Links() {
             {url}
           </code>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={copy}
+            {/* Keyed by the link: a new link starts as "Copy link" again. */}
+            <CopyButton
+              key={url}
+              text={url}
+              label="Copy link"
+              announce="Link copied"
               className={
                 organizer
                   ? "min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50"
                   : "min-h-11 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
               }
-            >
-              <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
-            </button>
+            />
             <a href={path} target="_blank" rel="noopener" className="flex min-h-11 items-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50">
               Open
             </a>
@@ -205,21 +185,26 @@ export default function Links() {
                 aria-pressed={range.days === r.days}
                 className={`min-h-11 rounded px-3 text-sm font-semibold transition-colors ${range.days === r.days ? "bg-deep-navy text-white" : "text-gray-700 hover:bg-soft-gray"}`}
               >
+                <span className="sr-only">Last </span>
                 {r.label}
               </button>
             ))}
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className={`w-full text-left text-sm ${tickets ? "min-w-[560px]" : "min-w-[720px]"}`}>
+          <table className={`w-full text-left text-sm ${tickets ? "" : "min-w-[720px]"}`}>
             <thead className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-600">
               <tr>
                 <th className="py-2 pr-4 font-semibold">Source</th>
                 <th className="py-2 pr-4 text-right font-semibold">Visitors</th>
                 {!tickets && <th className="py-2 pr-4 text-right font-semibold">Calls</th>}
                 <th className="py-2 pr-4 text-right font-semibold">{tickets ? "Ticket clicks" : "Booking requests"}</th>
-                <th className="py-2 pr-4 text-right font-semibold">{tickets ? "Updates sign-ups" : "Text me later"}</th>
-                <th className="w-64 py-2 font-semibold">{tickets ? "Ticket clicks" : "Calls + bookings"} per 100</th>
+                <th className={`py-2 pr-4 text-right font-semibold ${tickets ? "hidden sm:table-cell" : ""}`}>{tickets ? "Updates sign-ups" : "Text me later"}</th>
+                <th className="py-2 text-right font-semibold sm:w-64 sm:text-left">
+                  {/* Phones: "Per 100", the column's full name is in the heading above. */}
+                  <span className="hidden sm:inline">{tickets ? "Ticket clicks" : "Calls + bookings"} per</span>
+                  <span className="sm:hidden">Per</span> 100
+                </th>
               </tr>
             </thead>
             <tbody style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -227,18 +212,18 @@ export default function Links() {
                 <tr key={r.tag ?? "direct"} className="border-b border-gray-100">
                   <td className="py-2.5 pr-4">
                     <span className="font-medium text-deep-navy">{sourceLabel(r.tag)}</span>
-                    {r.tag && <span className="ml-2 text-xs text-gray-600">src={r.tag}</span>}
+                    {r.tag && <span className="ml-2 hidden text-xs text-gray-600 sm:inline">src={r.tag}</span>}
                   </td>
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.visitors)}</td>
                   {!tickets && <td className="py-2.5 pr-4 text-right">{formatNumber(r.calls)}</td>}
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.bookings)}</td>
-                  <td className="py-2.5 pr-4 text-right">{formatNumber(r.textLater)}</td>
+                  <td className={`py-2.5 pr-4 text-right ${tickets ? "hidden sm:table-cell" : ""}`}>{formatNumber(r.textLater)}</td>
                   <td className="py-2.5">
                     <div className="flex items-center gap-2">
-                      <div className="h-3 flex-1 rounded-sm" style={{ background: viz.grid }} aria-hidden="true">
+                      <div className="hidden h-3 flex-1 rounded-sm sm:block" style={{ background: viz.grid }} aria-hidden="true">
                         <div className="h-3 rounded-sm" style={{ width: `${(r.per100 / maxPer100) * 100}%`, background: viz.series1 }} />
                       </div>
-                      <span className="w-10 text-right font-semibold text-deep-navy">{r.per100.toFixed(1)}</span>
+                      <span className="ml-auto w-10 text-right font-semibold text-deep-navy">{r.per100.toFixed(1)}</span>
                     </div>
                   </td>
                 </tr>
@@ -250,7 +235,7 @@ export default function Links() {
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.visitors)}</td>
                 {!tickets && <td className="py-2.5 pr-4 text-right">{formatNumber(totals.calls)}</td>}
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.bookings)}</td>
-                <td className="py-2.5 pr-4 text-right">{formatNumber(totals.textLater)}</td>
+                <td className={`py-2.5 pr-4 text-right ${tickets ? "hidden sm:table-cell" : ""}`}>{formatNumber(totals.textLater)}</td>
                 <td className="py-2.5 text-right">
                   {((won(totals) / totals.visitors) * 100).toFixed(1)}
                 </td>

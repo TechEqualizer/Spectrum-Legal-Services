@@ -109,7 +109,7 @@ export default function ReelOrder({
                 onAdd(addId);
                 setAddId("");
               }}
-              className="min-h-10 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray disabled:opacity-40"
+              className="min-h-11 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray disabled:opacity-40"
             >
               Add
             </button>

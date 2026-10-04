@@ -1,3 +1,4 @@
+import { PlusIcon } from "@/admin/components/ui/icons";
 import { CTA_LABELS, ENTRY_TRIGGERS, type EditorFunnel } from "@/admin/editor-model";
 
 /** The business's funnels, each with who it's shown to; one is being edited. */
@@ -50,9 +51,10 @@ export default function FunnelTabs({
           <button
             type="button"
             onClick={onNew}
-            className="flex h-full min-h-24 w-40 items-center justify-center rounded-xl border border-dashed border-gray-400 px-4 text-sm font-semibold text-deep-navy hover:bg-white"
+            className="flex h-full min-h-24 w-40 items-center justify-center gap-2 rounded-xl border border-dashed border-gray-400 px-4 text-sm font-semibold text-deep-navy hover:bg-white"
           >
-            + New funnel
+            <PlusIcon />
+            New funnel
           </button>
         </li>
       </ul>

@@ -49,7 +49,7 @@ check('from-flyer banner', await ds.getByText('Filled in from your flyer.').isVi
 check('opens with: first reel', (await ds.getByLabel('Opens with').inputValue()) === '');
 await p.screenshot({ path: S + '/flyer-review-390.jpg' });
 await ds.getByRole('button', { name: 'Add date' }).click(); await p.waitForTimeout(400);
-check('back to list, first marked added', await sheet.getByText('Added ✓').isVisible());
+check('back to list, first marked added', await sheet.getByText('Added', { exact: true }).isVisible());
 check('row added', await rows() === before + 1);
 
 // 3. Second: missing details

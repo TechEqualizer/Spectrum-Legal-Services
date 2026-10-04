@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { CheckIcon } from "@/admin/components/ui/icons";
 
 /**
  * A drafted video prompt, ready to copy into a video tool. Closed by
@@ -37,9 +38,9 @@ export default function VideoPrompt({ prompt, what = "this reel" }: { prompt: st
           <button
             type="button"
             onClick={copy}
-            className="min-h-10 rounded-md bg-deep-navy px-4 text-sm font-semibold text-white hover:bg-royal-blue"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-deep-navy px-4 text-sm font-semibold text-white hover:bg-royal-blue"
           >
-            {copied ? "Copied ✓" : "Copy prompt"}
+            {copied ? <>Copied <CheckIcon /></> : "Copy prompt"}
           </button>
           <p className="min-w-0 flex-1 text-xs text-gray-600">Paste it into a video tool, then upload the clip here.</p>
         </div>

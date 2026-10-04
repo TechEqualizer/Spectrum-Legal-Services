@@ -73,7 +73,7 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   check(w+': Escape cancels', await p.getByRole('dialog').count()===0 && (await titles())[1]==='Edited title');
 
   // Add new reel
-  await p.getByRole('button',{name:'+ Add reel'}).click();
+  await p.getByRole('button',{name:'Add reel',exact:true}).click();
   const add = p.getByRole('dialog',{name:'Add reel'});
   await add.getByLabel('Title',{exact:true}).fill('Brand new reel');
   await add.getByRole('button',{name:'Add reel'}).click();
@@ -98,7 +98,7 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   check(w+': unreachable flagged', await p.getByText('No path leads here').count()===1);
 
   // New funnel + default exclusivity
-  await p.getByRole('button',{name:'+ New funnel'}).click();
+  await p.getByRole('button',{name:'New funnel',exact:true}).click();
   check(w+': new funnel empty', await p.getByText('No reels yet').isVisible());
   await p.getByText('Funnel settings').click();
   await p.getByLabel(/Default funnel/).check();

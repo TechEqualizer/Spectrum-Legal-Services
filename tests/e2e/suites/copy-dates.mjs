@@ -49,7 +49,7 @@ const first = dates.locator(':scope > ul > li').first();
 check('row shows new price and status', (await first.textContent()).includes('From $40') && (await first.textContent()).includes('Few left'));
 
 // 3. Add a date
-await dates.getByRole('button', { name: '+ Add date' }).click();
+await dates.getByRole('button', { name: 'Add date', exact: true }).click();
 check('new date prefilled', (await ds.getByLabel('Name').inputValue()) === 'Masquerade on the Runway' && (await ds.getByLabel('Date').inputValue()) !== '');
 await ds.getByRole('button', { name: 'Add date' }).click(); await p.waitForTimeout(200);
 check('ticket link required, explained', await waitShown(ds.getByRole('alert').filter({ hasText: 'starting with https://' })));
