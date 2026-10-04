@@ -14,9 +14,12 @@ type Hover = { reelId: string; key: (typeof outcomes)[number]["key"] } | null;
 
 // 100% stacked bars: what viewers did with each reel. Legend always shown,
 // percentages labeled only where they fit, per-segment tooltip, table view.
-export default function OutcomeBars({ rows }: { rows: ReelTotals[] }) {
+export default function OutcomeBars({ rows: all }: { rows: ReelTotals[] }) {
   const [hover, setHover] = useState<Hover>(null);
   const [asTable, setAsTable] = useState(false);
+  // Shares of nothing aren't shown: reels nobody has watched yet are left out.
+  const rows = all.filter((r) => r.views > 0);
+  if (!rows.length) return <p className="text-sm text-gray-600">Nobody has watched a reel in this period yet.</p>;
 
   return (
     <div>

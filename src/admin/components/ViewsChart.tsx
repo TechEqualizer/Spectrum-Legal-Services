@@ -27,7 +27,8 @@ export default function ViewsChart({ data }: { data: Point[] }) {
 
   const innerW = width - M.left - M.right;
   const innerH = HEIGHT - M.top - M.bottom;
-  const ticks = niceTicks(Math.max(...data.map((d) => d.views)));
+  // At least one step, so a period without views still draws a flat line.
+  const ticks = niceTicks(Math.max(1, ...data.map((d) => d.views)));
   const yMax = ticks[ticks.length - 1];
   const x = (i: number) => M.left + (data.length === 1 ? 0 : (i / (data.length - 1)) * innerW);
   const y = (v: number) => M.top + innerH - (v / yMax) * innerH;

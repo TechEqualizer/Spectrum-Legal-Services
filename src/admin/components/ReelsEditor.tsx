@@ -35,7 +35,8 @@ import { HERO_PROMPT, keepPrompts, usePrompts } from "@/admin/prompts";
 import { publishedFunnel, toPublication } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { ScreenCopy } from "@/lib/publication";
-import { sampleFor, type ReelTotals } from "@/admin/sample-data";
+import { useResults } from "@/admin/results";
+import type { ReelTotals } from "@/admin/sample-data";
 import type { FunnelTrigger } from "@/data/reels";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
 
@@ -68,7 +69,8 @@ export default function ReelsEditor() {
   const editor = useEditor();
   const { library, setLibrary, funnels, setFunnels, heroMedia, setHeroMedia, screen, setScreen, events, setEvents, look, setLook, activeId, setActiveId, live, setToast } = editor;
   // Sample results for the last 30 days, keyed by reel.
-  const stats = new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t]));
+  const { results, real: realResults } = useResults(30);
+  const stats = new Map((results?.reels ?? []).map((t) => [t.reel.id, t]));
   const [editing, setEditing] = useState<EditorReel | null>(null);
   // Plays the funnel as edited, from one of its reels.
   const [preview, setPreview] = useState<{ reelId: string; key: number } | null>(null);
@@ -360,6 +362,7 @@ export default function ReelsEditor() {
       library={library}
       reach={reach}
       stats={stats}
+      realResults={realResults}
       prompts={prompts}
       announcement={announcement}
       live={live}
@@ -540,7 +543,7 @@ export default function ReelsEditor() {
             }}
           />
         }
-        results={<ResultsPanel rows={funnel.order.map((id) => stats.get(id)).filter((r): r is ReelTotals => Boolean(r))} onPlay={(id) => setGo((g) => ({ reelId: id, key: g.key + 1 }))} />}
+        results={<ResultsPanel real={realResults} rows={funnel.order.map((id) => stats.get(id)).filter((r): r is ReelTotals => Boolean(r))} onPlay={(id) => setGo((g) => ({ reelId: id, key: g.key + 1 }))} />}
         settings={settingsInner}
       >
         {overlaysEl}

@@ -6,6 +6,7 @@ import { useState, useSyncExternalStore } from "react";
 import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses } from "@/admin/AdminBusiness";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
+import Avatar from "@/admin/components/ui/Avatar";
 import BrandLogo from "@/components/BrandLogo";
 
 // Five places at most, most used first, in a business owner's words
@@ -138,7 +139,20 @@ export default function AdminNav() {
           );
         })}
       </ul>
-      <div className="hidden px-3 pb-5 lg:mt-auto lg:block">
+      <div className="hidden space-y-1 px-3 pb-5 lg:mt-auto lg:block">
+        <Link
+          href="/admin/settings"
+          aria-current={pathname.startsWith("/admin/settings") ? "page" : undefined}
+          title={collapsed ? "Settings" : undefined}
+          className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-semibold transition-colors ${folded("justify-center")} ${
+            pathname.startsWith("/admin/settings") ? "bg-white/10 text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <svg className="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <path d={SETTINGS_ICON} />
+          </svg>
+          <span className={folded("sr-only")}>Settings</span>
+        </Link>
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
@@ -157,9 +171,13 @@ export default function AdminNav() {
   );
 }
 
-/** Who's signed in, with Change password and Sign out. */
+// A gear: Settings.
+const SETTINGS_ICON =
+  "M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z";
+
+/** Who's signed in (their photo and name), with Settings, Change password and Sign out. */
 function Account({ collapsed = false }: { collapsed?: boolean }) {
-  const { email } = useAdminSession();
+  const { email, name, avatarUrl } = useAdminSession();
   const router = useRouter();
   const [changing, setChanging] = useState(false);
   const signOut = async () => {
@@ -170,14 +188,26 @@ function Account({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <details className="group relative lg:mt-4">
       <summary
-        aria-label={`Account: ${email}`}
+        aria-label={`Account: ${name ?? email}`}
         className={`flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full bg-white/10 text-sm font-bold uppercase text-white hover:bg-white/20 lg:h-auto lg:gap-2 lg:rounded-md lg:bg-transparent lg:px-0 lg:text-xs lg:font-semibold lg:normal-case lg:text-gray-300 ${collapsed ? "lg:min-h-11 lg:w-11 lg:justify-center" : "lg:w-full lg:justify-start"}`}
       >
-        <span aria-hidden="true" className="lg:flex lg:h-7 lg:w-7 lg:items-center lg:justify-center lg:rounded-full lg:bg-white/10 lg:uppercase lg:text-white">{email[0]}</span>
-        <span className={`hidden truncate ${collapsed ? "" : "lg:inline"}`}>{email}</span>
+        <Avatar name={name} email={email} url={avatarUrl} className="h-11 w-11 text-sm lg:h-7 lg:w-7 lg:text-xs" />
+        <span className={`hidden truncate ${collapsed ? "" : "lg:inline"}`}>{name ?? email}</span>
       </summary>
       <div className="absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:left-0 lg:right-auto">
-        <p className="truncate px-3 py-2 text-xs text-gray-500">{email}</p>
+        <p className="truncate px-3 pt-2 text-sm font-semibold text-deep-navy">{name ?? email}</p>
+        {name && <p className="truncate px-3 text-xs text-gray-600">{email}</p>}
+        <div className="h-2" />
+        <Link
+          href="/admin/settings"
+          onClick={(e) => {
+            // Close the menu behind it.
+            const menu = e.currentTarget.closest("details");
+            if (menu) menu.open = false;
+          }}
+          className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray">
+          Settings
+        </Link>
         <button type="button" onClick={() => setChanging(true)} className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray">
           Change password
         </button>

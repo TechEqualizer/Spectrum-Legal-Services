@@ -415,7 +415,13 @@ business's colors. It is not linked from the public site and is marked
   `useEditor` (`src/admin/use-editor.ts`: the edited state, saving, Undo and
   Redo, publishing); its pieces live in `src/admin/components/reels/`.
 - **Results** (`/admin/overview`): views, watch-through and booking rates, a daily views chart,
-  and what viewers did with each reel, for the last 7, 30 or 90 days.
+  and what viewers did with each reel, for the last 7, 30 or 90 days. For an
+  organizer's event these are real: `GET /api/admin/stats` calls the
+  database's `funnel_stats` (`supabase/migrations/20261009000000_funnel_stats.sql`)
+  with the admin's sign-in, which returns totals only, and only to that
+  event's admins. Share's sources and the reel rows use the same numbers
+  (`src/admin/results.ts`); a ticket click counts as an event's booking. The
+  demos keep their sample data, and leads are still sample data.
 - **Share**: a builder for tagged funnel links, and which sources bring
   calls and call-back requests per 100 visitors.
 - **Events** (`/admin/events`, the first tab): each organizer's events with

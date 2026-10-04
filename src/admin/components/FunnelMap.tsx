@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useAdminBusiness } from "@/admin/AdminBusiness";
-import { sampleFor } from "@/admin/sample-data";
+import { useResults } from "@/admin/results";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import { funnelReel, type Funnel, type FunnelTrigger } from "@/data/reels";
 
@@ -89,10 +89,8 @@ export default function FunnelMap() {
   const getReel = (id: string) => funnelReel(funnel, id);
   const [links, setLinks] = useState<Links>(funnel.links);
   const [selected, setSelected] = useState<string | null>(funnel.entryReelIds[0]);
-  const stats = useMemo(
-    () => new Map(sampleFor(business).reelTotals(30).map((t) => [t.reel.id, t])),
-    [business]
-  );
+  const { results, real } = useResults(30);
+  const stats = useMemo(() => new Map((results?.reels ?? []).map((t) => [t.reel.id, t])), [results]);
   const { pos, width, height } = useMemo(() => layout(funnel, links), [funnel, links]);
   const edited = JSON.stringify(links) !== JSON.stringify(funnel.links);
   const endCard = `\u201c${funnel.brand.copy.endHeading}\u201d card`;
@@ -232,7 +230,7 @@ export default function FunnelMap() {
                 {[
                   ["Views", formatNumber(selStats.views)],
                   ["Watched", formatPercent(selStats.completed / selStats.views)],
-                  ["Booked", formatNumber(selStats.booked)],
+                  [funnel.primaryCta === "tickets" ? "Tickets" : "Booked", formatNumber(selStats.booked)],
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-md bg-soft-gray px-2 py-3">
                     <dt className="text-[11px] uppercase tracking-wide text-gray-600">{k}</dt>
@@ -240,7 +238,7 @@ export default function FunnelMap() {
                   </div>
                 ))}
               </dl>
-              <p className="-mt-3 text-xs text-gray-500">Last 30 days, sample data</p>
+              <p className="-mt-3 text-xs text-gray-600">Last 30 days{real ? "" : ", sample data"}</p>
               </div>
               <div className="space-y-5">
 

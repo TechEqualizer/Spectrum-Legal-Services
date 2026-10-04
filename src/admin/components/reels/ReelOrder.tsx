@@ -21,6 +21,7 @@ export default function ReelOrder({
   email,
   savedAt,
   unpublished,
+  realResults,
   pathLabel,
   shortDateOf,
   moveTo,
@@ -41,6 +42,8 @@ export default function ReelOrder({
   email: string;
   savedAt: number | null;
   unpublished: boolean;
+  /** The numbers are real (an organizer's event), not sample data. */
+  realResults: boolean;
   pathLabel: (target: PathTarget) => string;
   shortDateOf: (eventId?: string) => string | undefined;
   moveTo: (reelId: string, index: number) => void;
@@ -58,7 +61,7 @@ export default function ReelOrder({
     <section className="rounded-xl border border-gray-200 bg-white" aria-labelledby="order-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-gray-100 px-5 py-4">
         <h2 id="order-title" className="text-base font-bold text-deep-navy">Order</h2>
-        <p className="text-xs text-gray-600">Drag or use the arrows. Results: last 30 days (sample).</p>
+        <p className="text-xs text-gray-600">Drag or use the arrows. Results: last 30 days{realResults ? "" : " (sample)"}.</p>
       </div>
       <p className="sr-only" aria-live="polite">{announcement}</p>
       {funnel.order.length === 0 ? (
