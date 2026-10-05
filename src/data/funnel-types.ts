@@ -2,7 +2,7 @@
 // (/f/<slug>): its reels, the paths between them, and its brand.
 
 import type { ReelRole } from "@/lib/funnel-draft";
-import type { LookFont } from "@/lib/look";
+import type { ButtonEffect, LookFont } from "@/lib/look";
 
 export type Reel = {
   id: string;
@@ -76,7 +76,7 @@ export type FunnelCta = "call" | "book" | "tickets";
 
 /** Color overrides for the funnel's pages; the names are the tokens in globals.css. */
 export type FunnelTheme = Partial<
-  Record<"--deep-navy" | "--royal-blue" | "--teal-accent" | "--sky-accent" | "--soft-gray" | "--on-accent", string>
+  Record<"--deep-navy" | "--royal-blue" | "--teal-accent" | "--sky-accent" | "--soft-gray" | "--on-accent" | "--fx-color", string>
 >;
 
 /** Who the funnel belongs to, and the words it uses. */
@@ -86,6 +86,8 @@ export type FunnelBrand = {
   logo:
     | { kind: "image"; src: string; width: number; height: number; alt: string }
     | { kind: "wordmark"; text: string; tagline?: string };
+  /** The effect on the opening screen's main button (Design → Button effect); a subtle shimmer without it. */
+  buttonEffect?: ButtonEffect;
   /** The organizer's profile photo, in the circle beside the name on each reel (their initial without it). */
   avatar?: string;
   /** Shown beside the avatar on each reel, like a channel name ("@aurelia.medspa"); defaults to the name. */

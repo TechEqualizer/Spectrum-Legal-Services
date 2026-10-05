@@ -375,14 +375,22 @@ business's colors. It is not linked from the public site and is marked
   **Shuffle** for another good pairing; **Title** samples in all five
   typefaces (classic serif, fashion serif, engraved capitals, bold
   condensed, modern sans); **Background**: Flyer (sharp over a blur of
-  itself), Blurred (its colors only), or Glow. Cancel changes nothing; Done
+  itself), Blurred (its colors only), or Glow; **Button effect** on the main
+  button: Shimmer (a sweep of light, the default), Glow (a breathing halo)
+  or Edge light (light running around the border), each **Subtle** or
+  **Bold** (brighter, more often), shown running on a small button. The
+  effect is in the highlight color, or white when the highlight is too close
+  to the button color to show (`--fx-color`); flyer suggestions bring their
+  own (True to flyer: Shimmer, Bold: Glow, Elegant: Edge light); people who
+  ask for less motion see a still button. Published as `look.effect`, shown
+  through `data-fx` on `.cine-cta` (`src/app/globals.css`). Cancel changes nothing; Done
   saves with Undo. Colors are kept readable automatically, and the sheet
   says when a pick was adjusted; a light accent such as gold keeps its color
   and gets dark button words (`--on-accent`). `src/lib/look.ts`,
   `src/admin/components/StyleSheet.tsx`, `src/components/lookFonts.ts`.
 - **Selling the next date** (several dates): when the next date on sale starts
   within 48 hours, or is "Few left", **Tickets** is the main button (orange,
-  shimmering) and says which date ("Tickets · Sun, Oct 4"); Watch steps back.
+  with the button effect) and says which date ("Tickets · Sun, Oct 4"); Watch steps back.
   Under the buttons, one line says what it buys: date, time, price and the
   age limit (`brand.ageLimit`, e.g. "21+"). Sold-out dates come after the
   dates on sale, dimmed and marked "Waitlist"; their reels lead with
@@ -459,10 +467,6 @@ business's colors. It is not linked from the public site and is marked
   their date and status (Upcoming, No dates yet, Ended), the organizer's
   permanent link with Copy, **New event** and **Duplicate**. Built-in demos
   are listed apart.
-- **Paths** (`/admin/funnel`, linked from Funnel settings as "See every
-  path"): the live paths as a diagram.
-  Selecting a reel shows its numbers; changing where it leads redraws the map
-  (preview only).
 - **Leads**: sample leads with the videos each one watched before booking.
 - **Home** (`/admin/home`, where signing in lands): every event the admin
   runs at a glance. The last 30 days across all of them (reel views, ticket

@@ -27,6 +27,32 @@ export const LOOK_FONTS = {
 export type LookFont = keyof typeof LOOK_FONTS;
 export const LOOK_FONT_IDS = Object.keys(LOOK_FONTS) as LookFont[];
 
+/**
+ * The effect on the opening screen's main button (Tickets or Sneak peek),
+ * in the highlight color. Shimmer is the original: a sweep of light.
+ */
+export const BUTTON_EFFECTS = {
+  shimmer: { label: "Shimmer", hint: "A sweep of light" },
+  glow: { label: "Glow", hint: "A breathing halo" },
+  edge: { label: "Edge light", hint: "Light around the edge" },
+} as const;
+export type ButtonEffectStyle = keyof typeof BUTTON_EFFECTS;
+export const BUTTON_EFFECT_IDS = Object.keys(BUTTON_EFFECTS) as ButtonEffectStyle[];
+export type ButtonEffect = { style: ButtonEffectStyle; strength: "subtle" | "bold" };
+export const DEFAULT_EFFECT: ButtonEffect = { style: "shimmer", strength: "subtle" };
+
+/** The effect that suits each flyer suggestion, so most people never have to choose. */
+export const SUGGESTION_EFFECTS: Record<string, ButtonEffectStyle> = { "True to flyer": "shimmer", Bold: "glow", Elegant: "edge" };
+
+/** A button effect from untrusted input, or undefined. */
+export function parseEffect(input: unknown): ButtonEffect | undefined {
+  if (typeof input !== "object" || input === null) return undefined;
+  const { style, strength } = input as Record<string, unknown>;
+  return typeof style === "string" && style in BUTTON_EFFECTS && (strength === "subtle" || strength === "bold")
+    ? { style: style as ButtonEffectStyle, strength }
+    : undefined;
+}
+
 /** A ready-made combination from the flyer ("True to flyer", "Bold", "Elegant"). */
 export type LookSuggestion = { label: string; colors: LookColors; font: LookFont };
 
@@ -39,6 +65,8 @@ export type Look = {
   suggestions?: LookSuggestion[];
   /** The flyer itself (an upload or public link), for the background choices. */
   flyer?: string;
+  /** The main button's effect; without it, a subtle shimmer. */
+  effect?: ButtonEffect;
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -110,7 +138,7 @@ const isFont = (v: unknown): v is LookFont => typeof v === "string" && v in LOOK
  */
 export function parseLook(input: unknown, isUrl?: (v: unknown) => boolean): Look | null {
   if (typeof input !== "object" || input === null) return null;
-  const { colors: rawColors, font, palette, suggestions, flyer } = input as Record<string, unknown>;
+  const { colors: rawColors, font, palette, suggestions, flyer, effect } = input as Record<string, unknown>;
   const colors = parseColors(rawColors);
   if (!colors || !isFont(font)) return null;
   const look: Look = { colors, font };
@@ -128,6 +156,8 @@ export function parseLook(input: unknown, isUrl?: (v: unknown) => boolean): Look
     if (list.length) look.suggestions = list;
   }
   if (flyer !== undefined && isUrl?.(flyer)) look.flyer = flyer as string;
+  const fx = parseEffect(effect);
+  if (fx) look.effect = fx;
   return look;
 }
 
@@ -184,4 +214,7 @@ export const onAccent = (colors: LookColors) =>
   contrast(colors["--teal-accent"], "#FFFFFF") >= 4.5 ? "#FFFFFF" : colors["--deep-navy"];
 
 /** The theme a look gives a funnel. */
-export const themeOf = (look: Look): FunnelTheme => ({ ...look.colors, "--on-accent": onAccent(look.colors) });
+export const themeOf = (look: Look): FunnelTheme => ({ ...look.colors, "--on-accent": onAccent(look.colors), "--fx-color": effectColor(look.colors) });
+
+/** The button effect's color: the highlight, or white when the highlight is too close to the button to show. */
+export const effectColor = (colors: LookColors) => (contrast(colors["--sky-accent"], colors["--teal-accent"]) >= 1.6 ? colors["--sky-accent"] : "#FFFFFF");

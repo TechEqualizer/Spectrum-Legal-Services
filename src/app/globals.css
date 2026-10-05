@@ -181,15 +181,56 @@
 .cine-reveal { animation: cine-reveal 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .cine-title { animation: cine-title 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .cine-live { animation: cine-live 2s ease-out infinite; }
-/* A slow glint across the main button, every few seconds. */
-.cine-shimmer { position: relative; overflow: hidden; }
-.cine-shimmer::after {
+/* The main button's effect (Design → Button effect), in the effect color
+   (the highlight, or white when that wouldn't show on the button):
+   data-fx="shimmer" (the default) a glint of light every few seconds,
+   "glow" a breathing halo, "edge" light running around the border.
+   data-fx-strength="bold" makes it brighter and more often. */
+@property --fx-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.cine-cta {
+  position: relative;
+  overflow: hidden;
+  --fx: var(--fx-color, var(--sky-accent, #fff));
+  --fx-speed: 4s;
+  --fx-opacity: 0.35;
+  --fx-blur: 18px;
+  --fx-spread: 1px;
+  --fx-line: 1.5px;
+}
+.cine-cta[data-fx-strength="bold"] { --fx-speed: 2.2s; --fx-opacity: 0.6; --fx-blur: 30px; --fx-spread: 5px; --fx-line: 2.5px; }
+.cine-cta:not([data-fx])::after,
+.cine-cta[data-fx="shimmer"]::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--fx) 35%, white) 50%, transparent 70%);
+  opacity: var(--fx-opacity);
   transform: translateX(-120%);
-  animation: cine-shimmer 4s ease-in-out 2.4s infinite;
+  animation: cine-shimmer var(--fx-speed) ease-in-out 2.4s infinite;
+}
+.cine-cta[data-fx="glow"] { overflow: visible; }
+.cine-cta[data-fx="glow"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: 0 0 var(--fx-blur) var(--fx-spread) color-mix(in srgb, var(--fx) 75%, transparent);
+  animation: cine-halo calc(var(--fx-speed) * 0.6) ease-in-out infinite alternate;
+}
+.cine-cta[data-fx="edge"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: var(--fx-line);
+  background: conic-gradient(from var(--fx-angle), transparent 0 60%, var(--fx) 85%, white 90%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: cine-edge var(--fx-speed) linear infinite;
 }
 /* The "swipe up" chevron. */
 .cine-bob { animation: cine-bob 1.8s ease-in-out infinite; }
@@ -245,6 +286,13 @@
   from { opacity: 0; transform: translateY(10px) scale(1.04); filter: blur(14px); letter-spacing: 0.12em; }
   to { opacity: 1; transform: none; filter: none; letter-spacing: normal; }
 }
+@keyframes cine-halo {
+  from { opacity: 0.2; }
+  to { opacity: 1; }
+}
+@keyframes cine-edge {
+  to { --fx-angle: 360deg; }
+}
 @keyframes cine-shimmer {
   0% { transform: translateX(-120%); }
   35%, 100% { transform: translateX(120%); }
@@ -263,8 +311,9 @@
 @media (prefers-reduced-motion: reduce) {
   .cine-glow, .cine-sink, .cine-wash, .cine-flare, .cine-leak, .cine-mote, .cine-grain,
   .cine-kenburns, .cine-fade-in, .cine-reveal, .cine-title, .cine-live, .cine-bob,
-  .cine-shimmer::after {
-    animation: none;
+  /* !important: the effect rules are more specific (.cine-cta[data-fx="edge"]::before). */
+  .cine-cta, .cine-cta::before, .cine-cta::after {
+    animation: none !important;
   }
 }
 

@@ -99,8 +99,10 @@ await waitFor(`${CLAUDE}/__last`, "Mock Claude");
 
 if (build) {
   console.log("Building the app against the mocks...");
-  // A data cache from another build would serve its publications.
+  // A data cache from another build would serve its publications, and
+  // Turbopack's build cache has served a stale stylesheet after CSS edits.
   rmSync(join(root, ".next/cache/fetch-cache"), { recursive: true, force: true });
+  rmSync(join(root, ".next/cache/turbopack"), { recursive: true, force: true });
   const b = await run("npx", ["next", "build"], { stdio: ["ignore", "pipe", "pipe"] });
   if (b.code !== 0) {
     console.error(b.output);

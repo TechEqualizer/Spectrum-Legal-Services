@@ -53,7 +53,9 @@ export function applyPublication(base: Funnel, publication: Publication | null |
   return {
     ...funnel,
     ...(publication.events ? { events: publication.events } : {}),
-    ...(look ? { brand: { ...funnel.brand, theme: { ...funnel.brand.theme, ...themeOf(look) } } } : {}),
+    ...(look
+      ? { brand: { ...funnel.brand, theme: { ...funnel.brand.theme, ...themeOf(look) }, ...(look.effect ? { buttonEffect: look.effect } : {}) } }
+      : {}),
     cover: {
       ...funnel.cover,
       ...(look ? { titleFont: look.font } : {}),

@@ -25,7 +25,7 @@ const view = async (w, h, name) => {
   if (name) await p.screenshot({ path: `${S}/${name}.jpg` });
   return { p, v, errs };
 };
-const primaryLabel = (p) => p.locator('.cine-shimmer').first().innerText();
+const primaryLabel = (p) => p.locator('.cine-cta').first().innerText();
 
 // A. Three days out
 await publish(3 * 24 * H + 2 * H);

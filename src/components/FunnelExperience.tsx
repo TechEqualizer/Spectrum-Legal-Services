@@ -11,12 +11,13 @@ import { funnelReel } from "@/data/reels";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import SourceLink from "@/components/SourceLink";
 import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
+import { DEFAULT_EFFECT } from "@/lib/look";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
 
 const HOUR = 60 * 60 * 1000;
 const PRIMARY =
-  "cine-shimmer flex min-h-14 items-center justify-center whitespace-nowrap rounded-full bg-teal-accent text-[17px] font-semibold text-on-accent shadow-lg shadow-black/40 transition hover:brightness-110 max-[380px]:text-base";
+  "cine-cta flex min-h-14 items-center justify-center whitespace-nowrap rounded-full bg-teal-accent text-[17px] font-semibold text-on-accent shadow-lg shadow-black/40 transition hover:brightness-110 max-[380px]:text-base";
 const GLASS =
   "flex min-h-14 items-center justify-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 font-semibold text-white backdrop-blur-md transition hover:bg-white/20";
 
@@ -72,6 +73,9 @@ export default function FunnelExperience({
 }) {
   const funnel = useMemo(() => applyPublication(base, publication), [base, publication]);
   const { brand } = funnel;
+  // The main button's effect (only the PRIMARY button shows it).
+  const effect = brand.buttonEffect ?? DEFAULT_EFFECT;
+  const fx = { "data-fx": effect.style, "data-fx-strength": effect.strength };
   const params = useSearchParams();
   const start = startReelId ?? params.get("start");
   // Each visit gets a new key, so the viewer starts a fresh path every time.
@@ -161,7 +165,7 @@ export default function FunnelExperience({
   const afterActions = (
     <>
       <div className="flex gap-2.5">
-        <button type="button" onClick={() => startAt(recapReel)} className={`${PRIMARY} flex-1 gap-2.5 px-4`}>
+        <button type="button" onClick={() => startAt(recapReel)} className={`${PRIMARY} flex-1 gap-2.5 px-4`} {...fx}>
           <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
           Watch the recap
         </button>
@@ -247,6 +251,7 @@ export default function FunnelExperience({
         <button
           type="button"
           onClick={() => startAt(peekReel)}
+          {...fx}
           className={
             ticketsFirst
               ? `${GLASS} order-2 gap-2 px-5 max-[380px]:px-4`
@@ -263,6 +268,7 @@ export default function FunnelExperience({
             target="_blank"
             rel="noopener"
             onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
+            {...fx}
             aria-label={`${brand.copy.ticketsPrimary ?? "Get tickets"}: ${onSale.name}, ${formatEventDate(onSale)}, ${timeOf(new Date(onSale.startsAt))}${onSale.price ? `, ${onSale.price}` : ""}`}
             className={ticketsFirst ? `${PRIMARY} order-1 flex-1 px-4` : `${GLASS} px-5 max-[380px]:px-4`}
           >

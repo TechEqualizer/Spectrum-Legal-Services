@@ -388,7 +388,7 @@ export function Studio({
             value={tab}
             onChange={setTab}
           >
-            {tab === "design" ? design : tab === "results" ? results : <div className="rounded-xl bg-white p-4">{settings}</div>}
+            {tab === "design" ? design : tab === "results" ? results : settings}
           </StudioTabs>
         </div>
       </div>

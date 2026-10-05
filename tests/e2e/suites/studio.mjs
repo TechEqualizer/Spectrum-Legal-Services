@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { animationsDone, chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 process.on('uncaughtException', e => { console.log(res.join('\n')); console.log('ERR', e.message.split('\n').slice(0, 3).join(' ')); process.exit(1); });
@@ -30,7 +30,7 @@ await p.getByRole('button', { name: /^Buttons/ }).click();
 const sw = p.getByRole('radiogroup', { name: 'Buttons color' }).getByRole('radio');
 const target = await sw.nth(0).getAttribute('aria-label');
 await sw.nth(0).click(); await settle(p, 700);
-const btnBg = await phone.locator('main a.cine-shimmer, main button.cine-shimmer').first().evaluate(e => getComputedStyle(e).backgroundColor);
+const btnBg = await phone.locator('main a.cine-cta, main button.cine-cta').first().evaluate(e => getComputedStyle(e).backgroundColor);
 check('button color shows in phone', btnBg.length > 0, `${target} -> ${btnBg}`);
 // Undo / redo
 await p.getByRole('button', { name: 'Undo', exact: true }).first().click(); await settle(p, 600);
@@ -59,6 +59,9 @@ await p.getByRole('tab', { name: 'Results' }).click();
 check('results tab', await p.getByText('By reel · last 30 days').isVisible() && await p.getByText('Watched to end').isVisible());
 await p.getByRole('tab', { name: 'Settings' }).click();
 check('settings tab', await p.getByLabel('Funnel name').isVisible() || await p.getByText('Funnel name').isVisible());
+check('settings: no Paths link', await p.getByRole('link', { name: 'See every path' }).count() === 0);
+check('settings: only Settings looks selected', (await p.getByRole('tab', { selected: true }).allTextContents()).join() === 'Settings');
+await animationsDone(p, 1000); await p.screenshot({ path: S + '/studio-settings-1440.jpg' });
 await p.getByRole('tab', { name: 'Design' }).click();
 
 // Publish from the top bar

@@ -24,15 +24,9 @@ check('line tooltip on hover', await p.locator('[role=status]').first().isVisibl
 await p.screenshot({path:'admin-overview.jpg', type:'jpeg', quality:70, fullPage:true});
 await p.getByRole('button',{name:'Show as table'}).click();
 check('outcome table view', await p.locator('table').count()>=2);
-// Funnel
+// The old Paths map now lands in the studio.
 await p.goto(base+'/admin/funnel',{waitUntil:'networkidle'});
-const nodes = await p.locator('main [aria-pressed]').count();
-check('funnel shows 8 reel nodes', nodes===8, String(nodes));
-await p.getByRole('button',{name:/Dog Bite/}).first().click();
-await p.locator('aside select').first().selectOption('injury-claim-deadlines');
-check('editing a path updates the table', (await p.locator('section table tbody tr').filter({has: p.locator('td:first-child', {hasText:'Bitten by a dog'})}).textContent()).includes('How long you have to file'));
-check('reset appears after edit', await p.getByRole('button',{name:'Reset to live paths'}).isVisible());
-await p.screenshot({path:'admin-funnel.jpg', type:'jpeg', quality:70, fullPage:true});
+check('old Paths link lands in the studio', new URL(p.url()).pathname === '/admin');
 // Campaigns are gone
 const gone = await p.goto(base+'/admin/campaigns');
 check('campaigns page removed (404)', gone.status()===404);
@@ -53,7 +47,7 @@ const m = await b.newContext({ storageState: process.argv[2] + '/auth.json', vie
 await m.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
 const mp = await m.newPage();
 mp.on('pageerror',e=>errs.push('mobile '+e.message)); mp.on('console',x=>{if(x.type()==='error')errs.push('mobile: '+x.text().slice(0,160))});
-for (const path of ['/admin','/admin/funnel','/admin/leads']) {
+for (const path of ['/admin','/admin/home','/admin/leads']) {
   await mp.goto(base+path,{waitUntil:'networkidle'});
   check('mobile no page overflow '+path, await mp.evaluate(()=>innerWidth===document.documentElement.clientWidth && document.documentElement.scrollWidth<=innerWidth));
 }
