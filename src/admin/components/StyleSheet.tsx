@@ -472,6 +472,9 @@ export function StylePreview({
             <img src={media.src} alt="" className="absolute inset-x-0 top-[13%] mx-auto h-[36%] w-auto max-w-[80%] rounded object-contain [mask-image:linear-gradient(to_bottom,black_75%,transparent)]" />
           )}
         </>
+      ) : media?.kind === "video" && !media.poster ? (
+        // A video without a still: play it, muted, as the opening screen does.
+        <video src={media.src} muted loop playsInline autoPlay preload="metadata" className="absolute inset-0 h-full w-full object-cover brightness-75" />
       ) : still ? (
         // eslint-disable-next-line @next/next/no-img-element -- any file or link the admin adds
         <img src={still} alt="" className="absolute inset-0 h-full w-full object-cover brightness-75" />
