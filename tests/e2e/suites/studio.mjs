@@ -16,7 +16,7 @@ const phone = p.frameLocator('iframe[title="Live preview of your link"]');
 const h1 = phone.locator('h1');
 check('studio: three columns', await p.getByRole('tablist', { name: 'Studio' }).isVisible() && await p.getByRole('heading', { name: 'Opening scene' }).isVisible());
 check('phone runs the real funnel', (await h1.innerText()).toLowerCase().includes('masquerade on the runway'));
-check('no duplicate card titles', await p.getByText('Shown as circles on your opening screen.').evaluate(e => e.className.includes('sr-only')) && await p.locator('#hero-media-title').evaluate(e => e.className.includes('sr-only')) && await p.getByRole('button', { name: 'Style', exact: true }).count() === 0);
+check('no duplicate card titles', await p.getByText('Shown as circles on your opening screen.').evaluate(e => e.className.includes('sr-only')) && await p.locator('#hero-media-title').evaluate(e => e.className.includes('sr-only')) && await p.getByRole('button', { name: /^Design/ }).count() === 0);
 check('undo off at start', await p.getByRole('button', { name: 'Undo', exact: true }).first().isDisabled() && await p.getByRole('button', { name: 'Publish' }).isDisabled());
 
 // Design: font goes live
@@ -78,7 +78,11 @@ const m = await b.newContext({ timezoneId: 'America/Detroit',  storageState: S +
 const mp = await m.newPage();
 await mp.goto(B + '/admin'); await settle(mp, 500); await mp.selectOption('#admin-business', 'masquerade'); await settle(mp, 1500);
 check('phone admin: old layout', await mp.getByRole('heading', { name: 'Reels', exact: true }).isVisible() && await mp.getByRole('tablist', { name: 'Studio' }).count() === 0 && await mp.locator('iframe').count() === 0);
-check('phone admin: Style button kept', await mp.getByRole('button', { name: 'Style', exact: true }).isVisible());
+check('phone admin: Design row shown', await mp.getByRole('button', { name: /^Design/ }).isVisible());
+await mp.getByRole('button', { name: /^Design/ }).click(); await settle(mp, 500);
+check('phone admin: Design sheet has every option', await mp.getByRole('radiogroup', { name: 'Button effect' }).isVisible() && await mp.getByRole('radiogroup', { name: 'Title typeface' }).isVisible());
+await mp.screenshot({ path: S + '/design-sheet-390.jpg' });
+await mp.keyboard.press('Escape'); await settle(mp, 300);
 await p.evaluate(() => localStorage.clear());
 check('no errors', !errs.length, errs.join(' | '));
 await b.close(); console.log(res.join('\n'));

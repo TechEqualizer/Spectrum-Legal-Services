@@ -75,7 +75,7 @@ export default function HeroMediaCard({
   onChange: (change: { media: HeroMediaEdit; screen: ScreenCopy | undefined }, message: string, undo?: () => void) => void;
   /** Done in the Style sheet: the look (undefined: the original) and the background. */
   onStyle: (look: Look | undefined, media: HeroMediaEdit) => void;
-  /** In the studio: its story step names it, and Style is the Design tab. */
+  /** In the studio: its story step names it, and Design is a tab. */
   inStudio?: boolean;
   /** A drafted prompt for making the opening scene's video. */
   videoPrompt?: string;
@@ -113,15 +113,6 @@ export default function HeroMediaCard({
             >
               Edit
             </button>
-            {!inStudio && (
-              <button
-                type="button"
-                onClick={() => setStyling(true)}
-                className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
-              >
-                Style
-              </button>
-            )}
             {shown && (
               <button
                 type="button"
@@ -134,6 +125,20 @@ export default function HeroMediaCard({
           </div>
         </div>
       </div>
+      {/* Phones and narrow screens: the Design sheet (in the studio it's the Design tab). */}
+      {!inStudio && (
+        <button
+          type="button"
+          onClick={() => setStyling(true)}
+          className="flex min-h-14 w-full items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-2 text-left hover:bg-soft-gray"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-deep-navy">Design</span>
+            <span className="block text-xs text-gray-600">Colors, title, button effect and background</span>
+          </span>
+          <svg className="h-4 w-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+        </button>
+      )}
       {videoPrompt && !(shown && shown.kind === "video") && <VideoPrompt prompt={videoPrompt} what="the opening scene" />}
       {styling && (
         <StyleSheet

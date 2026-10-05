@@ -368,7 +368,8 @@ business's colors. It is not linked from the public site and is marked
   them in a segmented control with a preview; **Use this style** applies one
   (with Undo), optionally with the flyer as the background. The flyer is kept
   with the style (`look.flyer`), so it never has to be uploaded again.
-- **Style** (Opening screen card): one sheet with a live preview of the
+- **Design** (the Opening screen card's Design row on phones; the Design
+  tab in the desktop studio): one sheet with a live preview of the
   opening screen (logo, title, date circles, both buttons) that updates as
   you tap. **Suggested** styles and **Original**; **Colors** (Background,
   Buttons, Highlights) picked from the flyer's own swatches, with

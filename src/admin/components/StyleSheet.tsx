@@ -369,7 +369,7 @@ export default function StyleSheet({
         <button type="button" onClick={() => ref.current?.close()} className="min-h-11 justify-self-start rounded-lg px-3 text-[15px] font-semibold text-deep-navy hover:bg-white">
           Cancel
         </button>
-        <h2 id={`${id}-title`} className="text-[17px] font-bold text-deep-navy">Style</h2>
+        <h2 id={`${id}-title`} className="text-[17px] font-bold text-deep-navy">Design</h2>
         <button type="button" onClick={done} className="min-h-11 justify-self-end rounded-lg bg-deep-navy px-5 text-[15px] font-bold text-white hover:bg-royal-blue">
           Done
         </button>
