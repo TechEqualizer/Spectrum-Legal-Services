@@ -58,7 +58,7 @@ export default function AdminNav() {
   const folded = (on: string, off = "") => (collapsed ? on : off);
   return (
     <nav
-      className={`bg-deep-navy text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 motion-reduce:transition-none ${folded("lg:w-[4.5rem]", "lg:w-60")}`}
+      className={`bg-deep-navy text-white lg:sticky lg:top-0 lg:z-40 lg:flex lg:h-screen lg:flex-shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 motion-reduce:transition-none ${folded("lg:w-[4.5rem]", "lg:w-60")}`}
       aria-label="Admin"
     >
       <div className={`flex items-center justify-between gap-4 px-4 py-3 lg:block lg:py-6 ${folded("lg:px-3", "lg:px-5")}`}>
@@ -203,7 +203,10 @@ function Account({ collapsed = false }: { collapsed?: boolean }) {
           <Avatar name={name} email={email} url={avatarUrl} className="h-11 w-11 text-sm lg:h-7 lg:w-7 lg:text-xs" />
           <span className={`hidden truncate ${collapsed ? "" : "lg:inline"}`}>{name ?? email}</span>
         </summary>
-        <div className="absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:left-0 lg:right-auto">
+        {/* Above the page (the nav sits on top, lg:z-40). Folded, it opens beside the photo instead of over the content below. */}
+        <div
+          className={`absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:right-auto ${collapsed ? "lg:left-full lg:top-0 lg:ml-3 lg:mt-0" : "lg:left-0"}`}
+        >
           <p className="truncate px-3 pt-2 text-sm font-semibold text-deep-navy">{name ?? email}</p>
           {name && <p className="truncate px-3 text-xs text-gray-600">{email}</p>}
           <div className="h-2" />

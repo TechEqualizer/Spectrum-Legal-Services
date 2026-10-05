@@ -32,6 +32,11 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   check(w+': uploaded video attached', await card.getByText(/Video\s*·\s*not published/).isVisible());
   await p.reload(); await settle(p, 1500);
   check(w+': upload survives reload', await card.getByText(/Video\s*·\s*not published/).isVisible());
+  // Design's preview plays that video, not just the brand colors.
+  await card.getByRole('button',{name:/^Design/}).click(); await settle(p, 600);
+  const pv = p.getByRole('img',{name:'Preview of your opening screen'}).locator('video');
+  check(w+': Design preview plays the background video', await pv.count()===1 && await pv.isVisible());
+  await p.locator('dialog[open]').getByRole('button',{name:'Cancel'}).click(); await settle(p, 300);
   // Remove + Undo
   await card.getByRole('button',{name:'Remove background'}).click(); await settle(p, 300);
   check(w+': removed', await card.getByText('No background: your brand colors').isVisible());

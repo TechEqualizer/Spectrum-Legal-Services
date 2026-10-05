@@ -35,8 +35,8 @@ await dlg.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 check('card: bold style, background untouched', await card.getByText('Bold condensed').isVisible() && (await card.locator('p.text-sm.text-gray-600').first().innerText()).startsWith(kindBefore.split(' ·')[0]), kindBefore);
 
 // 2. Style sheet
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 300);
-check('style sheet opens', await dlg.getByRole('heading', { name: 'Style' }).isVisible());
+await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 300);
+check('style sheet opens', await dlg.getByRole('heading', { name: 'Design' }).isVisible());
 const sugg = dlg.getByRole('radiogroup', { name: 'Suggested styles' });
 check('4 cards incl. Original', await sugg.getByRole('radio').count() === 4);
 check('Bold card selected', (await sugg.getByRole('radio', { name: 'Bold' }).getAttribute('aria-checked')) === 'true');
@@ -81,7 +81,7 @@ await dlg.getByRole('button', { name: 'Cancel' }).click(); await settle(p, 300);
 check('cancel changes nothing', await card.getByText('Bold condensed').isVisible());
 
 // Again, and Done
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 300);
+await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 300);
 await sugg.getByRole('radio', { name: 'Elegant' }).click();
 await dlg.getByRole('radiogroup', { name: 'Title typeface' }).getByRole('radio', { name: /Engraved capitals/ }).click();
 await dlg.getByRole('radio', { name: 'Blurred', exact: true }).click();
@@ -99,7 +99,7 @@ check('stored: blurred backdrop', pub?.backdrop?.fit === 'blur' && pub.backdrop.
 // After a reload (fresh browser): the Style sheet still has everything
 await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 800);
 await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1500);
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 300);
+await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 300);
 check('after reload: suggestions kept', await sugg.getByRole('radio').count() === 4);
 check('after reload: flyer kept', await dlg.getByRole('radio', { name: 'Flyer', exact: true }).isEnabled() && (await dlg.getByRole('radio', { name: 'Blurred', exact: true }).getAttribute('aria-checked')) === 'true');
 await dlg.getByRole('button', { name: 'Cancel' }).click(); await settle(p, 200);
@@ -114,7 +114,7 @@ await vp.screenshot({ path: S + '/style-visitor-390.jpg' });
 
 // Original
 await p.screenshot({ path: S + '/style-dbg.jpg' });
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 600);
+await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 600);
 await p.screenshot({ path: S + '/style-dbg2.jpg' });
 await sugg.getByRole('radio', { name: 'Original' }).click();
 await dlg.getByRole('radio', { name: 'Glow', exact: true }).click();
@@ -124,7 +124,7 @@ check('original: look removed', await card.getByText('Engraved capitals').count(
 // Desktop
 await p.setViewportSize({ width: 1279, height: 900 });
 await p.getByRole('status').getByRole('button', { name: 'Undo' }).click().catch(() => {}); await settle(p, 200);
-await card.getByRole('button', { name: 'Style', exact: true }).click(); await settle(p, 400);
+await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 400);
 await p.screenshot({ path: S + '/style-sheet-1440.jpg' });
 await dlg.getByRole('button', { name: 'Cancel' }).click();
 

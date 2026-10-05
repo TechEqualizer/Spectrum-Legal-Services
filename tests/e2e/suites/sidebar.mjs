@@ -82,6 +82,19 @@ await account.click(); await settle(dp, 200);
 await dp.getByRole('button', { name: 'Change password' }).click(); await settle(dp, 300);
 check('desktop: Change password opens its sheet, menu closed', !(await isOpen()) && await dp.locator('dialog[open]').count() === 1);
 await dp.keyboard.press('Escape'); await settle(dp, 300);
+// Folded: the menu opens beside the rail, on top of the page.
+await dp.goto(B + '/admin'); await settle(dp, 1500);
+const navBar = dp.getByRole('navigation', { name: 'Admin' });
+await navBar.getByRole('button', { name: 'Collapse sidebar' }).click(); await animationsDone(dp, 1000);
+await account.click(); await settle(dp, 300);
+const rail = await navBar.boundingBox();
+const changePw = dp.getByRole('button', { name: 'Change password' });
+const cb = await changePw.boundingBox();
+check('folded: menu opens beside the rail', cb.x >= rail.x + rail.width, `${Math.round(cb.x)} vs rail ${Math.round(rail.x + rail.width)}`);
+check('folded: nothing covers the menu', await changePw.evaluate((el) => { const r = el.getBoundingClientRect(); const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return el.contains(top); }));
+await dp.screenshot({ path: S + '/sidebar-folded-menu-1440.jpg' });
+await dp.keyboard.press('Escape');
+await navBar.getByRole('button', { name: 'Expand sidebar' }).click(); await animationsDone(dp, 1000);
 check('desktop: no errors', !errs.length, errs.join(' | '));
 await d.close();
 
