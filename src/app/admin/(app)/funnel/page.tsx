@@ -1,5 +1,7 @@
-import FunnelMap from "@/admin/components/FunnelMap";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return <FunnelMap />;
+// The old Paths map: the path strip under the studio's phone shows every
+// path now, so old links land there.
+export default function AdminFunnelPage() {
+  redirect("/admin");
 }

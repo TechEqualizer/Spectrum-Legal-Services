@@ -26,7 +26,7 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   check(w+': spa theme in admin', await p.locator('nav[aria-label="Admin"]').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(42, 27, 34)');
   check(w+': spa funnel name', await p.getByLabel('Funnel name').inputValue()==='Skin Notes');
   check(w+': spa wordmark in nav', await p.locator('nav').getByRole('img',{name:'Aurelia Med Spa'}).count()===1);
-  for (const [path, text] of [['/admin/overview','Aurelia Med Spa'],['/admin/funnel','medspa-sample-v1'],['/admin/leads','Consultation requests'],['/admin/links','/f/medspa?src=instagram']]) {
+  for (const [path, text] of [['/admin/overview','Aurelia Med Spa'],['/admin/leads','Consultation requests'],['/admin/links','/f/medspa?src=instagram']]) {
     await p.goto(B+path,{waitUntil:'networkidle'});
     const body = await p.locator('main').textContent();
     check(w+`: ${path} shows med spa`, body.includes(text) && !/Attorney|attorney|Car Accident|case evaluation/.test(body), text);

@@ -22,7 +22,7 @@ for (const [w, h] of [[390, 844], [360, 640], [1440, 900]]) {
   const tag = `${w}x${h}`;
   const tickets = p.locator('main a', { hasText: /^Tickets/ }).first();
   const tClass = await tickets.getAttribute('class');
-  check(`${tag} tickets is the primary (shimmer) button`, /cine-shimmer/.test(tClass) && /order-1/.test(tClass));
+  check(`${tag} tickets is the primary (effect) button`, /cine-cta/.test(tClass) && /order-1/.test(tClass));
   check(`${tag} tickets says the date`, (await tickets.innerText()).includes(`Tickets · ${day}`), await tickets.innerText());
   check(`${tag} watch is secondary`, (await p.locator('main button', { hasText: /^Watch$/ }).count()) === 1);
   const info = await p.locator('main p', { hasText: 'From $25' }).first().innerText().catch(() => '');

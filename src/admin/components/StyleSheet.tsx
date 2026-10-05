@@ -6,13 +6,19 @@ import { wordmarkFont } from "@/components/BrandLogo";
 import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, FunnelTheme, ReelMedia } from "@/data/funnel-types";
 import {
+  BUTTON_EFFECT_IDS,
+  BUTTON_EFFECTS,
   composeColors,
+  DEFAULT_EFFECT,
+  effectColor,
   LOOK_FONT_IDS,
   LOOK_FONTS,
   LOOK_ROLES,
   onAccent,
   shuffleColors,
+  SUGGESTION_EFFECTS,
   wasAdjusted,
+  type ButtonEffect,
   type Look,
   type LookColors,
   type LookFont,
@@ -88,24 +94,33 @@ export default function StyleSheet({
   const [localColors, setLocalColors] = useState<LookColors | undefined>(look?.colors);
   const [localFont, setLocalFont] = useState<LookFont>(look?.font ?? "classic");
   const [localBackdrop, setLocalBackdrop] = useState<Backdrop>(() => backdropOf(media));
+  const [localEffect, setLocalEffect] = useState<ButtonEffect>(look?.effect ?? DEFAULT_EFFECT);
   const colors = panel ? look?.colors : localColors;
   const font = panel ? (look?.font ?? "classic") : localFont;
   const backdrop = panel ? backdropOf(media) : localBackdrop;
+  const effect = panel ? (look?.effect ?? DEFAULT_EFFECT) : localEffect;
 
-  const lookFor = (c: LookColors | undefined, f: LookFont): Look | undefined =>
-    !c && f === "classic" ? undefined : { ...(look ?? {}), colors: c ?? original, font: f, ...(flyer ? { flyer } : {}) };
+  const lookFor = (c: LookColors | undefined, f: LookFont, e: ButtonEffect): Look | undefined => {
+    const plainEffect = e.style === DEFAULT_EFFECT.style && e.strength === DEFAULT_EFFECT.strength;
+    if (!c && f === "classic" && plainEffect) return undefined;
+    const next: Look = { ...(look ?? {}), colors: c ?? original, font: f, ...(flyer ? { flyer } : {}) };
+    if (plainEffect) delete next.effect;
+    else next.effect = e;
+    return next;
+  };
   const mediaFor = (b: Backdrop): HeroMediaEdit =>
     b === "keep" ? (media ?? null) : b === "glow" || !flyer ? null : { kind: "image", src: flyer, fit: b };
   /** A change: kept in the sheet until Done, or applied at once in a panel. null colors: the original. */
-  const commit = (next: { colors?: LookColors | null; font?: LookFont; backdrop?: Backdrop }) => {
+  const commit = (next: { colors?: LookColors | null; font?: LookFont; backdrop?: Backdrop; effect?: ButtonEffect }) => {
     if (!panel) {
       if (next.colors !== undefined) setLocalColors(next.colors ?? undefined);
       if (next.font) setLocalFont(next.font);
       if (next.backdrop) setLocalBackdrop(next.backdrop);
+      if (next.effect) setLocalEffect(next.effect);
       return;
     }
     const c = next.colors === undefined ? colors : (next.colors ?? undefined);
-    onDone(lookFor(c, next.font ?? font), next.backdrop ? mediaFor(next.backdrop) : media ?? null);
+    onDone(lookFor(c, next.font ?? font, next.effect ?? effect), next.backdrop ? mediaFor(next.backdrop) : media ?? null);
   };
   const [open, setOpen] = useState<(typeof ROLE_ROWS)[number]["pick"] | null>(null);
   // What the admin picked for each role, to say when it was adjusted for readability.
@@ -124,7 +139,7 @@ export default function StyleSheet({
     setPicked((p) => ({ ...p, [role.role]: hex }));
   };
 
-  const done = () => onDone(lookFor(colors, font), mediaFor(backdrop));
+  const done = () => onDone(lookFor(colors, font, effect), mediaFor(backdrop));
 
   const backdrops: { id: Backdrop; label: string; disabled?: boolean }[] = [
     ...(media && !(media.kind === "image" && media.fit) ? [{ id: "keep" as const, label: media.kind === "image" ? "Photo" : "Video" }] : []),
@@ -148,7 +163,9 @@ export default function StyleSheet({
                     font={s.font}
                     selected={selected === i}
                     onSelect={() => {
-                      commit({ colors: s.colors, font: s.font });
+                      // Each suggestion comes with the effect that suits it.
+                      const style = SUGGESTION_EFFECTS[s.label];
+                      commit({ colors: s.colors, font: s.font, ...(style ? { effect: { ...effect, style } } : {}) });
                       setPicked({});
                     }}
                   />
@@ -159,7 +176,7 @@ export default function StyleSheet({
                   font="classic"
                   selected={selected === "original"}
                   onSelect={() => {
-                    commit({ colors: null, font: "classic" });
+                    commit({ colors: null, font: "classic", effect: DEFAULT_EFFECT });
                     setPicked({});
                   }}
                 />
@@ -261,6 +278,52 @@ export default function StyleSheet({
             </div>
           </Group>
 
+          <Group label="Button effect">
+            <div role="radiogroup" aria-label="Button effect" className="grid grid-cols-3 gap-2">
+              {BUTTON_EFFECT_IDS.map((style) => (
+                <button
+                  key={style}
+                  type="button"
+                  role="radio"
+                  aria-checked={effect.style === style}
+                  aria-label={`${BUTTON_EFFECTS[style].label} effect`}
+                  onClick={() => commit({ effect: { ...effect, style } })}
+                  className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl bg-deep-navy px-2 py-3 transition ${effect.style === style ? "ring-[3px] ring-deep-navy ring-offset-2 ring-offset-soft-gray" : "ring-1 ring-black/10"}`}
+                  style={{ ...shown, "--on-accent": onAccent(shown), "--fx-color": effectColor(shown) } as React.CSSProperties}
+                >
+                  {/* The effect itself, running on a small button in these colors. */}
+                  <span
+                    className="cine-cta flex h-7 w-full max-w-24 items-center justify-center rounded-full bg-teal-accent text-[11px] font-semibold text-on-accent"
+                    data-fx={style}
+                    data-fx-strength={effect.strength}
+                    aria-hidden="true"
+                  >
+                    Tickets
+                  </span>
+                  <span className="text-xs font-semibold text-white">{BUTTON_EFFECTS[style].label}</span>
+                </button>
+              ))}
+            </div>
+            <div role="radiogroup" aria-label="Effect strength" className="mt-2 grid grid-cols-2 gap-1 rounded-xl bg-gray-200/70 p-1">
+              {(["subtle", "bold"] as const).map((strength) => (
+                <button
+                  key={strength}
+                  type="button"
+                  role="radio"
+                  aria-checked={effect.strength === strength}
+                  onClick={() => commit({ effect: { ...effect, strength } })}
+                  className={`min-h-10 rounded-lg text-sm font-semibold transition ${effect.strength === strength ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+                >
+                  {strength === "subtle" ? "Subtle" : "Bold"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 px-1 text-xs text-gray-500">
+              {BUTTON_EFFECTS[effect.style].hint} on your main button, in your highlight color.{" "}
+              {effect.strength === "bold" ? "Bold: brighter and more often." : "Subtle: soft and every few seconds."}
+            </p>
+          </Group>
+
           <Group label="Background">
             <div role="radiogroup" aria-label="Background" className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-gray-200/70 p-1">
               {backdrops.map((b) => (
@@ -315,7 +378,7 @@ export default function StyleSheet({
       <div className="flex flex-col gap-6 px-4 pb-8 pt-4 sm:flex-row sm:px-6">
         {/* The preview stays in view while the controls scroll. */}
         <div className="sticky top-[60px] z-10 -mx-4 flex justify-center bg-soft-gray/95 px-4 pb-3 backdrop-blur sm:static sm:mx-0 sm:block sm:self-start sm:bg-transparent sm:px-0 sm:pb-0 sm:backdrop-blur-none">
-          <StylePreview funnel={funnel} title={title} colors={shown} font={font} media={previewMedia} />
+          <StylePreview funnel={funnel} title={title} colors={shown} font={font} media={previewMedia} effect={effect} />
         </div>
 
         {controls}
@@ -375,12 +438,14 @@ export function StylePreview({
   colors,
   font,
   media,
+  effect = DEFAULT_EFFECT,
 }: {
   funnel: Funnel;
   title: string;
   colors: LookColors;
   font: LookFont;
   media: ReelMedia | undefined;
+  effect?: ButtonEffect;
 }) {
   // The next three dates, as the circles visitors see.
   const [now] = useState(() => Date.now());
@@ -389,7 +454,7 @@ export function StylePreview({
     .filter((d) => d.getTime() > now)
     .sort((a, b) => a.getTime() - b.getTime())
     .slice(0, 3);
-  const theme = { ...colors, "--on-accent": onAccent(colors) } as React.CSSProperties;
+  const theme = { ...colors, "--on-accent": onAccent(colors), "--fx-color": effectColor(colors) } as React.CSSProperties;
   const still = thumbnailOf(media);
   return (
     <div
@@ -435,7 +500,7 @@ export function StylePreview({
           </div>
         )}
         <div className="mt-2 flex gap-1.5 sm:mt-3">
-          <span className="flex h-6 flex-1 items-center justify-center rounded-full bg-teal-accent text-[7px] font-semibold text-on-accent sm:h-8 sm:text-[10px]">Sneak peek</span>
+          <span className="cine-cta flex h-6 flex-1 items-center justify-center rounded-full bg-teal-accent text-[7px] font-semibold text-on-accent sm:h-8 sm:text-[10px]" data-fx={effect.style} data-fx-strength={effect.strength}>Sneak peek</span>
           <span className="flex h-6 items-center justify-center rounded-full border border-white/25 bg-white/10 px-2 text-[7px] font-semibold text-white sm:h-8 sm:px-3 sm:text-[10px]">Tickets</span>
         </div>
       </div>

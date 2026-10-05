@@ -94,8 +94,7 @@ check('Share speaks tickets, not calls', await p.getByRole('heading', { name: 'W
 check('Share has one filled button', await p.getByRole('region', { name: 'Your bio link' }).getByRole('button', { name: 'Copy' }).evaluate((el) => getComputedStyle(el).color === 'rgb(255, 255, 255)'));
 await p.goto(B + '/admin'); await settle(p, 1200);
 await p.getByText('Funnel settings').click();
-await p.getByRole('link', { name: 'See every path' }).click(); await p.waitForURL(/\/admin\/funnel/);
-check('Paths reachable from the studio', true);
+check('no separate Paths page: the path strip shows them', await p.getByRole('link', { name: 'See every path' }).count() === 0);
 
 const wide = await (await b.newContext({ storageState: S + '/auth.json', viewport: { width: 1440, height: 900 }, timezoneId: 'America/Detroit' })).newPage();
 await wide.goto(B + '/admin/events'); await settle(wide, 1200);

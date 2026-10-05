@@ -84,7 +84,7 @@ check('visitor title in Cinzel', /Cinzel/i.test(h1Font), h1Font);
 check('flyer poster shown', await vp.locator('img[src*="reel-media"]').count() >= 2);
 const theme = await vp.locator('meta[name="theme-color"]').getAttribute('content');
 check('browser bar color = look', theme?.toUpperCase() === pub.look.colors['--deep-navy'], theme);
-const btn = vp.locator('main button.cine-shimmer, main a.cine-shimmer').first();
+const btn = vp.locator('main button.cine-cta, main a.cine-cta').first();
 const [bg, fg] = await btn.evaluate(e => [getComputedStyle(e).backgroundColor, getComputedStyle(e).color]);
 check('visitor gold button with dark words', bg.includes('212, 175, 55') && !fg.includes('255, 255, 255'), bg + ' / ' + fg);
 const posterBottom = await vp.locator('img[src*="reel-media"]').nth(1).evaluate(e => e.getBoundingClientRect().bottom);
