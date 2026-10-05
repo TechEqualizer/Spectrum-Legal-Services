@@ -15,9 +15,10 @@ check('organizer signs in', login.ok(), String(login.status()));
 await p.goto(B + '/admin/events'); await settle(p, 1200);
 check('sees their event', await p.getByRole('button', { name: 'Open Masquerade on the Runway' }).first().isVisible());
 check('no demos', await p.getByRole('region', { name: 'Demos' }).count() === 0);
-const options = await p.locator('#admin-business option').allTextContents();
-// With one event there's no switcher at all; with more, only their own.
-check('nothing else to switch to', options.every((o) => /Big Love/.test(o)), options.join(' | '));
+const groupsOf = () => p.locator('#admin-business optgroup').evaluateAll((gs) => gs.map((g) => g.label));
+const options = await groupsOf();
+// With one event there's no switcher at all; with more, only their own client.
+check('nothing else to switch to', options.every((o) => o === 'Big Love Productions'), options.join(' | '));
 check('can add events', await p.getByRole('button', { name: 'New event' }).isVisible() && await p.getByRole('button', { name: 'Duplicate Masquerade on the Runway' }).first().isVisible());
 
 // 2. New event from their login: it's theirs to edit and publish.
@@ -26,8 +27,9 @@ const sheet = p.locator('dialog[open]');
 await sheet.getByLabel('Event name').fill('Spring Gala');
 await sheet.getByRole('button', { name: 'Create event' }).click();
 await p.waitForURL(/\/admin$/); await settle(p, 1500);
-const now = await p.locator('#admin-business option').allTextContents();
-check('new event opens in their studio, beside only their own', (await p.locator('#admin-business').inputValue()) === 'spring-gala' && now.length >= 2 && now.every((o) => /Big Love/.test(o)), now.join(' | '));
+const now = await groupsOf();
+const names = await p.locator('#admin-business option').allTextContents();
+check('new event opens in their studio, beside only their own', (await p.locator('#admin-business').inputValue()) === 'spring-gala' && names.includes('Spring Gala') && now.length === 1 && now[0] === 'Big Love Productions', now.join(' | ') + ' / ' + names.join(' | '));
 await p.keyboard.press('Escape');
 const reel = { id: 'spring-gala-welcome', practiceArea: 'The night', title: 'Spring Gala', summary: 'Details coming soon.', cta: 'funnel' };
 const pub = await p.request.post(B + '/api/admin/publish', { data: { slug: 'spring-gala', publication: {
