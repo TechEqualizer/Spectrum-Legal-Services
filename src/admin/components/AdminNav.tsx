@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
-import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses } from "@/admin/AdminBusiness";
+import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses, useAdminEvents } from "@/admin/AdminBusiness";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
 import Avatar from "@/admin/components/ui/Avatar";
@@ -53,6 +53,15 @@ export default function AdminNav() {
   const pathname = usePathname();
   const { funnel } = useAdminBusiness();
   const businesses = useAdminBusinesses();
+  const events = useAdminEvents();
+  // The dropdown's groups: each client (organizer) with their events, then the demos.
+  const groups: { label: string; demo: boolean; items: typeof businesses }[] = [];
+  for (const b of businesses) {
+    const organizer = events.find((e) => e.funnel.slug === b.funnel.slug)?.organizer;
+    const label = organizer?.name ?? "Demos";
+    const group = groups.find((g) => g.label === label) ?? groups[groups.push({ label, demo: !organizer, items: [] }) - 1];
+    group.items.push(b);
+  }
   const collapsed = useCollapsed();
   // Styles that only apply to the folded sidebar (phones never fold).
   const folded = (on: string, off = "") => (collapsed ? on : off);
@@ -95,10 +104,15 @@ export default function AdminNav() {
             onChange={(e) => selectAdminBusiness(e.target.value)}
             className="mt-1 w-full max-w-48 rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-sky-accent lg:max-w-none [&>option]:text-charcoal"
           >
-            {businesses.map((b) => (
-              <option key={b.funnel.slug} value={b.funnel.slug}>
-                {b.funnel.brand.name}
-              </option>
+            {/* Each client's events by name, then the demos. */}
+            {groups.map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.items.map((b) => (
+                  <option key={b.funnel.slug} value={b.funnel.slug}>
+                    {g.demo ? b.funnel.brand.name : b.funnel.brand.seriesLabel}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           </>)}

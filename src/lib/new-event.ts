@@ -87,10 +87,43 @@ export function newEventFrom(source: Funnel, { slug, name }: { slug: string; nam
     return copy;
   }
 
+  return freshEvent({ brand, titleFont: source.cover.titleFont, live: source.live, ticketing: source.ticketing }, { slug, name });
+}
+
+/** Who an event belongs to: what a fresh event keeps from the organizer. */
+type Organizer = {
+  brand: Pick<FunnelBrand, "name" | "logo" | "handle" | "phone" | "theme">;
+  titleFont?: Funnel["cover"]["titleFont"];
+  live?: boolean;
+  ticketing?: Funnel["ticketing"];
+};
+
+/** A brand-new client's look until their first flyer sets theirs: night colors and their name as the wordmark. */
+const CLIENT_THEME = {
+  "--deep-navy": "#0E0B12",
+  "--royal-blue": "#2A2236",
+  "--teal-accent": "#E3B95B",
+  "--on-accent": "#14100A",
+  "--sky-accent": "#B6A6FF",
+  "--soft-gray": "#F6F2EC",
+};
+
+/** A new client's first event: their name as the logo, night colors, a live link, ready for its flyer. */
+export function newClientEvent(clientName: string, event: { slug: string; name: string }): Funnel {
+  return freshEvent({ brand: { name: clientName, logo: { kind: "wordmark", text: clientName }, theme: { ...CLIENT_THEME } }, live: true }, event);
+}
+
+function freshEvent(who: Organizer, { slug, name }: { slug: string; name: string }): Funnel {
+  const { brand } = who;
   const services = ["The night", "Tickets"];
   const welcome = `${slug}-welcome`;
   return {
-    ...base,
+    id: `${slug}-v1`,
+    slug,
+    ...(who.live ? { live: true } : {}),
+    primaryCta: "tickets" as const,
+    ...(who.ticketing ? { ticketing: who.ticketing } : {}),
+    events: [],
     brand: {
       name: brand.name,
       logo: brand.logo,
@@ -109,7 +142,7 @@ export function newEventFrom(source: Funnel, { slug, name }: { slug: string; nam
       heading: "Which night?",
       intro: "Tap a date to watch, then grab tickets in one tap.",
       entryLabels: {},
-      ...(source.cover.titleFont ? { titleFont: source.cover.titleFont } : {}),
+      ...(who.titleFont ? { titleFont: who.titleFont } : {}),
       hero: { title: name, watchLabel: "Sneak peek inside" },
     },
     entryReelIds: [welcome],

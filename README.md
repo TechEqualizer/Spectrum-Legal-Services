@@ -206,6 +206,16 @@ phone and ticketing, starts the words over, and opens the studio on
 paths under a new name and link, without its dates or share text. Links
 are checked against built-in demos, organizers and events first.
 
+**New clients** (Events → **New client**, full admins only,
+`POST /api/admin/clients`): the client's name and bio link (`/f/<client>`)
+and their first event's name and link. It adds the organizer and the event
+(their name as the wordmark, night colors until their flyer sets theirs,
+a live link) and opens the studio on **Import from flyer**. Each client's
+section on Events has **Hand off**: Settings → Accounts opens on Add account,
+already set to that client, so they sign in to see and edit only their own
+events (then **Send login**). The business picker groups each client's events
+by name, with the demos last.
+
 **`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
 Spa doesn't exist: the page always says so, is never indexed, uses a
 555-01xx phone number reserved for fiction, and its forms and tracking send
@@ -466,8 +476,8 @@ business's colors. It is not linked from the public site and is marked
   calls and call-back requests per 100 visitors.
 - **Events** (`/admin/events`, the first tab): each organizer's events with
   their date and status (Upcoming, No dates yet, Ended), the organizer's
-  permanent link with Copy, **New event** and **Duplicate**. Built-in demos
-  are listed apart.
+  permanent link with Copy and **Hand off**, **New client**, **New event** and
+  **Duplicate**. Built-in demos are listed apart.
 - **Leads**: sample leads with the videos each one watched before booking.
 - **Home** (`/admin/home`, where signing in lands): every event the admin
   runs at a glance. The last 30 days across all of them (reel views, ticket

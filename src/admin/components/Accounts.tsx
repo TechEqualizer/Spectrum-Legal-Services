@@ -57,17 +57,34 @@ export default function Accounts() {
     void load();
   };
 
+  // Hand off (Events → Hand off): Add account, already set to that client.
+  const [preset, setPreset] = useState<Organizer | null>(null);
+  const handedOff = useRef(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/accounts").catch(() => null);
     const body = await res?.json().catch(() => null);
     if (!res?.ok || !body) return setError(body?.error ?? "Couldn't load accounts. Reload to try again.");
     setError("");
     setData(body as Data);
-  }, []);
+    const slug = handedOff.current ? null : new URLSearchParams(window.location.search).get("handoff");
+    const org = (body as Data).organizers.find((o) => o.slug === slug);
+    if (org) {
+      handedOff.current = true;
+      // Once: a reload doesn't open it again.
+      window.history.replaceState(null, "", window.location.pathname);
+      sectionRef.current?.scrollIntoView({ block: "start" });
+      setPreset(org);
+      setEditing("new");
+    }
+  }, [setPreset]);
   useEffect(() => {
     // Loads once; saving reloads.
     void load();
   }, [load]);
+
+
 
   const remove = async (email: string) => {
     const res = await fetch(`/api/admin/accounts?email=${encodeURIComponent(email)}`, { method: "DELETE" }).catch(() => null);
@@ -78,7 +95,7 @@ export default function Accounts() {
   };
 
   return (
-    <section aria-labelledby={`${id}-title`}>
+    <section ref={sectionRef} aria-labelledby={`${id}-title`} className="scroll-mt-6">
       <div className="mb-2 flex items-end justify-between gap-4 px-1">
         <div>
           <h2 id={`${id}-title`} className="text-xs font-bold uppercase tracking-wider text-gray-600">Accounts</h2>
@@ -187,9 +204,15 @@ export default function Accounts() {
         <AccountSheet
           account={editing === "new" ? undefined : editing}
           organizers={data.organizers}
-          onClose={() => setEditing(null)}
+          preset={editing === "new" ? preset ?? undefined : undefined}
+          canInvite={data.canInvite}
+          onClose={() => {
+            setEditing(null);
+            setPreset(null);
+          }}
           onSaved={(email, isNew) => {
             setEditing(null);
+            setPreset(null);
             setNotice(
               isNew
                 ? data.canInvite
@@ -208,11 +231,16 @@ export default function Accounts() {
 function AccountSheet({
   account,
   organizers,
+  preset,
+  canInvite,
   onClose,
   onSaved,
 }: {
   account?: Account;
   organizers: Organizer[];
+  /** Handing off this client: their events, already chosen. */
+  preset?: Organizer;
+  canInvite: boolean;
   onClose: () => void;
   onSaved: (email: string, isNew: boolean) => void;
 }) {
@@ -220,7 +248,7 @@ function AccountSheet({
   const ref = useRef<HTMLDialogElement>(null);
   const [email, setEmail] = useState(account?.email ?? "");
   const [full, setFull] = useState(account?.slugs.includes("*") ?? false);
-  const [chosen, setChosen] = useState<string[]>(account?.organizers ?? []);
+  const [chosen, setChosen] = useState<string[]>(account?.organizers ?? (preset ? [preset.slug] : []));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => ref.current?.showModal(), []);
@@ -250,9 +278,11 @@ function AccountSheet({
     >
       <form onSubmit={save} noValidate>
         <div className="px-5 pb-2 pt-5">
-          <h2 id={`${id}-title`} className="text-xl font-bold text-deep-navy">{account ? "Change access" : "Add account"}</h2>
+          <h2 id={`${id}-title`} className="text-xl font-bold text-deep-navy">{account ? "Change access" : preset ? `Hand off ${preset.name}` : "Add account"}</h2>
           <p className="mt-0.5 text-sm text-gray-600">
-            {account ? account.email : "They sign in with this email. You'll create their login in Supabase next."}
+            {account
+              ? account.email
+              : `${preset ? `Their own login: they'll see and edit only ${preset.name}'s events. ` : ""}They sign in with this email. ${canInvite ? "Send their login next." : "You'll create their login in Supabase next."}`}
           </p>
         </div>
         <div className="space-y-4 px-5 pb-5">

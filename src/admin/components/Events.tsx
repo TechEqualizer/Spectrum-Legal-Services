@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
 import { builtInBusinesses } from "@/admin/business";
+import NewClientSheet from "@/admin/components/NewClientSheet";
 import CopyButton from "@/admin/components/ui/CopyButton";
 import { PlusIcon } from "@/admin/components/ui/icons";
 import { requestImport } from "@/admin/import-request";
@@ -45,6 +47,9 @@ export default function Events() {
   const origin = useOrigin();
   const [now] = useState(() => Date.now());
   const [sheet, setSheet] = useState<{ mode: NewEventMode; source?: AdminEvent } | null>(null);
+  const [addingClient, setAddingClient] = useState(false);
+  // Full admins (Event Reels) add clients and hand them off.
+  const fullAccess = session.slugs.includes("*");
   // Events this admin can start new ones from: those of organizers they run.
   const sources = events.filter((e) => runsOrganizer(session, e.organizer.slug));
   const canAdd = sources.length > 0;
@@ -63,16 +68,32 @@ export default function Events() {
           <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Events</h1>
           <p className="mt-1 text-sm text-gray-600">Each event has its own link and reels. Open one to edit it.</p>
         </div>
-        {canAdd && (
-          <button
-            type="button"
-            onClick={() => setSheet({ mode: "fresh" })}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue"
-          >
-            <PlusIcon />
-            New event
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {fullAccess && (
+            <button
+              type="button"
+              onClick={() => setAddingClient(true)}
+              className={
+                canAdd
+                  ? "inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+                  : "inline-flex min-h-11 items-center gap-2 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue"
+              }
+            >
+              <PlusIcon />
+              New client
+            </button>
+          )}
+          {canAdd && (
+            <button
+              type="button"
+              onClick={() => setSheet({ mode: "fresh" })}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue"
+            >
+              <PlusIcon />
+              New event
+            </button>
+          )}
+        </div>
       </div>
 
       {organizers.map((org) => {
@@ -90,7 +111,18 @@ export default function Events() {
           <section key={org.slug} aria-labelledby={`org-${org.slug}`}>
             <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
               <h2 id={`org-${org.slug}`} className="text-xs font-bold uppercase tracking-wider text-gray-600">{org.name}</h2>
-              <PermanentLink href={`${origin}/f/${org.slug}`} />
+              <div className="flex flex-wrap items-center gap-x-3">
+                <PermanentLink href={`${origin}/f/${org.slug}`} />
+                {fullAccess && (
+                  <Link
+                    href={`/admin/settings?handoff=${encodeURIComponent(org.slug)}`}
+                    aria-label={`Hand off ${org.name}: give them their own login`}
+                    className="inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-deep-navy underline underline-offset-2 hover:bg-white"
+                  >
+                    Hand off
+                  </Link>
+                )}
+              </div>
             </div>
             <ul role="list" className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
               {theirs.map((e) => (
@@ -126,6 +158,19 @@ export default function Events() {
             ))}
           </ul>
         </section>
+      )}
+
+      {addingClient && (
+        <NewClientSheet
+          onClose={() => setAddingClient(false)}
+          onCreated={(eventSlug) => {
+            // Their first event opens in the studio, on Import flyer.
+            selectAdminBusiness(eventSlug);
+            requestImport(eventSlug);
+            router.push("/admin");
+            router.refresh();
+          }}
+        />
       )}
 
       {sheet && (

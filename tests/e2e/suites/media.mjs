@@ -15,9 +15,9 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
   // Organizers' events (from the database) come before the demos.
   check(w+': Big Love by default', await p.locator('#admin-business').inputValue()==='masquerade' && (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
-  // Other suites' Big Love events can linger in the app's event list cache, so: Big Love first, then the demos last.
-  const names = (await p.locator('#admin-business option').allTextContents()).join('|');
-  check(w+': organizers first, then demos', /^Big Love Productions(\|Big Love Productions)*\|The JLF Firm\|Aurelia Med Spa$/.test(names), names);
+  // Other suites' events and clients can linger in the app's event list cache, so: Big Love first, then the demos last.
+  const groups = (await p.locator('#admin-business optgroup').evaluateAll((gs) => gs.map((g) => g.label + ': ' + [...g.children].map((o) => o.textContent).join(', ')))).join(' | ');
+  check(w+': clients first, then demos', /^Big Love Productions: Masquerade on the Runway(, [^|]+)*( \| [^|]+)* \| Demos: The JLF Firm, Aurelia Med Spa$/.test(groups), groups);
 
   // Switch business
   await p.selectOption('#admin-business','medspa');

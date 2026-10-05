@@ -170,6 +170,14 @@ http.createServer((req, res) => {
       eventFunnels.set(body.slug, { slug: body.slug, funnel_id: body.funnel_id, organizer_slug: body.organizer_slug, data: body.data });
       return json(res, 201);
     }
+    // Like the real policy: only full admins add organizers (clients).
+    if (p === '/rest/v1/organizers' && req.method === 'POST') {
+      const email = emailOf(req);
+      if (!email || !users[email]?.admin || !users[email].slugs.includes('*')) return json(res, 403, { message: 'new row violates row-level security policy' });
+      if (organizers.has(body.slug)) return json(res, 409, { message: 'duplicate key' });
+      organizers.set(body.slug, { slug: body.slug, name: body.name });
+      return json(res, 201);
+    }
     if (p === '/rest/v1/organizers' && req.method === 'GET') {
       return json(res, 200, [...organizers.values()].filter((o) => !eq('slug') || o.slug === eq('slug')));
     }
