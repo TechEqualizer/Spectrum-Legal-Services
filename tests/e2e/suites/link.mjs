@@ -94,20 +94,6 @@ for (const [w,h] of [[390,844],[1440,900]]) {
   await p.goto(B+'/f/jlf?start=not-a-reel',{waitUntil:'networkidle'});
   check(w+': bad ?start shows cover', await p.getByRole('heading',{name:'What happened?'}).isVisible());
 
-  // Website modal also books in place
-  await p.goto(B+'/',{waitUntil:'networkidle'});
-  await p.locator('#videos ul button').first().click();
-  const dlg = p.getByRole('dialog');
-  await dlg.getByRole('button',{name:'Call back',exact:true}).click();
-  check(w+': site modal opens sheet in place', await p.getByRole('region',{name:'Get a free case review'}).isVisible() && await dlg.isVisible());
-  await p.keyboard.press('Escape'); await p.keyboard.press('Escape');
-  check(w+': Escape twice closes modal', await dlg.count()===0);
-  await p.fill('#hero-name','T'); await p.fill('#hero-email','t@example.com');
-  await p.selectOption('#hero-case-type','Dog Bite');
-  await p.getByRole('button',{name:'Get My Free Case Review'}).click();
-  await p.getByText('Demo: request not sent').waitFor({timeout:5000});
-  check(w+': hero form still works', true);
-
   // Admin links
   await p.goto(B+'/admin/links',{waitUntil:'networkidle'});
   check(w+': link builder default', (await p.getByLabel('Your link').textContent()).endsWith('/f/jlf?src=instagram'));

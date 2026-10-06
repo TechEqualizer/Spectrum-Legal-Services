@@ -5,6 +5,7 @@ import { useId, useRef, useState } from "react";
 import { useAdminEvents } from "@/admin/AdminBusiness";
 import Accounts from "@/admin/components/Accounts";
 import OrganizerPhotos from "@/admin/components/OrganizerPhotos";
+import Waitlist from "@/admin/components/Waitlist";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import Avatar from "@/admin/components/ui/Avatar";
 import { CheckIcon } from "@/admin/components/ui/icons";
@@ -213,6 +214,9 @@ export default function Settings() {
 
       {/* Superadmin: full admins manage everyone's access. */}
       {fullAccess && <Accounts />}
+
+      {/* Showlnk's own waitlist, from the home page. */}
+      {fullAccess && <Waitlist />}
 
       {changing && <PasswordSheet onClose={() => setChanging(false)} />}
     </div>
