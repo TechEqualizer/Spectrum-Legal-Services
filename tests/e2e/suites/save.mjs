@@ -37,7 +37,7 @@ await r2b.getByRole('button',{name:/^Preview /}).click(); await settle(p, 1000);
 check('preview plays the uploaded file', await p.evaluate(()=>{const v=document.querySelector('[role=dialog] video'); return !!v && v.src.startsWith('blob:')}));
 await p.keyboard.press('Escape'); await settle(p, 400);
 // Other businesses untouched
-await p.selectOption('#admin-business','jlf'); await settle(p, 800);
+await p.selectOption('#admin-business','medspa'); await settle(p, 800);
 check('other business untouched', await p.getByText(/Live\s*·\s*original reels/).isVisible());
 await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1000);
 // 4. Reset

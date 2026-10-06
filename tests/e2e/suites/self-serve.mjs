@@ -38,11 +38,11 @@ const pub = await p.request.post(B + '/api/admin/publish', { data: { slug: 'spri
 check('publishes the event they made', pub.ok(), String(pub.status()));
 
 // 3. Nobody else's: not the demos, not someone else's event.
-const other = await p.request.post(B + '/api/admin/publish', { data: { slug: 'jlf', publication: {
-  version: 1, reels: [], funnel: { order: [], topics: {}, paths: {}, primaryCta: 'call' },
+const other = await p.request.post(B + '/api/admin/publish', { data: { slug: 'medspa', publication: {
+  version: 1, reels: [], funnel: { order: [], topics: {}, paths: {}, primaryCta: 'book' },
 } } });
 check("can't publish a demo", other.status() === 403 || other.status() === 404, String(other.status()));
-const fromDemo = await p.request.post(B + '/api/admin/events', { data: { source: 'jlf', name: 'Mine now', slug: 'mine-now', mode: 'copy' } });
+const fromDemo = await p.request.post(B + '/api/admin/events', { data: { source: 'medspa', name: 'Mine now', slug: 'mine-now', mode: 'copy' } });
 check("can't copy a funnel that isn't theirs", fromDemo.status() === 400, String(fromDemo.status()));
 await p.goto(B + '/admin/preview/medspa'); await settle(p, 500);
 check("can't preview a demo", (await p.locator('body').innerText()).includes('404') || (await p.title()).includes('404'));

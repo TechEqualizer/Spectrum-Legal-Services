@@ -62,11 +62,11 @@ for (const [w,h] of [[390,844],[1440,900]]) {
   await p.screenshot({path:`ms-end-${w}.jpg`, quality:70});
   check(w+': nothing sent to APIs', sent.length===0, sent.join(','));
 
-  // OG image + JLF untouched
+  // OG image + another funnel keeps its own theme
   const og = await p.request.get(B+'/f/medspa/opengraph-image');
   check(w+': OG image', og.status()===200 && og.headers()['content-type']==='image/png');
-  await p.goto(B+'/f/jlf',{waitUntil:'networkidle'});
-  check(w+': JLF still navy', await p.locator('main').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(14, 26, 43)' && await p.getByRole('heading',{name:'What happened?'}).isVisible());
+  await p.goto(B+'/f/events',{waitUntil:'networkidle'});
+  check(w+': events sample keeps its own colors', await p.locator('main').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(26, 18, 13)' && await p.getByRole('heading',{name:'Sundays, on the roof.'}).isVisible());
   await p.close();
 }
 await b.close();

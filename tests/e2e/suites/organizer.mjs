@@ -21,7 +21,7 @@ check('page title matches the tab', (await p.getByRole('heading', { level: 1 }).
 const org = p.getByRole('region', { name: 'Big Love Productions' });
 check('event listed under its organizer, upcoming', await org.getByRole('button', { name: 'Open Masquerade on the Runway' }).isVisible() && await org.getByText('Upcoming').isVisible());
 check('bio link shown, labeled on a phone', await org.getByText('/f/biglove').isVisible() && await org.getByText('Bio link', { exact: false }).first().isVisible());
-check('demos listed apart', await p.getByRole('region', { name: 'Demos' }).getByRole('button', { name: /^Open / }).count() === 2);
+check('demos listed apart', await p.getByRole('region', { name: 'Demos' }).getByRole('button', { name: /^Open / }).count() === 1);
 await p.screenshot({ path: S + '/events-390.jpg', fullPage: true });
 
 // 3. New event: name → link, then the studio opens on Import flyer.

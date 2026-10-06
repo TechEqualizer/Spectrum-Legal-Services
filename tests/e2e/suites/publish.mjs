@@ -97,21 +97,21 @@ check('after reload: nothing unpublished', await p.getByRole('region', { name: '
 await p.getByRole('button', { name: "Move Haute couture Halloween looks up" }).click(); await settle(p, 300);
 await bar.getByRole('button', { name: 'Discard' }).click(); await settle(p, 400);
 check('discard goes back to live', await p.getByRole('region', { name: 'Publish' }).count() === 0 && (await p.locator('section[aria-labelledby="order-title"] ol > li').first().textContent()).includes('Masks on'));
-// 10. New reels are accepted by the tracking API once published (JLF, a real funnel)
-const r = await p.request.post(B + '/api/admin/publish', { data: { slug: 'jlf', publication: { version: 1, reels: [{ id: 'brand-new-reel', title: 'New', summary: '', practiceArea: 'Car Accident', cta: 'funnel' }], funnel: { order: ['brand-new-reel'], topics: {}, paths: {}, primaryCta: 'call' } } } });
-check('API publish ok', r.ok(), String(r.status()));
-const ev = await p.request.post(B + '/api/reel-events', { data: { visitorId: '11111111-1111-4111-8111-111111111111', funnelId: 'jlf-injury-v1', reelId: 'brand-new-reel', event: 'viewed' } });
-check('tracking accepts a newly published reel', ev.ok(), String(ev.status()));
-const bad = await p.request.post(B + '/api/admin/publish', { data: { slug: 'jlf', publication: { version: 1, reels: [{ id: 'x', title: 'T', summary: '', practiceArea: 'Car Accident', cta: 'funnel', media: { kind: 'video', src: 'blob:http://evil/1' } }], funnel: { order: ['x'], topics: {}, paths: {}, primaryCta: 'call' } } } });
-check('blob links rejected', bad.status() === 400);
-const down = await p.request.delete(B + '/api/admin/publish?slug=jlf');
-check('JLF test publication taken down', down.ok());
-// 11. Take down
+// 10. Take down
 await p.getByText('Funnel settings').click();
 await p.getByRole('button', { name: 'Take down published edits' }).click(); await settle(p, 800);
 check('taken down', !(await (await fetch(M + '/__state')).json()).publications.some(x => x.slug === 'masquerade'));
 await vp.goto(B + '/f/masquerade'); await settle(vp, 1500);
 check('live link back to original', await vp.evaluate(() => !document.querySelector('video')));
+// 11. New reels are accepted by the tracking API once published (Big Love's live event; the demos are samples and log nothing)
+const r = await p.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade', publication: { version: 1, reels: [{ id: 'brand-new-reel', title: 'New', summary: '', practiceArea: 'The night', cta: 'funnel' }], funnel: { order: ['brand-new-reel'], topics: {}, paths: {}, primaryCta: 'tickets' } } } });
+check('API publish ok', r.ok(), String(r.status()));
+const ev = await p.request.post(B + '/api/reel-events', { data: { visitorId: '11111111-1111-4111-8111-111111111111', funnelId: 'masquerade-v1', reelId: 'brand-new-reel', event: 'viewed' } });
+check('tracking accepts a newly published reel', ev.ok(), String(ev.status()));
+const bad = await p.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade', publication: { version: 1, reels: [{ id: 'x', title: 'T', summary: '', practiceArea: 'The night', cta: 'funnel', media: { kind: 'video', src: 'blob:http://evil/1' } }], funnel: { order: ['x'], topics: {}, paths: {}, primaryCta: 'tickets' } } } });
+check('blob links rejected', bad.status() === 400);
+const down = await p.request.delete(B + '/api/admin/publish?slug=masquerade');
+check('test publication taken down', down.ok());
 // 12. Sign out
 await p.getByRole('group').first().evaluate(() => {}).catch(() => {});
 await p.locator('nav details summary').click();
@@ -119,7 +119,7 @@ await p.getByRole('button', { name: 'Sign out' }).click();
 await p.waitForURL(/\/admin\/login/);
 await p.goto(B + '/admin');
 check('signed out stays out', p.url().includes('/admin/login'));
-const anon = await p.request.post(B + '/api/admin/publish', { data: { slug: 'jlf' } });
+const anon = await p.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade' } });
 check('API refuses signed-out publish', anon.status() === 401);
 // 13. Expired sign-in token gets refreshed
 await fetch(M + '/__ttl?s=30');

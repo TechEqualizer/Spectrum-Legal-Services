@@ -3,8 +3,8 @@ const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  
 const errs=[];
 const b = await chromium.launch();
 const ctx = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:1440,height:900}, timezoneId:'America/New_York' });
-// These checks use the JLF demo; organizers' events come first by default.
-await ctx.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
+// These checks use the med spa demo (sample data); organizers' events come first by default.
+await ctx.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'medspa'); });
 const p = await ctx.newPage();
 p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{if(m.type()==='error'||m.type()==='warning')errs.push(m.type()+': '+m.text().slice(0,160))});
 const base='http://localhost:3002';
@@ -34,7 +34,7 @@ await p.goto(base+'/admin/overview',{waitUntil:'networkidle'});
 check('no campaigns in nav', await p.locator('nav').getByText(/campaign/i).count()===0);
 // Leads
 await p.goto(base+'/admin/leads',{waitUntil:'networkidle'});
-await p.getByRole('button',{name:'Signed',exact:true}).click();
+await p.getByRole('button',{name:'Treatment booked',exact:true}).click();
 const rows = await p.locator('tbody tr').count();
 check('status filter', rows>0 && rows<18, rows+' rows');
 await p.getByRole('button',{name:'All',exact:true}).click();
@@ -43,8 +43,8 @@ check('lead detail journey', await p.getByText('Video journey before booking').i
 await p.screenshot({path:'admin-leads.jpg', type:'jpeg', quality:70, fullPage:true});
 // Mobile
 const m = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:390,height:844}, isMobile:true, hasTouch:true, deviceScaleFactor:2, timezoneId:'Asia/Tokyo' });
-// These checks use the JLF demo; organizers' events come first by default.
-await m.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
+// These checks use the med spa demo (sample data); organizers' events come first by default.
+await m.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'medspa'); });
 const mp = await m.newPage();
 mp.on('pageerror',e=>errs.push('mobile '+e.message)); mp.on('console',x=>{if(x.type()==='error')errs.push('mobile: '+x.text().slice(0,160))});
 for (const path of ['/admin','/admin/home','/admin/leads']) {

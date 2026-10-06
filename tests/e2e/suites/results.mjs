@@ -52,12 +52,12 @@ await p.goto(B + '/admin'); await settle(p, 1500);
 check('studio rows show real views', (await p.locator('section[aria-labelledby="order-title"]').innerText()).includes('Results: last 30 days.'));
 
 // 4. A demo keeps its sample data.
-await p.evaluate(() => localStorage.setItem('admin_business', 'jlf'));
+await p.evaluate(() => localStorage.setItem('admin_business', 'medspa'));
 await p.goto(B + '/admin/links'); await settle(p, 1200);
 check('demo stays sample', (await p.locator('main').innerText()).includes('Sample data.') && (await p.locator('body').innerText()).includes('Results and leads are sample data.'));
 
 // 5. Nobody else's numbers.
-const demoStats = await p.request.get(B + '/api/admin/stats?slug=jlf&days=30&tz=America/Detroit');
+const demoStats = await p.request.get(B + '/api/admin/stats?slug=medspa&days=30&tz=America/Detroit');
 check('no real stats for a demo', demoStats.status() === 404, String(demoStats.status()));
 const anon = await (await b.newContext()).request.get(B + '/api/admin/stats?slug=masquerade&days=30&tz=UTC');
 check('signed out: refused', anon.status() === 401, String(anon.status()));
