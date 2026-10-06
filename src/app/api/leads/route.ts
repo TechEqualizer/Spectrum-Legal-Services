@@ -1,27 +1,18 @@
 import { after } from "next/server";
 import { site } from "@/config/site";
 import type { Funnel } from "@/data/funnel-types";
-import { funnelReel, getReel } from "@/data/reels";
+import { funnelReel } from "@/data/reels";
 import {
-  isCaseType,
   isValidEmail,
   isValidPhone,
   LEAD_LIMITS,
   type LeadInput,
   type LeadIntent,
-  type LeadSource,
 } from "@/lib/leads";
 import { getLiveFunnelById } from "@/lib/server/publications";
 import { callRpc } from "@/lib/server/supabase";
 import { normalizeSourceTag, sourceLabel } from "@/lib/source-tag";
 
-const FORM_NAMES: Record<LeadSource, string> = {
-  hero: "hero form",
-  contact: "contact form",
-  funnel: "video funnel",
-};
-
-const SOURCES: LeadSource[] = ["hero", "contact", "funnel"];
 const INTENTS: LeadIntent[] = ["book", "text_later"];
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,25 +23,17 @@ function optionalString(value: unknown, max: number) {
   return value.trim() || undefined;
 }
 
-type ParsedLead = { lead: LeadInput; funnel?: Funnel };
+type ParsedLead = { lead: LeadInput; funnel: Funnel };
 
 // Returns the cleaned lead, or a message describing the first invalid field.
-// The website forms ask for an email; a funnel asks for a mobile number,
-// since its follow-ups are a call or a text.
-// `liveFunnel` is the funnel named by body.funnelId, as published.
+// A funnel asks for a mobile number, since its follow-ups are a call or a
+// text. `liveFunnel` is the funnel named by body.funnelId, as published.
 function parseLead(body: Record<string, unknown>, liveFunnel: Funnel | undefined): ParsedLead | string {
   const { source, name, caseType } = body;
-  if (typeof source !== "string" || !SOURCES.includes(source as LeadSource)) {
-    return "Unknown form";
-  }
-  const funnel = source === "funnel" ? liveFunnel : undefined;
-  if (source === "funnel" && !funnel) return "Unknown form";
+  const funnel = liveFunnel;
+  if (source !== "funnel" || !funnel) return "Unknown form";
   const intent = body.intent ?? "book";
-  if (
-    typeof intent !== "string" ||
-    !INTENTS.includes(intent as LeadIntent) ||
-    (intent === "text_later" && source !== "funnel")
-  ) {
+  if (typeof intent !== "string" || !INTENTS.includes(intent as LeadIntent)) {
     return "Unknown request";
   }
   if (
@@ -65,23 +48,16 @@ function parseLead(body: Record<string, unknown>, liveFunnel: Funnel | undefined
   if (email === null || (email && !isValidEmail(email))) {
     return "Please enter a valid email";
   }
-  if (!email && source !== "funnel") return "Please enter a valid email";
 
-  if (
-    typeof caseType !== "string" ||
-    !(funnel ? funnel.brand.services.includes(caseType) : isCaseType(caseType))
-  ) {
-    return "Please select a case type";
+  if (typeof caseType !== "string" || !funnel.brand.services.includes(caseType)) {
+    return "Please choose what you're interested in";
   }
 
   const phone = optionalString(body.phone, LEAD_LIMITS.phone);
   const message = optionalString(body.message, LEAD_LIMITS.message);
   if (phone === null) return "Phone number is too long";
   if (message === null) return "Message is too long";
-  if (source === "contact" && (!phone || !message)) {
-    return "Phone number and message are required";
-  }
-  if (source === "funnel" && (!phone || !isValidPhone(phone))) {
+  if (!phone || !isValidPhone(phone)) {
     return "Please enter a mobile number with area code";
   }
 
@@ -96,15 +72,15 @@ function parseLead(body: Record<string, unknown>, liveFunnel: Funnel | undefined
       : undefined;
   const referringReelId =
     typeof body.referringReelId === "string" &&
-    (funnel ? funnelReel(funnel, body.referringReelId) : getReel(body.referringReelId))
+    funnelReel(funnel, body.referringReelId)
       ? body.referringReelId
       : undefined;
 
   return {
     funnel,
     lead: {
-    source: source as LeadSource,
-    funnelId: funnel?.id,
+    source,
+    funnelId: funnel.id,
     intent: intent as LeadIntent,
     name: name.trim(),
     email,
@@ -119,30 +95,26 @@ function parseLead(body: Record<string, unknown>, liveFunnel: Funnel | undefined
   };
 }
 
-async function notifyFirm(lead: LeadInput, funnel?: Funnel) {
+async function notifyOwner(lead: LeadInput, funnel: Funnel) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.LEAD_NOTIFY_EMAIL;
   const from = process.env.LEAD_FROM_EMAIL;
   if (!apiKey || !to || !from) return;
 
-  const reel = lead.referringReelId
-    ? funnel
-      ? funnelReel(funnel, lead.referringReelId)
-      : getReel(lead.referringReelId)
-    : undefined;
+  const reel = lead.referringReelId ? funnelReel(funnel, lead.referringReelId) : undefined;
   const textLater = lead.intent === "text_later";
   const text = [
     textLater
-      ? `Asked to be texted the next video (${FORM_NAMES[lead.source]})`
-      : `New consultation request (${FORM_NAMES[lead.source]})`,
-    funnel ? `Funnel: ${funnel.brand.name} (/f/${funnel.slug})` : null,
+      ? "Asked to be texted the next video"
+      : "Asked for a call back",
+    `Funnel: ${funnel.brand.name} (/f/${funnel.slug})`,
     "",
     `Name: ${lead.name}`,
     `Email: ${lead.email ?? "not given"}`,
     `Phone: ${lead.phone ?? "not given"}`,
-    `Case type: ${lead.caseType}`,
+    `Interested in: ${lead.caseType}`,
     reel ? `Came from video: ${reel.title}` : null,
-    lead.source === "funnel" ? `Link source: ${sourceLabel(lead.sourceTag)}` : null,
+    `Link source: ${sourceLabel(lead.sourceTag)}`,
     "",
     lead.message ?? "(no message)",
   ]
@@ -161,7 +133,7 @@ async function notifyFirm(lead: LeadInput, funnel?: Funnel) {
       ...(lead.email ? { reply_to: lead.email } : {}),
       subject: textLater
         ? `${lead.caseType}: text-me-later request`
-        : `New ${lead.caseType} consultation request`,
+        : `New ${lead.caseType} request`,
       text,
     }),
   });
@@ -197,16 +169,16 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed }, { status: 400 });
   }
   const { lead, funnel } = parsed;
-  // The concept site must not collect anyone's details, even if called
-  // directly. A live client's funnel still collects them.
-  if (site.demoMode && !funnel?.live) {
+  // In demo mode nothing is collected, even if called directly. A live
+  // client's funnel still collects details.
+  if (site.demoMode && !funnel.live) {
     return Response.json(
-      { error: "This concept site doesn't accept submissions." },
+      { error: "This demo doesn't accept submissions." },
       { status: 403 }
     );
   }
   // A sample funnel's business doesn't exist, so it never collects details.
-  if (funnel?.sample) {
+  if (funnel.sample) {
     return Response.json(
       { error: "This sample funnel doesn't accept submissions." },
       { status: 403 }
@@ -225,19 +197,19 @@ export async function POST(request: Request) {
     p_intent: lead.intent ?? "book",
     p_source_tag: lead.sourceTag ?? null,
     // Saved word for word, as the record of what the person agreed to.
-    p_sms_consent_text: lead.smsConsent && funnel ? funnel.brand.smsConsent : null,
+    p_sms_consent_text: lead.smsConsent ? funnel.brand.smsConsent : null,
     p_funnel_id: lead.funnelId ?? null,
   });
   if (!result.ok) {
     console.error("submit_lead_v3 failed", result.status, result.error);
     return Response.json(
-      { error: "We couldn't send your request. Please call us instead." },
+      { error: "We couldn't send your request. Try again in a moment." },
       { status: 503 }
     );
   }
 
   after(() =>
-    notifyFirm(lead, funnel).catch((err) =>
+    notifyOwner(lead, funnel).catch((err) =>
       console.error("Lead notification email failed", err)
     )
   );

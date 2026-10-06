@@ -56,9 +56,9 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
   const description = `${funnel.cover.heading} ${funnel.cover.intro}`;
   const labeled = Boolean(funnel.sample) || isConcept(funnel);
   return {
-    title: funnel.sample ? `${title} (Sample)` : isConcept(funnel) ? `${title} (Concept Preview)` : title,
+    title: funnel.sample ? `${title} (Sample)` : isConcept(funnel) ? `${title} (Preview)` : title,
     description,
-    // Replace the JLF site's author and keywords from the root layout.
+    // The funnel's own business is the author, not Showlnk.
     authors: [{ name: funnel.brand.name }],
     keywords: null,
     openGraph: { title, description, type: "website", siteName: funnel.brand.name },

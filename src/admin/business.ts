@@ -4,7 +4,6 @@
 // (see eventBusiness).
 
 import { medspaFunnel } from "@/data/medspa";
-import { defaultFunnel } from "@/data/reels";
 import type { Funnel } from "@/data/funnel-types";
 
 /** How a reel tends to do: daily views as an entry reel, watch-through, and booking rate. */
@@ -21,46 +20,11 @@ export type AdminBusiness = {
     leadsIntro: string;
     /** The last lead status, after "Consultation booked". */
     wonStatus: string;
-    /** Whether the business also has a website form (JLF's hero form). */
-    hasWebsiteForm: boolean;
   };
   /** The live funnel's name in the reel editor. */
   funnelName: string;
   /** Order of the live funnel in the reel editor. */
   editorOrder: string[];
-};
-
-const jlf: AdminBusiness = {
-  funnel: defaultFunnel,
-  seeds: { days: 20261002, leads: 99 },
-  profile: {
-    "car-accident-first-steps": { entryViews: 46, watch: 0.64, book: 0.035 },
-    "car-accident-recorded-statement": { entryViews: 0, watch: 0.71, book: 0.05 },
-    "injury-claim-deadlines": { entryViews: 0, watch: 0.68, book: 0.09 },
-    "rideshare-accident-insurance": { entryViews: 21, watch: 0.58, book: 0.04 },
-    "truck-accident-evidence": { entryViews: 14, watch: 0.61, book: 0.045 },
-    "motorcycle-accident-claims": { entryViews: 17, watch: 0.52, book: 0.03 },
-    "slip-and-fall-documentation": { entryViews: 11, watch: 0.49, book: 0.025 },
-    "dog-bite-california-law": { entryViews: 9, watch: 0.57, book: 0.04 },
-  },
-  terms: {
-    topic: "Case type",
-    leadsIntro: "Case evaluation requests, with the videos each person watched first.",
-    wonStatus: "Signed",
-    hasWebsiteForm: true,
-  },
-  funnelName: "Injury Insights",
-  // Chosen so most live links are simply "next in order".
-  editorOrder: [
-    "car-accident-first-steps",
-    "car-accident-recorded-statement",
-    "injury-claim-deadlines",
-    "rideshare-accident-insurance",
-    "truck-accident-evidence",
-    "motorcycle-accident-claims",
-    "slip-and-fall-documentation",
-    "dog-bite-california-law",
-  ],
 };
 
 const medspa: AdminBusiness = {
@@ -81,7 +45,6 @@ const medspa: AdminBusiness = {
     topic: "Treatment",
     leadsIntro: "Consultation requests, with the videos each person watched first.",
     wonStatus: "Treatment booked",
-    hasWebsiteForm: false,
   },
   funnelName: "Skin Notes",
   editorOrder: medspaFunnel.reels.map((r) => r.id),
@@ -114,12 +77,11 @@ export function eventBusiness(funnel: Funnel): AdminBusiness {
       topic: "Interest",
       leadsIntro: "Update sign-ups, with the videos each person watched first. Ticket sales show in your ticketing report.",
       wonStatus: "Bought tickets",
-      hasWebsiteForm: false,
-    },
+      },
     funnelName: funnel.brand.seriesLabel,
     editorOrder: funnel.reels.map((r) => r.id),
   };
 }
 
 /** The built-in businesses (demos); organizers' events come from the database. */
-export const builtInBusinesses: AdminBusiness[] = [jlf, medspa];
+export const builtInBusinesses: AdminBusiness[] = [medspa];

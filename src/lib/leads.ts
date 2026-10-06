@@ -1,31 +1,18 @@
-// Shared by the intake forms and /api/leads so both validate the same way.
+// Shared by the funnel forms and /api/leads so both validate the same way.
 
-export const CASE_TYPES = [
-  "Car Accident",
-  "Truck Accident",
-  "Motorcycle Accident",
-  "Uber / Lyft Accident",
-  "Pedestrian Accident",
-  "Bicycle Accident",
-  "Slip, Trip & Fall",
-  "Dog Bite",
-  "Wrongful Death",
-  "Other Injury",
-] as const;
+export type LeadSource = "funnel";
 
-export type LeadSource = "hero" | "contact" | "funnel";
-
-/** What the visitor asked for: a call back about their case, or a text with the next video. */
+/** What the visitor asked for: a call back, or a text with the next video. */
 export type LeadIntent = "book" | "text_later";
 
 export type LeadInput = {
   source: LeadSource;
   intent?: LeadIntent;
   name: string;
-  /** Required on the website forms; optional in the funnel, which asks for a phone number. */
+  /** Optional: the funnel asks for a phone number. */
   email?: string;
   phone?: string;
-  /** One of CASE_TYPES on the website; one of the funnel's brand.services in a funnel. */
+  /** One of the funnel's brand.services. */
   caseType: string;
   message?: string;
   /** Anonymous id from the reel funnel, linking the lead to the videos watched. */
@@ -34,7 +21,7 @@ export type LeadInput = {
   referringReelId?: string;
   /** Where the funnel link was shared, from its ?src= tag. */
   sourceTag?: string;
-  /** The funnel link the lead came from (source "funnel" only). */
+  /** The funnel link the lead came from. */
   funnelId?: string;
   /** Ticked the SMS consent box (required for "text me later"). */
   smsConsent?: boolean;
@@ -56,8 +43,4 @@ export function isValidPhone(phone: string) {
 
 export function isValidEmail(email: string) {
   return EMAIL_PATTERN.test(email);
-}
-
-export function isCaseType(value: string) {
-  return (CASE_TYPES as readonly string[]).includes(value);
 }

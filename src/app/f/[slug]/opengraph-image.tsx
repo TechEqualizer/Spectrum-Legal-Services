@@ -39,7 +39,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
     : funnel.sample
       ? "Sample funnel"
       : isConcept(funnel)
-        ? "Concept preview"
+        ? "Preview"
         : (brand.phone?.display ?? "");
 
   return new ImageResponse(

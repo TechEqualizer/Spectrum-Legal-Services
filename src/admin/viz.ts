@@ -2,7 +2,7 @@
 // validated reference palette (dataviz skill), checked with
 // validate_palette.js: all checks pass; aqua is under 3:1 on white, so the
 // outcome chart always carries a legend, direct labels, and a table view.
-// The firm's brand blue (#28719A) fails the chroma floor as a data color, so
+// The admin's brand blue (#28719A) fails the chroma floor as a data color, so
 // it stays in the UI chrome and the charts use slot 1 instead.
 
 export const viz = {
@@ -35,7 +35,7 @@ export const formatNumber = (n: number) =>
 /** A share as a percent; a share of nothing (0/0) shows as a dash, never "NaN%". */
 export const formatPercent = (n: number) => (Number.isFinite(n) ? `${(n * 100).toFixed(0)}%` : "\u2013");
 
-// Pinned to the firm's time zone so server and browser render the same text.
+// Pinned to one time zone so server and browser render the same text.
 export const FIRM_TIME_ZONE = "America/Los_Angeles";
 
 export const formatDay = (d: Date) =>

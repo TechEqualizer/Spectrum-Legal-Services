@@ -1,4 +1,4 @@
-// A short tag saying where a funnel link was shared, e.g. /f/jlf?src=instagram.
+// A short tag saying where a funnel link was shared, e.g. /f/masquerade?src=instagram.
 // Shared by the browser and the API routes so both accept the same values.
 
 export const SOURCE_TAG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,39}$/;

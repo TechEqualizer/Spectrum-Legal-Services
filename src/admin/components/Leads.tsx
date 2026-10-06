@@ -131,7 +131,7 @@ export default function Leads() {
                       {lead.source === "Text me later" ? "Asked to be texted the next video" : "Requested a consultation"}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {lead.referringReelId ? `From "${getReel(lead.referringReelId)?.title}"` : "From the hero form"}
+                      {lead.referringReelId ? `From "${getReel(lead.referringReelId)?.title}"` : "From the link"}
                     </p>
                   </li>
                 </ol>

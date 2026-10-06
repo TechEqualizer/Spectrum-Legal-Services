@@ -128,7 +128,7 @@ export type SampleLead = {
   id: string;
   receivedAt: Date;
   caseType: string;
-  source: "Hero form" | "Video booking" | "Text me later";
+  source: "Video booking" | "Text me later";
   /** Where their funnel link came from (the ?src= tag); undefined for direct visits. */
   sourceTag?: string;
   referringReelId?: string;
@@ -155,9 +155,7 @@ function buildLeads(business: AdminBusiness): SampleLead[] {
       current = funnel.links[current]?.completed ?? null;
       if (current) watched.push(current);
     }
-    // A business without a website form gets all its leads from the reels.
-    const fromVideo = !business.terms.hasWebsiteForm || rand() < 0.6;
-    const textLater = fromVideo && rand() < 0.25;
+    const textLater = rand() < 0.25;
     const sourceTag = pick(["instagram", "instagram", "google", "tiktok", "sms", "referral", "share", undefined]);
     const reel = funnel.reels.find((r) => r.id === watched[watched.length - 1])!;
     const received = new Date(SAMPLE_END);
@@ -166,9 +164,9 @@ function buildLeads(business: AdminBusiness): SampleLead[] {
       id: `L-${1042 - i}`,
       receivedAt: received,
       caseType: reel.practiceArea,
-      source: textLater ? "Text me later" : fromVideo ? "Video booking" : "Hero form",
+      source: textLater ? "Text me later" : "Video booking",
       sourceTag,
-      referringReelId: fromVideo ? reel.id : undefined,
+      referringReelId: reel.id,
       watchedReelIds: watched,
       status: i < 5 ? "New" : pick(statuses),
     });
