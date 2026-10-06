@@ -12,7 +12,7 @@ import { EVENT_FUNNELS_TAG, ORGANIZERS_TAG, slugIsFree } from "@/lib/server/funn
 export async function POST(request: Request) {
   const admin = await getAdmin();
   if (!admin) return NextResponse.json({ error: "Sign in again." }, { status: 401 });
-  if (!admin.slugs.includes("*")) return NextResponse.json({ error: "Only Event Reels can add clients." }, { status: 403 });
+  if (!admin.slugs.includes("*")) return NextResponse.json({ error: "Only Showlnk can add clients." }, { status: 403 });
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const text = (v: unknown) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim() : "");

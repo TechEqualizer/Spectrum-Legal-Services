@@ -34,7 +34,7 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8" aria-labelledby={`${id}-title`}>
-      <p className="text-xs font-bold uppercase tracking-widest text-teal-accent">Reel Funnel Admin</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-teal-accent">Showlnk Admin</p>
       <h1 id={`${id}-title`} className="mt-1 text-2xl font-bold text-deep-navy">Sign in</h1>
       <p className="mt-1 text-sm text-gray-600">Edit your reels and publish them to your link.</p>
 

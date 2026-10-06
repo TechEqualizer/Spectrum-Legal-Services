@@ -1,4 +1,4 @@
-// New client: Event Reels adds a client (their bio link and a first event),
+// New client: Showlnk adds a client (their bio link and a first event),
 // builds it, then hands it off with the client's own login.
 import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
@@ -8,7 +8,7 @@ const errs = [];
 const ctx = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 1440, height: 900 }, timezoneId: 'America/Detroit' });
 const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
 
-// Only Event Reels adds clients.
+// Only Showlnk adds clients.
 const org = await b.newContext();
 await org.request.post(B + '/api/admin/login', { data: { email: 'organizer@example.com', password: 'organizer-pass-1' } });
 const refused = await org.request.post(B + '/api/admin/clients', { data: { name: 'Sneaky', slug: 'sneaky', eventName: 'Sneaky night', eventSlug: 'sneaky-night' } });

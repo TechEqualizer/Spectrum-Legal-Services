@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+// Not on the home page for now (kept to bring back).
 // The four things a flyer becomes, fanned like reels in a hand: the opening
 // scene and the three core reels. Built from a real Showlnk event (Big Love
 // Productions' Masquerade on the Runway); one reel "plays" at a time.

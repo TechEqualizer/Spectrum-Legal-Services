@@ -48,7 +48,7 @@ export default function Events() {
   const [now] = useState(() => Date.now());
   const [sheet, setSheet] = useState<{ mode: NewEventMode; source?: AdminEvent } | null>(null);
   const [addingClient, setAddingClient] = useState(false);
-  // Full admins (Event Reels) add clients and hand them off.
+  // Full admins (Showlnk) add clients and hand them off.
   const fullAccess = session.slugs.includes("*");
   // Events this admin can start new ones from: those of organizers they run.
   const sources = events.filter((e) => runsOrganizer(session, e.organizer.slug));
@@ -142,11 +142,11 @@ export default function Events() {
 
       {!events.length && (
         <p className="rounded-xl border border-gray-200 bg-white px-5 py-6 text-sm text-gray-600">
-          No events yet. Send Event Reels your flyer and we&apos;ll set up your first one with you.
+          No events yet. Send Showlnk your flyer and we&apos;ll set up your first one with you.
         </p>
       )}
       {events.length > 0 && !canAdd && (
-        <p className="px-1 text-sm text-gray-600">Next event coming up? Send Event Reels the flyer and we&apos;ll add it here.</p>
+        <p className="px-1 text-sm text-gray-600">Next event coming up? Send Showlnk the flyer and we&apos;ll add it here.</p>
       )}
 
       {demos.length > 0 && (

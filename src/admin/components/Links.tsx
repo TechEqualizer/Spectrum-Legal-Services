@@ -68,7 +68,7 @@ export default function Links() {
       <div>
         <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Share</h1>
         <p className="text-sm text-gray-600">
-          {organizer ? "Your bio link, and a tagged link for each other place you share" : "The reel funnel as its own link. Give each place you share it its own tag"}, so you can see which one brings {wonLabel}.
+          {organizer ? "Your bio link, and a tagged link for each other place you share" : "Your link. Give each place you share it its own tag"}, so you can see which one brings {wonLabel}.
         </p>
       </div>
 

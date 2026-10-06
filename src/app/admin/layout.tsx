@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Reel Funnel Admin",
+  title: "Showlnk Admin",
   robots: { index: false, follow: false },
 };
 

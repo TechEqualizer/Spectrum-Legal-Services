@@ -6,15 +6,14 @@ admin where organizers build, publish and track them. Next.js 16 (App
 Router), React 19, Tailwind CSS 4, Supabase.
 
 **The home page (`/`) is the Showlnk waitlist**, set like a night's flyer:
-the four reels fanned through the headline and "Get on the list" as a gold
+the headline and "Get on the list" as a gold
 admission stub (email and Instagram handle) that tears and stamps "You're on
 the list". Sign-ups go through `POST /api/waitlist` to the database's
 `join_waitlist` (one row per email; a hidden field turns bots away) and show
 to full admins in Settings → **Waitlist**, with their Instagram and a CSV
 download (`src/app/page.tsx`, `src/components/showlnk/`, migration
-`20261014000000_waitlist.sql`). The example reels are Big Love Productions'
-Masquerade on the Runway, and the ticket-click board is labeled as sample
-numbers.
+`20261014000000_waitlist.sql`). The ticket-click board is labeled as sample
+numbers. A fan of example reels (`ReelFan`) is built but off the page for now.
 
 The law firm (`/f/jlf`) and med spa (`/f/medspa`) funnels remain as demos.
 
@@ -56,7 +55,7 @@ detector (`.github/workflows/ci.yml`).
 
 ## Design and quality
 
-- [`PRODUCT.md`](PRODUCT.md): who Event Reels is for, what it does, and its
+- [`PRODUCT.md`](PRODUCT.md): who Showlnk is for, what it does, and its
   principles. [`DESIGN.md`](DESIGN.md): the design system ("The Velvet
   Rope"): color roles, type, components and rules. Read both before changing
   a screen; Impeccable and the design skills in `.claude/skills` read them
