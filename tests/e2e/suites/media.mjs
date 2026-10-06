@@ -17,7 +17,7 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   check(w+': Big Love by default', await p.locator('#admin-business').inputValue()==='masquerade' && (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
   // Other suites' events and clients can linger in the app's event list cache, so: Big Love first, then the demos last.
   const groups = (await p.locator('#admin-business optgroup').evaluateAll((gs) => gs.map((g) => g.label + ': ' + [...g.children].map((o) => o.textContent).join(', ')))).join(' | ');
-  check(w+': clients first, then demos', /^Big Love Productions: Masquerade on the Runway(, [^|]+)*( \| [^|]+)* \| Demos: The JLF Firm, Aurelia Med Spa$/.test(groups), groups);
+  check(w+': clients first, then demos', /^Big Love Productions: Masquerade on the Runway(, [^|]+)*( \| [^|]+)* \| Demos: Aurelia Med Spa$/.test(groups), groups);
 
   // Switch business
   await p.selectOption('#admin-business','medspa');
@@ -95,10 +95,10 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=') && !u.includes('/api/admin/stats?')).length===0, api.join(','));
   await p.keyboard.press('Escape');
 
-  // Switch back to JLF
-  await p.selectOption('#admin-business','jlf');
+  // Switch back to Big Love
+  await p.selectOption('#admin-business','masquerade');
   await settle(p, 300);
-  check(w+': back to JLF', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===8 && await p.getByLabel('Funnel name').inputValue()==='Injury Insights');
+  check(w+': back to Big Love', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5 && await p.getByLabel('Funnel name').inputValue()==='Masquerade on the Runway');
   await ctx.close();
 }
 await b.close();

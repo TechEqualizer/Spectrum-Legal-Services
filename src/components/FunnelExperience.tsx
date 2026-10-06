@@ -478,11 +478,11 @@ function FunnelCover({
   onSwipeUp?: () => void;
 }) {
   const { brand } = funnel;
-  // A sample business is always labeled; the JLF concept is labeled in demo mode.
+  // A sample business is always labeled; any other funnel that isn't live is labeled in demo mode.
   const notice =
     funnel.sample?.notice ??
     (isConcept(funnel)
-      ? `Concept preview prepared for ${brand.name}. Not the firm's official link.`
+      ? `Preview of ${brand.name}'s link. Not live yet.`
       : undefined);
   const noticeBar = notice && (
     <p className="bg-black/40 px-4 py-1.5 text-center text-[11px] leading-snug text-gray-200">{notice}</p>

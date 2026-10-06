@@ -15,18 +15,18 @@ download (`src/app/page.tsx`, `src/components/showlnk/`, migration
 `20261014000000_waitlist.sql`). The ticket-click board is labeled as sample
 numbers. A fan of example reels (`ReelFan`) is built but off the page for now.
 
-The law firm (`/f/jlf`) and med spa (`/f/medspa`) funnels remain as demos.
+The med spa (`/f/medspa`) and events (`/f/events`) funnels remain as labeled samples.
 
 ### Demo mode (on by default)
 
 While `NEXT_PUBLIC_DEMO_MODE` is anything other than `false`:
 
 - pages send `noindex, nofollow` (meta tag and `X-Robots-Tag` header),
-- the intake forms show a "demo, not sent" message and `/api/leads`
-  returns 403, so nobody's details are collected.
+- funnel forms show a "demo, not sent" message and `/api/leads` returns 403,
+  unless the funnel is a live client's.
 
-Set `NEXT_PUBLIC_DEMO_MODE=false` only after the firm has approved the site
-and wants leads delivered.
+Production sets `NEXT_PUBLIC_DEMO_MODE=false`. Sample funnels never collect
+details either way.
 
 ## Running locally
 
@@ -36,7 +36,7 @@ cp .env.example .env.local   # then fill in the values
 npm run dev                  # http://localhost:3000
 ```
 
-Without the Supabase variables the site still runs, but the intake forms show
+Without the Supabase variables the site still runs, but the funnel forms show
 an error instead of saving, and reel events are dropped.
 
 ## Tests
@@ -70,23 +70,23 @@ detector (`.github/workflows/ci.yml`).
 - `bolder`, `delight` and `overdrive` only for one screen that feels flat,
   never across the app.
 
-## Shareable funnel link (`/f/jlf`)
+## Shareable funnel link (`/f/<slug>`)
 
 The reel funnel on its own, with no website around it: the link to put in an
 Instagram or TikTok bio, a Google Business Profile, a text, or a referral
-partner's email. It opens on "What happened?" topic choices; each one starts
-the reels at that topic.
+partner's email. It opens on the funnel's cover (topic choices, or an
+event's opening scene); each topic starts the reels there.
 
 - **Every reel has three buttons**: the funnel's main action (`primaryCta`:
-  `call` for The JLF Firm, `book` suits businesses where people weigh their
-  options), plus the other one and **Text me later**. Booking and "text me
+  `call`, `book` for businesses where people weigh their options, or
+  tickets for events), plus the other one and **Text me later**. Booking and "text me
   later" open a short form over the reel, so visitors never leave the videos.
 - **Where the link was shared**: add `?src=<tag>` (e.g. `?src=instagram`).
   The tag is saved with every reel event and lead, and the most recent tag is
   remembered in the browser. `/admin/links` builds tagged links.
 - **Start on one video**: `?start=<reel id>` skips the topic choices. Follow-up
   texts use this to send someone the next video, e.g.
-  `/f/jlf?start=injury-claim-deadlines&src=sms`.
+  `/f/medspa?start=ms-pricing&src=sms`.
 - **Text me later** saves a lead with `intent = 'text_later'`, the visitor's
   mobile number, and the exact consent wording they agreed to (the
   funnel's `brand.smsConsent`, which the business's counsel should approve). **Texts are not sent yet**: that needs an SMS provider (e.g.
@@ -170,7 +170,6 @@ forms re-skin without code changes.
 
 | Link | Business | Main button |
 | --- | --- | --- |
-| `/f/jlf` | The JLF Firm (concept) | Call |
 | `/f/medspa` | Aurelia Med Spa (**sample**, made up) | Book |
 | `/f/events` | Golden Hour Sundays (**sample**, made up) | Tickets |
 | `/f/masquerade` | Big Love Productions: Masquerade on the Runway (**client**) | Tickets |
@@ -246,11 +245,12 @@ The "Injury Insights" section (`src/components/Reels.tsx`) is a branching
 video funnel, like a drip campaign inside one visit: what a visitor does with
 each reel decides which one comes next.
 
-- **Paths** live in `src/data/reels.ts`. Each reel has a `completed` link
+- **Paths** live in each funnel's `links` (built-in samples in `src/data/`,
+  organizers' events in the database). Each reel has a `completed` link
   (watched to the end, usually a deeper reel on the same topic) and a
-  `skipped` link (swiped or tapped next, usually another practice area).
-  `null` ends on a "talk to an attorney" card. Bump `defaultFunnel.id`
-  whenever the paths change, so results from different versions stay apart.
+  `skipped` link (swiped or tapped next, usually another topic). `null` ends
+  on the funnel's closing card. Bump a built-in funnel's `id` whenever its
+  paths change, so results from different versions stay apart.
 - **Media**: each reel's `media` is a video file (`{ kind: "video", src,
   poster?, captions? }`, e.g. from `public/reels/`), a YouTube video or
   Short (`{ kind: "youtube", id }`, played in the privacy-enhanced
@@ -286,9 +286,9 @@ each reel decides which one comes next.
   `/api/reel-events` with an anonymous visitor id stored in the browser and
   the link's source tag. Visitors sending Global Privacy Control or Do Not
   Track are not tracked.
-- **Leads** from the reels' forms and the hero form go to `/api/leads`, which
+- **Leads** from the reels' forms go to `/api/leads`, which
   saves them with the visitor id, the reel they came from and the link's
-  source tag, then optionally emails the firm through Resend.
+  source tag, then optionally emails the business through Resend.
 
 ## Admin (`/admin`)
 
@@ -331,7 +331,7 @@ The site needs no secret key. Published content is validated on the server
 
 **Adding an admin**: create the user in Supabase (Authentication, Users,
 "Add user", with "Auto Confirm User"), then
-`insert into admin_users (email, slugs) values ('them@example.com', '{jlf}');`.
+`insert into admin_users (email, slugs) values ('them@example.com', '{masquerade}');`.
 
 Results and Leads still show **sample data** (`src/admin/sample-data.ts`,
 generated per business from `src/admin/business.ts`). The business picker
@@ -529,7 +529,7 @@ select reel_id,
        count(*) filter (where event = 'call_clicked') as calls,
        count(*) filter (where event = 'cta_clicked') as booked
 from reel_events
-where funnel_id = 'jlf-injury-v1'
+where funnel_id = '<funnel id>'
 group by reel_id
 order by views desc;
 
@@ -541,7 +541,7 @@ select coalesce(source_tag, 'direct') as source,
        round(100.0 * count(*) filter (where event in ('call_clicked', 'cta_clicked'))
              / nullif(count(distinct visitor_id), 0), 1) as per_100
 from reel_events
-where funnel_id = 'jlf-injury-v1'
+where funnel_id = '<funnel id>'
 group by 1
 order by per_100 desc nulls last;
 
@@ -562,7 +562,6 @@ order by l.created_at desc;
 
 ## Before launch
 
-Contact details, stats, testimonials and reel scripts are placeholders. An
-attorney should review all marketing copy against the state bar's advertising
-rules, and the site needs a privacy policy that covers the visitor id and the
-intake forms.
+Sample funnels' contact details and reel scripts are placeholders. The site
+needs a privacy policy that covers the visitor id, the funnel forms and the
+waitlist.

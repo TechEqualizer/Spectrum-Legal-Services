@@ -3,7 +3,7 @@
 // and published with the rest of the admin's edits.
 //
 // The five colors are the theme tokens the whole app is built on (see
-// FunnelTheme): their names come from the law firm site, their roles are:
+// FunnelTheme): their names are historical, their roles are:
 //   --deep-navy    the dark background behind everything
 //   --royal-blue   a deeper mid tone (gradients, hovers)
 //   --teal-accent  the main buttons, with white text

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Brand colors - The JLF Firm (concept), sampled from jlffirm.com.
-   The site's light blue fails contrast behind white text, so buttons and
-   small text on light backgrounds use a deeper blue from the same family. */
+/* The default theme (a funnel's flyer can replace it; see src/lib/look.ts).
+   The light blue fails contrast behind white text, so buttons and small
+   text on light backgrounds use a deeper blue from the same family. */
 :root {
   --deep-navy: #0E1A2B;
   --royal-blue: #1E3A5F;

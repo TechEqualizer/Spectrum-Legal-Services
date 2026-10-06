@@ -4,15 +4,15 @@ import { getSourceTag, getVisitorId } from "@/lib/reel-tracking";
 
 export type SubmitLeadResult = { ok: true } | { ok: false; error: string };
 
-const FALLBACK_ERROR = `We couldn't send your request. Please call us at ${site.phone.display}.`;
+const FALLBACK_ERROR = "We couldn't send your request. Check your connection and try again.";
 
-/** Sends an intake form to /api/leads, attaching the visitor id and link source. */
+/** Sends a funnel form to /api/leads, attaching the visitor id and link source. */
 export async function submitLead(
   lead: Omit<LeadInput, "visitorId" | "sourceTag"> & { website?: string },
   /** Pretend to send, e.g. for a sample funnel; live: a live client's funnel, which sends even in demo mode. */
   { simulate = false, live = false } = {}
 ): Promise<SubmitLeadResult> {
-  // The concept site and sample funnels never send or store what people type.
+  // Demo mode and sample funnels never send or store what people type.
   if ((site.demoMode && !live) || simulate) return { ok: true };
   try {
     const res = await fetch("/api/leads", {

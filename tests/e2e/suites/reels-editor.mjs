@@ -5,8 +5,8 @@ const b = await chromium.launch();
 for (const [w,h] of [[390,844],[1279,900]]) {
   const mobile=w<1024;
   const p = await b.newPage({ storageState: process.argv[2] + '/auth.json', viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile, deviceScaleFactor: mobile?2:1 });
-  // These checks use the JLF demo; organizers' events come first by default.
-  await p.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'jlf'); });
+  // These checks use the med spa demo; organizers' events come first by default.
+  await p.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'medspa'); });
   p.on('pageerror',e=>errs.push(w+' '+e.message)); p.on('console',m=>{if(m.type()==='error' && !m.text().includes('404'))errs.push(w+' '+m.text())});
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
   const rows = p.locator('section[aria-labelledby="order-title"] ol > li');
@@ -15,14 +15,15 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   check(w+': Reels is admin home', await p.getByRole('heading',{level:1}).textContent()==='Reels');
   check(w+': nav marks Reels current', await p.locator('nav [aria-current="page"]').textContent()==='Reels');
   check(w+': 3 funnel cards, one default', await p.locator('[aria-pressed]').filter({hasText:'reel'}).count()===3 && await p.getByText('Default',{exact:true}).count()===1);
-  check(w+': 8 reels in live funnel', await rows.count()===8);
+  check(w+': 9 reels in live funnel', await rows.count()===9);
   const r0 = await rowText(0);
-  check(w+': row chips', r0.includes('Topic: Car accident') && r0.includes('No video yet') && r0.includes('Call'), r0.slice(0,160));
-  check(w+': override shown', r0.includes('Skipped → 4. Hurt in an Uber'), r0);
-  check(w+': end override', (await rowText(2)).includes('Watched → End card'));
-  check(w+': default path text', (await rowText(1)).includes('Skipped → 4.') || (await rowText(1)).includes('Then the next reel'));
+  check(w+': row chips', r0.includes('Topic: Fine lines and wrinkles') && r0.includes('No video yet') && r0.includes('Book'), r0.slice(0,160));
+  check(w+': override shown', r0.includes('Skipped → 3. Lip filler that still looks like you'), r0);
+  check(w+': watched override', (await rowText(1)).includes('Watched → 8. How pricing works'));
+  check(w+': default path text', (await rowText(7)).includes('Then the next reel'));
+  check(w+': last reel ends', (await rowText(8)).includes('Then the end card'));
   check(w+': all reachable', await p.getByText('No path leads here').count()===0);
-  check(w+': stats shown', r0.includes('Views') && r0.includes('Watched') && r0.includes('Booked'));
+  check(w+': stats shown', /views/i.test(r0) && /watched/i.test(r0) && /booked/i.test(r0));
   check(w+': page fits width', await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await p.screenshot({path:`reels-editor-${w}.jpg`, quality:70, fullPage:true});
 
@@ -78,13 +79,13 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   await add.getByLabel('Title',{exact:true}).fill('Brand new reel');
   await add.getByRole('button',{name:'Add reel'}).click();
   const t = await titles();
-  check(w+': new reel appended', t.length===9 && t[8]==='Brand new reel');
-  check(w+': new reel has no results', (await rowText(8)).includes('No results yet'));
+  check(w+': new reel appended', t.length===10 && t[9]==='Brand new reel');
+  check(w+': new reel has no results', (await rowText(9)).includes('No results yet'));
 
   // Remove a reel that others point at
-  await p.getByRole('button',{name:'Remove Hurt in an Uber or Lyft: whose insurance pays? from this funnel'}).click();
-  check(w+': removed', await rows.count()===8);
-  check(w+': paths to removed reel reset', !(await rows.allTextContents()).some(x=>x.includes('Hurt in an Uber')));
+  await p.getByRole('button',{name:'Remove Lip filler that still looks like you from this funnel'}).click();
+  check(w+': removed', await rows.count()===9);
+  check(w+': paths to removed reel reset', !(await rows.allTextContents()).some(x=>x.includes('Lip filler that still')));
 
   // Unreachable warning in a small funnel
   await p.getByRole('button',{name:/Follow-up texts/}).click();

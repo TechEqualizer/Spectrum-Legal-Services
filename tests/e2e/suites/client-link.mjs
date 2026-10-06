@@ -8,7 +8,7 @@ const ctx = await b.newContext({ timezoneId: 'America/Detroit', viewport: { widt
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
 const leads = []; await p.route('**/api/leads', async (r) => { leads.push(JSON.parse(r.request().postData())); await r.fulfill({ status: 201, contentType: 'application/json', body: '{"ok":true}' }); });
 await p.goto(B + '/f/masquerade'); await settle(p, 1200);
-check('no concept banner', await p.getByText(/Concept preview/).count() === 0);
+check('no concept banner', await p.getByText(/Not live yet/).count() === 0);
 check('title', await p.getByRole('heading', { name: 'Masquerade on the Runway' }).isVisible());
 check('date in Detroit time', await p.getByText('Saturday · 8 PM').isVisible());
 const href = await p.getByRole('link', { name: /Get tickets/ }).first().getAttribute('href');

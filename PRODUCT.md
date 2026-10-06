@@ -69,8 +69,8 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
   tracking data is wired in.
 - Video generation inside the product is not built; organizers copy prompts
   into a video tool and upload the clips.
-- Law firm (`/f/jlf`) and med spa (`/f/medspa`) funnels remain as demos; the
-  focus is events and nightlife.
+- The med spa sample (`/f/medspa`) remains as a demo; the focus is events and
+  nightlife.
 
 ## Brand Commitments
 
@@ -87,8 +87,7 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
   (`/f/masquerade`, seeded from `supabase/seed/biglove.json`), with its flyer
   and Eventbrite details (`public/clients/masquerade`).
 - Sample funnels, always labeled as samples: Golden Hour Sundays
-  (`/f/events`), Aurelia Med Spa (`/f/medspa`), and The JLF Firm concept
-  (`/f/jlf`).
+  (`/f/events`) and Aurelia Med Spa (`/f/medspa`).
 - No real testimonials, sales figures, conversion rates or customer counts
   exist yet. Never present sample results as real ones.
 

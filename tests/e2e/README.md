@@ -27,7 +27,11 @@ Building replaces the app's `.next` folder with a test build, so run
   - `client-link`: Big Love's live link, `/f/masquerade`.
   - `sell`, `fold`, `hero`, `yt-hero`, `events`, `one-date`, `emphasis`:
     the funnel link a visitor sees.
-  - `medspa`, `link`: the medspa and JLF links.
+  - `medspa`: the med spa sample at `/f/medspa` (book first; nothing is
+    sent).
+  - `link`: a call-first link that isn't live yet (`/f/velvet-room`, added
+    to the mock for the suite: forms simulate, tracking is real), plus the
+    admin's link builder.
   - The rest: the admin (dates, flyer import, the "Draft my funnel" draft,
     look and style, opening screen, studio and path strip, publishing,
     saving, media).
@@ -41,7 +45,8 @@ Building replaces the app's `.next` folder with a test build, so run
 - `mocks/supabase.mjs`: auth, the publications table and storage, kept in
   memory. Test accounts: `tester@example.com` / `tester-pass-1` (signed in
   for the suites) and `owner@example.com` (first sign-in flow). Control
-  routes: `/__state`, `/__reset`, `/__log`, `/__ttl?s=`.
+  routes: `/__state`, `/__reset`, `/__log`, `/__ttl?s=`, and `/__event`
+  (adds an event row straight to the table).
 - `mocks/claude.mjs`: answers flyer reads (`POST /__mode` with `multi`,
   `single`, `none` or `refusal`) and funnel drafts. `/__last` returns the
   last request, so suites can check the model, schema and prompt.
