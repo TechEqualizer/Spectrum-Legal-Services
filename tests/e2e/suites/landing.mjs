@@ -13,7 +13,6 @@ await p.goto(B + '/?src=instagram'); await settle(p, 1500);
 check('Showlnk title', /^Showlnk/.test(await p.title()), await p.title());
 check('the promise in one line', (await p.getByRole('heading', { level: 1 }).innerText()).replace(/\s+/g, ' ').toLowerCase() === 'drop a flyer. get four reels. sell the night.');
 check('no law firm left', !/attorney|injury|law firm/i.test(await p.locator('body').innerText()));
-check('the four reels shown', await p.getByRole('img', { name: /One flyer, four reels/ }).isVisible() && await p.locator('.sl-card').count() === 4);
 check('the form is on the first screen', (await p.locator('#join').boundingBox()).y < 900);
 check('sample numbers labeled', await p.getByText('Sample numbers').isVisible());
 check('headings read light on the night', await p.getByRole('heading', { level: 1 }).evaluate((h) => getComputedStyle(h).color) === 'rgb(244, 238, 228)');
@@ -68,18 +67,19 @@ const m = await (await b.newContext({ viewport: { width: 390, height: 844 }, isM
 m.on('pageerror', (e) => errs.push(e.message));
 await m.goto(B + '/'); await settle(m, 1500); await animationsDone(m, 2500);
 const dock = m.locator('.sl-dock');
-check('phone: the dock shows first', (await dock.getAttribute('data-hidden')) === null && await dock.getByRole('link', { name: 'Get on the list' }).isVisible());
+check('phone: the stub is on the first screen, so no dock', (await m.locator('#join').boundingBox()).y < 844 && (await dock.getAttribute('data-hidden')) === '');
 check('phone: no sideways scroll', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 await m.screenshot({ path: S + '/landing-390.jpg' });
-await dock.getByRole('link', { name: 'Get on the list' }).tap(); await settle(m, 1200); await animationsDone(m, 1000);
+await m.getByRole('heading', { name: /Know which post/ }).evaluate((h) => h.scrollIntoView({ block: 'center' }));
+// The page scrolls smoothly: wait for the dock to answer, not a fixed time.
+await m.waitForFunction(() => !document.querySelector('.sl-dock').hasAttribute('data-hidden'), null, { timeout: 5000 }).catch(() => {}); await animationsDone(m, 1000);
+check('phone: past the stub, the dock shows', (await dock.getAttribute('data-hidden')) === null && await dock.getByRole('link', { name: 'Get on the list' }).isVisible());
+await dock.getByRole('link', { name: 'Get on the list' }).tap();
+await m.waitForFunction(() => document.querySelector('.sl-dock').hasAttribute('data-hidden'), null, { timeout: 5000 }).catch(() => {}); await animationsDone(m, 1000);
 check('phone: the dock takes you to the stub, then steps aside', (await dock.getAttribute('data-hidden')) === '' && await m.locator('#join').getByLabel('Email').isVisible());
 await m.screenshot({ path: S + '/landing-390-stub.jpg' });
 await m.screenshot({ path: S + '/landing-390-full.jpg', fullPage: true });
 
-// Less motion: the reels sit still.
-const still = await (await b.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })).newPage();
-await still.goto(B + '/'); await settle(still, 1000);
-check('reduced motion: still', await still.locator('.sl-card').first().evaluate((e) => getComputedStyle(e).animationName) === 'none');
 
 check('no page errors', !errs.length, errs.join(' | ').slice(0, 300));
 console.log(res.join('\n'));

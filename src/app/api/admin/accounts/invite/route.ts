@@ -10,7 +10,7 @@ async function emailLogin(to: string, password: string, loginUrl: string, from: 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey || !from) return false;
   const text = [
-    reset ? "Your Event Reels password was reset." : "You've been invited to the Event Reels admin.",
+    reset ? "Your Showlnk password was reset." : "You've been invited to the Showlnk admin.",
     "",
     `Sign in: ${loginUrl}`,
     `Email: ${to}`,
@@ -22,7 +22,7 @@ async function emailLogin(to: string, password: string, loginUrl: string, from: 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: [to], subject: reset ? "Your Event Reels password" : "Your Event Reels login", text }),
+      body: JSON.stringify({ from, to: [to], subject: reset ? "Your Showlnk password" : "Your Showlnk login", text }),
     });
     if (!res.ok) console.error("[invite] email failed", res.status, await res.text());
     return res.ok;

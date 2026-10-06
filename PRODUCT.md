@@ -22,7 +22,7 @@ web
 
 ## Product Purpose
 
-Event Reels turns an event's link into a short story of vertical video reels
+Showlnk turns an event's link into a short story of vertical video reels
 that sells the night and ends on Tickets. An organizer drops in a flyer and
 gets four things: the opening scene, and three core reels built on the
 proven reasons people buy a ticket. **The Night** (desire and self-image:
@@ -74,7 +74,7 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
 
 ## Brand Commitments
 
-- Product name: **Showlnk** (was Event Reels; the domain is showlnk). The
+- Product name: **Showlnk** (formerly Event Reels; the domain is showlnk). The
   home page is the Showlnk waitlist.
 - On a funnel link, the organizer's brand leads (their name, colors, title
   typeface, flyer); the product's own brand stays out of the way.

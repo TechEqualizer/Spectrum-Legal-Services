@@ -1,5 +1,5 @@
 ---
-name: Event Reels
+name: Showlnk
 description: An event's link told as a story of vertical reels, in the organizer's own brand, ending on Tickets.
 colors:
   night: "#0E1A2B"
@@ -99,7 +99,7 @@ components:
     padding: "12px 16px"
 ---
 
-# Design System: Event Reels
+# Design System: Showlnk
 
 ## Overview
 
@@ -123,7 +123,7 @@ sake. Elegance comes from restraint, type and light, not ornament.
 **Key Characteristics:**
 - Two rooms, one palette: a dark, cinematic visitor link and a light, calm
   admin, both colored by the organizer's five color roles.
-- The organizer's brand leads; Event Reels recedes.
+- The organizer's brand leads; Showlnk recedes.
 - Tickets is the one filled, brand-colored action on every visitor screen.
 - Phone first: 44px targets, thumb-reach actions, nothing wider than the
   screen.
@@ -312,5 +312,5 @@ with the path strip beneath it showing where the visitor is in the story.
 - **Don't** hard-code hex colors in components; use the roles.
 - **Don't** add a second filled or Door-colored button to a visitor screen.
 - **Don't** put shadows on cards in the page.
-- **Don't** show the Event Reels brand on a visitor's screen.
+- **Don't** show the Showlnk brand on a visitor's screen.
 - **Don't** go below 11px text, or lighter than gray-600 for text on white.

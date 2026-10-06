@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const source = (await listEventFunnels()).find(({ funnel }) => funnel.slug === body?.source);
   if (!source) return NextResponse.json({ error: "Choose one of your events to start from." }, { status: 400 });
   if (!managesOrganizer(admin, source.organizer)) {
-    return NextResponse.json({ error: "Adding events isn't open to your account yet. Ask Event Reels to add it for you." }, { status: 403 });
+    return NextResponse.json({ error: "Adding events isn't open to your account yet. Ask Showlnk to add it for you." }, { status: 403 });
   }
   if (!(await slugIsFree(slug))) {
     return NextResponse.json({ error: `/f/${slug} is taken. Try another link.` }, { status: 409 });
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   });
   if (res?.status === 409) return NextResponse.json({ error: `/f/${slug} is taken. Try another link.` }, { status: 409 });
   if (res?.status === 401 || res?.status === 403) {
-    return NextResponse.json({ error: "Adding events isn't open to your account yet. Ask Event Reels to add it for you." }, { status: 403 });
+    return NextResponse.json({ error: "Adding events isn't open to your account yet. Ask Showlnk to add it for you." }, { status: 403 });
   }
   if (!res?.ok) return NextResponse.json({ error: "Couldn't add the event. Try again." }, { status: 502 });
   revalidateTag(EVENT_FUNNELS_TAG, { expire: 0 });

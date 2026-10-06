@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import LoginForm from "@/admin/components/LoginForm";
 
-export const metadata = { title: "Sign in | Reel Funnel Admin" };
+export const metadata = { title: "Sign in | Showlnk Admin" };
 
 export default function LoginPage() {
   return (

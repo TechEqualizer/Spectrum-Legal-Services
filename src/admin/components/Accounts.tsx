@@ -126,7 +126,7 @@ export default function Accounts() {
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <CopyButton
-              text={`Sign in to Event Reels: ${sent.loginUrl}\nEmail: ${sent.email}\nTemporary password: ${sent.password}\nYou'll choose your own password when you sign in.`}
+              text={`Sign in to Showlnk: ${sent.loginUrl}\nEmail: ${sent.email}\nTemporary password: ${sent.password}\nYou'll choose your own password when you sign in.`}
               label="Copy login details"
               announce="Login details copied"
               className="min-h-11 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"

@@ -205,7 +205,7 @@ export default function Settings() {
               </ul>
             </>
           ) : (
-            <p>You can edit the events Event Reels shared with you. To run an organizer&apos;s events yourself, ask Event Reels.</p>
+            <p>You can edit the events Showlnk shared with you. To run an organizer&apos;s events yourself, ask Showlnk.</p>
           )}
         </div>
       </section>

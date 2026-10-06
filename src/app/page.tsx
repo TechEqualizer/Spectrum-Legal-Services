@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Big_Shoulders } from "next/font/google";
 import Link from "next/link";
 import Dock from "@/components/showlnk/Dock";
-import ReelFan from "@/components/showlnk/ReelFan";
 import WaitlistStub from "@/components/showlnk/WaitlistStub";
 import "@/components/showlnk/showlnk.css";
 
@@ -63,18 +62,16 @@ export default function ShowlnkHome() {
       </header>
 
       <main id="main-content">
-        {/* The flyer: three lines of type with the four reels fanned through them. */}
+        {/* The flyer: three lines of type, then the stub. */}
         <section aria-labelledby="sl-title" className="sl-wash relative">
           <div className="mx-auto max-w-7xl px-5 pb-16 pt-6 sm:px-8 lg:pb-24 lg:pt-10">
-            <h1 id="sl-title" className="sl-display relative z-0 text-[clamp(3.4rem,10.5vw,6rem)] lg:text-[clamp(6rem,7.6vw,8.5rem)]">
+            <h1 id="sl-title" className="sl-display text-[clamp(3.4rem,10.5vw,6rem)] lg:text-[clamp(6rem,9.4vw,9.5rem)]">
               <span className="block">Drop a flyer.</span>
               <span className="block text-[var(--sl-gold)]">Get four reels.</span>
               <span className="block">Sell the night.</span>
             </h1>
 
-            <ReelFan className="relative z-10 mx-auto mt-8 w-full max-w-md lg:absolute lg:right-10 lg:top-2 lg:mt-0 lg:w-[45%] lg:max-w-[640px] xl:right-16" />
-
-            <div className="relative z-20 mt-10 max-w-2xl lg:mt-14">
+            <div className="mt-10 max-w-2xl lg:mt-14">
               <p className="max-w-[58ch] text-base leading-relaxed text-[var(--sl-text)]/90 sm:text-lg">
                 Showlnk turns your event flyer into one link of vertical reels that sells your night. Every reel ends on your
                 ticket page, and every ticket click shows which reel and which post brought it.

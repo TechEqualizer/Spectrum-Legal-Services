@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Reel Funnels//Event//EN",
+    "PRODID:-//Showlnk//Event//EN",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${esc(`${slug}-${event.id}`)}@reel-funnels`,
