@@ -1,17 +1,27 @@
-# The JLF Firm (concept site)
+# Showlnk
 
-Concept landing page for The JLF Firm, a California personal injury firm:
-Next.js 16 (App Router), React 19, Tailwind CSS 4.
+Showlnk turns an event's flyer into one link of vertical reels that sells
+the night (the opening scene, The Night, Your People, Last Call), with an
+admin where organizers build, publish and track them. Next.js 16 (App
+Router), React 19, Tailwind CSS 4, Supabase.
 
-**This is a sales mock-up, not the firm's official website** (that is
-jlffirm.com). Firm details live in `src/config/site.ts` and come from the
-firm's public directory listings and website; confirm each one with the firm.
+**The home page (`/`) is the Showlnk waitlist**, set like a night's flyer:
+the four reels fanned through the headline and "Get on the list" as a gold
+admission stub (email and Instagram handle) that tears and stamps "You're on
+the list". Sign-ups go through `POST /api/waitlist` to the database's
+`join_waitlist` (one row per email; a hidden field turns bots away) and show
+to full admins in Settings → **Waitlist**, with their Instagram and a CSV
+download (`src/app/page.tsx`, `src/components/showlnk/`, migration
+`20261014000000_waitlist.sql`). The example reels are Big Love Productions'
+Masquerade on the Runway, and the ticket-click board is labeled as sample
+numbers.
+
+The law firm (`/f/jlf`) and med spa (`/f/medspa`) funnels remain as demos.
 
 ### Demo mode (on by default)
 
 While `NEXT_PUBLIC_DEMO_MODE` is anything other than `false`:
 
-- a banner says the site is a concept and links to jlffirm.com,
 - pages send `noindex, nofollow` (meta tag and `X-Robots-Tag` header),
 - the intake forms show a "demo, not sent" message and `/api/leads`
   returns 403, so nobody's details are collected.

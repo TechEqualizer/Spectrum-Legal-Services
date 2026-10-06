@@ -32,6 +32,7 @@ const publications = new Map(); // slug -> row
 // What visitors did, like reel_events and leads (kept for funnel_stats).
 const reelEvents = []; // { at, visitor, funnel, reel, event, tag }
 const leadRows = []; // { at, funnel, intent, tag }
+const waitlist = new Map(); // email -> { email, instagram, source_tag, created_at }
 const files = new Map(); // path -> {type, body}
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
@@ -70,7 +71,7 @@ http.createServer((req, res) => {
     if (p === '/__log') return json(res, 200, log);
     if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()] });
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -186,6 +187,19 @@ http.createServer((req, res) => {
     if (p === '/rest/v1/rpc/log_reel_event_v2') {
       reelEvents.push({ at: Date.now(), visitor: body.p_visitor_id, funnel: body.p_funnel_id, reel: body.p_reel_id, event: body.p_event, tag: body.p_source_tag ?? null });
       return json(res, 204);
+    }
+    // Like the real join_waitlist: one row per email, the handle updated.
+    if (p === '/rest/v1/rpc/join_waitlist') {
+      const email = String(body.p_email).trim().toLowerCase();
+      const prev = waitlist.get(email);
+      waitlist.set(email, { email, instagram: body.p_instagram ?? prev?.instagram ?? null, source_tag: prev ? prev.source_tag : body.p_source_tag ?? null, created_at: prev?.created_at ?? new Date().toISOString() });
+      return json(res, 204);
+    }
+    // Like the real policy: full admins read the waitlist.
+    if (p === '/rest/v1/waitlist' && req.method === 'GET') {
+      const email = emailOf(req);
+      if (!email || !users[email]?.admin || !users[email].slugs.includes('*')) return json(res, 200, []);
+      return json(res, 200, [...waitlist.values()].sort((a, b) => b.created_at.localeCompare(a.created_at)));
     }
     if (p === '/rest/v1/rpc/submit_lead_v3') {
       leadRows.push({ at: Date.now(), funnel: body.p_funnel_id, intent: body.p_intent, tag: body.p_source_tag ?? null });

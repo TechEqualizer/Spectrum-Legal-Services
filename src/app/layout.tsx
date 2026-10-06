@@ -14,34 +14,13 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-const title = site.demoMode
-  ? `${site.name} | Personal Injury Attorneys (Concept Preview)`
-  : `${site.name} | Personal Injury Attorneys in Southern California`;
-const description = `${site.name} represents people hurt in car, truck, motorcycle, and rideshare accidents across Southern California, with offices in Downey, ${site.otherOffices.join(", ")}.`;
-
+// Showlnk's defaults; the home page, funnel links and the admin set their own.
 export const metadata: Metadata = {
-  title,
-  description,
-  keywords: [
-    "personal injury lawyer",
-    "car accident attorney",
-    "truck accident lawyer",
-    "motorcycle accident lawyer",
-    "Uber accident lawyer",
-    "Downey personal injury",
-  ],
-  authors: [{ name: site.name }],
-  openGraph: {
-    title,
-    description,
-    type: "website",
-    locale: "en_US",
-    siteName: site.name,
-  },
-  // The concept preview must not show up in search results as the firm's site.
-  robots: site.demoMode
-    ? { index: false, follow: false }
-    : { index: true, follow: true },
+  title: "Showlnk",
+  description: "Your event flyer, as one link of vertical reels that sells the night.",
+  openGraph: { siteName: "Showlnk", type: "website", locale: "en_US" },
+  // While the site is a preview, it stays out of search results.
+  robots: site.demoMode ? { index: false, follow: false } : { index: true, follow: true },
 };
 
 export default function RootLayout({

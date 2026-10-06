@@ -74,7 +74,8 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
 
 ## Brand Commitments
 
-- Product name: **Event Reels**.
+- Product name: **Showlnk** (was Event Reels; the domain is showlnk). The
+  home page is the Showlnk waitlist.
 - On a funnel link, the organizer's brand leads (their name, colors, title
   typeface, flyer); the product's own brand stays out of the way.
 - Agreed direction from earlier reviews: keep it elegant, and make Tickets

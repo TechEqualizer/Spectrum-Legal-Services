@@ -1,0 +1,268 @@
+/* Showlnk's home page: a night flyer. Condensed poster type on a deep night
+   ground, the four reels fanned through it, and the waitlist as a gold
+   admission stub. Everything here is scoped under .sl. */
+
+.sl {
+  --sl-night: #0a0710;
+  --sl-night-2: #140e1c;
+  --sl-line: rgb(244 238 228 / 0.14);
+  --sl-text: #f4eee4;
+  --sl-muted: #b8adc4;
+  --sl-gold: #e8be5a;
+  --sl-gold-deep: #c99a30;
+  --sl-lilac: #b9a7ff;
+  --sl-ink: #1a1208;
+  background: var(--sl-night);
+  color: var(--sl-text);
+  min-height: 100dvh;
+  overflow-x: clip;
+  caret-color: var(--sl-gold);
+  accent-color: var(--sl-gold);
+}
+/* The site's base headings are navy on light; here they take the night's text color. */
+.sl :is(h1, h2, h3) {
+  color: inherit;
+}
+.sl ::selection {
+  background: var(--sl-gold);
+  color: var(--sl-ink);
+}
+.sl :focus-visible {
+  outline: 2px solid var(--sl-gold);
+  outline-offset: 3px;
+}
+
+.sl-display {
+  font-family: var(--font-show), "Arial Narrow", sans-serif;
+  font-weight: 900;
+  font-variation-settings: "opsz" 72;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.86;
+  text-wrap: balance;
+}
+
+/* A soft light behind the fan, like a stage wash. */
+.sl-wash {
+  background:
+    radial-gradient(60% 55% at 70% 45%, rgb(185 167 255 / 0.18), transparent 70%),
+    radial-gradient(40% 40% at 78% 70%, rgb(232 190 90 / 0.12), transparent 70%);
+}
+
+/* ---- The reel fan ------------------------------------------------------ */
+
+.sl-fan {
+  position: relative;
+  aspect-ratio: 1.42;
+}
+.sl-card {
+  --w: 29%;
+  position: absolute;
+  left: calc(50% - var(--w) / 2);
+  top: 6%;
+  width: var(--w);
+  aspect-ratio: 9 / 16;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--sl-night-2);
+  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(244 238 228 / 0.12);
+  transform: translateX(var(--x)) translateY(var(--y)) rotate(var(--r));
+  transform-origin: 50% 100%;
+  animation: sl-deal 900ms cubic-bezier(0.16, 1, 0.3, 1) both, sl-spot 12s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 90ms), calc(1.2s + var(--i) * 3s);
+}
+.sl-card:nth-child(1) { --i: 0; --x: -116%; --y: 6%; --r: -8deg; z-index: 1; }
+.sl-card:nth-child(2) { --i: 1; --x: -39%; --y: 1%; --r: -2.5deg; z-index: 2; }
+.sl-card:nth-child(3) { --i: 2; --x: 39%; --y: 1%; --r: 2.5deg; z-index: 3; }
+.sl-card:nth-child(4) { --i: 3; --x: 116%; --y: 6%; --r: 8deg; z-index: 4; }
+@keyframes sl-deal {
+  from {
+    transform: translateX(0) translateY(12%) rotate(0deg) scale(0.92);
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+/* One reel "plays" at a time, left to right, like a story. */
+@keyframes sl-spot {
+  0%, 22% {
+    transform: translateX(var(--x)) translateY(calc(var(--y) - 4%)) rotate(var(--r)) scale(1.04);
+    box-shadow: 0 30px 60px -12px rgb(0 0 0 / 0.75), 0 0 0 2px var(--sl-gold);
+  }
+  30%, 100% {
+    transform: translateX(var(--x)) translateY(var(--y)) rotate(var(--r));
+  }
+}
+.sl-bars {
+  position: absolute;
+  inset: 8px 8px auto;
+  display: flex;
+  gap: 3px;
+  z-index: 2;
+}
+.sl-bars span {
+  height: 2px;
+  flex: 1;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.35);
+}
+.sl-bars span[data-on] {
+  background: #fff;
+}
+.sl-card-label {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 36% 10px 10px;
+  background: linear-gradient(to top, rgb(10 7 16 / 0.95) 30%, transparent);
+  z-index: 2;
+}
+
+/* ---- The admission stub ----------------------------------------------- */
+
+.sl-stub {
+  --notch: 11px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: var(--sl-gold);
+  color: var(--sl-ink);
+  border-radius: 14px;
+  box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.8), 0 2px 0 rgb(255 255 255 / 0.25) inset;
+  /* Ticket notches where the stub tears. */
+  -webkit-mask:
+    radial-gradient(circle var(--notch) at 0 var(--tear), transparent 98%, #000) top left / 51% 100% no-repeat,
+    radial-gradient(circle var(--notch) at 100% var(--tear), transparent 98%, #000) top right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle var(--notch) at 0 var(--tear), transparent 98%, #000) top left / 51% 100% no-repeat,
+    radial-gradient(circle var(--notch) at 100% var(--tear), transparent 98%, #000) top right / 51% 100% no-repeat;
+  --tear: 58px;
+}
+.sl-stub-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 58px;
+  padding: 0 20px;
+  border-bottom: 2px dashed rgb(26 18 8 / 0.35);
+  transition: transform 700ms cubic-bezier(0.7, 0, 0.84, 0), opacity 500ms ease-in 200ms;
+  transform-origin: 0% 100%;
+}
+@media (min-width: 768px) {
+  .sl-stub {
+    grid-template-columns: 112px 1fr;
+    --tear: 0px;
+    -webkit-mask:
+      radial-gradient(circle var(--notch) at 112px 0, transparent 98%, #000) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--notch) at 112px 100%, transparent 98%, #000) bottom / 100% 51% no-repeat;
+    mask:
+      radial-gradient(circle var(--notch) at 112px 0, transparent 98%, #000) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--notch) at 112px 100%, transparent 98%, #000) bottom / 100% 51% no-repeat;
+  }
+  .sl-stub-tab {
+    height: auto;
+    flex-direction: column;
+    justify-content: center;
+    padding: 16px 0;
+    border-bottom: 0;
+    border-right: 2px dashed rgb(26 18 8 / 0.35);
+    transform-origin: 100% 100%;
+  }
+  .sl-stub-tab .sl-vertical {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+}
+/* Admitted: the tab tears away. */
+.sl-stub[data-done] .sl-stub-tab {
+  transform: translateY(40px) rotate(-14deg);
+  opacity: 0;
+}
+.sl-field {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1.5px solid rgb(26 18 8 / 0.28);
+  background: rgb(255 255 255 / 0.32);
+  color: var(--sl-ink);
+  padding: 0 14px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: border-color 150ms, background-color 150ms;
+}
+.sl-field::placeholder {
+  color: rgb(26 18 8 / 0.6);
+}
+.sl-field:hover {
+  border-color: rgb(26 18 8 / 0.5);
+}
+.sl-field:focus {
+  outline: none;
+  border-color: var(--sl-ink);
+  background: rgb(255 255 255 / 0.5);
+}
+.sl-field[aria-invalid="true"] {
+  border-color: #8f1d14;
+}
+.sl-go {
+  min-height: 52px;
+  border-radius: 10px;
+  background: var(--sl-ink);
+  color: var(--sl-gold);
+  font-weight: 800;
+  font-size: 16px;
+  padding: 0 22px;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms;
+}
+.sl-go:hover {
+  background: #2b1f10;
+}
+.sl-go:active {
+  transform: scale(0.98);
+}
+.sl-go:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+.sl-stamp {
+  display: inline-block;
+  border: 3px solid var(--sl-ink);
+  border-radius: 8px;
+  padding: 2px 12px;
+  transform: rotate(-6deg);
+  animation: sl-stamp 450ms cubic-bezier(0.16, 1, 0.3, 1) both 250ms;
+}
+@keyframes sl-stamp {
+  from {
+    transform: rotate(-6deg) scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* The lineup's names light up as you pass them. */
+.sl-act {
+  transition: color 250ms ease-out;
+}
+.sl-row:hover .sl-act {
+  color: var(--sl-gold);
+}
+
+/* Phones: "Get on the list" stays in reach until a stub is in view. */
+.sl-dock {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms;
+}
+.sl-dock[data-hidden] {
+  transform: translateY(120%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-card,
+  .sl-stamp,
+  .sl-stub-tab,
+  .sl-dock {
+    animation: none !important;
+    transition: none !important;
+  }
+}
