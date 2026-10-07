@@ -11,7 +11,7 @@ import "@/components/showlnk/showlnk.css";
 
 const show = Big_Shoulders({ subsets: ["latin"], variable: "--font-show", axes: ["opsz"], display: "swap" });
 
-const title = "Showlnk · Upload one flyer. Sell the experience.";
+const title = "Showlnk · Don't just announce the night. Invite them into it.";
 const description =
   "Drop in your event flyer. Showlnk turns it into one link of vertical reels: the opening scene, The Night, Your People and Last Call, every one ending on your tickets. Get on the list for early access.";
 
@@ -68,15 +68,14 @@ export default function ShowlnkHome() {
           <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-14 lg:pb-24 lg:pt-10">
             <div className="min-w-0">
               <h1 id="sl-title" className="sl-display text-[clamp(3.4rem,10.5vw,6rem)] lg:text-[clamp(5rem,6.9vw,7.5rem)]">
-                <span className="block">Upload one flyer.</span>
-                <span className="block text-[var(--sl-gold)]">Sell the experience.</span>
-                <span className="block">Sell out the night.</span>
+                <span className="block">Don&apos;t just announce the night.</span>
+                <span className="block text-[var(--sl-gold)]">Invite them into it.</span>
               </h1>
 
               <div className="mt-10 max-w-2xl lg:mt-12">
                 <p className="max-w-[58ch] text-base leading-relaxed text-[var(--sl-text)]/90 sm:text-lg">
-                  Guests don&apos;t buy a date and a price. They buy the night. Showlnk turns your flyer into one link of short
-                  reels that let them feel it before they&apos;re there, and every reel ends on your tickets.
+                  A flyer tells people when. Showlnk turns it into one link of experiences that let guests step inside the night
+                  before they buy, and shows you which post sold every ticket.
                 </p>
                 <div className="mt-8">
                   <WaitlistStub id="join" />
