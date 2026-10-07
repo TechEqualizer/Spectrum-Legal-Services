@@ -1,7 +1,7 @@
 // A book-first link a visitor opens (the test-only Lumen Skin Studio,
 // /f/skin-notes): Book is the main action, quiet reels drop the pill, and
 // the forms simulate because the link isn't live.
-import { chromium } from '../browser.mjs';
+import { chromium, settle } from '../browser.mjs';
 import { addBookFirst } from '../fixtures/book-first.mjs';
 import { addGoldenHour } from '../fixtures/golden-hour.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
@@ -71,7 +71,8 @@ for (const [w,h] of [[390,844],[1440,900]]) {
   // OG image + another funnel keeps its own theme
   const og = await p.request.get(B+'/f/skin-notes/opengraph-image');
   check(w+': OG image', og.status()===200 && og.headers()['content-type']==='image/png');
-  await p.goto(B+'/f/sundays',{waitUntil:'networkidle'});
+  // Not networkidle: the page's video can keep loading, so the network may never go quiet.
+  await p.goto(B+'/f/sundays'); await settle(p, 3000);
   check(w+': another link keeps its own colors', await p.locator('main').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(26, 18, 13)' && await p.getByRole('heading',{name:'Sundays, on the roof.'}).isVisible());
   await p.close();
 }
