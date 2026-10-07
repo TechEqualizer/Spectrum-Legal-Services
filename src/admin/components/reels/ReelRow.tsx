@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CTA_LABELS, TRIGGER_LABELS, type EditorFunnel, type EditorReel, type PathTarget } from "@/admin/editor-model";
-import type { ReelTotals } from "@/admin/sample-data";
+import type { ReelTotals } from "@/admin/stats";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import type { FunnelTrigger } from "@/data/reels";
 import { thumbnailOf } from "@/lib/media";

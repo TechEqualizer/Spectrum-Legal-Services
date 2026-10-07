@@ -1,22 +1,28 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium } from '../browser.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[];
 const b = await chromium.launch();
 const ctx = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:1440,height:900}, timezoneId:'America/New_York' });
-// These checks use the med spa demo (sample data); organizers' events come first by default.
-await ctx.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'medspa'); });
+// Big Love's event, with real visits: three views today and five three weeks ago.
+const ev = (daysAgo, event) => ({ daysAgo, funnel: 'masquerade-v1', reel: 'mr-masks-on', event });
+await fetch('http://localhost:54321/__reel-events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([
+  ...[0, 0, 0].map((d) => ev(d, 'viewed')), ev(0, 'completed'), ...[20, 20, 21, 21, 22].map((d) => ev(d, 'viewed')), ev(20, 'completed'), ev(21, 'skipped'),
+]) });
 const p = await ctx.newPage();
 p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{if(m.type()==='error'||m.type()==='warning')errs.push(m.type()+': '+m.text().slice(0,160))});
 const base='http://localhost:3002';
 // Overview
 await p.goto(base+'/admin/overview',{waitUntil:'networkidle'});
-check('sample-data banner', await p.getByText('Sample data.').isVisible());
+await p.locator('main p.text-2xl').first().waitFor();
+check('no sample data', !/sample/i.test(await p.locator('body').innerText()));
 check('noindex meta', (await p.content()).includes('noindex'));
 const v30 = await p.locator('main p.text-2xl').first().textContent();
 await p.getByRole('button',{name:'Last 7 days'}).click();
+await p.waitForFunction((before) => document.querySelector('main p.text-2xl')?.textContent !== before, v30, { timeout: 5000 }).catch(() => {});
 const v7 = await p.locator('main p.text-2xl').first().textContent();
-check('range changes KPIs', v30!==v7, v30+' -> '+v7);
+check('range changes KPIs', v30==='8' && v7==='3', v30+' -> '+v7);
 await p.getByRole('button',{name:'Last 90 days'}).click();
+await p.locator('svg[role=img]').first().waitFor();
 const svg = p.locator('svg[role=img]');
 const box = await svg.boundingBox();
 await p.mouse.move(box.x+box.width*0.5, box.y+box.height*0.5);
@@ -32,19 +38,12 @@ const gone = await p.goto(base+'/admin/campaigns');
 check('campaigns page removed (404)', gone.status()===404);
 await p.goto(base+'/admin/overview',{waitUntil:'networkidle'});
 check('no campaigns in nav', await p.locator('nav').getByText(/campaign/i).count()===0);
-// Leads
+// Leads: Big Love's real ones (none yet), no made-up statuses.
 await p.goto(base+'/admin/leads',{waitUntil:'networkidle'});
-await p.getByRole('button',{name:'Treatment booked',exact:true}).click();
-const rows = await p.locator('tbody tr').count();
-check('status filter', rows>0 && rows<18, rows+' rows');
-await p.getByRole('button',{name:'All',exact:true}).click();
-await p.locator('tbody tr').nth(2).click();
-check('lead detail journey', await p.getByText('Video journey before booking').isVisible());
-await p.screenshot({path:'admin-leads.jpg', type:'jpeg', quality:70, fullPage:true});
+check('leads: real empty state', await p.getByRole('heading',{name:'No leads yet'}).isVisible());
+check('leads: no status filter', await p.getByRole('group',{name:'Filter by status'}).count()===0 && !/Treatment booked|Consultation booked/.test(await p.locator('main').innerText()));
 // Mobile
 const m = await b.newContext({ storageState: process.argv[2] + '/auth.json', viewport:{width:390,height:844}, isMobile:true, hasTouch:true, deviceScaleFactor:2, timezoneId:'Asia/Tokyo' });
-// These checks use the med spa demo (sample data); organizers' events come first by default.
-await m.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'medspa'); });
 const mp = await m.newPage();
 mp.on('pageerror',e=>errs.push('mobile '+e.message)); mp.on('console',x=>{if(x.type()==='error')errs.push('mobile: '+x.text().slice(0,160))});
 for (const path of ['/admin','/admin/home','/admin/leads']) {

@@ -1,6 +1,10 @@
-import { chromium, settle } from '../browser.mjs';
+// A visitor on an event link with several dates (the test-only Golden Hour
+// event, /f/sundays), then the admin on Big Love's event.
+import { chromium, pickEvent, settle } from '../browser.mjs';
+import { addGoldenHour } from '../fixtures/golden-hour.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[]; const B='http://localhost:3002';
+await addGoldenHour();
 const b = await chromium.launch();
 for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   const ctx = await b.newContext({ timezoneId: 'America/Detroit',  storageState: process.argv[2] + '/auth.json', viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile });
@@ -9,8 +13,8 @@ for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   const api=[]; await ctx.route('**/api/**', r=>{api.push(r.request().url()); r.fulfill({status:204});});
   await ctx.route(/example\.com/, r=>r.fulfill({status:200, contentType:'text/html', body:'<h1>Tickets</h1>'}));
   await ctx.route(/youtube-nocookie|ytimg/, r=>r.fulfill({status:200, contentType:'text/html', body:''}));
-  await p.goto(B+'/f/events?src=instagram',{waitUntil:'networkidle'});
-  check(w+': sample notice', await p.getByText('Golden Hour Sundays is not real').isVisible());
+  await p.goto(B+'/f/sundays?src=instagram',{waitUntil:'networkidle'});
+  check(w+': not-live note', await p.getByText("Preview of Golden Hour Sundays's link. Not live yet.").isVisible());
   check(w+': heading', await p.getByRole('heading',{name:'Which Sunday?'}).isVisible());
   const choices = await p.locator('main ul > li button').evaluateAll(els=>els.map(e=>e.getAttribute('aria-label')+' '+e.textContent));
   check(w+': 3 upcoming nights + recap', choices.length===4 && choices[3].includes('Watch last time'), choices.join(' | '));
@@ -63,15 +67,15 @@ for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   check(w+': sold out leads with the waitlist', await p.getByRole('button',{name:'Join the waitlist',exact:true}).count() >= 1);
   check(w+': sold out offers this Sunday, named', (await p.getByRole('link',{name:/^Get Oct \d+$/}).first().getAttribute('href')).includes('/this-sunday'));
   await p.keyboard.press('Escape');
-  check(w+': nothing sent to APIs', api.length===0, api.join(','));
+  check(w+': no lead sent from a link that isn\'t live', !api.some(u=>u.includes('/api/leads')), api.join(','));
 
   // End card
-  await p.goto(B+'/f/events?start=gh-presale',{waitUntil:'networkidle'});
+  await p.goto(B+'/f/sundays?start=gh-presale',{waitUntil:'networkidle'});
   await p.keyboard.press('ArrowDown');
   const end = p.getByRole('region',{name:'See you on the roof?'});
   check(w+': end card', await end.isVisible() && await end.getByRole('link',{name:/^Get tickets/}).first().isVisible() && await end.getByRole('button',{name:'Presale'}).isVisible() && await end.getByRole('button',{name:'Send to the group chat'}).isVisible());
   await p.screenshot({path:`events-end-${w}.jpg`, quality:70});
-  check(w+': OG image', (await p.request.get(B+'/f/events/opengraph-image')).status()===200);
+  check(w+': OG image', (await p.request.get(B+'/f/sundays/opengraph-image')).status()===200);
 
   if (process.env.DEMO) {
   // Demo
@@ -90,7 +94,7 @@ for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   }
   // Admin
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
-  await p.selectOption('#admin-business','masquerade');
+  await pickEvent(p, 'masquerade');
   await settle(p, 300);
   check(w+': admin shows Big Love reels', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
   await p.goto(B+'/admin/links',{waitUntil:'networkidle'});

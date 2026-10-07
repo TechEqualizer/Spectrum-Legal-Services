@@ -1,11 +1,11 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const b = await chromium.launch();
 const ctx = await b.newContext({ timezoneId: 'America/Detroit',  storageState: process.argv[2] + '/auth.json', viewport:{width:390,height:844}, isMobile:true, hasTouch:true, deviceScaleFactor:2});
 await ctx.route(/i\.ytimg\.com/, r=>r.fulfill({status:200, contentType:'image/png', body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==','base64')}));
 const p = await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
 await p.goto('http://localhost:3002/admin'); await settle(p, 600);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 800);
+await pickEvent(p, 'masquerade'); await settle(p, 800);
 const rows = p.locator('section[aria-labelledby="order-title"] ol > li');
 const row = () => rows.filter({ hasText: 'Burlesque' });
 check('starts on live reels', await p.getByText(/Live\s*·\s*original reels/).isVisible());
@@ -20,7 +20,7 @@ check('save time shown', await p.getByRole('region',{name:'Publish'}).getByText(
 // 2. Rename + reorder, then reload
 await p.getByRole('button',{name:"Move Burlesque, performances and a live DJ up"}).click(); await settle(p, 300);
 await p.reload(); await settle(p, 1200);
-check('after reload: still masquerade', (await p.locator('#admin-business').inputValue())==='masquerade');
+check('after reload: still masquerade', (await p.getByLabel('Funnel name').inputValue())==='Masquerade on the Runway');
 check('after reload: order kept', (await rows.nth(1).textContent()).includes('Burlesque'));
 const r2 = p.locator('section[aria-labelledby="order-title"] ol > li').nth(1);
 check('after reload: YouTube link kept', await r2.getByText('YouTube').isVisible());
@@ -36,10 +36,6 @@ check('after reload: uploaded video kept', !(await r2b.getByText('No video yet')
 await r2b.getByRole('button',{name:/^Preview /}).click(); await settle(p, 1000);
 check('preview plays the uploaded file', await p.evaluate(()=>{const v=document.querySelector('[role=dialog] video'); return !!v && v.src.startsWith('blob:')}));
 await p.keyboard.press('Escape'); await settle(p, 400);
-// Other businesses untouched
-await p.selectOption('#admin-business','medspa'); await settle(p, 800);
-check('other business untouched', await p.getByText(/Live\s*·\s*original reels/).isVisible());
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1000);
 // 4. Reset
 await p.getByRole('region',{name:'Publish'}).getByRole('button',{name:'Discard'}).click(); await settle(p, 400);
 check('reset: back to live', (await rows.nth(2).textContent()).includes('Burlesque') && await row().getByText('No video yet').isVisible() && (await rows.first().textContent()).includes('Masks on'));

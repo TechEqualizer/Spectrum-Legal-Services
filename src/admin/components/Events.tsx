@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
-import { builtInBusinesses } from "@/admin/business";
+import { selectAdminBusiness, useAdminEvents, useMaybeAdminBusiness, type AdminEvent } from "@/admin/AdminBusiness";
 import NewClientSheet from "@/admin/components/NewClientSheet";
 import CopyButton from "@/admin/components/ui/CopyButton";
 import { PlusIcon } from "@/admin/components/ui/icons";
@@ -41,8 +40,7 @@ function standing(live: Funnel, now: number) {
 export default function Events() {
   const router = useRouter();
   const events = useAdminEvents();
-  const allowed = useAdminBusinesses();
-  const current = useAdminBusiness();
+  const current = useMaybeAdminBusiness();
   const session = useAdminSession();
   const origin = useOrigin();
   const [now] = useState(() => Date.now());
@@ -55,7 +53,6 @@ export default function Events() {
   const canAdd = sources.length > 0;
 
   const organizers = [...new Map(events.map((e) => [e.organizer.slug, e.organizer])).values()];
-  const demos = builtInBusinesses.filter((b) => allowed.some((a) => a.funnel.slug === b.funnel.slug));
   const open = (slug: string) => {
     selectAdminBusiness(slug);
     router.push("/admin");
@@ -129,7 +126,7 @@ export default function Events() {
                 <EventRow
                   key={e.funnel.slug}
                   funnel={e.live}
-                  current={current.funnel.slug === e.funnel.slug}
+                  current={current?.funnel.slug === e.funnel.slug}
                   status={e.standing}
                   onOpen={() => open(e.funnel.slug)}
                   onDuplicate={runsOrganizer(session, e.organizer.slug) ? () => setSheet({ mode: "copy", source: e }) : undefined}
@@ -142,22 +139,13 @@ export default function Events() {
 
       {!events.length && (
         <p className="rounded-xl border border-gray-200 bg-white px-5 py-6 text-sm text-gray-600">
-          No events yet. Send Showlnk your flyer and we&apos;ll set up your first one with you.
+          {fullAccess
+            ? "No events yet. Add a client with New client to set up their first event."
+            : "No events yet. Send Showlnk your flyer and we'll set up your first one with you."}
         </p>
       )}
       {events.length > 0 && !canAdd && (
         <p className="px-1 text-sm text-gray-600">Next event coming up? Send Showlnk the flyer and we&apos;ll add it here.</p>
-      )}
-
-      {demos.length > 0 && (
-        <section aria-labelledby="demos-title">
-          <h2 id="demos-title" className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-gray-600">Demos</h2>
-          <ul role="list" className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
-            {demos.map((b) => (
-              <EventRow key={b.funnel.slug} funnel={b.funnel} current={current.funnel.slug === b.funnel.slug} onOpen={() => open(b.funnel.slug)} />
-            ))}
-          </ul>
-        </section>
       )}
 
       {addingClient && (

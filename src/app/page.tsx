@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Big_Shoulders } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
 import Dock from "@/components/showlnk/Dock";
+import SourcesBoard from "@/components/showlnk/SourcesBoard";
 import WaitlistStub from "@/components/showlnk/WaitlistStub";
 import "@/components/showlnk/showlnk.css";
 
@@ -9,7 +11,7 @@ import "@/components/showlnk/showlnk.css";
 
 const show = Big_Shoulders({ subsets: ["latin"], variable: "--font-show", axes: ["opsz"], display: "swap" });
 
-const title = "Showlnk · Your flyer, as reels that sell the night";
+const title = "Showlnk · Upload one flyer. Sell the experience.";
 const description =
   "Drop in your event flyer. Showlnk turns it into one link of vertical reels: the opening scene, The Night, Your People and Last Call, every one ending on your tickets. Get on the list for early access.";
 
@@ -27,8 +29,8 @@ const LINEUP = [
   { act: "Last Call", question: "Why buy now?", line: "The true reason to act: the date, the price that ends, the last tickets. Never fake scarcity." },
 ];
 
-// Illustrative only, and labeled as such on the page.
-const SAMPLE_SOURCES = [
+// What the organizer's board looks like, to show the idea.
+const BOARD_SOURCES = [
   { source: "Instagram bio", visitors: 412, tickets: 61 },
   { source: "Instagram story", visitors: 268, tickets: 44 },
   { source: "TikTok bio", visitors: 190, tickets: 19 },
@@ -44,7 +46,6 @@ function Wordmark({ className = "" }: { className?: string }) {
 }
 
 export default function ShowlnkHome() {
-  const most = Math.max(...SAMPLE_SOURCES.map((s) => s.visitors));
   return (
     <div className={`sl ${show.variable} font-sans`}>
       <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
@@ -62,24 +63,45 @@ export default function ShowlnkHome() {
       </header>
 
       <main id="main-content">
-        {/* The flyer: three lines of type, then the stub. */}
+        {/* The flyer: three lines of type and the stub, beside a real opening scene on a phone. */}
         <section aria-labelledby="sl-title" className="sl-wash relative">
-          <div className="mx-auto max-w-7xl px-5 pb-16 pt-6 sm:px-8 lg:pb-24 lg:pt-10">
-            <h1 id="sl-title" className="sl-display text-[clamp(3.4rem,10.5vw,6rem)] lg:text-[clamp(6rem,9.4vw,9.5rem)]">
-              <span className="block">Drop a flyer.</span>
-              <span className="block text-[var(--sl-gold)]">Get four reels.</span>
-              <span className="block">Sell the night.</span>
-            </h1>
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-14 lg:pb-24 lg:pt-10">
+            <div className="min-w-0">
+              <h1 id="sl-title" className="sl-display text-[clamp(3.4rem,10.5vw,6rem)] lg:text-[clamp(5rem,6.9vw,7.5rem)]">
+                <span className="block">Upload one flyer.</span>
+                <span className="block text-[var(--sl-gold)]">Sell the experience.</span>
+                <span className="block">Sell out the night.</span>
+              </h1>
 
-            <div className="mt-10 max-w-2xl lg:mt-14">
-              <p className="max-w-[58ch] text-base leading-relaxed text-[var(--sl-text)]/90 sm:text-lg">
-                Showlnk turns your event flyer into one link of vertical reels that sells your night. Every reel ends on your
-                ticket page, and every ticket click shows which reel and which post brought it.
-              </p>
-              <div className="mt-8">
-                <WaitlistStub id="join" />
+              <div className="mt-10 max-w-2xl lg:mt-12">
+                <p className="max-w-[58ch] text-base leading-relaxed text-[var(--sl-text)]/90 sm:text-lg">
+                  Guests don&apos;t buy a date and a price. They buy the night. Showlnk turns your flyer into one link of short
+                  reels that let them feel it before they&apos;re there, and every reel ends on your tickets.
+                </p>
+                <div className="mt-8">
+                  <WaitlistStub id="join" />
+                </div>
               </div>
             </div>
+
+            {/* What a guest sees first when they tap the link. */}
+            <figure className="sl-phone-wrap mx-auto w-[min(78vw,300px)] lg:w-[clamp(260px,22vw,320px)]">
+              <div className="sl-phone">
+                <div className="sl-phone-screen">
+                  <Image
+                    src="/showlnk/opening-scene.webp"
+                    alt="Big Love Productions' Showlnk link on a phone: Masquerade on the Runway, Saturday October 31 at 8 PM, with Sneak peek inside and Get tickets buttons"
+                    width={780}
+                    height={1688}
+                    sizes="(min-width: 1024px) 320px, 78vw"
+                    className="block h-auto w-full"
+                  />
+                </div>
+              </div>
+              <figcaption className="mt-4 text-center text-xs text-[var(--sl-muted)]">
+                Big Love Productions&apos; opening scene, live on Showlnk.
+              </figcaption>
+            </figure>
           </div>
         </section>
 
@@ -121,35 +143,7 @@ export default function ShowlnkHome() {
                 printed flyer. You see what works before the next drop, not after the night.
               </p>
             </div>
-            <figure className="rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night)] p-5 sm:p-7">
-              <figcaption className="flex items-baseline justify-between gap-4">
-                <span className="text-sm font-bold">Ticket clicks by source</span>
-                <span className="rounded-full border border-[var(--sl-lilac)]/50 px-2.5 py-0.5 text-xs font-bold text-[var(--sl-lilac)]">Sample numbers</span>
-              </figcaption>
-              <table className="mt-5 w-full text-left text-sm">
-                <thead className="sr-only">
-                  <tr>
-                    <th>Source</th>
-                    <th>Visitors</th>
-                    <th>Ticket clicks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SAMPLE_SOURCES.map((s) => (
-                    <tr key={s.source} className="border-t border-[var(--sl-line)] first:border-t-0">
-                      <td className="py-3 pr-3">
-                        <span className="block font-semibold">{s.source}</span>
-                        <span className="mt-2 block h-1.5 rounded-full bg-[var(--sl-line)]" aria-hidden="true">
-                          <span className="block h-full rounded-full bg-[var(--sl-gold)]" style={{ width: `${(s.visitors / most) * 100}%` }} />
-                        </span>
-                      </td>
-                      <td className="py-3 pr-3 text-right tabular-nums text-[var(--sl-muted)]">{s.visitors} visitors</td>
-                      <td className="py-3 text-right font-bold tabular-nums text-[var(--sl-gold)]">{s.tickets} tickets</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </figure>
+            <SourcesBoard sources={BOARD_SOURCES} />
           </div>
         </section>
 

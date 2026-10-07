@@ -22,7 +22,7 @@ const rate = (part: number, whole: number) => (whole ? part / whole : 0);
 export default function Overview() {
   const [range, setRange] = useState(ranges[1]);
   const business = useAdminBusiness();
-  const { results, real, error } = useResults(range.days);
+  const { results, error } = useResults(range.days);
   // An event sells tickets: its "bookings" are ticket clicks.
   const tickets = business.funnel.primaryCta === "tickets";
   const won = tickets ? { many: "Ticket clicks", rate: "Ticket click rate", short: "Ticket clicks" } : { many: "Bookings from reels", rate: "Booking rate", short: "Booked" };
@@ -63,7 +63,7 @@ export default function Overview() {
           {error || "Loading results…"}
         </p>
       ) : (
-        <Figures results={results} real={real} won={won} periodLabel={range.short} topicLabel={business.terms.topic} />
+        <Figures results={results} won={won} periodLabel={range.short} topicLabel={business.terms.topic} />
       )}
     </div>
   );
@@ -71,13 +71,11 @@ export default function Overview() {
 
 function Figures({
   results: { current, previous, daily, reels: rows },
-  real,
   won,
   periodLabel,
   topicLabel,
 }: {
   results: NonNullable<ReturnType<typeof useResults>["results"]>;
-  real: boolean;
   won: { many: string; rate: string; short: string };
   periodLabel: string;
   topicLabel: string;
@@ -86,7 +84,7 @@ function Figures({
   const bookRate = rate(current.booked, current.views);
   return (
     <>
-      {real && current.views === 0 && (
+      {current.views === 0 && (
         <p className="rounded-xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-600">
           No views in this period yet. Results appear here as people open your link.
         </p>

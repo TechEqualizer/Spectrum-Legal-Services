@@ -10,8 +10,10 @@ await p.goto(B + '/admin/overview'); await settle(p, 800);
 const nav = p.getByRole('navigation', { name: 'Admin' });
 const width = async () => Math.round((await nav.boundingBox()).width);
 const toggle = nav.getByRole('button', { name: /sidebar$/ });
+// Which event is shown: a picker with more than one event, otherwise its name.
+const businessOf = (page) => page.locator('#admin-business').or(page.getByRole('navigation', { name: 'Admin' }).getByText('Big Love Productions', { exact: true }));
 check('starts open', await width() === 240 && (await toggle.getAttribute('aria-label')) === 'Collapse sidebar' && (await toggle.getAttribute('aria-expanded')) === 'true', String(await width()));
-check('open: labels and business picker shown', await nav.getByRole('link', { name: 'Leads' }).getByText('Leads').isVisible() && await p.locator('#admin-business').isVisible());
+check('open: labels and business picker shown', await nav.getByRole('link', { name: 'Leads' }).getByText('Leads').isVisible() && await businessOf(p).isVisible());
 const column = p.locator('main').locator('xpath=..');
 const mainBefore = (await column.boundingBox()).width;
 
@@ -22,7 +24,7 @@ check('main area gets the room', (await column.boundingBox()).width > mainBefore
 const leads = nav.getByRole('link', { name: 'Leads' });
 check('icons keep their names (screen readers, tooltips)', await leads.count() === 1 && (await leads.getAttribute('title')) === 'Leads' && (await leads.getByText('Leads').boundingBox()).width <= 1);
 check('current page still marked', (await nav.locator('[aria-current="page"]').getAttribute('title')) === 'Results');
-check('business picker tucked away', !(await p.locator('#admin-business').isVisible()));
+check('business picker tucked away', !(await businessOf(p).isVisible()));
 const links = await nav.getByRole('link').evaluateAll(els => els.filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }));
 check('icon targets at least 44px', links.every(([w, h]) => w >= 44 && h >= 44), JSON.stringify(links));
 await p.screenshot({ path: S + '/sidebar-collapsed-1440.jpg' });
@@ -38,7 +40,7 @@ check('studio fits, no page scroll', await p.evaluate(() => scrollY === 0 && doc
 await p.screenshot({ path: S + '/sidebar-collapsed-studio-1440.jpg' });
 
 await toggle.click(); await animationsDone(p, 1000);
-check('expands again', await width() === 240 && await p.locator('#admin-business').isVisible());
+check('expands again', await width() === 240 && await businessOf(p).isVisible());
 check('expanded is remembered', await p.evaluate(() => localStorage.getItem('admin_nav_collapsed') === null));
 check('no errors', !errs.length, errs.join(' | '));
 await ctx.close();
@@ -50,7 +52,7 @@ await mp.goto(B + '/admin/overview'); await mp.evaluate(() => localStorage.setIt
 const tabs = mp.locator('nav ul a');
 check('phone: 6 tabs with labels', await tabs.count() === 6 && await tabs.first().getByText('Home').isVisible());
 check('phone: no collapse button', !(await mp.getByRole('button', { name: /sidebar$/ }).isVisible()));
-check('phone: business picker shown', await mp.locator('#admin-business').isVisible());
+check('phone: business picker shown', await businessOf(mp).isVisible());
 // The account menu closes on a tap outside and when a tab is chosen.
 const phoneMenu = mp.locator('details:has(summary[aria-label^="Account"])').first();
 await mp.locator('summary[aria-label^="Account"]').first().tap(); await settle(mp, 300);

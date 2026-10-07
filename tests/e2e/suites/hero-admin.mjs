@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==','base64');
 const b = await chromium.launch();
@@ -7,7 +7,7 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   await ctx.route(/i\.ytimg\.com|example\.com/, r=>r.fulfill({status:200, contentType:'image/png', body:png}));
   const p = await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(e.message));
   await p.goto('http://localhost:3002/admin'); await settle(p, 500);
-  await p.selectOption('#admin-business', 'masquerade'); await settle(p, 900);
+  await pickEvent(p, 'masquerade'); await settle(p, 900);
   const card = p.locator('section[aria-labelledby="hero-media-title"]');
   check(w+': card shows the live flyer photo', await card.getByText('Photo',{exact:true}).isVisible());
   const add = await p.getByRole('button',{name:'Add reel',exact:true}).boundingBox();

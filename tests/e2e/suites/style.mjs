@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -12,7 +12,7 @@ p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.te
 process.on('uncaughtException', e => { console.log(res.join('\n')); console.log('ERR', e.message.split('\n')[0]); process.exit(1); });
 await p.goto(B + '/admin'); await settle(p, 500);
 await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 500);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
+await pickEvent(p, 'masquerade'); await settle(p, 1300);
 const dates = p.locator('section[aria-labelledby="dates-title"]');
 const card = p.locator('section[aria-labelledby="hero-media-title"]');
 const dlg = p.locator('dialog[open]');
@@ -98,7 +98,7 @@ check('stored: blurred backdrop', pub?.backdrop?.fit === 'blur' && pub.backdrop.
 
 // After a reload (fresh browser): the Style sheet still has everything
 await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 800);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1500);
+await pickEvent(p, 'masquerade'); await settle(p, 1500);
 await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 300);
 check('after reload: suggestions kept', await sugg.getByRole('radio').count() === 4);
 check('after reload: flyer kept', await dlg.getByRole('radio', { name: 'Flyer', exact: true }).isEnabled() && (await dlg.getByRole('radio', { name: 'Blurred', exact: true }).getAttribute('aria-checked')) === 'true');

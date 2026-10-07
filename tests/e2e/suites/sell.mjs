@@ -1,8 +1,9 @@
 import { chromium, settle } from '../browser.mjs';
+import { addGoldenHour } from '../fixtures/golden-hour.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-// The sample's dates move with the calendar (src/data/events-sample.ts): its
+// The test event's dates move with the calendar (fixtures/golden-hour.mjs): its
 // "this Sunday" is today until 9pm, then next Sunday. Visit on that Sunday
 // morning, so the page always sells a date under 48 hours away.
 const now = new Date();
@@ -11,6 +12,7 @@ sunday.setDate(now.getDate() + ((7 - now.getDay()) % 7 || (now.getHours() >= 21 
 sunday.setHours(10, 0, 0, 0);
 const day = sunday.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); // "Sun, Oct 11"
 const short = sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // "Oct 11"
+await addGoldenHour();
 const b = await chromium.launch();
 for (const [w, h] of [[390, 844], [360, 640], [1440, 900]]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, isMobile: w < 500, hasTouch: w < 500, deviceScaleFactor: 2 });
@@ -18,7 +20,7 @@ for (const [w, h] of [[390, 844], [360, 640], [1440, 900]]) {
   await ctx.route(/i\.ytimg\.com/, r => r.fulfill({ status: 200, contentType: 'image/png', body: png }));
   await ctx.route(/youtube-nocookie\.com/, r => r.fulfill({ status: 200, contentType: 'text/html', body: '<body></body>' }));
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto(B + '/f/events'); await settle(p, 3000);
+  await p.goto(B + '/f/sundays'); await settle(p, 3000);
   const tag = `${w}x${h}`;
   const tickets = p.locator('main a', { hasText: /^Tickets/ }).first();
   const tClass = await tickets.getAttribute('class');

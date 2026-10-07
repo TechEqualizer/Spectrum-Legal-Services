@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
-import { selectAdminBusiness, useAdminBusiness, useAdminBusinesses, useAdminEvents } from "@/admin/AdminBusiness";
+import { selectAdminBusiness, useAdminBusinesses, useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
 import Avatar from "@/admin/components/ui/Avatar";
@@ -51,15 +51,15 @@ const useCollapsed = () =>
 
 export default function AdminNav() {
   const pathname = usePathname();
-  const { funnel } = useAdminBusiness();
+  // Null for an admin with no events yet: the Showlnk brand stands in.
+  const funnel = useMaybeAdminBusiness()?.funnel ?? null;
   const businesses = useAdminBusinesses();
   const events = useAdminEvents();
-  // The dropdown's groups: each client (organizer) with their events, then the demos.
-  const groups: { label: string; demo: boolean; items: typeof businesses }[] = [];
+  // The dropdown's groups: each client (organizer) with their events.
+  const groups: { label: string; items: typeof businesses }[] = [];
   for (const b of businesses) {
-    const organizer = events.find((e) => e.funnel.slug === b.funnel.slug)?.organizer;
-    const label = organizer?.name ?? "Demos";
-    const group = groups.find((g) => g.label === label) ?? groups[groups.push({ label, demo: !organizer, items: [] }) - 1];
+    const label = events.find((e) => e.funnel.slug === b.funnel.slug)?.organizer.name ?? b.funnel.brand.name;
+    const group = groups.find((g) => g.label === label) ?? groups[groups.push({ label, items: [] }) - 1];
     group.items.push(b);
   }
   const collapsed = useCollapsed();
@@ -71,14 +71,10 @@ export default function AdminNav() {
       aria-label="Admin"
     >
       <div className={`flex items-center justify-between gap-4 px-4 py-3 lg:block lg:py-6 ${folded("lg:px-3", "lg:px-5")}`}>
-        <Link
-          href={funnel.sample ? `/f/${funnel.slug}` : "/"}
-          aria-label={funnel.sample ? "Open the funnel link" : "Back to the site"}
-          className={`inline-flex ${folded("lg:hidden")}`}
-        >
-          <BrandLogo brand={funnel.brand} size="sm" />
+        <Link href="/" aria-label="Back to the site" className={`inline-flex ${folded("lg:hidden")}`}>
+          {funnel ? <BrandLogo brand={funnel.brand} size="sm" /> : <span className="text-lg font-black tracking-tight">Showlnk</span>}
         </Link>
-        {collapsed && (
+        {collapsed && funnel && (
           <span
             title={funnel.brand.name}
             aria-hidden="true"
@@ -100,23 +96,23 @@ export default function AdminNav() {
           <label htmlFor="admin-business" className="sr-only">Business</label>
           <select
             id="admin-business"
-            value={funnel.slug}
+            value={funnel?.slug}
             onChange={(e) => selectAdminBusiness(e.target.value)}
             className="mt-1 w-full max-w-48 rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-sky-accent lg:max-w-none [&>option]:text-charcoal"
           >
-            {/* Each client's events by name, then the demos. */}
+            {/* Each client's events by name. */}
             {groups.map((g) => (
               <optgroup key={g.label} label={g.label}>
                 {g.items.map((b) => (
                   <option key={b.funnel.slug} value={b.funnel.slug}>
-                    {g.demo ? b.funnel.brand.name : b.funnel.brand.seriesLabel}
+                    {b.funnel.brand.seriesLabel}
                   </option>
                 ))}
               </optgroup>
             ))}
           </select>
           </>)}
-          {businesses.length <= 1 && <p className="mt-1 text-sm font-semibold">{funnel.brand.name}</p>}
+          {businesses.length <= 1 && <p className="mt-1 text-sm font-semibold">{funnel ? funnel.brand.name : "No events yet"}</p>}
         </div>
         <Account collapsed={collapsed} />
       </div>

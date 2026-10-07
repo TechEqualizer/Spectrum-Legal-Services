@@ -1,6 +1,6 @@
 // Real results: an organizer's event shows what visitors actually did (from
-// funnel_stats), the demos keep their sample data, and nobody sees numbers
-// that aren't theirs.
+// funnel_stats), with no sample data anywhere, and nobody sees numbers that
+// aren't theirs.
 import { chromium, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
@@ -14,7 +14,7 @@ const p = await admin.newPage(); p.on('pageerror', (e) => errs.push(e.message));
 await p.goto(B + '/admin/overview'); await settle(p, 1500);
 let text = await p.locator('main').innerText();
 check('no views yet says so', text.includes('No views in this period yet'), text.slice(0, 200));
-check('banner: only leads are sample', (await p.locator('body').innerText()).includes('Leads are sample data.'));
+check('no sample data anywhere', !/sample/i.test(await p.locator('body').innerText()));
 check('event wording: ticket clicks', text.includes('Ticket clicks') && !text.includes('Bookings from reels'));
 check('never NaN', !/NaN/.test(text));
 
@@ -46,19 +46,14 @@ const instagram = table.getByRole('row', { name: /Instagram/ });
 check('Share: Instagram brought 1 visitor and 1 ticket click', /Instagram[\s\S]*\b1\b[\s\S]*\b1\b[\s\S]*100\.0/.test(await instagram.innerText()), await instagram.innerText());
 const tiktok = table.getByRole('row', { name: /TikTok/ });
 check('Share: TikTok brought 1 visitor, no clicks', /TikTok[\s\S]*\b1\b[\s\S]*\b0\b/.test(await tiktok.innerText()), await tiktok.innerText());
-check('Share: not labeled sample', !(await p.locator('main').innerText()).includes('Sample data.'));
+check('Share: not labeled sample', !/sample/i.test(await p.locator('main').innerText()));
 
 await p.goto(B + '/admin'); await settle(p, 1500);
 check('studio rows show real views', (await p.locator('section[aria-labelledby="order-title"]').innerText()).includes('Results: last 30 days.'));
 
-// 4. A demo keeps its sample data.
-await p.evaluate(() => localStorage.setItem('admin_business', 'medspa'));
-await p.goto(B + '/admin/links'); await settle(p, 1200);
-check('demo stays sample', (await p.locator('main').innerText()).includes('Sample data.') && (await p.locator('body').innerText()).includes('Results and leads are sample data.'));
-
-// 5. Nobody else's numbers.
-const demoStats = await p.request.get(B + '/api/admin/stats?slug=medspa&days=30&tz=America/Detroit');
-check('no real stats for a demo', demoStats.status() === 404, String(demoStats.status()));
+// 4. Nobody else's numbers.
+const gone = await p.request.get(B + '/api/admin/stats?slug=medspa&days=30&tz=America/Detroit');
+check('no stats for the old sample', gone.status() === 404, String(gone.status()));
 const anon = await (await b.newContext()).request.get(B + '/api/admin/stats?slug=masquerade&days=30&tz=UTC');
 check('signed out: refused', anon.status() === 401, String(anon.status()));
 const odd = await p.request.get(B + '/api/admin/stats?slug=masquerade&days=12&tz=UTC');

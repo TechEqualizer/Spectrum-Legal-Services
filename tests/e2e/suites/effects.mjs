@@ -1,10 +1,12 @@
 // The main button's effect: Shimmer (the default), Glow or Edge light,
 // Subtle or Bold, chosen in Design, shown live in the phone and published
 // with the look. Still for people who ask for less motion.
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
+import { addGoldenHour } from '../fixtures/golden-hour.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+await addGoldenHour();
 const b = await chromium.launch();
 const errs = [];
 const route = async (ctx) => {
@@ -13,11 +15,11 @@ const route = async (ctx) => {
 };
 const fxOf = (loc) => loc.evaluate((e) => ({ fx: e.dataset.fx, strength: e.dataset.fxStrength, self: getComputedStyle(e).animationName, after: getComputedStyle(e, '::after').animationName, before: getComputedStyle(e, '::before').animationName }));
 
-// A look nobody has changed (the Golden Hour sample): the original shimmer.
+// A look nobody has changed (the test-only Golden Hour event): the original shimmer.
 const vctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'America/Detroit' });
 await route(vctx);
 const v = await vctx.newPage(); v.on('pageerror', (e) => errs.push(e.message));
-await v.goto(B + '/f/events'); await settle(v, 1500);
+await v.goto(B + '/f/sundays'); await settle(v, 1500);
 let fx = await fxOf(v.locator('main .cine-cta').first());
 check('default: subtle shimmer', fx.fx === 'shimmer' && fx.strength === 'subtle' && fx.after === 'cine-shimmer', JSON.stringify(fx));
 await v.goto(B + '/f/masquerade'); await settle(v, 1500);
@@ -28,7 +30,7 @@ await route(ctx);
 const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
 await p.goto(B + '/admin'); await settle(p, 500);
 await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 500);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 3000);
+await pickEvent(p, 'masquerade'); await settle(p, 3000);
 const effects = p.getByRole('radiogroup', { name: 'Button effect' });
 check('three effects offered, shimmer chosen', JSON.stringify(await effects.getByRole('radio').allTextContents()) === JSON.stringify(['TicketsShimmer', 'TicketsGlow', 'TicketsEdge light']) && (await effects.getByRole('radio', { name: /Shimmer/ }).getAttribute('aria-checked')) === 'true');
 check('each one plays on a small button', await effects.locator('.cine-cta[data-fx="glow"]').count() === 1 && await effects.locator('.cine-cta[data-fx="edge"]').count() === 1);

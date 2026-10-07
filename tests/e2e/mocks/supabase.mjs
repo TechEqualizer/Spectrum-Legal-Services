@@ -31,7 +31,7 @@ const canPublishFunnel = (email, slug) => Boolean(users[email]?.admin) && (users
 const publications = new Map(); // slug -> row
 // What visitors did, like reel_events and leads (kept for funnel_stats).
 const reelEvents = []; // { at, visitor, funnel, reel, event, tag }
-const leadRows = []; // { at, funnel, intent, tag }
+const leadRows = []; // { id, at, funnel, visitor, intent, tag, name, phone, email, caseType, message, reel }
 const waitlist = new Map(); // email -> { email, instagram, source_tag, created_at }
 const files = new Map(); // path -> {type, body}
 const sessions = new Map(); // token -> email
@@ -184,6 +184,11 @@ http.createServer((req, res) => {
     }
     // Test control: add an event straight to the table (a second organizer event, dated).
     if (p === '/__event' && req.method === 'POST') { eventFunnels.set(body.slug, body); return json(res, 201); }
+    // Test control: visitors' past reel events, dated `daysAgo` days back (for results over several periods).
+    if (p === '/__reel-events' && req.method === 'POST') {
+      for (const e of body) reelEvents.push({ at: Date.now() - (e.daysAgo ?? 0) * 864e5, visitor: e.visitor ?? `visitor-${++seq}`, funnel: e.funnel, reel: e.reel, event: e.event, tag: e.tag ?? null });
+      return json(res, 201);
+    }
     if (p === '/rest/v1/rpc/log_reel_event_v2') {
       reelEvents.push({ at: Date.now(), visitor: body.p_visitor_id, funnel: body.p_funnel_id, reel: body.p_reel_id, event: body.p_event, tag: body.p_source_tag ?? null });
       return json(res, 204);
@@ -201,9 +206,38 @@ http.createServer((req, res) => {
       if (!email || !users[email]?.admin || !users[email].slugs.includes('*')) return json(res, 200, []);
       return json(res, 200, [...waitlist.values()].sort((a, b) => b.created_at.localeCompare(a.created_at)));
     }
+    // Like the real submit_lead_v3: stores the lead (trimmed) and returns its id.
     if (p === '/rest/v1/rpc/submit_lead_v3') {
-      leadRows.push({ at: Date.now(), funnel: body.p_funnel_id, intent: body.p_intent, tag: body.p_source_tag ?? null });
-      return json(res, 204);
+      const blank = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+      const id = `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`;
+      leadRows.push({
+        id, at: Date.now(), funnel: body.p_funnel_id ?? null, visitor: body.p_visitor_id ?? null,
+        intent: body.p_intent ?? 'book', tag: body.p_source_tag ?? null,
+        name: String(body.p_name).trim(), phone: blank(body.p_phone), email: blank(body.p_email)?.toLowerCase() ?? null,
+        caseType: body.p_case_type, message: blank(body.p_message), reel: body.p_referring_reel_id ?? null,
+      });
+      return json(res, 200, id);
+    }
+    // Like the real funnel_leads: an event's leads, newest first (at most 500), for its admins only,
+    // each with the reels that visitor watched to the end before asking. Never the visitor id.
+    if (p === '/rest/v1/rpc/funnel_leads') {
+      const email = emailOf(req);
+      if (!email || !canPublishFunnel(email, body.p_slug)) return json(res, 403, { message: 'not your event' });
+      const funnel = eventFunnels.get(body.p_slug)?.funnel_id;
+      if (!funnel) return json(res, 200, null);
+      const leads = leadRows.filter((l) => l.funnel === funnel).sort((a, b) => b.at - a.at).slice(0, 500);
+      return json(res, 200, leads.map((l) => {
+        const firsts = new Map();
+        for (const e of reelEvents) {
+          if (!l.visitor || e.visitor !== l.visitor || e.funnel !== funnel || e.event !== 'completed' || e.at > l.at) continue;
+          if (!firsts.has(e.reel) || e.at < firsts.get(e.reel)) firsts.set(e.reel, e.at);
+        }
+        return {
+          id: l.id, created_at: new Date(l.at).toISOString(), name: l.name, phone: l.phone, email: l.email,
+          intent: l.intent, case_type: l.caseType, message: l.message, referring_reel_id: l.reel, source_tag: l.tag,
+          watched: [...firsts].sort((a, b) => a[1] - b[1]).map(([reel]) => reel),
+        };
+      }));
     }
     // Like the real funnel_stats: an event's totals, for its admins only.
     if (p === '/rest/v1/rpc/funnel_stats') {

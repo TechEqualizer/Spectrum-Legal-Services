@@ -26,7 +26,10 @@ await sheet.getByRole('checkbox').first().check().catch(() => {});
 await sheet.getByRole('button', { name: 'Text me updates' }).click(); await settle(p, 800);
 check('lead actually sent', leads.length === 1 && leads[0].funnelId === 'masquerade-v1', JSON.stringify(leads).slice(0, 200));
 await ctx.close(); const ctx2 = await b.newContext({ storageState: S + '/auth.json' }); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(B + '/admin'); await settle(p2, 800);
-check('admin lists Big Love, not Golden Hour', (await p2.locator('#admin-business optgroup').evaluateAll((gs) => gs.map((g) => g.label))).includes('Big Love Productions') && !(await p2.locator('#admin-business option').allTextContents()).join('|').includes('Golden Hour'));
+const navText = await p2.locator('nav[aria-label="Admin"]').innerText();
+check('admin shows Big Love, no demos', navText.includes('Big Love') && !/Aurelia|Demos/.test(navText), navText.slice(0, 200));
+// The sample links are gone for good.
+for (const gone of ['/f/medspa', '/f/events']) check(`${gone} is a 404`, (await fetch(B + gone)).status === 404);
 const missing = await fetch(B + '/f/no-such-event');
 check('unknown link is a 404', missing.status === 404, String(missing.status));
 check('no page errors', errs.length === 0, errs.join(' | '));

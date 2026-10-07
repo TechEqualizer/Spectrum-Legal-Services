@@ -116,6 +116,47 @@
   z-index: 2;
 }
 
+/* ---- The phone in the hero ------------------------------------------- */
+
+.sl-phone {
+  position: relative;
+  border-radius: 44px;
+  padding: 9px;
+  background: linear-gradient(160deg, #2a2233, #120d18 45%, #2a2233);
+  box-shadow:
+    0 0 0 1px rgb(244 238 228 / 0.14),
+    0 40px 80px -24px rgb(0 0 0 / 0.85),
+    0 0 90px -10px rgb(232 190 90 / 0.18);
+}
+/* The screen: a status-bar strip for the speaker slot, then the scene. */
+.sl-phone-screen {
+  overflow: hidden;
+  border-radius: 35px;
+  padding-top: 30px;
+  background: #0b0710;
+}
+/* The speaker slot. */
+.sl-phone::after {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  width: 24%;
+  height: 20px;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: #050307;
+}
+.sl-phone-wrap {
+  animation: sl-rise 1000ms cubic-bezier(0.16, 1, 0.3, 1) both 150ms;
+}
+@keyframes sl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
 /* ---- The admission stub ----------------------------------------------- */
 
 .sl-stub {
@@ -260,6 +301,7 @@
 @media (prefers-reduced-motion: reduce) {
   .sl-card,
   .sl-stamp,
+  .sl-phone-wrap,
   .sl-stub-tab,
   .sl-dock {
     animation: none !important;

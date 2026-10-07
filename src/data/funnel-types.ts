@@ -90,7 +90,7 @@ export type FunnelBrand = {
   buttonEffect?: ButtonEffect;
   /** The organizer's profile photo, in the circle beside the name on each reel (their initial without it). */
   avatar?: string;
-  /** Shown beside the avatar on each reel, like a channel name ("@aurelia.medspa"); defaults to the name. */
+  /** Shown beside the avatar on each reel, like a channel name ("@biglove.productions"); defaults to the name. */
   handle?: string;
   /** Two short lines beside the logo. */
   byline?: [string, string];

@@ -1,14 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
-import { builtInBusinesses, eventBusiness, type AdminBusiness } from "@/admin/business";
+import { eventBusiness, type AdminBusiness } from "@/admin/business";
 import PasswordSheet from "@/admin/components/PasswordSheet";
-import { mayEdit, useAdminSession } from "@/admin/session";
+import { useAdminSession } from "@/admin/session";
 import type { Funnel } from "@/data/funnel-types";
 
-// Which business the admin preview shows. Remembered in this browser only,
-// as a convenience; it falls back to the first business.
+// Which event the admin shows. Remembered in this browser only, as a
+// convenience; it falls back to the first event.
 const KEY = "admin_business";
 const listeners = new Set<() => void>();
 let memory: string | null = null;
@@ -47,22 +48,28 @@ export function useAdminEvents(): AdminEvent[] {
   return useContext(EventsContext);
 }
 
-/** The businesses this admin may edit: organizers' events first, then the demos. */
+/** The events this admin may edit (checked on the server), as admin businesses. */
 export function useAdminBusinesses(): AdminBusiness[] {
-  const session = useAdminSession();
   const adminEvents = useContext(EventsContext);
-  return useMemo(() => {
-    const builtIn = new Set(builtInBusinesses.map((b) => b.funnel.slug));
-    const events = adminEvents.filter((e) => !builtIn.has(e.funnel.slug)).map((e) => eventBusiness(e.funnel));
-    // Events come checked from the server (including those an organizer's admin runs); demos are checked here.
-    return [...events, ...builtInBusinesses.filter((b) => mayEdit(session, b.funnel.slug))];
-  }, [adminEvents, session]);
+  return useMemo(() => adminEvents.map((e) => eventBusiness(e.funnel)), [adminEvents]);
 }
 
-export function useAdminBusiness(): AdminBusiness {
+/** The event being edited, or null when this admin has no events yet. */
+export function useMaybeAdminBusiness(): AdminBusiness | null {
   const allowed = useAdminBusinesses();
   const slug = useSyncExternalStore(subscribe, read, () => null);
-  return allowed.find((b) => b.funnel.slug === slug) ?? allowed[0] ?? builtInBusinesses[0];
+  return allowed.find((b) => b.funnel.slug === slug) ?? allowed[0] ?? null;
+}
+
+/**
+ * The event being edited. Only for screens about one event (Reels, Leads,
+ * Results, Share): AdminFrame shows "No events yet" instead of them when
+ * there is none.
+ */
+export function useAdminBusiness(): AdminBusiness {
+  const business = useMaybeAdminBusiness();
+  if (!business) throw new Error("useAdminBusiness: no event to show (AdminFrame should have shown No events yet)");
+  return business;
 }
 
 const noSubscribe = () => () => {};
@@ -77,9 +84,13 @@ export function selectAdminBusiness(slug: string) {
   listeners.forEach((notify) => notify());
 }
 
+// Screens that work without an event: everything else is about one event.
+const WITHOUT_EVENT = ["/admin/home", "/admin/events", "/admin/settings"];
+
 /**
- * Applies the selected business's colors to the admin, and remounts the page
- * when the business changes so every editor starts from that business.
+ * Applies the selected event's colors to the admin, and remounts the page
+ * when the event changes so every editor starts from that event. An admin
+ * with no events yet sees "No events yet" on the screens about one event.
  */
 export function AdminFrame({
   nav,
@@ -88,38 +99,50 @@ export function AdminFrame({
   nav: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const business = useAdminBusiness();
-  const { funnel } = business;
+  const business = useMaybeAdminBusiness();
   const session = useAdminSession();
-  // An organizer's event shows its real results; leads stay sample data for now.
-  const realResults = useContext(EventsContext).some((e) => e.funnel.slug === funnel.slug);
-  // The page itself renders in the browser only: which business it shows is
+  const pathname = usePathname();
+  // The page itself renders in the browser only: which event it shows is
   // remembered there, and its dates and times are in the admin's own time
   // zone, so a server render would show the wrong ones for a moment.
   const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
   // The Reels page is a full-width studio on wide screens.
-  const studio = usePathname() === "/admin";
+  const studio = pathname === "/admin" && Boolean(business);
+  const needsEvent = !WITHOUT_EVENT.some((p) => pathname.startsWith(p));
   return (
     <div
       className="min-h-screen bg-soft-gray text-charcoal lg:flex"
-      style={funnel.brand.theme as React.CSSProperties}
+      style={business?.funnel.brand.theme as React.CSSProperties | undefined}
     >
       {nav}
       <div className="min-w-0 flex-1">
-        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 md:px-8 md:text-left">
-          <strong>{realResults ? "Leads are sample data." : "Results and leads are sample data."}</strong> Reel edits save as
-          you go; Publish puts them on your live link.
-          {funnel.sample && <> {funnel.brand.name} is a sample business.</>}
-        </p>
         <main
-          key={funnel.id}
+          key={business?.funnel.id ?? "none"}
           id="main-content"
           className={`mx-auto max-w-6xl px-4 pb-24 pt-6 md:px-8 md:pt-8 lg:pb-8 ${studio ? "xl:max-w-none xl:px-6 xl:pb-0 xl:pt-4" : ""}`}
         >
-          {inBrowser ? children : <div className="min-h-[60vh]" aria-busy="true" />}
+          {!inBrowser ? <div className="min-h-[60vh]" aria-busy="true" /> : !business && needsEvent ? <NoEvents /> : children}
         </main>
         {session.mustChangePassword && <PasswordSheet firstTime />}
       </div>
     </div>
+  );
+}
+
+/** For an admin with no events yet, on a screen about one event. */
+function NoEvents() {
+  const fullAccess = useAdminSession().slugs.includes("*");
+  return (
+    <section className="mx-auto max-w-xl rounded-xl border border-gray-200 bg-white px-5 py-8 text-center" aria-labelledby="no-events-title">
+      <h1 id="no-events-title" className="text-lg font-bold text-deep-navy">No events yet</h1>
+      <p className="mx-auto mt-1 max-w-md text-sm text-gray-600">
+        {fullAccess
+          ? "Add a client and their first event. Its reels, leads and results show up here."
+          : "Once your first event is set up, its reels, leads and results show up here. Send Showlnk your flyer and we'll set it up with you."}
+      </p>
+      <Link href="/admin/events" className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue">
+        Go to Events
+      </Link>
+    </section>
   );
 }

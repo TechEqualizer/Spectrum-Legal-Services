@@ -63,14 +63,14 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
 - Stack: Next.js 16 App Router, React 19, Tailwind 4, Supabase (auth,
   publications, storage, leads), Claude API for flyers and drafts, Vercel.
 - Organizers and their events live in the database (`organizers`,
-  `event_funnels`); the demos stay in code. Several events per organizer and
-  one permanent organizer link are planned next.
-- Results and leads shown in the admin are sample numbers until real
-  tracking data is wired in.
+  `event_funnels`); only private DM demos stay in code. Several events per
+  organizer and one permanent organizer link (`/f/<organizer>`) work.
+- Results and leads in the admin are real, from the database, and only an
+  event's own admins see them. There is no sample data in the admin.
 - Video generation inside the product is not built; organizers copy prompts
   into a video tool and upload the clips.
-- The med spa sample (`/f/medspa`) remains as a demo; the focus is events and
-  nightlife.
+- The sample funnels (the med spa at `/f/medspa`, Golden Hour at
+  `/f/events`) are gone; the focus is events and nightlife.
 
 ## Brand Commitments
 
@@ -86,8 +86,8 @@ that earned it (Eventbrite affiliate codes, UTM tags elsewhere).
 - One live client: Big Love Productions, Masquerade on the Runway
   (`/f/masquerade`, seeded from `supabase/seed/biglove.json`), with its flyer
   and Eventbrite details (`public/clients/masquerade`).
-- Sample funnels, always labeled as samples: Golden Hour Sundays
-  (`/f/events`) and Aurelia Med Spa (`/f/medspa`).
+- No sample funnels or sample admin data: Big Love starts from fresh, real
+  data (production stats were wiped before launch).
 - No real testimonials, sales figures, conversion rates or customer counts
   exist yet. Never present sample results as real ones.
 
