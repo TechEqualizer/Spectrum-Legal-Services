@@ -1,8 +1,8 @@
 # End-to-end tests
 
 Real-browser tests for the funnel links and the admin, run against
-stand-ins for Supabase and the Claude API, so nothing touches real services
-or costs anything.
+stand-ins for Supabase, the Claude API and Eventbrite, so nothing touches
+real services or costs anything.
 
 ```sh
 npm run test:e2e                  # build, then every suite (about 7 minutes)
@@ -16,7 +16,9 @@ fresh mock state. It prints one line per suite and exits non-zero if any
 check fails. Each suite's full output, plus screenshots, goes to
 `tests/e2e/.out` (not committed).
 
-Ports 3002, 54321 (mock Supabase) and 54400 (mock Claude) must be free.
+Ports 3002, 3003 (the `eventbrite` suite's second app, without Eventbrite
+settings), 54321 (mock Supabase), 54400 (mock Claude) and 54600 (mock
+Eventbrite) must be free.
 Building replaces the app's `.next` folder with a test build, so run
 `npm run build` again before `npm start` for real.
 
@@ -34,6 +36,13 @@ Building replaces the app's `.next` folder with a test build, so run
     sent from Big Love's live link showing with its reel, source and the
     reels watched first, who may see leads, no sample wording anywhere in
     the admin, and the old sample links (`/f/medspa`, `/f/events`) as 404s.
+  - `eventbrite`: Big Love's organizer connects Eventbrite (orders already
+    placed are imported), a webhook order from Instagram shows as tickets
+    sold on Results, Share and Home, refunds lower it, forged webhooks and
+    a mismatched state change nothing, another business's admin
+    (`rival@example.com`) can't see or touch the connection, the token
+    never reaches the browser, disconnecting keeps the history, and a
+    second app on port 3003 without the settings shows "not turned on yet".
   - `link`: a call-first link that isn't live yet (`/f/velvet-room`, added
     to the mock for the suite: forms simulate, tracking is real), plus the
     admin's link builder.
@@ -49,12 +58,27 @@ Building replaces the app's `.next` folder with a test build, so run
   settle that ran out of time and what was still busy.
 - `mocks/supabase.mjs`: auth, the publications table and storage, kept in
   memory. Test accounts: `tester@example.com` / `tester-pass-1` (signed in
-  for the suites) and `owner@example.com` (first sign-in flow). Control
+  for the suites), `owner@example.com` (first sign-in flow),
+  `organizer@example.com` / `organizer-pass-1` (runs Big Love only) and
+  `rival@example.com` / `rival-pass-1` (another business's admin). Control
   routes: `/__state`, `/__reset`, `/__log`, `/__ttl?s=`, and `/__event`
   (adds an event row straight to the table), and `/__reel-events` (adds
   visitors' reel events, each `daysAgo` days back, for results over several
   periods). Leads sent through `submit_lead_v3` are kept, and
   `funnel_leads` returns them to the event's admins, like the database.
+- `mocks/eventbrite.mjs`: Eventbrite's OAuth (authorize signs the test
+  account in at once and redirects back with the code and state; token) and
+  the v3 API the app uses (`users/me`, its two organizations, an event's
+  owner, webhooks made and removed, orders with attendees, an event's
+  orders two per page). The runner points the app at it
+  (`EVENTBRITE_OAUTH_BASE`, `EVENTBRITE_API_BASE`) with a test client id,
+  secret and token key. Control routes: `/__orders` (add or replace
+  orders), `/__fire` (`{ order_id, action }` delivers a webhook for that
+  order to every webhook it holds, like Eventbrite; `{ endpoint, body }`
+  delivers any body, for forged deliveries), `/__deny` (the next sign-in is
+  refused), `/__state`, `/__reset`. The Supabase mock keeps
+  `eventbrite_connections` and `ticket_sales` (the secret key only, like
+  the real tables) and adds tickets sold to `funnel_stats`.
 - `mocks/claude.mjs`: answers flyer reads (`POST /__mode` with `multi`,
   `single`, `none` or `refusal`) and funnel drafts. `/__last` returns the
   last request, so suites can check the model, schema and prompt.

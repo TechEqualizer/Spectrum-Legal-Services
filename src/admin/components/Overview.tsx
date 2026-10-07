@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import OutcomeBars from "@/admin/components/OutcomeBars";
+import SalesHint from "@/admin/components/SalesHint";
 import StatTile from "@/admin/components/StatTile";
 import ViewsChart from "@/admin/components/ViewsChart";
 import { useAdminBusiness } from "@/admin/AdminBusiness";
@@ -70,7 +71,7 @@ export default function Overview() {
 }
 
 function Figures({
-  results: { current, previous, daily, reels: rows },
+  results: { current, previous, daily, reels: rows, sales },
   won,
   periodLabel,
   topicLabel,
@@ -89,12 +90,17 @@ function Figures({
           No views in this period yet. Results appear here as people open your link.
         </p>
       )}
-      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-3 md:gap-4 ${sales ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         <StatTile label="Reel views" value={formatNumber(current.views)} delta={change(current.views, previous.views)} periodLabel={periodLabel} />
         <StatTile label="Watch-through rate" value={formatPercent(watchRate)} delta={change(watchRate, rate(previous.completed, previous.views))} periodLabel={periodLabel} />
         <StatTile label={won.many} value={formatNumber(current.booked)} delta={change(current.booked, previous.booked)} periodLabel={periodLabel} />
-        <StatTile label={won.rate} value={`${(bookRate * 100).toFixed(1)}%`} delta={change(bookRate, rate(previous.booked, previous.views))} periodLabel={periodLabel} />
+        {sales && <StatTile label="Tickets sold" value={formatNumber(sales.current)} delta={change(sales.current, sales.previous)} periodLabel={periodLabel} />}
+        {/* With five tiles, the last one fills the phone's last row. */}
+        <div className={sales ? "col-span-2 lg:col-span-1 [&>div]:h-full" : "contents"}>
+          <StatTile label={won.rate} value={`${(bookRate * 100).toFixed(1)}%`} delta={change(bookRate, rate(previous.booked, previous.views))} periodLabel={periodLabel} />
+        </div>
       </div>
+      {!sales && <SalesHint className="-mt-3" />}
 
       <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="views-title">
         <h2 id="views-title" className="text-base font-bold text-deep-navy">

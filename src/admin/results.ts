@@ -18,6 +18,13 @@ export type Results = {
   reels: ReelTotals[];
   /** Per place the link was shared, most visitors first. */
   sources: SourceTotals[];
+  /**
+   * Tickets sold on Eventbrite, when the organizer has it connected (or sales
+   * were recorded before): this period and the one before, and those sold
+   * without one of our tracking codes ("Eventbrite (other)"). null: no sales
+   * to show, so the screens keep to ticket clicks.
+   */
+  sales: { current: number; previous: number; other: number } | null;
 };
 
 /** What /api/admin/stats returns (the database's funnel_stats). */
@@ -28,7 +35,16 @@ export type StatsResponse = {
   reels: { reel: string; event: string; n: number }[];
   sources: { tag: string | null; visitors: number; tickets: number; calls: number }[];
   updates: { tag: string | null; n: number }[];
+  /** Tickets sold (Eventbrite), this period and the one before. Missing before the Eventbrite migration. */
+  sold?: { current: number; previous: number };
+  /** Tickets sold this period per source tag; null: not from our links. */
+  sales?: { tag: string | null; n: number }[];
+  /** Whether the event's organizer has Eventbrite connected. */
+  eventbrite?: boolean;
 };
+
+/** Our ticket links without a ?src= tag carry reels_direct: that's the Direct row (no tag). */
+const salesTag = (tag: string) => (tag === "direct" ? "" : tag);
 
 /** Event counts as the admin's totals. A ticket click is an event's "booking". */
 const totalsOf = (counts: Record<string, number>): DailyReelStats => ({
@@ -56,15 +72,25 @@ export function realResults(raw: StatsResponse, funnel: Funnel, days: number, no
   const reels = funnel.reels.map((reel) => ({ reel, ...totalsOf(byReel.get(reel.id) ?? {}) })).sort((a, b) => b.views - a.views);
 
   const updates = new Map(raw.updates.map((u) => [u.tag ?? "", u.n]));
-  const tags = new Set([...raw.sources.map((s) => s.tag ?? ""), ...updates.keys()]);
+  // Tickets sold by source; orders without our code (tag null) are "other".
+  const sold = new Map<string, number>();
+  let other = 0;
+  for (const s of raw.sales ?? []) {
+    if (s.tag === null) other += s.n;
+    else sold.set(salesTag(s.tag), (sold.get(salesTag(s.tag)) ?? 0) + s.n);
+  }
+  const tags = new Set([...raw.sources.map((s) => s.tag ?? ""), ...updates.keys(), ...sold.keys()]);
   const sources = [...tags]
     .map((tag): SourceTotals => {
       const s = raw.sources.find((r) => (r.tag ?? "") === tag);
-      return { tag: tag || undefined, visitors: s?.visitors ?? 0, calls: s?.calls ?? 0, bookings: s?.tickets ?? 0, textLater: updates.get(tag) ?? 0 };
+      return { tag: tag || undefined, visitors: s?.visitors ?? 0, calls: s?.calls ?? 0, bookings: s?.tickets ?? 0, textLater: updates.get(tag) ?? 0, sold: sold.get(tag) ?? 0 };
     })
     .sort((a, b) => b.visitors - a.visitors);
 
-  return { current: totalsOf(raw.current), previous: totalsOf(raw.previous), daily, reels, sources };
+  const soldTotals = { current: raw.sold?.current ?? 0, previous: raw.sold?.previous ?? 0 };
+  const sales = raw.eventbrite || soldTotals.current > 0 || soldTotals.previous > 0 ? { ...soldTotals, other } : null;
+
+  return { current: totalsOf(raw.current), previous: totalsOf(raw.previous), daily, reels, sources, sales };
 }
 
 type State = { key: string; results: Results | null; error: string };

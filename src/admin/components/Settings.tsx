@@ -1,15 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
-import { useAdminEvents } from "@/admin/AdminBusiness";
+import { Suspense, useId, useRef, useState } from "react";
+import { useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import Accounts from "@/admin/components/Accounts";
+import EventbriteSettings from "@/admin/components/EventbriteSettings";
 import OrganizerPhotos from "@/admin/components/OrganizerPhotos";
 import Waitlist from "@/admin/components/Waitlist";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import Avatar from "@/admin/components/ui/Avatar";
 import { CheckIcon } from "@/admin/components/ui/icons";
-import { useAdminSession } from "@/admin/session";
+import { runsOrganizer, useAdminSession } from "@/admin/session";
 import { squareJpeg } from "@/admin/square-photo";
 
 /**
@@ -22,6 +23,9 @@ export default function Settings() {
   const router = useRouter();
   const session = useAdminSession();
   const events = useAdminEvents();
+  const business = useMaybeAdminBusiness();
+  // Eventbrite is connected per organizer: the one whose event is selected, if this admin runs it.
+  const eventOrganizer = events.find((e) => e.funnel.slug === business?.funnel.slug)?.organizer;
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(session.name ?? "");
   const [busy, setBusy] = useState<"" | "photo" | "name">("");
@@ -209,6 +213,12 @@ export default function Settings() {
           )}
         </div>
       </section>
+
+      {eventOrganizer && runsOrganizer(session, eventOrganizer.slug) && (
+        <Suspense>
+          <EventbriteSettings key={eventOrganizer.slug} organizer={eventOrganizer} fullAccess={fullAccess} />
+        </Suspense>
+      )}
 
       <OrganizerPhotos organizers={organizers} />
 

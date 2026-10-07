@@ -1,5 +1,5 @@
-// End-to-end tests: builds the app against stand-ins for Supabase and the
-// Claude API (tests/e2e/mocks), starts it on port 3002, signs in a test
+// End-to-end tests: builds the app against stand-ins for Supabase, the
+// Claude API and Eventbrite (tests/e2e/mocks), starts it on port 3002, signs in a test
 // admin, and runs each suite in a real browser (Playwright's Chromium).
 //
 //   npm run test:e2e                  every suite
@@ -20,6 +20,7 @@ const out = join(here, ".out");
 const APP = "http://localhost:3002";
 const SUPABASE = "http://localhost:54321";
 const CLAUDE = "http://localhost:54400";
+const EVENTBRITE = "http://localhost:54600";
 
 const args = process.argv.slice(2);
 const build = !args.includes("--no-build");
@@ -41,9 +42,15 @@ const env = {
   ANTHROPIC_BASE_URL: CLAUDE,
   NEXT_TELEMETRY_DISABLED: "1",
 };
-for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) delete env[key];
+for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "EVENTBRITE_CLIENT_ID", "EVENTBRITE_CLIENT_SECRET", "EVENTBRITE_TOKEN_KEY", "EVENTBRITE_OAUTH_BASE", "EVENTBRITE_API_BASE"]) delete env[key];
 // The mock's own secret key, for Send login (Settings → Accounts) only.
 env.SUPABASE_SECRET_KEY = "test-secret";
+// Eventbrite goes to its mock: OAuth and the API, with a test app and token key.
+env.EVENTBRITE_CLIENT_ID = "test-eb-client";
+env.EVENTBRITE_CLIENT_SECRET = "test-eb-secret";
+env.EVENTBRITE_TOKEN_KEY = Buffer.alloc(32, 7).toString("base64");
+env.EVENTBRITE_OAUTH_BASE = EVENTBRITE;
+env.EVENTBRITE_API_BASE = `${EVENTBRITE}/v3`;
 
 const children = [];
 const start = (cmd, cmdArgs, opts = {}) => {
@@ -81,7 +88,7 @@ async function waitFor(url, what, ms = 60000) {
 }
 
 // Something already on these ports (an earlier run, a dev server) would answer instead.
-for (const [url, what] of [[APP, "port 3002"], [SUPABASE, "port 54321"], [CLAUDE, "port 54400"]]) {
+for (const [url, what] of [[APP, "port 3002"], [SUPABASE, "port 54321"], [CLAUDE, "port 54400"], [EVENTBRITE, "port 54600"], ["http://localhost:3003", "port 3003"]]) {
   if (await fetch(url).then(() => true, () => false)) {
     console.error(`Something is already running on ${what}. Stop it, then run the tests again.`);
     process.exit(2);
@@ -91,11 +98,13 @@ for (const [url, what] of [[APP, "port 3002"], [SUPABASE, "port 54321"], [CLAUDE
 mkdirSync(out, { recursive: true });
 cpSync(join(here, "fixtures"), out, { recursive: true });
 
-console.log("Starting the mock Supabase and Claude servers...");
+console.log("Starting the mock Supabase, Claude and Eventbrite servers...");
 start("node", [join(here, "mocks/supabase.mjs")]);
 start("node", [join(here, "mocks/claude.mjs")]);
+start("node", [join(here, "mocks/eventbrite.mjs")]);
 await waitFor(`${SUPABASE}/__state`, "Mock Supabase");
 await waitFor(`${CLAUDE}/__last`, "Mock Claude");
+await waitFor(`${EVENTBRITE}/__state`, "Mock Eventbrite");
 
 if (build) {
   console.log("Building the app against the mocks...");
@@ -128,6 +137,7 @@ for (const suite of suites) {
   // Each suite starts from nothing published, with the Claude mock answering several dates.
   await fetch(`${SUPABASE}/__reset`, { method: "POST" });
   await fetch(`${CLAUDE}/__mode`, { method: "POST", body: "multi" });
+  await fetch(`${EVENTBRITE}/__reset`, { method: "POST" });
   const started = Date.now();
   const r = await run("node", [join(here, "suites", `${suite}.mjs`), out], { cwd: out });
   const lines = r.output.split("\n");
