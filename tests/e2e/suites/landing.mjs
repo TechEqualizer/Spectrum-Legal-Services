@@ -9,6 +9,7 @@ const errs = [];
 // Desktop: the flyer, the reels and the stub.
 const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
 const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
+const visits = []; ctx.on('request', (r) => { if (r.url().includes('/api/reel-events')) visits.push(r.url()); });
 await p.goto(B + '/?src=instagram'); await settle(p, 1500);
 check('Showlnk title', /^Showlnk/.test(await p.title()), await p.title());
 check('the promise in one line', (await p.getByRole('heading', { level: 1 }).innerText()).replace(/\s+/g, ' ').toLowerCase() === "don't just announce the night. invite them into it.");
@@ -16,6 +17,14 @@ check('no law firm left', !/attorney|injury|law firm/i.test(await p.locator('bod
 check('the form is on the first screen', (await p.locator('#join').boundingBox()).y < 900);
 check('the board has no sample label', await p.getByText(/Sample numbers/).count() === 0);
 check('the opening scene is in the hero', await p.getByRole('img', { name: /Big Love Productions' Showlnk link/ }).isVisible());
+// The phone plays Big Love's real link, and none of it counts as a visit.
+const live = p.locator('iframe.sl-phone-live');
+await p.waitForFunction(() => getComputedStyle(document.querySelector('iframe.sl-phone-live') ?? document.body).opacity === '1', null, { timeout: 15000 }).catch(() => {});
+check('the phone plays the real link', (await live.getAttribute('src')) === '/f/masquerade' && await live.evaluate((f) => getComputedStyle(f).opacity) === '1');
+const scene = p.frameLocator('iframe.sl-phone-live');
+check('the link in the phone is the live opening scene', await scene.getByRole('heading', { name: /Masquerade on the Runway/i }).first().isVisible().catch(() => false));
+await p.waitForTimeout(1500);
+check("the phone doesn't count as a visit", visits.length === 0, visits.join(' '));
 check('headings read light on the night', await p.getByRole('heading', { level: 1 }).evaluate((h) => getComputedStyle(h).color) === 'rgb(244, 238, 228)');
 await animationsDone(p, 2500);
 await p.screenshot({ path: S + '/landing-1440.jpg' });

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Big_Shoulders } from "next/font/google";
-import Image from "next/image";
 import Link from "next/link";
 import Dock from "@/components/showlnk/Dock";
+import PhoneScene from "@/components/showlnk/PhoneScene";
 import SourcesBoard from "@/components/showlnk/SourcesBoard";
 import WaitlistStub from "@/components/showlnk/WaitlistStub";
 import "@/components/showlnk/showlnk.css";
@@ -85,17 +85,14 @@ export default function ShowlnkHome() {
               </div>
             </div>
 
-            {/* What a guest sees first when they tap the link. */}
+            {/* What a guest sees first when they tap the link: the real link, playing. */}
             <figure className="sl-phone-wrap mx-auto w-[min(78vw,300px)] lg:w-[clamp(260px,22vw,320px)]">
               <div className="sl-phone">
                 <div className="sl-phone-screen">
-                  <Image
-                    src="/showlnk/opening-scene.webp"
+                  <PhoneScene
+                    src="/f/masquerade"
+                    still="/showlnk/opening-scene.webp"
                     alt="Big Love Productions' Showlnk link on a phone: Masquerade on the Runway, Saturday October 31 at 8 PM, with Sneak peek inside and Get tickets buttons"
-                    width={780}
-                    height={1688}
-                    sizes="(min-width: 1024px) 320px, 78vw"
-                    className="block h-auto w-full"
                   />
                 </div>
               </div>

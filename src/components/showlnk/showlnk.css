@@ -135,6 +135,9 @@
   padding-top: 30px;
   background: #0b0710;
 }
+.sl-phone-live {
+  transition: opacity 500ms ease-out;
+}
 /* The speaker slot. */
 .sl-phone::after {
   content: "";
