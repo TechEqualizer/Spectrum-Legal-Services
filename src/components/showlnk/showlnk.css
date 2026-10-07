@@ -1,6 +1,6 @@
 /* Showlnk's home page: a night flyer. Condensed poster type on a deep night
-   ground, the four reels fanned through it, and the waitlist as a gold
-   admission stub. Everything here is scoped under .sl. */
+   ground, Big Love's four reels, and the waitlist as a gold admission
+   stub. Everything here is scoped under .sl. */
 
 .sl {
   --sl-night: #0a0710;
@@ -49,52 +49,68 @@
     radial-gradient(40% 40% at 78% 70%, rgb(232 190 90 / 0.12), transparent 70%);
 }
 
-/* ---- The reel fan ------------------------------------------------------ */
+/* ---- Big Love's four reels --------------------------------------------- */
 
-.sl-fan {
-  position: relative;
-  aspect-ratio: 1.42;
+/* Phones: a row to swipe, the next reel peeking in. Desktop: four across. */
+.sl-reels {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(66vw, 260px);
+  gap: 18px;
+  margin-inline: -20px;
+  padding: 8px 20px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 20px;
+  scrollbar-width: none;
 }
-.sl-card {
-  --w: 29%;
-  position: absolute;
-  left: calc(50% - var(--w) / 2);
-  top: 6%;
-  width: var(--w);
+.sl-reels::-webkit-scrollbar {
+  display: none;
+}
+.sl-reel-item {
+  scroll-snap-align: start;
+}
+@media (min-width: 1024px) {
+  .sl-reels {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px;
+    margin-inline: 0;
+    padding: 12px 0 0;
+    overflow: visible;
+  }
+}
+.sl-reel {
+  position: relative;
   aspect-ratio: 9 / 16;
   border-radius: 18px;
   overflow: hidden;
   background: var(--sl-night-2);
-  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(244 238 228 / 0.12);
-  transform: translateX(var(--x)) translateY(var(--y)) rotate(var(--r));
-  transform-origin: 50% 100%;
-  animation: sl-deal 900ms cubic-bezier(0.16, 1, 0.3, 1) both, sl-spot 12s ease-in-out infinite;
-  animation-delay: calc(var(--i) * 90ms), calc(1.2s + var(--i) * 3s);
+  box-shadow: 0 24px 48px -16px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(244 238 228 / 0.12);
 }
-.sl-card:nth-child(1) { --i: 0; --x: -116%; --y: 6%; --r: -8deg; z-index: 1; }
-.sl-card:nth-child(2) { --i: 1; --x: -39%; --y: 1%; --r: -2.5deg; z-index: 2; }
-.sl-card:nth-child(3) { --i: 2; --x: 39%; --y: 1%; --r: 2.5deg; z-index: 3; }
-.sl-card:nth-child(4) { --i: 3; --x: 116%; --y: 6%; --r: 8deg; z-index: 4; }
-@keyframes sl-deal {
-  from {
-    transform: translateX(0) translateY(12%) rotate(0deg) scale(0.92);
-    opacity: 0;
-    filter: blur(6px);
+/* One reel plays at a time, left to right, like a story. */
+@media (prefers-reduced-motion: no-preference) {
+  .sl-reel {
+    animation: sl-play 12s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 3s);
   }
 }
-/* One reel "plays" at a time, left to right, like a story. */
-@keyframes sl-spot {
+.sl-reel-item:nth-child(1) .sl-reel { --i: 0; }
+.sl-reel-item:nth-child(2) .sl-reel { --i: 1; }
+.sl-reel-item:nth-child(3) .sl-reel { --i: 2; }
+.sl-reel-item:nth-child(4) .sl-reel { --i: 3; }
+@keyframes sl-play {
   0%, 22% {
-    transform: translateX(var(--x)) translateY(calc(var(--y) - 4%)) rotate(var(--r)) scale(1.04);
-    box-shadow: 0 30px 60px -12px rgb(0 0 0 / 0.75), 0 0 0 2px var(--sl-gold);
+    transform: translateY(-6px);
+    box-shadow: 0 32px 60px -16px rgb(0 0 0 / 0.75), 0 0 0 2px var(--sl-gold);
   }
   30%, 100% {
-    transform: translateX(var(--x)) translateY(var(--y)) rotate(var(--r));
+    transform: none;
   }
 }
 .sl-bars {
   position: absolute;
-  inset: 8px 8px auto;
+  inset: 10px 10px auto;
   display: flex;
   gap: 3px;
   z-index: 2;
@@ -108,12 +124,32 @@
 .sl-bars span[data-on] {
   background: #fff;
 }
-.sl-card-label {
+.sl-reel-label {
   position: absolute;
   inset: auto 0 0;
-  padding: 36% 10px 10px;
-  background: linear-gradient(to top, rgb(10 7 16 / 0.95) 30%, transparent);
+  padding: 40% 14px 14px;
+  background: linear-gradient(to top, rgb(10 7 16 / 0.95) 35%, transparent);
   z-index: 2;
+}
+
+/* How it works: four steps in a row (stacked on phones). */
+.sl-steps {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--sl-line);
+  padding-top: 24px;
+}
+.sl-steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .sl-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+  }
 }
 
 /* ---- The phone in the hero ------------------------------------------- */
@@ -323,7 +359,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sl-card,
+  .sl-reel,
   .sl-stamp,
   .sl-phone-wrap,
   .sl-stub-tab,

@@ -3,6 +3,7 @@ import { Big_Shoulders } from "next/font/google";
 import Link from "next/link";
 import Dock from "@/components/showlnk/Dock";
 import PhoneScene from "@/components/showlnk/PhoneScene";
+import ReelStrip from "@/components/showlnk/ReelStrip";
 import SourcesBoard from "@/components/showlnk/SourcesBoard";
 import WaitlistStub from "@/components/showlnk/WaitlistStub";
 import "@/components/showlnk/showlnk.css";
@@ -21,13 +22,6 @@ export const metadata: Metadata = {
   openGraph: { title, description, type: "website", siteName: "Showlnk" },
   twitter: { card: "summary", title, description },
 };
-
-const LINEUP = [
-  { act: "Opening scene", question: "What is this night?", line: "Your title, your dates and Tickets, over your flyer or your video. The first look, in your own colors and type." },
-  { act: "The Night", question: "Will this be amazing?", line: "Desire. Who they get to be that night, cut from your best moments." },
-  { act: "Your People", question: "Is this for someone like me?", line: "Belonging. The crowd, the dress code, the vibe, from real nights only. No invented reviews." },
-  { act: "Last Call", question: "Why buy now?", line: "The true reason to act: the date, the price that ends, the last tickets. Never fake scarcity." },
-];
 
 // What the organizer's board looks like, to show the idea.
 const BOARD_SOURCES = [
@@ -96,36 +90,40 @@ export default function ShowlnkHome() {
                   />
                 </div>
               </div>
-              <figcaption className="mt-4 text-center text-xs text-[var(--sl-muted)]">
-                Big Love Productions&apos; opening scene, live on Showlnk.
+              <figcaption className="mt-4 text-center text-sm text-[var(--sl-muted)]">
+                <span className="font-semibold text-[var(--sl-text)]">Big Love Productions</span>, live on Showlnk
               </figcaption>
             </figure>
           </div>
         </section>
 
-        {/* The lineup: the four things, in the order a visitor meets them. */}
+        {/* Big Love's night: one flyer, the four reels it became, and how. */}
         <section aria-labelledby="sl-lineup" className="border-t border-[var(--sl-line)]">
           <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
-            <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-              <div>
-                <h2 id="sl-lineup" className="sl-reveal sl-display text-[clamp(2.75rem,6vw,5.5rem)]">Tonight&apos;s lineup</h2>
-                <p className="sl-reveal mt-4 max-w-[42ch] text-[var(--sl-muted)]">
-                  One flyer in, four things out. Each reel answers the question every guest asks before they buy, in the order
-                  they ask it.
-                </p>
-              </div>
-              <ol role="list" className="divide-y divide-[var(--sl-line)] border-y border-[var(--sl-line)]">
-                {LINEUP.map((a) => (
-                  <li key={a.act} className="sl-reveal sl-row grid gap-x-6 gap-y-2 py-6 sm:grid-cols-[minmax(0,15rem)_1fr] sm:py-7">
-                    <h3 className="sl-act sl-display text-[clamp(2rem,4vw,3.25rem)]">{a.act}</h3>
-                    <div className="sm:pt-1.5">
-                      <p className="text-lg font-bold">&ldquo;{a.question}&rdquo;</p>
-                      <p className="mt-1 max-w-[52ch] text-[var(--sl-muted)]">{a.line}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+            <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr] lg:items-end lg:gap-16">
+              <h2 id="sl-lineup" className="sl-reveal sl-display text-[clamp(2.75rem,6vw,5.5rem)]">
+                One flyer <span className="text-[var(--sl-gold)]">became this.</span>
+              </h2>
+              <p className="sl-reveal max-w-[52ch] text-[var(--sl-muted)] lg:pb-2">
+                <span className="font-semibold text-[var(--sl-text)]">Big Love Productions</span> dropped one flyer for Masquerade
+                on the Runway, Oct 31 in Detroit. Showlnk turned it into four reels, each answering what a guest asks before
+                they buy, and every one ends on Tickets.
+              </p>
             </div>
+            <div className="mt-12 lg:mt-16">
+              <ReelStrip />
+            </div>
+            {/* How the video comes to be, honestly. */}
+            <ol role="list" aria-label="How it works" className="sl-reveal sl-steps mt-14 lg:mt-20">
+              {["Drop in your flyer", "Showlnk drafts four reels and a shot list", "Add your clips or photos", "Publish one link that ends on Tickets"].map(
+                (step, i) => (
+                  <li key={step}>
+                    <span className="sl-display text-2xl text-[var(--sl-gold)]">{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                )
+              )}
+            </ol>
           </div>
         </section>
 
