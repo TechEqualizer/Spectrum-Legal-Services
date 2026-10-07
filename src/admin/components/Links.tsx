@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { useResults } from "@/admin/results";
+import SalesHint from "@/admin/components/SalesHint";
 import CopyButton from "@/admin/components/ui/CopyButton";
 import { formatNumber, viz } from "@/admin/viz";
 import { funnelReel } from "@/data/reels";
@@ -59,9 +60,12 @@ export default function Links() {
       calls: t.calls + r.calls,
       bookings: t.bookings + r.bookings,
       textLater: t.textLater + r.textLater,
+      sold: t.sold + r.sold,
     }),
-    { visitors: 0, calls: 0, bookings: 0, textLater: 0 }
+    { visitors: 0, calls: 0, bookings: 0, textLater: 0, sold: 0 }
   );
+  // Tickets sold on Eventbrite, once the organizer has connected it.
+  const sales = tickets ? results?.sales ?? null : null;
 
   return (
     <div className="space-y-6">
@@ -205,8 +209,10 @@ export default function Links() {
                 <th className="py-2 pr-4 text-right font-semibold">Visitors</th>
                 {!tickets && <th className="py-2 pr-4 text-right font-semibold">Calls</th>}
                 <th className="py-2 pr-4 text-right font-semibold">{tickets ? "Ticket clicks" : "Booking requests"}</th>
+                {sales && <th className="py-2 pr-4 text-right font-semibold">Tickets sold</th>}
                 <th className={`py-2 pr-4 text-right font-semibold ${tickets ? "hidden sm:table-cell" : ""}`}>{tickets ? "Updates sign-ups" : "Text me later"}</th>
-                <th className="py-2 text-right font-semibold sm:w-64 sm:text-left">
+                {/* Phones with tickets sold: sold says more than the rate, so the rate waits for a wider screen. */}
+                <th className={`py-2 text-right font-semibold sm:w-64 sm:text-left ${sales ? "hidden sm:table-cell" : ""}`}>
                   {/* Phones: "Per 100", the column's full name is in the heading above. */}
                   <span className="hidden sm:inline">{tickets ? "Ticket clicks" : "Calls + bookings"} per</span>
                   <span className="sm:hidden">Per</span> 100
@@ -223,8 +229,9 @@ export default function Links() {
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.visitors)}</td>
                   {!tickets && <td className="py-2.5 pr-4 text-right">{formatNumber(r.calls)}</td>}
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.bookings)}</td>
+                  {sales && <td className="py-2.5 pr-4 text-right font-semibold text-deep-navy">{formatNumber(r.sold)}</td>}
                   <td className={`py-2.5 pr-4 text-right ${tickets ? "hidden sm:table-cell" : ""}`}>{formatNumber(r.textLater)}</td>
-                  <td className="py-2.5">
+                  <td className={`py-2.5 ${sales ? "hidden sm:table-cell" : ""}`}>
                     <div className="flex items-center gap-2">
                       <div className="hidden h-3 flex-1 rounded-sm sm:block" style={{ background: viz.grid }} aria-hidden="true">
                         <div className="h-3 rounded-sm" style={{ width: `${(r.per100 / maxPer100) * 100}%`, background: viz.series1 }} />
@@ -234,6 +241,16 @@ export default function Links() {
                   </td>
                 </tr>
               ))}
+              {sales && sales.other > 0 && (
+                <tr className="border-b border-gray-100 text-gray-600">
+                  <td className="py-2.5 pr-4">Eventbrite (other)</td>
+                  <td className="py-2.5 pr-4 text-right" aria-label="Not tracked">–</td>
+                  <td className="py-2.5 pr-4 text-right" aria-label="Not tracked">–</td>
+                  <td className="py-2.5 pr-4 text-right font-semibold text-deep-navy">{formatNumber(sales.other)}</td>
+                  <td className="hidden py-2.5 pr-4 text-right sm:table-cell" aria-label="Not tracked">–</td>
+                  <td className="hidden py-2.5 text-right sm:table-cell" aria-label="Not tracked">–</td>
+                </tr>
+              )}
             </tbody>
             <tfoot style={{ fontVariantNumeric: "tabular-nums" }}>
               <tr className="font-semibold text-deep-navy">
@@ -241,8 +258,9 @@ export default function Links() {
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.visitors)}</td>
                 {!tickets && <td className="py-2.5 pr-4 text-right">{formatNumber(totals.calls)}</td>}
                 <td className="py-2.5 pr-4 text-right">{formatNumber(totals.bookings)}</td>
+                {sales && <td className="py-2.5 pr-4 text-right">{formatNumber(totals.sold + sales.other)}</td>}
                 <td className={`py-2.5 pr-4 text-right ${tickets ? "hidden sm:table-cell" : ""}`}>{formatNumber(totals.textLater)}</td>
-                <td className="py-2.5 text-right">
+                <td className={`py-2.5 text-right ${sales ? "hidden sm:table-cell" : ""}`}>
                   {per100(totals).toFixed(1)}
                 </td>
               </tr>
@@ -254,7 +272,9 @@ export default function Links() {
           {tickets
             ? "Updates sign-ups get event news by text and aren't counted until they click Tickets."
             : "“Text me later” requests get the next video by text and aren't counted as calls until they call or book."}
+          {sales && " Tickets sold are Eventbrite orders placed through each link; orders without your link's code show as Eventbrite (other)."}
         </p>
+        {tickets && results && !sales && <SalesHint className="mt-1" />}
       </section>
     </div>
   );

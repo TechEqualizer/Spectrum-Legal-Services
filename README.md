@@ -312,9 +312,11 @@ admin account, what each can edit (full access or chosen organizers), and
 **Send login**, which creates the person's login with a temporary password
 (emailed through Resend when `RESEND_API_KEY` and `LEAD_FROM_EMAIL` are set,
 and shown once to copy) that they replace at first sign-in. Send login needs
-`SUPABASE_SECRET_KEY` on the server (`src/lib/server/auth-admin.ts` is the
-only code that uses it); without it, create logins in Supabase →
-Authentication → Add user.
+`SUPABASE_SECRET_KEY` on the server (`src/lib/server/auth-admin.ts` and the
+Eventbrite connection, `src/lib/server/eventbrite.ts`, are the only code that
+uses it); without it, create logins in Supabase → Authentication → Add user.
+**Eventbrite** connects the selected event's organizer's Eventbrite account so
+Results shows tickets sold: see [Eventbrite](#eventbrite).
 
 **Publishing**: reel edits save in the browser as you go. When they differ
 from what's live, a bar offers **Publish** (or **Discard**). Publishing
@@ -487,7 +489,10 @@ marked `noindex`.
   (`src/admin/results.ts`, shapes in `src/admin/stats.ts`); a ticket click
   counts as an event's booking. A new event shows zeros and says so.
 - **Share**: a builder for tagged funnel links, and which sources bring
-  calls and call-back requests per 100 visitors.
+  calls and call-back requests per 100 visitors. Once the organizer has
+  connected Eventbrite, Results gets a **Tickets sold** tile and Share a
+  **Tickets sold** column per source (Home too); until then a quiet
+  "Connect Eventbrite to see tickets sold" link points to Settings.
 - **Events** (`/admin/events`, the first tab): each organizer's events with
   their date and status (Upcoming, No dates yet, Ended), the organizer's
   permanent link with Copy and **Hand off**, **New client**, **New event** and
@@ -575,6 +580,78 @@ left join reel_events e on e.visitor_id = l.visitor_id and e.created_at <= l.cre
 group by l.id
 order by l.created_at desc;
 ```
+
+## Eventbrite
+
+Every Tickets button on an Eventbrite event sends buyers to Eventbrite with
+the tracking code `aff=reels_<source>` (`reels_instagram`, `reels_tiktok`,
+`reels_direct` for an untagged link; `src/lib/events.ts`). Connecting
+Eventbrite closes the loop from post to ticket **sold**: an organizer's admin
+connects their Eventbrite account once (Settings → Eventbrite → **Connect
+Eventbrite**; they sign in on Eventbrite, we never see their password),
+Eventbrite then tells us about each order, and Results, Share and Home show
+tickets sold per source next to ticket clicks.
+
+**Setup**
+
+1. Create an Eventbrite app (Eventbrite → Account settings → Developer
+   links → API keys → Create API key). Set its **OAuth Redirect URI** to
+   `https://www.showlnk.com/api/admin/eventbrite/callback` (each other domain
+   you sign in on, such as a preview, needs its own app or redirect URI).
+2. Add these to the site's environment (Vercel → Settings → Environment
+   Variables), then redeploy:
+   - `EVENTBRITE_CLIENT_ID`: the app's API key (client id).
+   - `EVENTBRITE_CLIENT_SECRET`: the app's client secret.
+   - `EVENTBRITE_TOKEN_KEY`: a random key that encrypts organizers' Eventbrite
+     tokens at rest (AES-256-GCM). Make one with
+     `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+     Changing it later means organizers reconnect.
+   - `SUPABASE_SECRET_KEY` must be set too (the connection tables are server
+     only). Until all of these are set, Settings tells full admins which are
+     missing and organizers that the connection isn't turned on yet.
+3. Apply `supabase/migrations/20261016000000_eventbrite.sql` to production
+   **before** deploying this version. It adds `eventbrite_connections` and
+   `ticket_sales` (row-level security on, no policies, no grants to `anon`
+   or `authenticated`: only the secret key reads or writes them) and
+   replaces `funnel_stats` (same signature and checks) with three more keys:
+   `sold` (`{current, previous}` tickets), `sales` (tickets by source tag)
+   and `eventbrite` (whether the organizer is connected). Without it, Results
+   keeps working and simply shows no sales.
+
+**How it works** (`src/lib/server/eventbrite.ts`, routes under
+`src/app/api/admin/eventbrite/` and `src/app/api/eventbrite/webhook/`):
+
+- **Connect** (`/api/admin/eventbrite/connect?organizer=`): admins who run
+  the organizer only. A one-time state in an httpOnly, SameSite=Lax cookie
+  ties Eventbrite's answer to this browser and organizer. The **callback**
+  checks it, trades the code for a token, picks the Eventbrite organization
+  that owns the organizer's events (else the first), creates a webhook for
+  `order.placed`, `order.refunded` and `order.updated` pointing at
+  `/api/eventbrite/webhook`, stores the token encrypted, and imports the
+  orders already placed for every event the organizer's links sell (for at
+  most 20 seconds). **Disconnect** removes the webhook and the connection;
+  tickets already recorded stay in Results.
+- **Webhook** (`/api/eventbrite/webhook`, public): Eventbrite doesn't sign
+  deliveries, so the body is never trusted. Only an `api_url` on the
+  configured API host of the form `/v3/orders/<digits>/`, for a webhook id we
+  created, is acted on, and the order is fetched fresh with that
+  organizer's token. It always answers 200 at once and does the work after.
+- **Matching**: an order counts for an event when its Eventbrite event id
+  matches one of the organizer's events' ticket links
+  (`…/e/<name>-tickets-<id>`, any `eventbrite.<tld>`, or `?eid=`). It counts
+  toward a source only when its attendees carry our `reels_<source>`
+  affiliate code; Eventbrite orders without it (bought on Eventbrite
+  directly, or from another promotion) show on Share as **Eventbrite
+  (other)**. Tickets sold are the order's attendees not refunded or
+  cancelled; refunds and cancellations update the order. Unfinished
+  checkouts and other events' orders are skipped.
+- **Limits**: only orders for events whose ticket link is on a Showlnk
+  event count; a buyer who leaves and comes back to Eventbrite later
+  without the link loses the code; and the code is per source, not per
+  reel. Eventbrite tokens don't expire, so there's no refresh; if an
+  organizer revokes access on Eventbrite, reconnect from Settings.
+  `EVENTBRITE_OAUTH_BASE` and `EVENTBRITE_API_BASE` override Eventbrite's
+  addresses (the tests point them at a mock).
 
 ## Before launch
 

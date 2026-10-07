@@ -23,6 +23,8 @@ const initialUsers = () => ({
   // Runs Big Love Productions' events only.
   'organizer@example.com': { password: 'organizer-pass-1', admin: true, mustChange: false, slugs: [], organizers: ['biglove'] },
   'stranger@example.com': { password: 'stranger-pass-1', admin: false, mustChange: false },
+  // Another business's admin: runs only the test-only Golden Hour event, never Big Love's.
+  'rival@example.com': { password: 'rival-pass-1', admin: true, mustChange: false, slugs: ['sundays'], organizers: [] },
 });
 let users = initialUsers();
 // Like the database's manages_organizer and can_publish_funnel.
@@ -34,6 +36,9 @@ const reelEvents = []; // { at, visitor, funnel, reel, event, tag }
 const leadRows = []; // { id, at, funnel, visitor, intent, tag, name, phone, email, caseType, message, reel }
 const waitlist = new Map(); // email -> { email, instagram, source_tag, created_at }
 const files = new Map(); // path -> {type, body}
+// Eventbrite (server-only tables: like the real ones, the secret key alone reads and writes them).
+const ebConnections = new Map(); // organizer_slug -> row
+const ticketSales = new Map(); // eventbrite_order_id -> row
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
 let seq = 0;
@@ -69,9 +74,9 @@ http.createServer((req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     // Test controls
     if (p === '/__log') return json(res, 200, log);
-    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()] });
+    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()], eventbriteConnections: [...ebConnections.values()], ticketSales: [...ticketSales.values()] });
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -193,6 +198,41 @@ http.createServer((req, res) => {
       reelEvents.push({ at: Date.now(), visitor: body.p_visitor_id, funnel: body.p_funnel_id, reel: body.p_reel_id, event: body.p_event, tag: body.p_source_tag ?? null });
       return json(res, 204);
     }
+    // Eventbrite's tables: RLS on with no policies and no grants, so only the secret key (service role) gets in.
+    if (p === '/rest/v1/eventbrite_connections' || p === '/rest/v1/ticket_sales') {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: `permission denied for table ${p.split('/').pop()}` });
+      const table = p.endsWith('eventbrite_connections') ? ebConnections : ticketSales;
+      const keyCol = table === ebConnections ? 'organizer_slug' : 'eventbrite_order_id';
+      const filters = [...url.searchParams].filter(([k, v]) => !['select', 'on_conflict', 'limit', 'order'].includes(k) && v.startsWith('eq.')).map(([k, v]) => [k, v.slice(3)]);
+      const match = (r) => filters.every(([k, v]) => String(r[k]) === v);
+      if (req.method === 'GET') {
+        const cols = (url.searchParams.get('select') || '*').split(',');
+        const rows = [...table.values()].filter(match).map((r) => (cols.includes('*') ? r : Object.fromEntries(cols.map((c) => [c, r[c]]))));
+        return json(res, 200, rows);
+      }
+      if (req.method === 'POST') {
+        const merge = (req.headers.prefer || '').includes('resolution=merge-duplicates');
+        for (const row of Array.isArray(body) ? body : [body]) {
+          if (table.has(row[keyCol]) && !merge) return json(res, 409, { code: '23505', message: 'duplicate key' });
+          if (table === ebConnections) {
+            if (!organizers.has(row.organizer_slug)) return json(res, 409, { code: '23503', message: 'foreign key' });
+            if (row.webhook_id && [...ebConnections.values()].some((c) => c.webhook_id === row.webhook_id && c.organizer_slug !== row.organizer_slug)) return json(res, 409, { code: '23505', message: 'duplicate webhook_id' });
+          } else if (!['placed', 'refunded', 'cancelled'].includes(row.status) || !/^[0-9]{1,30}$/.test(row.eventbrite_order_id) || !row.funnel_id) {
+            return json(res, 400, { code: '23514', message: 'check constraint' });
+          }
+          table.set(row[keyCol], { ...table.get(row[keyCol]), ...row });
+        }
+        return json(res, 201);
+      }
+      if (req.method === 'PATCH') {
+        for (const r of [...table.values()].filter(match)) table.set(r[keyCol], { ...r, ...body });
+        return json(res, 204);
+      }
+      if (req.method === 'DELETE') {
+        for (const r of [...table.values()].filter(match)) table.delete(r[keyCol]);
+        return json(res, 204);
+      }
+    }
     // Like the real join_waitlist: one row per email, the handle updated.
     if (p === '/rest/v1/rpc/join_waitlist') {
       const email = String(body.p_email).trim().toLowerCase();
@@ -260,6 +300,18 @@ http.createServer((req, res) => {
         reels: [...group(now, (e) => `${e.reel}|${e.event}`)].map(([k, l]) => ({ reel: k.split('|')[0], event: k.split('|')[1], n: l.length })),
         sources: [...group(now, (e) => e.tag)].map(([tag, l]) => ({ tag, visitors: new Set(l.map((e) => e.visitor)).size, tickets: l.filter((e) => e.event === 'cta_clicked').length, calls: l.filter((e) => e.event === 'call_clicked').length })),
         updates: [...group(leadRows.filter((l) => l.funnel === funnel && l.intent === 'text_later' && l.at >= since), (l) => l.tag)].map(([tag, l]) => ({ tag, n: l.length })),
+        // Eventbrite: tickets sold (placed orders' quantity), by source, and whether the organizer is connected.
+        ...(() => {
+          const placed = [...ticketSales.values()].filter((s) => s.funnel_id === funnel && s.status === 'placed');
+          const at = (s) => Date.parse(s.ordered_at);
+          const sum = (list) => list.reduce((n, s) => n + s.quantity, 0);
+          const nowSales = placed.filter((s) => at(s) >= since);
+          return {
+            sold: { current: sum(nowSales), previous: sum(placed.filter((s) => at(s) >= before && at(s) < since)) },
+            sales: [...group(nowSales, (s) => s.source_tag)].map(([tag, l]) => ({ tag, n: sum(l) })).filter((s) => s.n > 0),
+            eventbrite: ebConnections.has(eventFunnels.get(body.p_slug)?.organizer_slug),
+          };
+        })(),
       });
     }
     // Like the real set_organizer_avatar: the organizer's admins, a photo from its own folder.

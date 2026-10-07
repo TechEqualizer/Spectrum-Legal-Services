@@ -1,8 +1,9 @@
 import { randomInt } from "node:crypto";
 
 // Creating and resetting admin logins (Settings → Accounts → Send login).
-// This is the only code that uses the Supabase secret key, and only routes
-// that check for a full admin call it. Without the key, invites are off and
+// With src/lib/server/eventbrite.ts (its closed tables), this is the only
+// code that uses the Supabase secret key, and only routes that check for a
+// full admin call it. Without the key, invites are off and
 // Accounts says how to turn them on.
 
 const url = () => process.env.SUPABASE_URL;

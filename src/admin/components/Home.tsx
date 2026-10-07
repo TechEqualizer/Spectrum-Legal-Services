@@ -99,18 +99,26 @@ function Totals({ results }: { results: EventResults[] }) {
   const tickets = sum((r) => r.results.current.booked);
   const ticketsBefore = sum((r) => r.results.previous.booked);
   const updates = sum((r) => r.results.sources.reduce((n, s) => n + s.textLater, 0));
+  // Tickets sold, once any of these events' organizers has Eventbrite connected.
+  const withSales = results.filter((r) => r.results.sales);
+  const sold = withSales.reduce((n, r) => n + r.results.sales!.current, 0);
+  const soldBefore = withSales.reduce((n, r) => n + r.results.sales!.previous, 0);
   const period = `${DAYS} days`;
   return (
-    <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+    <div className={`grid grid-cols-2 gap-3 md:gap-4 ${withSales.length ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
       <StatTile label="Reel views" value={formatNumber(views)} delta={change(views, before)} periodLabel={period} />
       <StatTile label="Ticket clicks" value={formatNumber(tickets)} delta={change(tickets, ticketsBefore)} periodLabel={period} />
+      {withSales.length > 0 && <StatTile label="Tickets sold" value={formatNumber(sold)} delta={change(sold, soldBefore)} periodLabel={period} />}
       <StatTile
         label="Views to tickets"
         value={views ? `${(rate(tickets, views) * 100).toFixed(1)}%` : "–"}
         delta={views && before ? change(rate(tickets, views), rate(ticketsBefore, before)) : undefined}
         periodLabel={period}
       />
-      <StatTile label="Update sign-ups" value={formatNumber(updates)} periodLabel={period} />
+      {/* With five tiles, the last one fills the phone's last row. */}
+      <div className={withSales.length ? "col-span-2 lg:col-span-1 [&>div]:h-full" : "contents"}>
+        <StatTile label="Update sign-ups" value={formatNumber(updates)} periodLabel={period} />
+      </div>
     </div>
   );
 }
@@ -224,14 +232,16 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
 /** Where visitors came from across every event: the tagged links in bios, texts and ads. */
 function Sources({ results }: { results: EventResults[] }) {
   const id = useId();
-  const byTag = new Map<string, { visitors: number; tickets: number }>();
+  const byTag = new Map<string, { visitors: number; tickets: number; sold: number }>();
   for (const { results: r } of results) {
     for (const s of r.sources) {
-      const t = byTag.get(s.tag ?? "") ?? { visitors: 0, tickets: 0 };
-      byTag.set(s.tag ?? "", { visitors: t.visitors + s.visitors, tickets: t.tickets + s.bookings });
+      const t = byTag.get(s.tag ?? "") ?? { visitors: 0, tickets: 0, sold: 0 };
+      byTag.set(s.tag ?? "", { visitors: t.visitors + s.visitors, tickets: t.tickets + s.bookings, sold: t.sold + s.sold });
     }
   }
-  const rows = [...byTag].filter(([, t]) => t.visitors > 0).sort((a, b) => b[1].visitors - a[1].visitors).slice(0, 5);
+  // Tickets sold shows once any event's organizer has Eventbrite connected.
+  const showSold = results.some((r) => r.results.sales);
+  const rows = [...byTag].filter(([, t]) => t.visitors > 0 || t.sold > 0).sort((a, b) => b[1].visitors - a[1].visitors || b[1].sold - a[1].sold).slice(0, 5);
   const most = rows[0]?.[1].visitors ?? 0;
   return (
     <section aria-labelledby={id} className="rounded-xl border border-gray-200 bg-white p-5">
@@ -244,11 +254,12 @@ function Sources({ results }: { results: EventResults[] }) {
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="truncate font-semibold text-deep-navy">{sourceLabel(tag || undefined)}</span>
                 <span className="flex-shrink-0 text-gray-600">
-                  {formatNumber(t.visitors)} {t.visitors === 1 ? "visitor" : "visitors"} · {formatNumber(t.tickets)} {t.tickets === 1 ? "ticket" : "tickets"}
+                  {formatNumber(t.visitors)} {t.visitors === 1 ? "visitor" : "visitors"} · {formatNumber(t.tickets)} {t.tickets === 1 ? "ticket click" : "ticket clicks"}
+                  {showSold && <> · <span className="font-semibold text-deep-navy">{formatNumber(t.sold)} sold</span></>}
                 </span>
               </div>
               <div className="mt-1 h-1.5 rounded-full bg-soft-gray" aria-hidden="true">
-                <div className="h-full rounded-full bg-deep-navy" style={{ width: `${Math.max(4, (t.visitors / most) * 100)}%` }} />
+                <div className="h-full rounded-full bg-deep-navy" style={{ width: `${Math.max(4, most ? (t.visitors / most) * 100 : 0)}%` }} />
               </div>
             </li>
           ))}

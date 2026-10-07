@@ -24,4 +24,6 @@ export type SourceTotals = {
   calls: number;
   bookings: number;
   textLater: number;
+  /** Tickets sold on Eventbrite from this source's links (0 when not connected). */
+  sold: number;
 };
