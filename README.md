@@ -127,6 +127,15 @@ For event organizers, a funnel sells tickets instead of booking calls
 - **Event dates** live in `funnel.events` (name, start time, venue, price,
   ticket link, `on_sale` / `few_left` / `sold_out`). Reels point at one with
   `eventId`.
+- **Each date is on its own clock**: `startsAt` is the moment (UTC) and
+  `timeZone` the event's IANA zone (e.g. `"America/Detroit"`). Every date and
+  time, and Tonight/Tomorrow, is shown on that clock, for every visitor, the
+  server and the admin (`src/lib/event-time.ts`), so 8 PM in Detroit reads
+  "8 PM" in Los Angeles and London too. Without a `timeZone`, the offset in
+  `startsAt` (`-04:00`) is used, else the viewer's zone. The admin's date
+  sheet enters times on the date's clock and names it ("Detroit time"); new
+  dates take the series' zone, else the admin's browser's. The calendar file
+  carries the moment in UTC.
 - **"Which night?"**: the opening screen lists upcoming dates with a
   countdown (Tonight, Tomorrow, In 3 days), price and status, plus "Watch
   last time" for the latest recap.
@@ -202,7 +211,7 @@ top.
 the one to put in a bio. It never changes: with one upcoming event it shows
 that event; with several it shows a "Coming up" page with a card per night,
 soonest first; with none it shows the latest event
-(`src/lib/server/links.ts`). Dates show in the visitor's own time zone.
+(`src/lib/server/links.ts`). Dates show on each event's own clock.
 
 **After the night**, once every date of an event is over, its link stops
 selling tickets that are gone. The opening scene says "Thanks for coming",

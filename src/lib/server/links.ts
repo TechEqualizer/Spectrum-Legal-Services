@@ -40,7 +40,7 @@ export async function resolveLink(slug: string, now = Date.now()): Promise<LinkT
     const publication = (await getPublication(slug))?.publication ?? null;
     const organizer = await organizerOf(slug);
     const next = organizer ? (await organizerNights(organizer, now)).upcoming.find((e) => e.base.slug !== slug) : undefined;
-    const nextNight = next && { slug: next.base.slug, name: next.live.cover.hero?.title ?? next.live.brand.seriesLabel, startsAt: next.next.startsAt };
+    const nextNight = next && { slug: next.base.slug, name: next.live.cover.hero?.title ?? next.live.brand.seriesLabel, startsAt: next.next.startsAt, ...(next.next.timeZone ? { timeZone: next.next.timeZone } : {}) };
     return { kind: "event", funnel, publication, ...(nextNight ? { nextNight } : {}) };
   }
 

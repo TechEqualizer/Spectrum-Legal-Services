@@ -11,6 +11,7 @@ import { useAllResults, type EventResults } from "@/admin/results";
 import { useAdminSession } from "@/admin/session";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import type { FunnelEvent } from "@/data/funnel-types";
+import { eventDaysAway, eventWhen } from "@/lib/event-time";
 import { upcomingEvents } from "@/lib/events";
 import { REEL_DRIVERS, REEL_ROLES, coreReels } from "@/lib/funnel-draft";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
@@ -116,12 +117,8 @@ function Totals({ results }: { results: EventResults[] }) {
 
 /** When a date is, from today: "Tonight", "Tomorrow", "In 12 days". */
 function countdown(date: FunnelEvent, now: number) {
-  const day = (t: number) => {
-    const d = new Date(t);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  };
-  const days = Math.round((day(Date.parse(date.startsAt)) - day(now)) / 864e5);
+  // Counted on the event's own calendar.
+  const days = eventDaysAway(date, now);
   return days <= 0 ? "Tonight" : days === 1 ? "Tomorrow" : `In ${days} days`;
 }
 
@@ -175,9 +172,7 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
             {title}
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            {new Date(date.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-            {" · "}
-            {new Date(date.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            {eventWhen(date)}
             {date.venue ? ` · ${date.venue}` : ""}
           </p>
           <p className="mt-0.5 text-sm text-gray-600">{e.organizer.name}</p>

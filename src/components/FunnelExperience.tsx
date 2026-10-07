@@ -11,6 +11,7 @@ import { funnelReel } from "@/data/reels";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import SourceLink from "@/components/SourceLink";
 import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
+import { eventDate, eventDayOfMonth, eventTime, type EventClock } from "@/lib/event-time";
 import { DEFAULT_EFFECT } from "@/lib/look";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
@@ -41,7 +42,7 @@ function singleHook(event: FunnelEvent, untilStart: number) {
     return `Starts in ${h ? `${h}h ` : ""}${m}m`;
   }
   if (untilStart < 6.5 * 24 * HOUR) {
-    return `This ${new Date(event.startsAt).toLocaleDateString("en-US", { weekday: "long" })}`;
+    return `This ${eventDate(event, { weekday: "long" })}`;
   }
   return "One night only";
 }
@@ -112,7 +113,7 @@ export default function FunnelExperience({
   const lastNight = over ? [...funnel.events!].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0] : undefined;
   // The page can be a few minutes old: only a night that's still to come.
   const next = over && nextNight && Date.parse(nextNight.startsAt) + 6 * HOUR > now ? nextNight : undefined;
-  const nextWhen = next && new Date(next.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const nextWhen = next && formatEventDate(next);
   const [updates, setUpdates] = useState(false);
   // Its words were about getting tickets; now they're about the night that was.
   const afterLine = next ? "Relive the night, then see what's next." : "Relive the night.";
@@ -171,7 +172,7 @@ export default function FunnelExperience({
         </button>
         {next ? (
           <SourceLink href={`/f/${next.slug}`} aria-label={`Next: ${next.name}, ${nextWhen}`} className={`${GLASS} px-5 max-[380px]:px-4`}>
-            Next &middot; {new Date(next.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            Next &middot; {shortDay(next)}
           </SourceLink>
         ) : (
           <button type="button" onClick={() => setUpdates(true)} className={`${GLASS} px-5 max-[380px]:px-4`}>
@@ -216,7 +217,7 @@ export default function FunnelExperience({
                     <StoryCircle
                       key={event.id}
                       label={`${event.name}, ${when}${event.price && !soldOut ? `, ${event.price}` : ""}${soldOut ? ", join the waitlist" : ""}`}
-                      date={new Date(event.startsAt)}
+                      date={event}
                       line1={status}
                       line2={variant ?? (soldOut ? "Waitlist" : undefined)}
                       hot={chip.tone === "hot"}
@@ -269,7 +270,7 @@ export default function FunnelExperience({
             rel="noopener"
             onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
             {...fx}
-            aria-label={`${brand.copy.ticketsPrimary ?? "Get tickets"}: ${onSale.name}, ${formatEventDate(onSale)}, ${timeOf(new Date(onSale.startsAt))}${onSale.price ? `, ${onSale.price}` : ""}`}
+            aria-label={`${brand.copy.ticketsPrimary ?? "Get tickets"}: ${onSale.name}, ${formatEventDate(onSale)}, ${eventTime(onSale)}${onSale.price ? `, ${onSale.price}` : ""}`}
             className={ticketsFirst ? `${PRIMARY} order-1 flex-1 px-4` : `${GLASS} px-5 max-[380px]:px-4`}
           >
             {/* With several dates, the button says which one it sells. */}
@@ -294,7 +295,7 @@ export default function FunnelExperience({
       {/* What the tickets button buys, before anyone taps it. */}
       {onSale && !single && (
         <p className="mt-2.5 text-center text-xs font-medium text-white/75">
-          {[onSale.name.includes(": ") ? onSale.name.split(": ").slice(1).join(": ") : undefined, `${formatEventDate(onSale)}, ${timeOf(new Date(onSale.startsAt))}`, onSale.price, brand.ageLimit]
+          {[onSale.name.includes(": ") ? onSale.name.split(": ").slice(1).join(": ") : undefined, `${formatEventDate(onSale)}, ${eventTime(onSale)}`, onSale.price, brand.ageLimit]
             .filter(Boolean)
             .join(" \u00b7 ")}
         </p>
@@ -519,7 +520,8 @@ function StoryCircle({
   onClick,
 }: {
   label: string;
-  date?: Date;
+  /** The date it shows, on the event's own clock. */
+  date?: EventClock;
   line1: string;
   line2?: string;
   hot?: boolean;
@@ -539,9 +541,9 @@ function StoryCircle({
               {date ? (
                 <>
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-accent">
-                    {date.toLocaleDateString("en-US", { month: "short" })}
+                    {eventDate(date, { month: "short" })}
                   </span>
-                  <span className="mt-0.5 text-xl font-bold text-white">{date.getDate()}</span>
+                  <span className="mt-0.5 text-xl font-bold text-white">{eventDayOfMonth(date)}</span>
                 </>
               ) : (
                 <svg className="ml-0.5 h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
@@ -558,11 +560,8 @@ function StoryCircle({
   );
 }
 
-/** "Oct 4": a short date for a button that has to share a row. */
-const shortDay = (e: FunnelEvent) => new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-/** "3 PM" or "3:30 PM". */
-const timeOf = (d: Date) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":00", "");
+/** "Oct 4": a short date for a button that has to share a row, on the event's clock. */
+const shortDay = (e: EventClock) => eventDate(e, { month: "short", day: "numeric" });
 
 /**
  * The one upcoming date, as a card: when, where and how much, with its
@@ -582,7 +581,6 @@ function SingleDate({
   onOpen: () => void;
   onRecap?: () => void;
 }) {
-  const d = new Date(event.startsAt);
   const chip = eventChip(event, now);
   const soldOut = event.status === "sold_out";
   const status = soldOut ? "Sold out" : event.status === "few_left" ? "Few left" : chip.text.split(" \u00b7 ")[0];
@@ -597,13 +595,13 @@ function SingleDate({
       >
         <span className="flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-black/30 leading-none">
           <span className="text-[11px] font-bold uppercase tracking-wider text-sky-accent">
-            {d.toLocaleDateString("en-US", { month: "short" })}
+            {eventDate(event, { month: "short" })}
           </span>
-          <span className="mt-1 text-xl font-bold text-white">{d.getDate()}</span>
+          <span className="mt-1 text-xl font-bold text-white">{eventDayOfMonth(event)}</span>
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-semibold text-white">
-            {d.toLocaleDateString("en-US", { weekday: "long" })} &middot; {timeOf(d)}
+            {eventDate(event, { weekday: "long" })} &middot; {eventTime(event)}
           </span>
           {where && <span className="mt-0.5 block truncate text-[13px] text-white/75">{where}</span>}
         </span>

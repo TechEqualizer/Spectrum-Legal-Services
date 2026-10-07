@@ -36,8 +36,15 @@ export type Reel = {
 export type FunnelEvent = {
   id: string;
   name: string;
-  /** ISO date and time, with offset, e.g. "2026-10-12T15:00:00-07:00". */
+  /** The moment it starts: an ISO date and time, e.g. "2026-11-01T00:00:00.000Z" or "2026-10-31T20:00:00-04:00". */
   startsAt: string;
+  /**
+   * Where the event's clock is: an IANA time zone, e.g. "America/Detroit".
+   * Its date and time always show on this clock, whoever is looking and
+   * wherever they are (src/lib/event-time.ts). Without it, the offset in
+   * startsAt if it has one, else the viewer's own zone.
+   */
+  timeZone?: string;
   venue?: string;
   /** "From $25", "Free", ... */
   price?: string;

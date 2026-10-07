@@ -3,15 +3,15 @@
 // platform's tracking codes added.
 
 import type { Funnel, FunnelEvent, Reel } from "@/data/funnel-types";
+import { eventDate, eventDaysAway } from "@/lib/event-time";
 
 /** An organizer's next night on another link, for an event that's over. */
-export type NextNight = { slug: string; name: string; startsAt: string };
+export type NextNight = { slug: string; name: string; startsAt: string; timeZone?: string };
 
 /** Every date is over: the link is a recap now. */
 export const allOver = (funnel: Funnel, now: number) => Boolean(funnel.events?.length) && upcomingEvents(funnel, now).length === 0;
 
 const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
 // An event counts as over six hours after it starts.
 const RUNS_FOR = 6 * HOUR;
 
@@ -53,28 +53,17 @@ export function ticketTarget(funnel: Funnel, reel: Reel | undefined, now: number
   return nextOnSale(funnel, now);
 }
 
-/** Calendar day difference in the viewer's own time zone. */
-function daysUntil(date: Date, now: number) {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const day = new Date(date);
-  day.setHours(0, 0, 0, 0);
-  return Math.round((day.getTime() - start.getTime()) / DAY);
-}
-
-export function formatEventDate(event: FunnelEvent) {
-  return new Date(event.startsAt).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+/** "Sat, Oct 31", on the event's own clock. */
+export function formatEventDate(event: Pick<FunnelEvent, "startsAt" | "timeZone">) {
+  return eventDate(event, { weekday: "short", month: "short", day: "numeric" });
 }
 
 /** The chip for a reel or a "Which night?" choice: Tonight, In 3 days, Sold out, Recap... */
 export function eventChip(event: FunnelEvent, now: number): { text: string; tone: "hot" | "plain" | "muted" } {
   if (isOver(event, now)) return { text: `Recap · ${formatEventDate(event)}`, tone: "muted" };
   if (event.status === "sold_out") return { text: "Sold out", tone: "muted" };
-  const days = daysUntil(new Date(event.startsAt), now);
+  // Days counted on the event's calendar: "Tonight" is the event's night, wherever the viewer is.
+  const days = eventDaysAway(event, now);
   const when =
     days <= 0 ? "Tonight" : days === 1 ? "Tomorrow" : days < 7 ? `In ${days} days` : formatEventDate(event);
   if (event.status === "few_left") return { text: `${when} · Few left`, tone: "hot" };

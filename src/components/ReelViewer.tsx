@@ -11,6 +11,7 @@ import {
 } from "@/data/reels";
 import type { ReelMedia } from "@/data/funnel-types";
 import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
+import { eventDate } from "@/lib/event-time";
 import { eventChip, eventOf, formatEventDate, isOver, ticketHref, ticketTarget, type NextNight } from "@/lib/events";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import SourceLink from "@/components/SourceLink";
@@ -316,7 +317,7 @@ export default function ReelViewer({
             {ticketUrl && (
               <RailButton
                 placement={placement}
-                label={waitlist.other ? `Get ${new Date(waitlist.other.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Other date"}
+                label={waitlist.other ? `Get ${eventDate(waitlist.other, { month: "short", day: "numeric" })}` : "Other date"}
                 href={ticketUrl}
                 onClick={ctas.onTickets}
               >
@@ -694,7 +695,7 @@ function EndCard({
   onClose: () => void;
 }) {
   const next = after?.next;
-  const nextWhen = next && new Date(next.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const nextWhen = next && formatEventDate(next);
   return (
     <div className="absolute inset-0 overflow-y-auto bg-gradient-to-br from-deep-navy via-deep-navy to-royal-blue px-6 py-16 text-center short:py-12">
       <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center">

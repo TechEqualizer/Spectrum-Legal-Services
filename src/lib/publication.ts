@@ -4,6 +4,7 @@
 
 import { withEdits, type EditorFunnel, type EditorReel, type PathTarget, type ReelCta } from "@/admin/editor-model";
 import type { Funnel, FunnelCta, FunnelEvent, ReelEmphasis, ReelMedia } from "@/data/funnel-types";
+import { isTimeZone } from "@/lib/event-time";
 import { parseLook, themeOf, type Look } from "@/lib/look";
 import { REEL_ROLES, type ReelRole } from "@/lib/funnel-draft";
 
@@ -218,7 +219,11 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
       events.push({
         id: e.id,
         name: (e.name as string).trim(),
-        startsAt: new Date(e.startsAt).toISOString(),
+        // The moment, as UTC; its clock is the time zone. A date without a
+        // (valid) zone keeps the offset it was written with, if any, as its clock.
+        ...(isTimeZone(e.timeZone)
+          ? { startsAt: new Date(e.startsAt).toISOString(), timeZone: e.timeZone }
+          : { startsAt: /[+-]\d{2}:?\d{2}$/.test(e.startsAt) ? e.startsAt : new Date(e.startsAt).toISOString() }),
         ticketUrl: e.ticketUrl as string,
         ...(typeof e.venue === "string" && e.venue.trim() ? { venue: e.venue.trim() } : {}),
         ...(typeof e.price === "string" && e.price.trim() ? { price: e.price.trim() } : {}),

@@ -120,6 +120,7 @@
             "id": "mr-2026",
             "name": "Masquerade on the Runway",
             "startsAt": "2026-10-31T20:00:00-04:00",
+            "timeZone": "America/Detroit",
             "venue": "1600 East Grand Blvd, Detroit",
             "price": "From $31",
             "ticketUrl": "https://www.eventbrite.com/e/masquerade-on-the-runway-tickets-1998119183265"

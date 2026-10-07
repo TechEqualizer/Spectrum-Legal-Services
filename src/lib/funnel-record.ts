@@ -4,6 +4,7 @@
 // site), text has limits, and references between reels must resolve.
 
 import type { Funnel, FunnelBrand, FunnelCta, ReelEmphasis } from "@/data/funnel-types";
+import { isTimeZone } from "@/lib/event-time";
 import { LOOK_FONTS } from "@/lib/look";
 import { checkMedia, isMediaUrl } from "@/lib/publication";
 
@@ -112,5 +113,14 @@ export function parseFunnelRecord(input: unknown): Funnel | string {
   // A stored funnel is never a sample: samples are made-up businesses in code.
   const funnel = { ...f } as Funnel;
   delete funnel.sample;
+  // A date's time zone must be one Intl knows ("America/Detroit"); an unknown one is dropped, not fatal.
+  if (funnel.events) {
+    funnel.events = funnel.events.map((e) => {
+      if (e.timeZone === undefined || isTimeZone(e.timeZone)) return e;
+      const rest = { ...e };
+      delete rest.timeZone;
+      return rest;
+    });
+  }
   return funnel;
 }

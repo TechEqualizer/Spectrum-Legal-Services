@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { FunnelEvent } from "@/data/funnel-types";
+import { eventDate, eventDay, eventDayOfMonth, eventWhen, instantToZoned, isTimeZone, localTimeZone, zonedToInstant, zoneName } from "@/lib/event-time";
 import { isOver } from "@/lib/events";
 import FlyerImportSheet, { type FlyerFound, type FunnelDraft, type ImportedDate } from "@/admin/components/FlyerImportSheet";
 import type { Look } from "@/lib/look";
@@ -15,14 +16,16 @@ const STATUS: { id: Status; label: string }[] = [
   { id: "sold_out", label: "Sold out" },
 ];
 
-const pad = (n: number) => String(n).padStart(2, "0");
-/** The date and time fields' values, in the admin's own time zone. */
-const toFields = (iso: string) => {
-  const d = new Date(iso);
-  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
-};
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+/**
+ * Where a date's clock is: its own time zone, else (an older date, or a new
+ * one) this browser's. Dates are entered and shown on that clock, so an
+ * 8 PM Detroit night reads 8 PM to an admin anywhere.
+ */
+const zoneOf = (e?: Pick<FunnelEvent, "timeZone">) => (isTimeZone(e?.timeZone) ? e.timeZone : localTimeZone());
+/** The date and time fields' values, on the date's clock. */
+const toFields = (e: FunnelEvent) => instantToZoned(e.startsAt, zoneOf(e));
+/** "2026-10-31" plus n days. */
+const addDays = (date: string, n: number) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
 /**
  * The event's dates, as rows: tap one to edit it, or add the next one.
@@ -95,7 +98,7 @@ export default function DatesCard({
     setFound(null);
     setAdded(new Set());
   };
-  const days = new Set(events.map((e) => toFields(e.startsAt).date));
+  const days = new Set(events.map((e) => eventDay(e)));
   const review = (index: number, dates = found?.dates ?? []) => {
     setImporting(false);
     setEditing({ event: fromFlyer(dates[index], sorted), isNew: true, imported: index });
@@ -212,17 +215,19 @@ export default function DatesCard({
   );
 }
 
-/** A new date: a week after the last one, at the same time, with the same details. */
+/** A new date: a week after the last one, at the same time on the same clock, with the same details. */
 function newDate(sorted: FunnelEvent[]): FunnelEvent {
   const last = sorted[sorted.length - 1];
-  const start = last ? new Date(last.startsAt) : new Date();
-  if (!last) start.setHours(19, 0, 0, 0);
-  start.setDate(start.getDate() + 7);
-  while (start.getTime() < Date.now()) start.setDate(start.getDate() + 7);
+  const timeZone = zoneOf(last);
+  const from = last ? toFields(last) : { date: instantToZoned(new Date().toISOString(), timeZone).date, time: "19:00" };
+  let date = addDays(from.date, 7);
+  const at = () => zonedToInstant(date, from.time, timeZone) ?? new Date().toISOString();
+  while (Date.parse(at()) < Date.now()) date = addDays(date, 7);
   return {
     id: `ev-${Date.now().toString(36)}`,
     name: last?.name.split(": ")[0] ?? "",
-    startsAt: start.toISOString(),
+    startsAt: at(),
+    ...(timeZone ? { timeZone } : {}),
     venue: last?.venue,
     price: last?.price,
     ticketUrl: "",
@@ -232,11 +237,14 @@ function newDate(sorted: FunnelEvent[]): FunnelEvent {
 /** A new date from what the flyer says. Anything it left out stays empty, for the admin to fill. */
 function fromFlyer(d: ImportedDate, sorted: FunnelEvent[]): FunnelEvent {
   const last = sorted[sorted.length - 1];
+  // On the same clock as the other dates (else this browser's).
+  const timeZone = zoneOf(last);
   return {
     id: `ev-${Date.now().toString(36)}`,
     name: d.name || (last?.name.split(": ")[0] ?? ""),
     // No time on the flyer: the time of the last date, else 7 PM.
-    startsAt: new Date(`${d.date}T${d.time || (last ? toFields(last.startsAt).time : "19:00")}`).toISOString(),
+    startsAt: zonedToInstant(d.date, d.time || (last ? toFields(last).time : "19:00"), timeZone) ?? new Date().toISOString(),
+    ...(timeZone ? { timeZone } : {}),
     ...(d.venue ? { venue: d.venue } : {}),
     ...(d.price ? { price: d.price } : {}),
     ticketUrl: d.ticketUrl,
@@ -244,19 +252,18 @@ function fromFlyer(d: ImportedDate, sorted: FunnelEvent[]): FunnelEvent {
 }
 
 function DateRow({ event, reel, past = false, onClick }: { event: FunnelEvent; reel?: string; past?: boolean; onClick: () => void }) {
-  const d = new Date(event.startsAt);
   const status = past ? "Past" : STATUS.find((s) => s.id === (event.status ?? "on_sale"))!.label;
   return (
     <li>
       <button type="button" onClick={onClick} className="flex min-h-16 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-soft-gray sm:px-5">
         <span className={`flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl leading-none ${past ? "bg-gray-100 text-gray-500" : "bg-deep-navy text-white"}`}>
-          <span className={`text-[11px] font-bold uppercase tracking-wider ${past ? "" : "text-sky-accent"}`}>{d.toLocaleDateString("en-US", { month: "short" })}</span>
-          <span className="mt-0.5 text-lg font-bold">{d.getDate()}</span>
+          <span className={`text-[11px] font-bold uppercase tracking-wider ${past ? "" : "text-sky-accent"}`}>{eventDate(event, { month: "short" })}</span>
+          <span className="mt-0.5 text-lg font-bold">{eventDayOfMonth(event)}</span>
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold text-deep-navy">{event.name}</span>
           <span className="block truncate text-xs text-gray-600">
-            {when(event.startsAt)}
+            {eventWhen(event)}
             {event.price ? ` · ${event.price}` : ""}
           </span>
           {!past && (
@@ -302,7 +309,9 @@ function DateSheet({
 }) {
   const id = useId();
   const ref = useRef<HTMLDialogElement>(null);
-  const initial = toFields(event.startsAt);
+  // The date's own clock; an older date without one takes this browser's.
+  const timeZone = zoneOf(event);
+  const initial = toFields(event);
   const [name, setName] = useState(event.name);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
@@ -315,15 +324,15 @@ function DateSheet({
   // Where the chosen reel sells tickets now, if that's another date (choosing it moves it here).
   const chosen = reels.find((r) => r.id === reel);
   const movesFrom = chosen?.eventId && chosen.eventId !== event.id ? events.find((e) => e.id === chosen.eventId) : undefined;
-  const shortDate = (e: FunnelEvent) => new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const shortDate = (e: FunnelEvent) => eventDate(e, { month: "short", day: "numeric" });
   useEffect(() => ref.current?.showModal(), []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const problems: Record<string, string> = {};
     if (!name.trim()) problems.name = "Give the date a name.";
-    const start = new Date(`${date}T${time || "00:00"}`);
-    if (!date || Number.isNaN(start.getTime())) problems.date = "Pick a date.";
+    const start = date ? zonedToInstant(date, time || "00:00", timeZone) : undefined;
+    if (!start) problems.date = "Pick a date.";
     try {
       if (new URL(ticketUrl.trim()).protocol !== "https:") throw new Error();
     } catch {
@@ -335,7 +344,8 @@ function DateSheet({
       ...(event.reelId ? { reelId: event.reelId } : {}),
       id: event.id,
       name: name.trim(),
-      startsAt: start.toISOString(),
+      startsAt: start!,
+      ...(timeZone ? { timeZone } : {}),
       ticketUrl: ticketUrl.trim(),
       ...(venue.trim() ? { venue: venue.trim() } : {}),
       ...(price.trim() ? { price: price.trim() } : {}),
@@ -383,7 +393,9 @@ function DateSheet({
               </div>
               <div>
                 <label htmlFor={`${id}-time`} className="text-sm font-semibold text-deep-navy">Starts</label>
-                <input id={`${id}-time`} type="time" className={field} value={time} onChange={(e) => setTime(e.target.value)} />
+                <input id={`${id}-time`} type="time" className={field} value={time} onChange={(e) => setTime(e.target.value)} aria-describedby={timeZone ? `${id}-zone` : undefined} />
+                {/* Whose clock the time is on, so it's never a guess. */}
+                {timeZone && <p id={`${id}-zone`} className="mt-1 text-xs text-gray-500">{zoneName(timeZone)} time</p>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 px-4 py-3">

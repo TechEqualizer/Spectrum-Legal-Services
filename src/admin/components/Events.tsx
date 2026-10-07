@@ -9,8 +9,9 @@ import CopyButton from "@/admin/components/ui/CopyButton";
 import { PlusIcon } from "@/admin/components/ui/icons";
 import { requestImport } from "@/admin/import-request";
 import { runsOrganizer, useAdminSession } from "@/admin/session";
-import LocalDate from "@/components/LocalDate";
+import EventWhen from "@/components/EventWhen";
 import type { Funnel } from "@/data/funnel-types";
+import { eventDaysAway } from "@/lib/event-time";
 import { isOver, upcomingEvents } from "@/lib/events";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
 import { EVENT_SLUG, slugFromName, type NewEventMode } from "@/lib/new-event";
@@ -21,7 +22,8 @@ const useOrigin = () => useSyncExternalStore(() => () => {}, () => window.locati
 function standing(live: Funnel, now: number) {
   const next = upcomingEvents(live, now)[0];
   if (next) {
-    const today = new Date(next.startsAt).toDateString() === new Date(now).toDateString();
+    // Today on the event's own calendar.
+    const today = eventDaysAway(next, now) <= 0;
     return { next, label: today ? "Tonight" : "Upcoming", tone: "bg-teal-accent/15 text-deep-navy" };
   }
   const dates = live.events ?? [];
@@ -224,7 +226,7 @@ function EventRow({
         <span className="min-w-0 flex-1">
           <span className="line-clamp-2 font-bold leading-snug text-deep-navy">{title}</span>
           <span className="mt-0.5 block truncate text-sm text-gray-600">
-            {when ? <LocalDate iso={when.startsAt} /> : `/f/${funnel.slug}`}
+            {when ? <EventWhen event={when} /> : `/f/${funnel.slug}`}
           </span>
           <span className="mt-1 flex flex-wrap gap-1.5">
             {status && <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${status.tone}`}>{status.label}</span>}

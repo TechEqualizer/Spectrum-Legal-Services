@@ -1,5 +1,5 @@
 import BrandLogo from "@/components/BrandLogo";
-import LocalDate from "@/components/LocalDate";
+import EventWhen from "@/components/EventWhen";
 import SourceLink from "@/components/SourceLink";
 import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
@@ -64,7 +64,7 @@ export default function OrganizerEvents({
                         {funnel.cover.hero?.title ?? funnel.brand.seriesLabel}
                       </h2>
                       <p className="mt-1 text-sm font-semibold text-sky-accent">
-                        <LocalDate iso={next.startsAt} />
+                        <EventWhen event={next} />
                         {next.status === "few_left" && " · Few left"}
                         {next.status === "sold_out" && " · Sold out"}
                       </p>
