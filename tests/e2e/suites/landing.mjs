@@ -89,7 +89,20 @@ await dock.getByRole('link', { name: 'Get on the list' }).tap();
 await m.waitForFunction(() => document.querySelector('.sl-dock').hasAttribute('data-hidden'), null, { timeout: 5000 }).catch(() => {}); await animationsDone(m, 1000);
 check('phone: the dock takes you to the stub, then steps aside', (await dock.getAttribute('data-hidden')) === '' && await m.locator('#join').getByLabel('Email').isVisible());
 await m.screenshot({ path: S + '/landing-390-stub.jpg' });
-await m.screenshot({ path: S + '/landing-390-full.jpg', fullPage: true });
+// Each section rises in as it scrolls into view, and ends fully shown.
+const reveal = async (name) => {
+  await m.getByRole('heading', { name }).evaluate((h) => h.scrollIntoView({ block: 'center' }));
+  await m.waitForFunction((n) => [...document.querySelectorAll('h2')].some((h) => h.textContent.includes(n) && getComputedStyle(h).opacity === '1'), name.source, { timeout: 5000 }).catch(() => {});
+  return m.getByRole('heading', { name }).evaluate((h) => getComputedStyle(h).opacity);
+};
+const below = await m.getByRole('heading', { name: /The night ends/ }).evaluate((h) => Number(getComputedStyle(h).opacity));
+check('phone: a section waits below until you reach it', below < 1, String(below));
+check('phone: board numbers stay on one line', await m.locator('[data-tickets], [data-visitors]').evaluateAll((tds) => tds.every((td) => { const r = document.createRange(); r.selectNodeContents(td); return r.getClientRects().length === 1; })));
+check('phone: the lineup arrives', (await reveal(/lineup/)) === '1');
+await m.waitForFunction(() => new Promise((r) => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); })); await animationsDone(m, 800); await m.screenshot({ path: S + '/landing-390-lineup.jpg' });
+check('phone: the last call arrives', (await reveal(/The night ends/)) === '1');
+await m.waitForFunction(() => new Promise((r) => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); })); await animationsDone(m, 800); await m.screenshot({ path: S + '/landing-390-after.jpg' });
+
 
 
 check('no page errors', !errs.length, errs.join(' | ').slice(0, 300));
