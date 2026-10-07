@@ -80,7 +80,10 @@ export default function ReelViewer({
   const [isPaused, setIsPaused] = useState(() =>
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
-  const [isMuted, setIsMuted] = useState(true);
+  // A video file opens with sound, as the visitor just tapped to open it (if
+  // the browser still refuses sound, it plays muted: see VideoSlide). YouTube
+  // starts muted: its player stays stopped rather than falling back.
+  const [isMuted, setIsMuted] = useState(() => funnelReel(funnel, startReelId)?.media?.kind !== "video");
   // The booking or "text me later" form, open over the reel.
   const [sheet, setSheet] = useState<LeadIntent | null>(null);
   const isModal = variant === "modal";
@@ -414,6 +417,7 @@ export default function ReelViewer({
               reel={reel}
               isPaused={isPaused || sheet !== null}
               isMuted={isMuted}
+              onSoundBlocked={() => setIsMuted(true)}
               onProgress={(fraction) => setProgress({ step, fraction })}
               onFinished={() => advance("completed")}
             />
@@ -917,6 +921,8 @@ type ReelSlideProps = {
   reel: Reel;
   isPaused: boolean;
   isMuted: boolean;
+  /** The browser won't play this video with sound yet; it carries on muted. */
+  onSoundBlocked: () => void;
   onProgress: (fraction: number) => void;
   onFinished: () => void;
 };
@@ -942,17 +948,24 @@ function VideoSlide({
   media,
   isPaused,
   isMuted,
+  onSoundBlocked,
   onProgress,
   onFinished,
 }: ReelSlideProps & { media: Extract<ReelMedia, { kind: "video" }> }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const soundBlocked = useLatest(onSoundBlocked);
 
+  // Runs again once muted, so a video the browser wouldn't play with sound
+  // starts playing without it.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     if (isPaused) video.pause();
-    else video.play().catch(() => {});
-  }, [isPaused]);
+    else
+      video.play().catch((error: unknown) => {
+        if (!video.muted && error instanceof DOMException && error.name === "NotAllowedError") soundBlocked.current();
+      });
+  }, [isPaused, isMuted, soundBlocked]);
 
   return (
     <video

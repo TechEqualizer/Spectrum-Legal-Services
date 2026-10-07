@@ -29,6 +29,10 @@ Building replaces the app's `.next` folder with a test build, so run
   - `client-link`: Big Love's live link, `/f/masquerade`.
   - `sell`, `fold`, `hero`, `yt-hero`, `events`, `one-date`, `emphasis`:
     the funnel link a visitor sees.
+  - `sound`: a video reel opens with sound after a tap, and plays muted
+    (with Unmute) when the browser refuses sound. Headless Chromium never
+    refuses, so the suite plays by a phone's rule (no sound before a tap),
+    with `fixtures/sample-reel-sound.webm`, a clip with an audio track.
   - `book-first`: a book-first link that isn't live (`/f/skin-notes`, the
     test-only Lumen Skin Studio from `fixtures/book-first.mjs`: Book is the
     main action; forms simulate).
