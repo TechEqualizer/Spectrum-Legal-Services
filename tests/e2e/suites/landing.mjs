@@ -11,7 +11,7 @@ const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
 const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
 await p.goto(B + '/?src=instagram'); await settle(p, 1500);
 check('Showlnk title', /^Showlnk/.test(await p.title()), await p.title());
-check('the promise in one line', (await p.getByRole('heading', { level: 1 }).innerText()).replace(/\s+/g, ' ').toLowerCase() === 'drop a flyer. get four reels. sell the night.');
+check('the promise in one line', (await p.getByRole('heading', { level: 1 }).innerText()).replace(/\s+/g, ' ').toLowerCase() === 'upload one flyer. sell the experience. sell out the night.');
 check('no law firm left', !/attorney|injury|law firm/i.test(await p.locator('body').innerText()));
 check('the form is on the first screen', (await p.locator('#join').boundingBox()).y < 900);
 check('the board has no sample label', await p.getByText(/Sample numbers/).count() === 0);
