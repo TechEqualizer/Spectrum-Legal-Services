@@ -293,6 +293,7 @@ export default function ReelsEditor() {
           </button>
           <button
             type="button"
+            data-tour="add-reel"
             onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
             className="inline-flex min-h-11 items-center gap-2 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
           >
@@ -554,6 +555,7 @@ export default function ReelsEditor() {
               {orderEl}
               <button
                 type="button"
+                data-tour="add-reel"
                 onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-400 text-sm font-semibold text-deep-navy hover:bg-white"
               >

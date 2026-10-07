@@ -140,7 +140,7 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
 
   if (!next) {
     return (
-      <section aria-labelledby={id} className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
+      <section aria-labelledby={id} data-tour="home-next" className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
         <h2 id={id} className="text-base font-bold text-deep-navy">Next up</h2>
         <p className="mt-1 text-sm text-gray-600">No upcoming dates. Add the next night to an event, or start a new one.</p>
         <Link href="/admin/events" className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue">
@@ -165,7 +165,7 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
   const left = steps.filter((s) => s.state !== "ready").length;
 
   return (
-    <section aria-labelledby={id} className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
+    <section aria-labelledby={id} data-tour="home-next" className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
       <div className="flex flex-wrap items-start gap-4">
         <span className="relative h-24 w-[4.5rem] flex-shrink-0 overflow-hidden rounded-lg bg-deep-navy" aria-hidden="true">
           {poster && (

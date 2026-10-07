@@ -127,6 +127,20 @@
   animation: fadeInUp 0.6s ease-out forwards;
 }
 
+/* The admin tour's card, each step. */
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.animate-tour-in {
+  animation: tour-in 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-tour-in { animation: none; }
+}
+
 /* Cinematic opening scene (CinematicHero). Every color comes from the
    funnel's theme, so each brand gets its own light. Built so a browser that
    skips animations (battery saver, forced dark mode, older phones) still

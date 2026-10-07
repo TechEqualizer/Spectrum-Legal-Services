@@ -55,7 +55,7 @@ export default function ReelOrder({
   const notInFunnel = library.filter((r) => !funnel.order.includes(r.id));
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white" aria-labelledby="order-title">
+    <section className="rounded-xl border border-gray-200 bg-white" aria-labelledby="order-title" data-tour="reels-order">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-gray-100 px-5 py-4">
         <h2 id="order-title" className="text-base font-bold text-deep-navy">Order</h2>
         <p className="text-xs text-gray-600">Drag or use the arrows. Results: last 30 days.</p>

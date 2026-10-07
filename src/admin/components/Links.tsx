@@ -77,7 +77,7 @@ export default function Links() {
       </div>
 
       {organizer && (
-        <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="bio-title">
+        <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="bio-title" data-tour="share-bio">
           <h2 id="bio-title" className="text-base font-bold text-deep-navy">Your bio link</h2>
           <p className="mt-1 text-sm text-gray-600">
             Always shows your next event, so it never needs changing. Put this one in your Instagram and TikTok bio.
@@ -95,7 +95,7 @@ export default function Links() {
         </section>
       )}
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="builder-title">
+      <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="builder-title" data-tour="share-builder">
         <h2 id="builder-title" className="mb-4 text-base font-bold text-deep-navy">{organizer ? "A link for this event" : "Build a link"}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
