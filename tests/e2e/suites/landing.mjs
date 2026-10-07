@@ -24,6 +24,23 @@ check('the phone plays the real link', (await live.getAttribute('src')) === '/f/
 const scene = p.frameLocator('iframe.sl-phone-live');
 check('the link in the phone is the live opening scene', await scene.getByRole('heading', { name: /Masquerade on the Runway/i }).first().isVisible().catch(() => false));
 await p.waitForTimeout(1500);
+// If the link can't load, the phone keeps its still instead of showing an error page.
+{
+  const q = await ctx.newPage();
+  await q.route('**/f/masquerade', (r) => r.fulfill({ status: 404, contentType: 'text/html', body: '<!doctype html><title>404: This page could not be found.</title><h1>404</h1>' }));
+  await q.goto(B + '/'); await q.waitForTimeout(3500);
+  check("a link that fails keeps the phone's still", await q.locator('iframe.sl-phone-live').evaluate((f) => getComputedStyle(f).opacity) === '0' && await q.getByRole('img', { name: /Big Love Productions' Showlnk link/ }).isVisible());
+  await q.close();
+}
+// Big Love's night: one flyer, their four reels, and how it works.
+const reels = p.getByRole('list', { name: "Big Love's four reels" });
+check('four reels, in the order a guest meets them', (await reels.getByRole('heading').allTextContents()).join('|') === '“What is this night?”|“Will this be amazing?”|“Is this for someone like me?”|“Why buy now?”');
+check("the reels carry Big Love's own titles", await reels.getByText('Haute couture Halloween looks').isVisible() && await reels.getByText('Masks on. Secrets revealed.').isVisible() && await reels.getByText('Limited tickets. Arrive early.').isVisible());
+check('four across on desktop', await reels.evaluate((ol) => { const ys = [...ol.children].map((li) => Math.round(li.getBoundingClientRect().top)); return new Set(ys).size === 1 && ys.length === 4; }));
+check('how it works, honestly', (await p.getByRole('list', { name: 'How it works' }).innerText()).includes('Add your clips or photos'));
+await reels.evaluate((ol) => ol.scrollIntoView({ block: 'center' })); await p.waitForTimeout(900);
+await p.screenshot({ path: S + '/landing-1440-reels.jpg' });
+await p.evaluate(() => scrollTo(0, 0));
 check("the phone doesn't count as a visit", visits.length === 0, visits.join(' '));
 check('headings read light on the night', await p.getByRole('heading', { level: 1 }).evaluate((h) => getComputedStyle(h).color) === 'rgb(244, 238, 228)');
 await animationsDone(p, 2500);
@@ -107,8 +124,10 @@ const reveal = async (name) => {
 const below = await m.getByRole('heading', { name: /The night ends/ }).evaluate((h) => Number(getComputedStyle(h).opacity));
 check('phone: a section waits below until you reach it', below < 1, String(below));
 check('phone: board numbers stay on one line', await m.locator('[data-tickets], [data-visitors]').evaluateAll((tds) => tds.every((td) => { const r = document.createRange(); r.selectNodeContents(td); return r.getClientRects().length === 1; })));
-check('phone: the lineup arrives', (await reveal(/lineup/)) === '1');
-await m.waitForFunction(() => new Promise((r) => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); })); await animationsDone(m, 800); await m.screenshot({ path: S + '/landing-390-lineup.jpg' });
+check('phone: the reels arrive', (await reveal(/One flyer became this/)) === '1');
+const strip = m.getByRole('list', { name: "Big Love's four reels" });
+check('phone: the reels swipe sideways, the next one peeking in', await strip.evaluate((ol) => ol.scrollWidth > ol.clientWidth + 100) && await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+await m.waitForFunction(() => new Promise((r) => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); })); await animationsDone(m, 800); await m.screenshot({ path: S + '/landing-390-reels.jpg' });
 check('phone: the last call arrives', (await reveal(/The night ends/)) === '1');
 await m.waitForFunction(() => new Promise((r) => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => r(scrollY === y))); })); await animationsDone(m, 800); await m.screenshot({ path: S + '/landing-390-after.jpg' });
 

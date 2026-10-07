@@ -15,9 +15,9 @@ download (`src/app/page.tsx`, `src/components/showlnk/`, migration
 `20261014000000_waitlist.sql`). Beside the headline, a phone plays Big Love's real
 link (`PhoneScene`: `/f/masquerade` in a frame, over a still
 `public/showlnk/opening-scene.webp` until it draws). A funnel link shown
-inside another page runs as a preview, so the phone never counts as a visit. The ticket-click board (`SourcesBoard`)
-counts up when it scrolls into view. A fan of example reels (`ReelFan`) is
-built but off the page for now.
+inside another page runs as a preview, so the phone never counts as a visit. Below the hero, `ReelStrip` shows Big Love's four
+reels (their real titles and pictures) with an honest how-it-works line, and
+the ticket board (`SourcesBoard`) counts up when it scrolls into view.
 
 There are no sample funnels: the old med spa (`/f/medspa`) and Golden Hour
 (`/f/events`) samples are gone (both links are 404s), and the admin shows
