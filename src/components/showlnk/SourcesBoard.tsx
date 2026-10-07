@@ -75,8 +75,8 @@ export default function SourcesBoard({ sources }: { sources: Source[] }) {
                   <span data-bar className="block h-full origin-left rounded-full bg-[var(--sl-gold)]" style={{ width: `${(s.visitors / most) * 100}%` }} />
                 </span>
               </td>
-              <td data-visitors className="py-3 pr-3 text-right tabular-nums text-[var(--sl-muted)]">{s.visitors} visitors</td>
-              <td data-tickets className="py-3 text-right font-bold tabular-nums text-[var(--sl-gold)]">{s.tickets} tickets</td>
+              <td data-visitors className="whitespace-nowrap py-3 pr-3 text-right text-xs tabular-nums text-[var(--sl-muted)] sm:text-sm">{s.visitors} visitors</td>
+              <td data-tickets className="whitespace-nowrap py-3 text-right font-bold tabular-nums text-[var(--sl-gold)]">{s.tickets} tickets</td>
             </tr>
           ))}
         </tbody>

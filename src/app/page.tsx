@@ -11,7 +11,7 @@ import "@/components/showlnk/showlnk.css";
 
 const show = Big_Shoulders({ subsets: ["latin"], variable: "--font-show", axes: ["opsz"], display: "swap" });
 
-const title = "Showlnk · Upload one flyer. Sell the experience.";
+const title = "Showlnk · Don't just announce the night. Invite them into it.";
 const description =
   "Drop in your event flyer. Showlnk turns it into one link of vertical reels: the opening scene, The Night, Your People and Last Call, every one ending on your tickets. Get on the list for early access.";
 
@@ -63,20 +63,21 @@ export default function ShowlnkHome() {
       </header>
 
       <main id="main-content">
-        {/* The flyer: three lines of type and the stub, beside a real opening scene on a phone. */}
+        {/* The flyer: the headline in two beats and the stub, beside a real opening scene on a phone. */}
         <section aria-labelledby="sl-title" className="sl-wash relative">
           <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-14 lg:pb-24 lg:pt-10">
             <div className="min-w-0">
               <h1 id="sl-title" className="sl-display text-[clamp(3.4rem,10.5vw,6rem)] lg:text-[clamp(5rem,6.9vw,7.5rem)]">
-                <span className="block">Upload one flyer.</span>
-                <span className="block text-[var(--sl-gold)]">Sell the experience.</span>
-                <span className="block">Sell out the night.</span>
+                {/* On phones the setup steps back so the invitation lands on its own. */}
+                <span className="block max-lg:text-[0.6em] max-lg:leading-[0.95]">Don&apos;t just announce the night.</span>
+                <span className="block text-[var(--sl-gold)] max-lg:mt-3">Invite them into it.</span>
               </h1>
 
               <div className="mt-10 max-w-2xl lg:mt-12">
-                <p className="max-w-[58ch] text-base leading-relaxed text-[var(--sl-text)]/90 sm:text-lg">
-                  Guests don&apos;t buy a date and a price. They buy the night. Showlnk turns your flyer into one link of short
-                  reels that let them feel it before they&apos;re there, and every reel ends on your tickets.
+                <p className="max-w-[58ch] text-[17px] leading-relaxed text-[var(--sl-text)]/75 sm:text-lg">
+                  <span className="font-semibold text-[var(--sl-text)]">A flyer tells people when.</span> Showlnk turns it into one
+                  link of experiences that let guests step inside the night before they buy, and shows you which post sold every
+                  ticket.
                 </p>
                 <div className="mt-8">
                   <WaitlistStub id="join" />
@@ -110,15 +111,15 @@ export default function ShowlnkHome() {
           <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
             <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
               <div>
-                <h2 id="sl-lineup" className="sl-display text-[clamp(2.75rem,6vw,5.5rem)]">Tonight&apos;s lineup</h2>
-                <p className="mt-4 max-w-[42ch] text-[var(--sl-muted)]">
+                <h2 id="sl-lineup" className="sl-reveal sl-display text-[clamp(2.75rem,6vw,5.5rem)]">Tonight&apos;s lineup</h2>
+                <p className="sl-reveal mt-4 max-w-[42ch] text-[var(--sl-muted)]">
                   One flyer in, four things out. Each reel answers the question every guest asks before they buy, in the order
                   they ask it.
                 </p>
               </div>
               <ol role="list" className="divide-y divide-[var(--sl-line)] border-y border-[var(--sl-line)]">
                 {LINEUP.map((a) => (
-                  <li key={a.act} className="sl-row grid gap-x-6 gap-y-2 py-6 sm:grid-cols-[minmax(0,15rem)_1fr] sm:py-7">
+                  <li key={a.act} className="sl-reveal sl-row grid gap-x-6 gap-y-2 py-6 sm:grid-cols-[minmax(0,15rem)_1fr] sm:py-7">
                     <h3 className="sl-act sl-display text-[clamp(2rem,4vw,3.25rem)]">{a.act}</h3>
                     <div className="sm:pt-1.5">
                       <p className="text-lg font-bold">&ldquo;{a.question}&rdquo;</p>
@@ -135,25 +136,27 @@ export default function ShowlnkHome() {
         <section aria-labelledby="sl-traced" className="bg-[var(--sl-night-2)]">
           <div className="mx-auto grid max-w-7xl gap-10 px-5 py-20 sm:px-8 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-28">
             <div>
-              <h2 id="sl-traced" className="sl-display text-[clamp(2.75rem,6vw,5.5rem)]">
+              <h2 id="sl-traced" className="sl-reveal sl-display text-[clamp(2.75rem,6vw,5.5rem)]">
                 Know which post <span className="text-[var(--sl-gold)]">sold the ticket</span>
               </h2>
-              <p className="mt-5 max-w-[50ch] text-[var(--sl-muted)]">
+              <p className="sl-reveal mt-5 max-w-[50ch] text-[var(--sl-muted)]">
                 Every tap on Tickets carries the reel and the place it came from: your bio, a story, TikTok, or the QR code on a
                 printed flyer. You see what works before the next drop, not after the night.
               </p>
             </div>
-            <SourcesBoard sources={BOARD_SOURCES} />
+            <div className="sl-reveal">
+              <SourcesBoard sources={BOARD_SOURCES} />
+            </div>
           </div>
         </section>
 
         {/* After the night: a quiet beat before the close. */}
         <section aria-labelledby="sl-after" className="border-t border-[var(--sl-line)]">
           <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
-            <h2 id="sl-after" className="sl-display max-w-5xl text-[clamp(2.75rem,7vw,6.5rem)]">
+            <h2 id="sl-after" className="sl-reveal sl-display max-w-5xl text-[clamp(2.75rem,7vw,6.5rem)]">
               The night ends. <span className="text-[var(--sl-lilac)]">The link doesn&apos;t.</span>
             </h2>
-            <p className="mt-6 max-w-[56ch] text-lg text-[var(--sl-muted)]">
+            <p className="sl-reveal mt-6 max-w-[56ch] text-lg text-[var(--sl-muted)]">
               When it&apos;s over, your link plays the recap and points to your next event. The link in your bio always shows
               what&apos;s next, so you never change it again.
             </p>
@@ -163,10 +166,12 @@ export default function ShowlnkHome() {
         {/* The close: the second stub. */}
         <section aria-labelledby="sl-close" className="sl-wash border-t border-[var(--sl-line)]">
           <div className="mx-auto grid max-w-7xl gap-10 px-5 pb-28 pt-20 sm:px-8 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:gap-16 lg:pb-28 lg:pt-28">
-            <h2 id="sl-close" className="sl-display text-[clamp(3.4rem,9vw,8rem)]">
+            <h2 id="sl-close" className="sl-reveal sl-display text-[clamp(3.4rem,9vw,8rem)]">
               Doors open <span className="text-[var(--sl-gold)]">soon.</span>
             </h2>
-            <WaitlistStub id="join-close" />
+            <div className="sl-reveal">
+              <WaitlistStub id="join-close" />
+            </div>
           </div>
         </section>
       </main>
