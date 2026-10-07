@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import type { PreviewMessage, PreviewMoment } from "@/admin/components/PreviewFrame";
-import type { ReelTotals } from "@/admin/sample-data";
+import type { ReelTotals } from "@/admin/stats";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import { PlusIcon } from "@/admin/components/ui/icons";
 import { REEL_DRIVERS, REEL_ROLES, type ReelRole } from "@/lib/funnel-draft";
@@ -147,7 +147,7 @@ export function StudioTabs<T extends string>({
 }
 
 /** Results beside the editor: how far people watch each reel, and what they do. */
-export function ResultsPanel({ rows, real, onPlay }: { rows: ReelTotals[]; real: boolean; onPlay: (reelId: string) => void }) {
+export function ResultsPanel({ rows, onPlay }: { rows: ReelTotals[]; onPlay: (reelId: string) => void }) {
   const views = rows.reduce((n, r) => n + r.views, 0);
   const booked = rows.reduce((n, r) => n + r.booked, 0);
   const completed = rows.reduce((n, r) => n + r.completed, 0);
@@ -192,7 +192,7 @@ export function ResultsPanel({ rows, real, onPlay }: { rows: ReelTotals[]; real:
             );
           })}
         </ul>
-        <p className="mt-1.5 px-1 text-xs text-gray-600">{real ? "Last 30 days." : "Sample numbers."} Tap a reel to play it in the preview.</p>
+        <p className="mt-1.5 px-1 text-xs text-gray-600">Last 30 days. Tap a reel to play it in the preview.</p>
       </div>
       <a href="/admin/overview" className="inline-flex min-h-11 items-center px-1 text-sm font-semibold text-deep-navy hover:underline">
         All results →

@@ -39,7 +39,7 @@ check('their first event opens in the studio', (await p.locator('#admin-business
 check('on Import flyer', await p.locator('dialog[open]').filter({ hasText: /flyer/i }).count() === 1);
 await p.keyboard.press('Escape'); await settle(p, 300);
 const groups = await p.locator('#admin-business optgroup').evaluateAll((gs) => gs.map((g) => g.label + ': ' + [...g.children].map((o) => o.textContent).join(', ')));
-check('dropdown: the client with its event', groups.includes('Velvet Nights: Velvet Halloween') && groups.at(-1).startsWith('Demos:'), groups.join(' | '));
+check('dropdown: the client with its event, no demos', groups.includes('Velvet Nights: Velvet Halloween') && !groups.some((g) => g.startsWith('Demos:')), groups.join(' | '));
 
 // Their links work for visitors.
 const v = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();

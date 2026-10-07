@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -47,7 +47,7 @@ check('prompt gone after refresh', await p.locator('dialog[open]').count() === 0
 
 // 4. Reels: events business, nothing published yet
 await p.goto(B + '/admin'); await settle(p, 600);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1200);
+await pickEvent(p, 'masquerade'); await settle(p, 1200);
 check('live: original reels', await p.getByText(/Live\s*·\s*original reels/).isVisible());
 check('no publish bar yet', await p.getByRole('region', { name: 'Publish' }).count() === 0);
 // 5. Edit: YouTube link on reel 1, uploaded video as the opening background
@@ -103,7 +103,7 @@ await p.getByRole('button', { name: 'Take down published edits' }).click(); awai
 check('taken down', !(await (await fetch(M + '/__state')).json()).publications.some(x => x.slug === 'masquerade'));
 await vp.goto(B + '/f/masquerade'); await settle(vp, 1500);
 check('live link back to original', await vp.evaluate(() => !document.querySelector('video')));
-// 11. New reels are accepted by the tracking API once published (Big Love's live event; the demos are samples and log nothing)
+// 11. New reels are accepted by the tracking API once published (Big Love's live event)
 const r = await p.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade', publication: { version: 1, reels: [{ id: 'brand-new-reel', title: 'New', summary: '', practiceArea: 'The night', cta: 'funnel' }], funnel: { order: ['brand-new-reel'], topics: {}, paths: {}, primaryCta: 'tickets' } } } });
 check('API publish ok', r.ok(), String(r.status()));
 const ev = await p.request.post(B + '/api/reel-events', { data: { visitorId: '11111111-1111-4111-8111-111111111111', funnelId: 'masquerade-v1', reelId: 'brand-new-reel', event: 'viewed' } });

@@ -27,8 +27,13 @@ Building replaces the app's `.next` folder with a test build, so run
   - `client-link`: Big Love's live link, `/f/masquerade`.
   - `sell`, `fold`, `hero`, `yt-hero`, `events`, `one-date`, `emphasis`:
     the funnel link a visitor sees.
-  - `medspa`: the med spa sample at `/f/medspa` (book first; nothing is
-    sent).
+  - `book-first`: a book-first link that isn't live (`/f/skin-notes`, the
+    test-only Lumen Skin Studio from `fixtures/book-first.mjs`: Book is the
+    main action; forms simulate).
+  - `leads`: the admin's Leads page: a fresh event's empty state, a lead
+    sent from Big Love's live link showing with its reel, source and the
+    reels watched first, who may see leads, no sample wording anywhere in
+    the admin, and the old sample links (`/f/medspa`, `/f/events`) as 404s.
   - `link`: a call-first link that isn't live yet (`/f/velvet-room`, added
     to the mock for the suite: forms simulate, tracking is real), plus the
     admin's link builder.
@@ -46,13 +51,26 @@ Building replaces the app's `.next` folder with a test build, so run
   memory. Test accounts: `tester@example.com` / `tester-pass-1` (signed in
   for the suites) and `owner@example.com` (first sign-in flow). Control
   routes: `/__state`, `/__reset`, `/__log`, `/__ttl?s=`, and `/__event`
-  (adds an event row straight to the table).
+  (adds an event row straight to the table), and `/__reel-events` (adds
+  visitors' reel events, each `daysAgo` days back, for results over several
+  periods). Leads sent through `submit_lead_v3` are kept, and
+  `funnel_leads` returns them to the event's admins, like the database.
 - `mocks/claude.mjs`: answers flyer reads (`POST /__mode` with `multi`,
   `single`, `none` or `refusal`) and funnel drafts. `/__last` returns the
   last request, so suites can check the model, schema and prompt.
 - `fixtures/`: a photo, two short videos, a sample flyer and a text file
-  (for the wrong-file-type message).
+  (for the wrong-file-type message), plus two test-only links the suites
+  add to the mock database with `/__event`: `golden-hour.mjs` (Golden Hour
+  Sundays at `/f/sundays`, several dates: sold out, few left, a recap, a
+  presale) and `book-first.mjs` (`/f/skin-notes`). Neither is part of the
+  app, and neither is live, so their forms simulate. Their slugs sort after
+  `masquerade`, so if one lingers in the app's cached event list, Big Love
+  stays the admin's default event.
+- `pickEvent(page, slug)` (in `browser.mjs`) shows an admin event: it uses
+  the nav's event picker, which only appears when the admin has more than
+  one event (Big Love's is the only one seeded).
 
-The admin suites use Big Love Productions, and the visitor suites use the
-Golden Hour sample at `/f/events`. The admin suites run in Detroit time
+The admin suites use Big Love Productions (`masquerade`, organizer
+`biglove`, seeded from `supabase/seed/biglove.json`), and the visitor suites
+use the test-only Golden Hour event at `/f/sundays`. The admin suites run in Detroit time
 (`America/Detroit`), so the Oct 31, 8 PM event shows on the right day.

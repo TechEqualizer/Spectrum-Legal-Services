@@ -13,33 +13,25 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await p.route(/youtube-nocookie\.com/, r=>r.fulfill({status:200, contentType:'text/html', body:'<html></html>'}));
   await p.route(/ytimg\.com/, r=>r.fulfill({status:200, contentType:'image/png', path: D+'/sample-photo.png'}));
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
-  // Organizers' events (from the database) come before the demos.
-  check(w+': Big Love by default', await p.locator('#admin-business').inputValue()==='masquerade' && (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
-  // Other suites' events and clients can linger in the app's event list cache, so: Big Love first, then the demos last.
-  const groups = (await p.locator('#admin-business optgroup').evaluateAll((gs) => gs.map((g) => g.label + ': ' + [...g.children].map((o) => o.textContent).join(', ')))).join(' | ');
-  check(w+': clients first, then demos', /^Big Love Productions: Masquerade on the Runway(, [^|]+)*( \| [^|]+)* \| Demos: Aurelia Med Spa$/.test(groups), groups);
-
-  // Switch business
-  await p.selectOption('#admin-business','medspa');
-  await p.getByText('Aurelia Med Spa is a sample business.').waitFor();
-  check(w+': switched to med spa', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===9);
-  check(w+': spa theme in admin', await p.locator('nav[aria-label="Admin"]').evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(42, 27, 34)');
-  check(w+': spa funnel name', await p.getByLabel('Funnel name').inputValue()==='Skin Notes');
-  check(w+': spa wordmark in nav', await p.locator('nav').getByRole('img',{name:'Aurelia Med Spa'}).count()===1);
-  for (const [path, text] of [['/admin/overview','Aurelia Med Spa'],['/admin/leads','Consultation requests'],['/admin/links','/f/medspa?src=instagram']]) {
+  // Big Love's event, and no demos or sample businesses to switch to.
+  const picker = p.locator('#admin-business');
+  check(w+': Big Love by default', (!(await picker.count()) || await picker.inputValue()==='masquerade') && (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5);
+  // Other suites' events and clients can linger in the app's event list cache: Big Love's group comes first, and there are no demos.
+  const groups = await picker.count() ? (await picker.locator('optgroup').evaluateAll((gs) => gs.map((g) => g.label + ': ' + [...g.children].map((o) => o.textContent).join(', ')))).join(' | ') : await p.locator('nav').innerText();
+  check(w+': clients only, no demos', /Big Love/.test(groups) && !/Demos|Aurelia/.test(groups), groups);
+  for (const [path, text] of [['/admin/overview','Big Love Productions'],['/admin/leads','Leads'],['/admin/links','/f/masquerade?src=instagram']]) {
     await p.goto(B+path,{waitUntil:'networkidle'});
     const body = await p.locator('main').textContent();
-    check(w+`: ${path} shows med spa`, body.includes(text) && !/Attorney|attorney|Car Accident|case evaluation/.test(body), text);
+    check(w+`: ${path} shows Big Love`, body.includes(text) && !/sample/i.test(body), text);
     check(w+`: ${path} fits`, await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   }
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
-  check(w+': choice remembered', await p.locator('#admin-business').inputValue()==='medspa');
 
   // Edit a reel: paste a YouTube link
   const first = (await p.locator('section[aria-labelledby="order-title"] ol > li p.font-bold').first().textContent());
   await p.getByRole('button',{name:`Edit ${first}`}).click();
   const dlg = p.getByRole('dialog');
-  check(w+': treatment select', await dlg.getByText('Treatment',{exact:true}).isVisible() && (await dlg.locator('select').first().locator('option').allTextContents()).includes('Lip Filler'));
+  check(w+': interest select', await dlg.getByText('Interest',{exact:true}).isVisible() && (await dlg.locator('select').first().locator('option').allTextContents()).includes('Fashion show'));
   await dlg.getByRole('button',{name:'Paste a link'}).click();
   await dlg.getByLabel('Link').fill('https://www.instagram.com/reel/abc123/');
   await dlg.getByRole('button',{name:'Use link'}).click();
@@ -50,8 +42,8 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await dlg.getByRole('button',{name:'Save reel'}).click();
   check(w+': row tagged YouTube', (await p.locator('section[aria-labelledby="order-title"] ol > li').first().textContent()).includes('YouTube'));
 
-  // Upload: video, then a photo, and a wrong file type
-  const second = (await p.locator('section[aria-labelledby="order-title"] ol > li p.font-bold').nth(1).textContent());
+  // Upload: video, then a photo, and a wrong file type (on reels with no media yet)
+  const second = (await p.locator('section[aria-labelledby="order-title"] ol > li p.font-bold').nth(2).textContent());
   await p.getByRole('button',{name:`Edit ${second}`}).click();
   const d2 = p.getByRole('dialog');
   await d2.getByLabel('Upload a video or photo').setInputFiles(D+'/notes.txt');
@@ -63,12 +55,12 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   check(w+': webm preview loads', await d2.locator('video').evaluate(v=>v.readyState>=1 && !v.error));
   await p.screenshot({path:`media-dialog-${w}.jpg`, quality:70});
   await d2.getByRole('button',{name:'Save reel'}).click();
-  check(w+': row tagged as video', !(await p.locator('section[aria-labelledby="order-title"] ol > li').nth(1).textContent()).includes('No video yet'));
-  const third = (await p.locator('section[aria-labelledby="order-title"] ol > li p.font-bold').nth(2).textContent());
+  check(w+': row tagged as video', !(await p.locator('section[aria-labelledby="order-title"] ol > li').nth(2).textContent()).includes('No video yet'));
+  const third = (await p.locator('section[aria-labelledby="order-title"] ol > li p.font-bold').nth(3).textContent());
   await p.getByRole('button',{name:`Edit ${third}`}).click();
   await p.getByRole('dialog').getByLabel('Upload a video or photo').setInputFiles(D+'/sample-photo.png');
   await p.getByRole('dialog').getByRole('button',{name:'Save reel'}).click();
-  check(w+': row tagged Photo', (await p.locator('section[aria-labelledby="order-title"] ol > li').nth(2).textContent()).includes('Photo'));
+  check(w+': row tagged Photo', (await p.locator('section[aria-labelledby="order-title"] ol > li').nth(3).textContent()).includes('Photo'));
 
   // Preview edits in the real viewer
   await p.getByRole('button',{name:'Preview',exact:true}).click();
@@ -76,7 +68,7 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await viewer.waitFor();
   const frame = viewer.locator('iframe');
   check(w+': youtube plays in nocookie player', (await frame.getAttribute('src'))?.startsWith('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1'));
-  check(w+': rail in preview', await viewer.getByRole('button',{name:'Book',exact:true}).isVisible() && await viewer.getByRole('button',{name:'Like',exact:true}).isVisible());
+  check(w+': rail in preview', await viewer.getByRole('link',{name:'Tickets',exact:true}).isVisible() && await viewer.getByRole('button',{name:'Like',exact:true}).isVisible());
   await viewer.getByRole('button',{name:'Like',exact:true}).click();
   check(w+': like toggles', await viewer.getByRole('button',{name:'Liked'}).getAttribute('aria-pressed')==='true');
   await p.screenshot({path:`preview-yt-${w}.jpg`, quality:70});
@@ -92,13 +84,10 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await settle(p, 300);
   check(w+': photo reel shows', await p.getByRole('dialog',{name:/Video:/}).locator('img[src^="blob:"]').evaluate(i=>i.complete && i.naturalWidth>0));
   // Only the admin's own reads (what's live, its results); no tracking or leads.
-  check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=') && !u.includes('/api/admin/stats?')).length===0, api.join(','));
+  check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=') && !u.includes('/api/admin/stats?') && !u.includes('/api/admin/leads?')).length===0, api.join(','));
   await p.keyboard.press('Escape');
 
-  // Switch back to Big Love
-  await p.selectOption('#admin-business','masquerade');
-  await settle(p, 300);
-  check(w+': back to Big Love', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5 && await p.getByLabel('Funnel name').inputValue()==='Masquerade on the Runway');
+  check(w+': still Big Love', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5 && await p.getByLabel('Funnel name').inputValue()==='Masquerade on the Runway');
   await ctx.close();
 }
 await b.close();

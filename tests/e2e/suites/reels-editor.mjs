@@ -1,12 +1,17 @@
-import { chromium, settle } from '../browser.mjs';
+// The reel editor on Big Love's event: the live funnel's reels, their paths
+// and results, moving, editing, adding and removing reels, and funnels of
+// the admin's own.
+import { chromium } from '../browser.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[]; const B='http://localhost:3002';
+// Real results for the first reel, so its row shows them.
+await fetch('http://localhost:54321/__reel-events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(
+  ['viewed', 'viewed', 'viewed', 'completed', 'cta_clicked'].map((event) => ({ funnel: 'masquerade-v1', reel: 'mr-masks-on', event })),
+) });
 const b = await chromium.launch();
 for (const [w,h] of [[390,844],[1279,900]]) {
   const mobile=w<1024;
   const p = await b.newPage({ storageState: process.argv[2] + '/auth.json', viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile, deviceScaleFactor: mobile?2:1 });
-  // These checks use the med spa demo; organizers' events come first by default.
-  await p.addInitScript(() => { if (!localStorage.getItem('admin_business')) localStorage.setItem('admin_business', 'medspa'); });
   p.on('pageerror',e=>errs.push(w+' '+e.message)); p.on('console',m=>{if(m.type()==='error' && !m.text().includes('404'))errs.push(w+' '+m.text())});
   await p.goto(B+'/admin',{waitUntil:'networkidle'});
   const rows = p.locator('section[aria-labelledby="order-title"] ol > li');
@@ -14,16 +19,16 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   const rowText = async i => (await rows.nth(i).textContent());
   check(w+': Reels is admin home', await p.getByRole('heading',{level:1}).textContent()==='Reels');
   check(w+': nav marks Reels current', await p.locator('nav [aria-current="page"]').textContent()==='Reels');
-  check(w+': 3 funnel cards, one default', await p.locator('[aria-pressed]').filter({hasText:'reel'}).count()===3 && await p.getByText('Default',{exact:true}).count()===1);
-  check(w+': 9 reels in live funnel', await rows.count()===9);
+  check(w+': only the live funnel, the default', await p.locator('[aria-pressed]').filter({hasText:'reel'}).count()===1 && await p.getByText('Default',{exact:true}).count()===1);
+  check(w+': 5 reels in live funnel', await rows.count()===5);
   const r0 = await rowText(0);
-  check(w+': row chips', r0.includes('Topic: Fine lines and wrinkles') && r0.includes('No video yet') && r0.includes('Book'), r0.slice(0,160));
-  check(w+': override shown', r0.includes('Skipped → 3. Lip filler that still looks like you'), r0);
-  check(w+': watched override', (await rowText(1)).includes('Watched → 8. How pricing works'));
-  check(w+': default path text', (await rowText(7)).includes('Then the next reel'));
-  check(w+': last reel ends', (await rowText(8)).includes('Then the end card'));
+  check(w+': row chips', r0.includes('The night') && r0.includes('Tickets') && r0.includes('Photo') && !r0.includes('No video yet'), r0.slice(0,160));
+  check(w+': override shown', r0.includes('Skipped → 5. Limited tickets. Arrive early.'), r0);
+  check(w+': no video yet chip', (await rowText(2)).includes('No video yet'));
+  check(w+': default path text', (await rowText(3)).includes('Then the next reel'));
+  check(w+': last reel ends', (await rowText(4)).includes('Then the end card'));
   check(w+': all reachable', await p.getByText('No path leads here').count()===0);
-  check(w+': stats shown', /views/i.test(r0) && /watched/i.test(r0) && /booked/i.test(r0));
+  check(w+': real stats shown', /3/.test(r0) && /views/i.test(r0) && /watched/i.test(r0) && /ticket/i.test(r0), r0.slice(-160));
   check(w+': page fits width', await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await p.screenshot({path:`reels-editor-${w}.jpg`, quality:70, fullPage:true});
 
@@ -79,24 +84,13 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   await add.getByLabel('Title',{exact:true}).fill('Brand new reel');
   await add.getByRole('button',{name:'Add reel'}).click();
   const t = await titles();
-  check(w+': new reel appended', t.length===10 && t[9]==='Brand new reel');
-  check(w+': new reel has no results', (await rowText(9)).includes('No results yet'));
+  check(w+': new reel appended', t.length===6 && t[5]==='Brand new reel');
+  check(w+': new reel has no results', (await rowText(5)).includes('No results yet'));
 
   // Remove a reel that others point at
-  await p.getByRole('button',{name:'Remove Lip filler that still looks like you from this funnel'}).click();
-  check(w+': removed', await rows.count()===9);
-  check(w+': paths to removed reel reset', !(await rows.allTextContents()).some(x=>x.includes('Lip filler that still')));
-
-  // Unreachable warning in a small funnel
-  await p.getByRole('button',{name:/Follow-up texts/}).click();
-  check(w+': switched funnel', await rows.count()===2 && await p.getByLabel('Funnel name').inputValue()==='Follow-up texts');
-  const ft = await titles();
-  await p.getByRole('button',{name:`Edit ${ft[0]}`}).click();
-  const d2 = p.getByRole('dialog');
-  await d2.getByLabel('When watched to the end').selectOption('end');
-  await d2.getByLabel('When skipped').selectOption('end');
-  await d2.getByRole('button',{name:'Save reel'}).click();
-  check(w+': unreachable flagged', await p.getByText('No path leads here').count()===1);
+  await p.getByRole('button',{name:'Remove Limited tickets. Arrive early. from this funnel'}).click();
+  check(w+': removed', await rows.count()===5);
+  check(w+': paths to removed reel reset', !(await rows.allTextContents()).some(x=>x.includes('Limited tickets')));
 
   // New funnel + default exclusivity
   await p.getByRole('button',{name:'New funnel',exact:true}).click();
@@ -106,6 +100,17 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   check(w+': one default only', await p.getByText('Default',{exact:true}).count()===1);
   await p.selectOption('#add-existing',{index:1}); await p.getByRole('button',{name:'Add',exact:true}).click();
   check(w+': add existing reel', await rows.count()===1);
+  await p.selectOption('#add-existing',{index:1}); await p.getByRole('button',{name:'Add',exact:true}).click();
+
+  // Unreachable warning in a small funnel
+  const ft = await titles();
+  check(w+': two reels in the new funnel', ft.length===2, ft.join(' | '));
+  await p.getByRole('button',{name:`Edit ${ft[0]}`}).click();
+  const d2 = p.getByRole('dialog');
+  await d2.getByLabel('When watched to the end').selectOption('end');
+  await d2.getByLabel('When skipped').selectOption('end');
+  await d2.getByRole('button',{name:'Save reel'}).click();
+  check(w+': unreachable flagged', await p.getByText('No path leads here').count()===1);
   check(w+': fits width after edits', await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
 
   await p.goto(B+'/admin/overview',{waitUntil:'networkidle'});

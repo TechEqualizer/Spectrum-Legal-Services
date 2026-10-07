@@ -86,14 +86,13 @@ function fromLinks(
   return paths;
 }
 
-/** The editor's starting point for a business: its live funnel, plus sample funnels with other entry triggers. */
+/** The editor's starting point for a business: its live funnel. More funnels are the admin's own (New funnel). */
 export function initialEditorState(business: AdminBusiness): {
   reels: EditorReel[];
   funnels: EditorFunnel[];
 } {
   const { funnel, editorOrder } = business;
   const reels = funnel.reels.map((reel) => ({ ...reel, cta: "funnel" as const }));
-  const [first, second, third] = editorOrder;
   return {
     reels,
     funnels: [
@@ -106,27 +105,6 @@ export function initialEditorState(business: AdminBusiness): {
         order: editorOrder,
         topics: { ...funnel.cover.entryLabels },
         paths: fromLinks(editorOrder, funnel.links),
-      },
-      // Sample funnels showing entry triggers; not live.
-      {
-        id: `${funnel.id}-instagram`,
-        name: "Instagram first visit",
-        isDefault: false,
-        entry: "src:instagram",
-        primaryCta: "book",
-        order: [first, second, third].filter(Boolean),
-        topics: {},
-        paths: {},
-      },
-      {
-        id: `${funnel.id}-texts`,
-        name: "Follow-up texts",
-        isDefault: false,
-        entry: "src:sms",
-        primaryCta: funnel.primaryCta,
-        order: editorOrder.slice(-2),
-        topics: {},
-        paths: {},
       },
     ],
   };

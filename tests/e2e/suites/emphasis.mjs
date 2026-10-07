@@ -1,12 +1,16 @@
+// How strongly each reel asks for the booking: builds, quiet and bold, on
+// the test-only book-first link (/f/skin-notes).
 import { chromium, settle } from '../browser.mjs';
+import { addBookFirst } from '../fixtures/book-first.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[];
+await addBookFirst();
 const b = await chromium.launch();
 for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   const p = await b.newPage({ viewport:{width:w,height:h}, isMobile:mobile, hasTouch:mobile });
   p.on('pageerror',e=>errs.push(e.message));
   await p.clock.install();
-  await p.goto('http://localhost:3002/f/medspa',{waitUntil:'networkidle'});
+  await p.goto('http://localhost:3002/f/skin-notes',{waitUntil:'networkidle'});
   const region = p.getByRole('region',{name:/Video:/});
   const pill = () => region.getByRole('button',{name:'Book a free consultation'});
   const railBook = () => region.locator('button:visible',{hasText:/^Book$/}).first();

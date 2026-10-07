@@ -1,7 +1,7 @@
 // The funnel link a visitor opens, on a call-first link that isn't live yet
 // (a preview: forms simulate, but tracking is real), plus the admin's link
-// builder. The med spa sample's book-first flow is in medspa.mjs, and Big
-// Love's live event in client-link.mjs.
+// builder. A book-first link is in book-first.mjs, and Big Love's live
+// event in client-link.mjs.
 import { chromium } from '../browser.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[];
@@ -26,13 +26,6 @@ for (const [w,h] of sizes) {
   check(w+': start explained', await p.getByText('Opens on “Haute couture Halloween looks”').isVisible());
   check(w+': admin fits width', await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await p.screenshot({path:`admin-links-${w}.jpg`, quality:70, fullPage:true});
-  // A demo's sample results by source, and its leads' journeys.
-  await p.evaluate(() => localStorage.setItem('admin_business', 'medspa'));
-  await p.goto(B+'/admin/links',{waitUntil:'networkidle'});
-  check(w+': demo link', (await p.getByLabel('Your link').textContent()).endsWith('/f/medspa?src=instagram'));
-  check(w+': source rows', await p.locator('tbody tr').count()===8);
-  await p.goto(B+'/admin/leads',{waitUntil:'networkidle'});
-  check(w+': lead timeline starts with link', await p.getByText(/^Opened the link/).first().isVisible());
   await ctx.close();
 }
 

@@ -15,7 +15,10 @@ download (`src/app/page.tsx`, `src/components/showlnk/`, migration
 `20261014000000_waitlist.sql`). The ticket-click board is labeled as sample
 numbers. A fan of example reels (`ReelFan`) is built but off the page for now.
 
-The med spa (`/f/medspa`) and events (`/f/events`) funnels remain as labeled samples.
+There are no sample funnels: the old med spa (`/f/medspa`) and Golden Hour
+(`/f/events`) samples are gone (both links are 404s), and the admin shows
+only real events, real results and real leads. The only built-in links left
+are private DM demos (below).
 
 ### Demo mode (on by default)
 
@@ -25,8 +28,8 @@ While `NEXT_PUBLIC_DEMO_MODE` is anything other than `false`:
 - funnel forms show a "demo, not sent" message and `/api/leads` returns 403,
   unless the funnel is a live client's.
 
-Production sets `NEXT_PUBLIC_DEMO_MODE=false`. Sample funnels never collect
-details either way.
+Production sets `NEXT_PUBLIC_DEMO_MODE=false`. DM demos (built-in funnels
+with `sample` set) never collect details either way.
 
 ## Running locally
 
@@ -86,7 +89,7 @@ event's opening scene); each topic starts the reels there.
   remembered in the browser. `/admin/links` builds tagged links.
 - **Start on one video**: `?start=<reel id>` skips the topic choices. Follow-up
   texts use this to send someone the next video, e.g.
-  `/f/medspa?start=ms-pricing&src=sms`.
+  `/f/masquerade?start=mr-tickets&src=sms`.
 - **Text me later** saves a lead with `intent = 'text_later'`, the visitor's
   mobile number, and the exact consent wording they agreed to (the
   funnel's `brand.smsConsent`, which the business's counsel should approve). **Texts are not sent yet**: that needs an SMS provider (e.g.
@@ -112,7 +115,7 @@ event's opening scene); each topic starts the reels there.
   link. Any other `/f/...` path is a 404. Each funnel gets its own link
   preview image (`src/app/f/[slug]/opengraph-image.tsx`).
 
-### Event funnels (`/f/events`)
+### Event funnels
 
 For event organizers, a funnel sells tickets instead of booking calls
 (`primaryCta: "tickets"`):
@@ -134,8 +137,9 @@ For event organizers, a funnel sells tickets instead of booking calls
   ticket drop, with SMS consent.
 - `brand.phone` is optional; without it, Call buttons are hidden.
 
-`/f/events` is a sample: Golden Hour Sundays is made up, its dates are
-always relative to today, and its ticket links go to example.com.
+The end-to-end tests exercise all of this on a test-only event with several
+dates (`/f/sundays`, from `tests/e2e/fixtures/golden-hour.mjs`), added to the mock database;
+it is not part of the app.
 
 ### DM demos ("Prepared for ...")
 
@@ -170,8 +174,6 @@ forms re-skin without code changes.
 
 | Link | Business | Main button |
 | --- | --- | --- |
-| `/f/medspa` | Aurelia Med Spa (**sample**, made up) | Book |
-| `/f/events` | Golden Hour Sundays (**sample**, made up) | Tickets |
 | `/f/masquerade` | Big Love Productions: Masquerade on the Runway (**client**) | Tickets |
 
 **`/f/masquerade` is a real client's link**, so its forms and tracking are
@@ -180,9 +182,7 @@ event flyer and its Eventbrite page (`supabase/seed/biglove.json`): one
 date (Sat, Oct 31, 8pm, Detroit, 30+, from $31), Eventbrite tickets, the flyer behind
 the opening screen, and two reels with photos cropped from it
 (`public/clients/masquerade`). The other reels show "Video coming soon" until
-their videos are uploaded in the admin, where Big Love Productions replaced
-Golden Hour Sundays. Golden Hour stays at `/f/events` as a sample to show
-other organizers.
+their videos are uploaded in the admin.
 
 **Organizers and events live in the database**
 (`supabase/migrations/20261007000000_organizers_events.sql`): `organizers`,
@@ -221,23 +221,13 @@ and their first event's name and link. It adds the organizer and the event
 a live link) and opens the studio on **Import from flyer**. Each client's
 section on Events has **Hand off**: Settings → Accounts opens on Add account,
 already set to that client, so they sign in to see and edit only their own
-events (then **Send login**). The business picker groups each client's events
-by name, with the demos last.
+events (then **Send login**). The event picker (shown once an admin has more
+than one event) groups each client's events by name.
 
-**`/f/medspa` is a sample for pitching aesthetics businesses.** Aurelia Med
-Spa doesn't exist: the page always says so, is never indexed, uses a
-555-01xx phone number reserved for fiction, and its forms and tracking send
-nothing (the API refuses its funnel id too). Its nine reels walk from a
-topic (wrinkle relaxers, lip filler, facials, microneedling, laser hair
-removal) to pricing and "what happens at your consultation", then the end
-card. Scripts are placeholders written to avoid outcome claims; a real
-clinic's medical director should review its own.
-
-To add a business: copy `src/data/medspa.ts`, change the brand, reels and
-links, remove `sample` for a real client, and add it to
-`src/data/funnels.ts`. Lead emails go to `LEAD_NOTIFY_EMAIL` for every
-funnel for now, with the funnel's name in the message; per-business
-routing comes with the admin login.
+Every business is an organizer with events in the database: add one with
+**New client** in the admin. Lead emails go to `LEAD_NOTIFY_EMAIL` for every
+funnel for now, with the funnel's name in the message; leads also show on
+the admin's **Leads** page for that event's admins.
 
 ## Reel funnel
 
@@ -245,8 +235,8 @@ The "Injury Insights" section (`src/components/Reels.tsx`) is a branching
 video funnel, like a drip campaign inside one visit: what a visitor does with
 each reel decides which one comes next.
 
-- **Paths** live in each funnel's `links` (built-in samples in `src/data/`,
-  organizers' events in the database). Each reel has a `completed` link
+- **Paths** live in each funnel's `links` (organizers' events in the
+  database, DM demos in `src/data/demos/`). Each reel has a `completed` link
   (watched to the end, usually a deeper reel on the same topic) and a
   `skipped` link (swiped or tapped next, usually another topic). `null` ends
   on the funnel's closing card. Bump a built-in funnel's `id` whenever its
@@ -333,11 +323,13 @@ The site needs no secret key. Published content is validated on the server
 "Add user", with "Auto Confirm User"), then
 `insert into admin_users (email, slugs) values ('them@example.com', '{masquerade}');`.
 
-Results and Leads still show **sample data** (`src/admin/sample-data.ts`,
-generated per business from `src/admin/business.ts`). The business picker
-switches every page between the businesses the admin may edit, in that
-business's colors. It is not linked from the public site and is marked
-`noindex`.
+There is **no sample data** in the admin: Results, Share, Home, the reel rows
+and Leads all read the database, through functions that only answer an
+event's own admins. The event picker switches every page between the events
+the admin may edit, in that event's colors. An admin with no events yet sees
+"No events yet" on the pages about one event, with a way to Events (New
+client / New event). The admin is not linked from the public site and is
+marked `noindex`.
 
 - **Opening screen** (top of the Reels page): **Edit** opens one sheet for
   the words visitors see first (title, tagline, main button and dates
@@ -436,7 +428,7 @@ business's colors. It is not linked from the public site and is marked
   (`/admin/preview/<slug>`, fed by `postMessage`; nothing tapped there is
   tracked or sent), with **Restart**; a reel's preview button plays it in
   the phone. On the right, **Design** (the Style controls, applied live),
-  **Results** (sample numbers per reel; tap one to play it) and
+  **Results** (the last 30 days per reel; tap one to play it) and
   **Settings** (funnel settings). The top bar has **Undo / Redo** (also
   ⌘Z / ⇧⌘Z), the live link, Discard and **Publish**. Narrower screens and
   phones keep the single-column editor below.
@@ -479,15 +471,23 @@ business's colors. It is not linked from the public site and is marked
   database's `funnel_stats` (`supabase/migrations/20261009000000_funnel_stats.sql`)
   with the admin's sign-in, which returns totals only, and only to that
   event's admins. Share's sources and the reel rows use the same numbers
-  (`src/admin/results.ts`); a ticket click counts as an event's booking. The
-  demos keep their sample data, and leads are still sample data.
+  (`src/admin/results.ts`, shapes in `src/admin/stats.ts`); a ticket click
+  counts as an event's booking. A new event shows zeros and says so.
 - **Share**: a builder for tagged funnel links, and which sources bring
   calls and call-back requests per 100 visitors.
 - **Events** (`/admin/events`, the first tab): each organizer's events with
   their date and status (Upcoming, No dates yet, Ended), the organizer's
   permanent link with Copy and **Hand off**, **New client**, **New event** and
-  **Duplicate**. Built-in demos are listed apart.
-- **Leads**: sample leads with the videos each one watched before booking.
+  **Duplicate**.
+- **Leads** (`/admin/leads`): the event's real leads, newest first (up to
+  500): name, mobile number (tap to call), email, what they asked for (a call
+  back or updates by text), their interest, the reel they asked from, where
+  the link was shared, when, their message, and the reels they watched to
+  the end before asking. `GET /api/admin/leads?slug=` calls the database's
+  `funnel_leads` (`supabase/migrations/20261015000000_funnel_leads.sql`) with
+  the admin's sign-in; like `funnel_stats` it answers only that event's
+  admins and never returns the visitor id. Never cached. There are no lead
+  statuses: follow up from your phone.
 - **Home** (`/admin/home`, where signing in lands): every event the admin
   runs at a glance. The last 30 days across all of them (reel views, ticket
   clicks, views to tickets, update sign-ups), **Next up** (the next night
@@ -501,15 +501,18 @@ business's colors. It is not linked from the public site and is marked
   in a bottom tab bar; on
   desktop, a sidebar. Screens follow `.claude/skills/simple-navigation`.
 
-Next steps to make it real: an admin login (Supabase Auth), reading the
-tables with the secret key on the server, storing funnels in
-Supabase, and sending email through Resend.
+Next steps: sending the "text me later" texts (an SMS provider), and per-
+business lead email routing.
 
 ## Database (Supabase)
 
 `supabase/migrations/` holds the schema: `reel_events`, `leads`, and the
 functions the site writes through, `log_reel_event_v2` and `submit_lead_v3`
-(which also records the lead's `funnel_id`).
+(which also records the lead's `funnel_id`), and the two the admin reads
+through, `funnel_stats` (an event's totals) and `funnel_leads` (an event's
+leads, added in `20261015000000_funnel_leads.sql`: **apply it to production
+before deploying this version**, or the Leads page shows "Couldn't load
+leads").
 The tables have row-level security with no policies, so the publishable key
 cannot read or write them directly; it can only call the functions, which
 validate their input. Older versions (`log_reel_event`, `submit_lead`,
@@ -562,6 +565,6 @@ order by l.created_at desc;
 
 ## Before launch
 
-Sample funnels' contact details and reel scripts are placeholders. The site
+DM demos' contact details and reel scripts are placeholders. The site
 needs a privacy policy that covers the visitor id, the funnel forms and the
 waitlist.

@@ -1,4 +1,4 @@
-import { animationsDone, chromium, settle } from '../browser.mjs';
+import { animationsDone, chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 process.on('uncaughtException', e => { console.log(res.join('\n')); console.log('ERR', e.message.split('\n').slice(0, 3).join(' ')); process.exit(1); });
@@ -11,7 +11,7 @@ let tracked = 0; await ctx.route('**/api/reel-events', r => { tracked++; r.fulfi
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
 await p.goto(B + '/admin'); await settle(p, 500);
 await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 500);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 4000);
+await pickEvent(p, 'masquerade'); await settle(p, 4000);
 const phone = p.frameLocator('iframe[title="Live preview of your link"]');
 const h1 = phone.locator('h1');
 check('studio: three columns', await p.getByRole('tablist', { name: 'Studio' }).isVisible() && await p.getByRole('heading', { name: 'Opening scene' }).isVisible());
@@ -76,7 +76,7 @@ await p.request.delete(B + '/api/admin/publish?slug=events');
 // Phones keep the single column
 const m = await b.newContext({ timezoneId: 'America/Detroit',  storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const mp = await m.newPage();
-await mp.goto(B + '/admin'); await settle(mp, 500); await mp.selectOption('#admin-business', 'masquerade'); await settle(mp, 1500);
+await mp.goto(B + '/admin'); await settle(mp, 500); await pickEvent(mp, 'masquerade'); await settle(mp, 1500);
 check('phone admin: old layout', await mp.getByRole('heading', { name: 'Reels', exact: true }).isVisible() && await mp.getByRole('tablist', { name: 'Studio' }).count() === 0 && await mp.locator('iframe').count() === 0);
 check('phone admin: Design row shown', await mp.getByRole('button', { name: /^Design/ }).isVisible());
 await mp.getByRole('button', { name: /^Design/ }).click(); await settle(mp, 500);

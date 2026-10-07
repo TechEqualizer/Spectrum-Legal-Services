@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ReelTotals } from "@/admin/sample-data";
+import type { ReelTotals } from "@/admin/stats";
 import { formatNumber, formatPercent, labelInk, viz } from "@/admin/viz";
 
 const outcomes = [

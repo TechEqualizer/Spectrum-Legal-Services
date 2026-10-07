@@ -36,7 +36,7 @@ import { publishedFunnel, toPublication } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { ScreenCopy } from "@/lib/publication";
 import { useResults } from "@/admin/results";
-import type { ReelTotals } from "@/admin/sample-data";
+import type { ReelTotals } from "@/admin/stats";
 import type { FunnelTrigger } from "@/data/reels";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
 
@@ -68,8 +68,8 @@ export default function ReelsEditor() {
   const slug = liveFunnel.slug;
   const editor = useEditor();
   const { library, setLibrary, funnels, setFunnels, heroMedia, setHeroMedia, screen, setScreen, events, setEvents, look, setLook, activeId, setActiveId, live, setToast } = editor;
-  // Sample results for the last 30 days, keyed by reel.
-  const { results, real: realResults } = useResults(30);
+  // Results for the last 30 days, keyed by reel.
+  const { results } = useResults(30);
   const stats = new Map((results?.reels ?? []).map((t) => [t.reel.id, t]));
   const [editing, setEditing] = useState<EditorReel | null>(null);
   // Where a new reel goes in the order, when it was added from a + on the path strip.
@@ -368,7 +368,6 @@ export default function ReelsEditor() {
       library={library}
       reach={reach}
       stats={stats}
-      realResults={realResults}
       prompts={prompts}
       announcement={announcement}
       live={live}
@@ -581,7 +580,7 @@ export default function ReelsEditor() {
             }}
           />
         }
-        results={<ResultsPanel real={realResults} rows={funnel.order.map((id) => stats.get(id)).filter((r): r is ReelTotals => Boolean(r))} onPlay={(id) => setGo((g) => ({ reelId: id, key: g.key + 1 }))} />}
+        results={<ResultsPanel rows={funnel.order.map((id) => stats.get(id)).filter((r): r is ReelTotals => Boolean(r))} onPlay={(id) => setGo((g) => ({ reelId: id, key: g.key + 1 }))} />}
         settings={settingsInner}
       >
         {overlaysEl}

@@ -112,3 +112,15 @@ export const chromium = {
     return browser;
   },
 };
+
+/**
+ * Shows the admin event `slug`: picks it in the nav's event picker, which
+ * only appears when the admin has more than one event. With one event (Big
+ * Love's, the only one seeded) it is already the one shown; the choice is
+ * remembered for the next page load either way.
+ */
+export async function pickEvent(page, slug) {
+  const picker = page.locator('#admin-business');
+  if (await picker.count()) await picker.selectOption(slug);
+  else await page.evaluate((s) => localStorage.setItem('admin_business', s), slug);
+}

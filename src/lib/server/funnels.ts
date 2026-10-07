@@ -1,4 +1,4 @@
-// Every funnel link's content, on the server: the built-in samples in code
+// Every funnel link's content, on the server: the built-in DM demos in code
 // (src/data/funnels.ts) first, then organizers' events in the database
 // (event_funnels). Database rows are checked on the way out and cached,
 // refreshed at once when edited from the admin (by tag) and at most five

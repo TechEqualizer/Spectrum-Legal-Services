@@ -1,6 +1,6 @@
 // Several events per organizer: the Events page, New event and Duplicate,
 // each event's own link, and the organizer's permanent (bio) link.
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
@@ -21,7 +21,7 @@ check('page title matches the tab', (await p.getByRole('heading', { level: 1 }).
 const org = p.getByRole('region', { name: 'Big Love Productions' });
 check('event listed under its organizer, upcoming', await org.getByRole('button', { name: 'Open Masquerade on the Runway' }).isVisible() && await org.getByText('Upcoming').isVisible());
 check('bio link shown, labeled on a phone', await org.getByText('/f/biglove').isVisible() && await org.getByText('Bio link', { exact: false }).first().isVisible());
-check('demos listed apart', await p.getByRole('region', { name: 'Demos' }).getByRole('button', { name: /^Open / }).count() === 1);
+check('no demos listed', await p.getByRole('region', { name: 'Demos' }).count() === 0 && !/Aurelia|sample/i.test(await p.locator('main').innerText()));
 await p.screenshot({ path: S + '/events-390.jpg', fullPage: true });
 
 // 3. New event: name → link, then the studio opens on Import flyer.
@@ -87,7 +87,7 @@ const anon = await visitor.request.post(B + '/api/admin/events', { data: { sourc
 check('signed-out create refused', anon.status() === 401);
 
 // 8. Share shows the bio link; Paths is a link from the studio.
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 500);
+await pickEvent(p, 'masquerade'); await settle(p, 500);
 await p.goto(B + '/admin/links'); await settle(p, 1000);
 check('Share shows the bio link', await p.getByRole('region', { name: 'Your bio link' }).getByText('/f/biglove').isVisible());
 check('Share speaks tickets, not calls', await p.getByRole('heading', { name: 'Which links bring ticket clicks' }).isVisible() && await p.getByRole('columnheader', { name: 'Calls', exact: true }).count() === 0);

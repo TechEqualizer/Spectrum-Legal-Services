@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -15,7 +15,7 @@ p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.te
 
 await p.goto(B + '/admin'); await settle(p, 600);
 await p.evaluate(() => { localStorage.removeItem('admin_prompts_masquerade'); localStorage.removeItem('admin_draft_masquerade'); });
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
+await pickEvent(p, 'masquerade'); await settle(p, 1300);
 const dates = p.locator('section[aria-labelledby="dates-title"]');
 const sheet = p.locator('dialog[open]');
 const orderRows = () => p.locator('ol > li').filter({ has: p.getByRole('button', { name: /^Move .* down$/ }) });

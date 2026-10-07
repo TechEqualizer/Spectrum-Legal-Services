@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -10,7 +10,7 @@ const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
 
 await p.goto(B + '/admin'); await settle(p, 600);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
+await pickEvent(p, 'masquerade'); await settle(p, 1300);
 const dates = p.locator('section[aria-labelledby="dates-title"]');
 const row = (text) => dates.locator(':scope > ul > li').filter({ hasText: text });
 const reelRows = p.locator('section[aria-labelledby="order-title"] ol > li');

@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 process.on('uncaughtException', e => { console.log(res.join('\n')); console.log('ERR', e.message.split('\n').slice(0, 3).join(' ')); process.exit(1); });
@@ -11,7 +11,7 @@ for (const [w, h] of [[1440, 900], [1280, 800]]) {
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto(B + '/admin'); await settle(p, 500);
   await p.evaluate(() => localStorage.clear()); await p.reload(); await settle(p, 500);
-  await p.selectOption('#admin-business', 'masquerade'); await settle(p, 4000);
+  await pickEvent(p, 'masquerade'); await settle(p, 4000);
   const strip = p.getByRole('navigation', { name: 'Path through your link' });
   const phone = p.frameLocator('iframe[title="Live preview of your link"]');
   const stops = strip.getByRole('button', { name: /^(Opening|Reel \d+|End:)/ });

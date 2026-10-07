@@ -49,7 +49,7 @@ export default function Links() {
   const won = (r: { calls: number; bookings: number }) => (tickets ? r.bookings : r.calls + r.bookings);
   const wonLabel = tickets ? "ticket clicks" : "calls and bookings";
   const per100 = (r: { calls: number; bookings: number; visitors: number }) => (r.visitors ? (won(r) / r.visitors) * 100 : 0);
-  const { results, real, error } = useResults(range.days);
+  const { results, error } = useResults(range.days);
   const rows = (results?.sources ?? []).map((r) => ({ ...r, per100: per100(r) })).sort((a, b) => b.per100 - a.per100 || b.visitors - a.visitors);
   // At least 1, so bars are never divided by zero.
   const maxPer100 = Math.max(1, ...rows.map((r) => r.per100));
@@ -174,7 +174,7 @@ export default function Links() {
           <div>
             <h2 id="sources-title" className="text-base font-bold text-deep-navy">Which links bring {wonLabel}</h2>
             <p className="text-sm text-gray-600">
-              {tickets ? "Ticket clicks" : "Calls and booking requests"} per 100 visitors, by where the link was shared.{real ? "" : " Sample data."}
+              {tickets ? "Ticket clicks" : "Calls and booking requests"} per 100 visitors, by where the link was shared.
             </p>
           </div>
           <div className="flex rounded-md border border-gray-300 bg-white p-1" role="group" aria-label="Date range">

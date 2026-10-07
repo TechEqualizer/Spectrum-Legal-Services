@@ -1,12 +1,11 @@
 "use client";
 
-// What Results, Share and the reel rows show: an organizer's event's real
-// numbers (from /api/admin/stats), or a demo's sample data. Both arrive in
-// one shape, so the screens don't care which.
+// What Results, Share, Home and the reel rows show: an organizer's event's
+// real numbers, from /api/admin/stats (the database's funnel_stats).
 
 import { useEffect, useState } from "react";
-import { useAdminBusiness, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
-import { sampleFor, type DailyReelStats, type ReelTotals, type SourceTotals } from "@/admin/sample-data";
+import { useAdminEvents, useMaybeAdminBusiness, type AdminEvent } from "@/admin/AdminBusiness";
+import type { DailyReelStats, ReelTotals, SourceTotals } from "@/admin/stats";
 import type { Funnel } from "@/data/funnel-types";
 
 export type Results = {
@@ -68,24 +67,17 @@ export function realResults(raw: StatsResponse, funnel: Funnel, days: number, no
   return { current: totalsOf(raw.current), previous: totalsOf(raw.previous), daily, reels, sources };
 }
 
-/** A demo's sample data in the same shape. */
-export function sampleResults(business: ReturnType<typeof useAdminBusiness>, days: number): Results {
-  const data = sampleFor(business);
-  const { current, previous } = data.periodTotals(days);
-  return { current, previous, daily: data.dailyViews(days), reels: data.reelTotals(days), sources: data.sourceTotals(days) };
-}
-
 type State = { key: string; results: Results | null; error: string };
 
 /**
- * Results for the business being edited over the last `days` days: real for
- * an organizer's event, sample for a demo. `results` is null while real ones
- * load; `error` says why they couldn't.
+ * Results for the event being edited over the last `days` days. `results`
+ * is null while they load (or when there's no event to show); `error` says
+ * why they couldn't.
  */
-export function useResults(days: number): { results: Results | null; real: boolean; error: string } {
-  const business = useAdminBusiness();
-  const event = useAdminEvents().find((e) => e.funnel.slug === business.funnel.slug);
-  const key = `${business.funnel.slug}:${days}`;
+export function useResults(days: number): { results: Results | null; error: string } {
+  const business = useMaybeAdminBusiness();
+  const event = useAdminEvents().find((e) => e.funnel.slug === business?.funnel.slug);
+  const key = `${event?.funnel.slug ?? ""}:${days}`;
   const [state, setState] = useState<State>({ key: "", results: null, error: "" });
 
   useEffect(() => {
@@ -108,9 +100,9 @@ export function useResults(days: number): { results: Results | null; real: boole
     };
   }, [event, days, key]);
 
-  if (!event) return { results: sampleResults(business, days), real: false, error: "" };
-  // Until this business and period's numbers arrive, show nothing rather than the last ones.
-  return state.key === key ? { results: state.results, real: true, error: state.error } : { results: null, real: true, error: "" };
+  if (!event) return { results: null, error: "" };
+  // Until this event and period's numbers arrive, show nothing rather than the last ones.
+  return state.key === key ? { results: state.results, error: state.error } : { results: null, error: "" };
 }
 
 /** One event's results, for Home. */

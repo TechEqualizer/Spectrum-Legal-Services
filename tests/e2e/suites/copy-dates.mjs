@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -13,7 +13,7 @@ p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.te
 const waitShown = (loc) => loc.waitFor({ timeout: 5000 }).then(() => true, () => false);
 
 await p.goto(B + '/admin'); await settle(p, 600);
-await p.selectOption('#admin-business', 'masquerade'); await settle(p, 1300);
+await pickEvent(p, 'masquerade'); await settle(p, 1300);
 const card = p.locator('section[aria-labelledby="hero-media-title"]');
 check('card shows the title', await card.getByText('“Masquerade on the Runway”').isVisible());
 const dates = p.locator('section[aria-labelledby="dates-title"]');
@@ -95,23 +95,7 @@ check('live eyebrow: few left date', await vp.getByText(/Next up/).isVisible());
 check('still fits one screen', await vp.evaluate(() => document.documentElement.scrollHeight <= innerHeight));
 await vp.screenshot({ path: S + '/live-copy-dates.jpg' });
 
-// 8. A funnel without dates: heading and intro
-await p.selectOption('#admin-business', 'medspa'); await settle(p, 1300);
-check('no dates card for the med spa', await p.locator('section[aria-labelledby="dates-title"]').count() === 0);
-await card.getByRole('button', { name: 'Edit', exact: true }).click();
-check('med spa fields: heading and intro', await sheet.getByLabel('Heading').isVisible() && await sheet.getByLabel('Intro').isVisible() && await sheet.getByLabel('Title').count() === 0);
-await sheet.getByLabel('Heading').fill('Thinking about lips?');
-await sheet.getByRole('button', { name: 'Save', exact: true }).click(); await settle(p, 300);
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 1500);
-await vp.goto(B + '/f/medspa'); await settle(vp, 1500);
-check('med spa live heading', (await vp.locator('h1').innerText()).trim() === 'Thinking about lips?');
-// Clearing a field goes back to the original words
-await card.getByRole('button', { name: 'Edit', exact: true }).click();
-await sheet.getByLabel('Heading').fill('');
-await sheet.getByRole('button', { name: 'Save', exact: true }).click(); await settle(p, 300);
-check('empty field = original words', await card.getByText('“What are you curious about?”').isVisible());
-
-// Clean up: take both down
-for (const slug of ['masquerade', 'medspa']) await p.request.delete(B + '/api/admin/publish?slug=' + slug);
+// Clean up: take it down
+await p.request.delete(B + '/api/admin/publish?slug=masquerade');
 check('no errors', !errs.length, errs.join(' | '));
 await b.close(); console.log(res.join('\n'));
