@@ -14,11 +14,22 @@ check('Showlnk title', /^Showlnk/.test(await p.title()), await p.title());
 check('the promise in one line', (await p.getByRole('heading', { level: 1 }).innerText()).replace(/\s+/g, ' ').toLowerCase() === 'drop a flyer. get four reels. sell the night.');
 check('no law firm left', !/attorney|injury|law firm/i.test(await p.locator('body').innerText()));
 check('the form is on the first screen', (await p.locator('#join').boundingBox()).y < 900);
-check('sample numbers labeled', await p.getByText('Sample numbers').isVisible());
+check('the board has no sample label', await p.getByText(/Sample numbers/).count() === 0);
+check('the opening scene is in the hero', await p.getByRole('img', { name: /Big Love Productions' Showlnk link/ }).isVisible());
 check('headings read light on the night', await p.getByRole('heading', { level: 1 }).evaluate((h) => getComputedStyle(h).color) === 'rgb(244, 238, 228)');
 await animationsDone(p, 2500);
 await p.screenshot({ path: S + '/landing-1440.jpg' });
 await p.screenshot({ path: S + '/landing-1440-full.jpg', fullPage: true });
+
+// The board runs up when it scrolls into view, and lands on its numbers.
+const board = p.getByRole('figure').filter({ hasText: 'Ticket clicks by source' });
+check('the board waits below the fold', /^0 visitors/.test(await board.locator('tbody tr').first().locator('td').nth(1).innerText()));
+await board.evaluate((f) => f.scrollIntoView({ block: 'center' }));
+await p.waitForFunction(() => document.body.innerText.includes('61 tickets') && document.body.innerText.includes('12 tickets'), null, { timeout: 6000 }).catch(() => {});
+check('the board counts up to its numbers', await board.getByText('412 visitors').isVisible() && await board.getByText('61 tickets').isVisible());
+await animationsDone(p, 500);
+await board.screenshot({ path: S + '/landing-board.jpg' });
+await p.evaluate(() => scrollTo(0, 0));
 
 // Errors name the field and the fix.
 const stub = p.locator('#join');

@@ -12,8 +12,11 @@ the list". Sign-ups go through `POST /api/waitlist` to the database's
 `join_waitlist` (one row per email; a hidden field turns bots away) and show
 to full admins in Settings → **Waitlist**, with their Instagram and a CSV
 download (`src/app/page.tsx`, `src/components/showlnk/`, migration
-`20261014000000_waitlist.sql`). The ticket-click board is labeled as sample
-numbers. A fan of example reels (`ReelFan`) is built but off the page for now.
+`20261014000000_waitlist.sql`). Beside the headline, a phone shows Big Love's real
+opening scene (a still, `public/showlnk/opening-scene.webp`, so landing
+visits never count on their link). The ticket-click board (`SourcesBoard`)
+counts up when it scrolls into view. A fan of example reels (`ReelFan`) is
+built but off the page for now.
 
 There are no sample funnels: the old med spa (`/f/medspa`) and Golden Hour
 (`/f/events`) samples are gone (both links are 404s), and the admin shows
