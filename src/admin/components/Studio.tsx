@@ -353,6 +353,7 @@ export function Studio({
         )}
         <button
           type="button"
+          data-tour="publish"
           onClick={onPublish}
           disabled={Boolean(publishing) || !unpublished}
           className="min-h-10 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white shadow-sm hover:bg-royal-blue disabled:opacity-50"

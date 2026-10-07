@@ -39,8 +39,17 @@ function track(page) {
   for (const done of ['requestfinished', 'requestfailed']) page.on(done, (r) => live.delete(r));
 }
 
-async function trackContext(ctx) {
+// The admin's guided tour starts by itself on a first visit to Home; suites
+// see the admin as someone who has had it, except a context made with { tour: true }.
+const tourSeen = () => {
+  try {
+    localStorage.setItem('admin_tour', 'done');
+  } catch {}
+};
+
+async function trackContext(ctx, { tour = false } = {}) {
   await ctx.addInitScript(countTimers);
+  if (!tour) await ctx.addInitScript(tourSeen);
   ctx.on('page', track);
   for (const page of ctx.pages()) track(page);
   return ctx;
@@ -107,7 +116,7 @@ export const chromium = {
   async launch(options) {
     const browser = await playwright.launch(options);
     const newContext = browser.newContext.bind(browser);
-    browser.newContext = async (opts) => trackContext(await newContext(opts));
+    browser.newContext = async ({ tour, ...opts } = {}) => trackContext(await newContext(opts), { tour });
     browser.newPage = async (opts) => (await browser.newContext(opts)).newPage();
     return browser;
   },

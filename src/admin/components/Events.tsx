@@ -107,7 +107,7 @@ export default function Events() {
             return Date.parse(b.standing.last?.startsAt ?? "0") - Date.parse(a.standing.last?.startsAt ?? "0");
           });
         return (
-          <section key={org.slug} aria-labelledby={`org-${org.slug}`}>
+          <section key={org.slug} aria-labelledby={`org-${org.slug}`} data-tour="events-list">
             <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
               <h2 id={`org-${org.slug}`} className="text-xs font-bold uppercase tracking-wider text-gray-600">{org.name}</h2>
               <div className="flex flex-wrap items-center gap-x-3">

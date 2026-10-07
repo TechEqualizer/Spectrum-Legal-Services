@@ -30,6 +30,7 @@ export default function PublishBar({
         )}
         <button
           type="button"
+          data-tour="publish"
           onClick={onPublish}
           disabled={Boolean(publishing) || !unpublished}
           className="min-h-11 rounded-lg bg-teal-accent px-5 text-sm font-bold text-white shadow-md hover:brightness-110 disabled:opacity-60"

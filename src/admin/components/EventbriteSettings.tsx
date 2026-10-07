@@ -93,7 +93,7 @@ export default function EventbriteSettings({ organizer, fullAccess }: { organize
   };
 
   return (
-    <section id="eventbrite" ref={sectionRef} aria-labelledby={`${id}-title`} className="scroll-mt-6">
+    <section id="eventbrite" data-tour="eventbrite" ref={sectionRef} aria-labelledby={`${id}-title`} className="scroll-mt-6">
       <h2 id={`${id}-title`} className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-gray-600">Eventbrite</h2>
       <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 sm:px-5">
         {message && (

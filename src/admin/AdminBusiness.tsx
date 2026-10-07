@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
 import { eventBusiness, type AdminBusiness } from "@/admin/business";
+import Tour from "@/admin/components/Tour";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
 import type { Funnel } from "@/data/funnel-types";
@@ -124,6 +125,7 @@ export function AdminFrame({
           {!inBrowser ? <div className="min-h-[60vh]" aria-busy="true" /> : !business && needsEvent ? <NoEvents /> : children}
         </main>
         {session.mustChangePassword && <PasswordSheet firstTime />}
+        {inBrowser && <Tour canStart={Boolean(business) && !session.mustChangePassword} />}
       </div>
     </div>
   );

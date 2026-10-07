@@ -6,6 +6,7 @@ import { useState, useSyncExternalStore } from "react";
 import { selectAdminBusiness, useAdminBusinesses, useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
+import { startTour } from "@/admin/tour";
 import Avatar from "@/admin/components/ui/Avatar";
 import { closeMenu, useDismiss } from "@/admin/components/ui/use-dismiss";
 import BrandLogo from "@/components/BrandLogo";
@@ -131,6 +132,7 @@ export default function AdminNav() {
               <Link
                 href={link.href}
                 aria-current={active ? "page" : undefined}
+                data-tour={`nav-${link.label.toLowerCase()}`}
                 title={collapsed ? link.label : undefined}
                 className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors lg:min-h-11 lg:flex-row lg:gap-3 lg:rounded-md lg:px-3 lg:text-sm ${folded("lg:justify-center", "lg:justify-start")} ${
                   active
@@ -207,6 +209,7 @@ function Account({ collapsed = false }: { collapsed?: boolean }) {
     <>
       <details ref={menu} className="group relative lg:mt-4">
         <summary
+          data-tour="account"
           aria-label={`Account: ${name ?? email}`}
           className={`flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full bg-white/10 text-sm font-bold uppercase text-white hover:bg-white/20 lg:h-auto lg:gap-2 lg:rounded-md lg:bg-transparent lg:px-0 lg:text-xs lg:font-semibold lg:normal-case lg:text-gray-300 ${collapsed ? "lg:min-h-11 lg:w-11 lg:justify-center" : "lg:w-full lg:justify-start"}`}
         >
@@ -235,6 +238,16 @@ function Account({ collapsed = false }: { collapsed?: boolean }) {
             className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray"
           >
             Change password
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              closeMenu(e.currentTarget);
+              startTour();
+            }}
+            className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+          >
+            Take the tour
           </button>
           <button type="button" onClick={signOut} className="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-red-700 hover:bg-soft-gray">
             Sign out
