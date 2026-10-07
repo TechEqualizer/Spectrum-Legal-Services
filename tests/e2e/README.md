@@ -72,5 +72,9 @@ Building replaces the app's `.next` folder with a test build, so run
 
 The admin suites use Big Love Productions (`masquerade`, organizer
 `biglove`, seeded from `supabase/seed/biglove.json`), and the visitor suites
-use the test-only Golden Hour event at `/f/sundays`. The admin suites run in Detroit time
-(`America/Detroit`), so the Oct 31, 8 PM event shows on the right day.
+use the test-only Golden Hour event at `/f/sundays`. Most suites run in Detroit time
+(`America/Detroit`). `timezones` runs in Los Angeles and London and checks
+that Big Love's Oct 31, 8 PM date still reads 8 PM Detroit time (the link,
+Tonight and This Saturday, the calendar file, and the admin's date sheet).
+Golden Hour's dates have no `timeZone`, so they cover the fallback to the
+viewer's zone.

@@ -23,6 +23,7 @@ import {
   type LookColors,
   type LookFont,
 } from "@/lib/look";
+import { eventDate, eventDayOfMonth } from "@/lib/event-time";
 import { thumbnailOf } from "@/lib/media";
 
 /** What goes behind the opening screen's words. */
@@ -450,9 +451,8 @@ export function StylePreview({
   // The next three dates, as the circles visitors see.
   const [now] = useState(() => Date.now());
   const days = (funnel.events ?? [])
-    .map((e) => new Date(e.startsAt))
-    .filter((d) => d.getTime() > now)
-    .sort((a, b) => a.getTime() - b.getTime())
+    .filter((e) => Date.parse(e.startsAt) > now)
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
     .slice(0, 3);
   const theme = { ...colors, "--on-accent": onAccent(colors), "--fx-color": effectColor(colors) } as React.CSSProperties;
   const still = thumbnailOf(media);
@@ -495,8 +495,8 @@ export function StylePreview({
             {days.map((d, i) => (
               <span key={i} className="rounded-full bg-[conic-gradient(from_200deg,var(--sky-accent),var(--teal-accent),var(--sky-accent))] p-[1.5px]">
                 <span className="flex h-6 w-6 flex-col items-center justify-center rounded-full bg-deep-navy text-[5px] leading-none text-white sm:h-9 sm:w-9 sm:text-[7px]">
-                  <span className="text-sky-accent">{d.toLocaleDateString("en-US", { month: "short" }).toUpperCase()}</span>
-                  <span className="mt-px text-[8px] font-bold sm:text-[11px]">{d.getDate()}</span>
+                  <span className="text-sky-accent">{eventDate(d, { month: "short" }).toUpperCase()}</span>
+                  <span className="mt-px text-[8px] font-bold sm:text-[11px]">{eventDayOfMonth(d)}</span>
                 </span>
               </span>
             ))}

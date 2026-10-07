@@ -12,9 +12,10 @@ the list". Sign-ups go through `POST /api/waitlist` to the database's
 `join_waitlist` (one row per email; a hidden field turns bots away) and show
 to full admins in Settings → **Waitlist**, with their Instagram and a CSV
 download (`src/app/page.tsx`, `src/components/showlnk/`, migration
-`20261014000000_waitlist.sql`). Beside the headline, a phone shows Big Love's real
-opening scene (a still, `public/showlnk/opening-scene.webp`, so landing
-visits never count on their link). The ticket-click board (`SourcesBoard`)
+`20261014000000_waitlist.sql`). Beside the headline, a phone plays Big Love's real
+link (`PhoneScene`: `/f/masquerade` in a frame, over a still
+`public/showlnk/opening-scene.webp` until it draws). A funnel link shown
+inside another page runs as a preview, so the phone never counts as a visit. The ticket-click board (`SourcesBoard`)
 counts up when it scrolls into view. A fan of example reels (`ReelFan`) is
 built but off the page for now.
 
@@ -126,6 +127,15 @@ For event organizers, a funnel sells tickets instead of booking calls
 - **Event dates** live in `funnel.events` (name, start time, venue, price,
   ticket link, `on_sale` / `few_left` / `sold_out`). Reels point at one with
   `eventId`.
+- **Each date is on its own clock**: `startsAt` is the moment (UTC) and
+  `timeZone` the event's IANA zone (e.g. `"America/Detroit"`). Every date and
+  time, and Tonight/Tomorrow, is shown on that clock, for every visitor, the
+  server and the admin (`src/lib/event-time.ts`), so 8 PM in Detroit reads
+  "8 PM" in Los Angeles and London too. Without a `timeZone`, the offset in
+  `startsAt` (`-04:00`) is used, else the viewer's zone. The admin's date
+  sheet enters times on the date's clock and names it ("Detroit time"); new
+  dates take the series' zone, else the admin's browser's. The calendar file
+  carries the moment in UTC.
 - **"Which night?"**: the opening screen lists upcoming dates with a
   countdown (Tonight, Tomorrow, In 3 days), price and status, plus "Watch
   last time" for the latest recap.
@@ -201,7 +211,7 @@ top.
 the one to put in a bio. It never changes: with one upcoming event it shows
 that event; with several it shows a "Coming up" page with a card per night,
 soonest first; with none it shows the latest event
-(`src/lib/server/links.ts`). Dates show in the visitor's own time zone.
+(`src/lib/server/links.ts`). Dates show on each event's own clock.
 
 **After the night**, once every date of an event is over, its link stops
 selling tickets that are gone. The opening scene says "Thanks for coming",

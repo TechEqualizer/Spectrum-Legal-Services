@@ -20,6 +20,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const event = funnel.events?.find((e) => e.id === eventId);
   if (!event) return new Response("Not found", { status: 404 });
 
+  // The moment itself, in UTC: calendar apps show it on the phone's own
+  // clock, which is right for a calendar (8 PM Detroit is 5 PM in LA).
   const start = Date.parse(event.startsAt);
   const lines = [
     "BEGIN:VCALENDAR",

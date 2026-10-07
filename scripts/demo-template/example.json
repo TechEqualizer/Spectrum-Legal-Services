@@ -12,6 +12,7 @@
       "id": "oct-12",
       "name": "Golden Hour",
       "startsAt": "2026-10-12T15:00:00-07:00",
+      "timeZone": "America/Los_Angeles",
       "venue": "The Rooftop",
       "price": "From $25",
       "ticketUrl": "https://www.eventbrite.com/e/your-event-id"

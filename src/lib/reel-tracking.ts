@@ -68,10 +68,11 @@ export function getSourceTag(): string | undefined {
 }
 
 /**
- * The admin's live preview: what the admin taps there isn't a visit, and
- * forms there send nothing.
+ * The admin's live preview, or a link shown inside another page (the phone
+ * on Showlnk's home page): what happens there isn't a visit, and forms there
+ * send nothing.
  */
-let previewing = false;
+let previewing = typeof window !== "undefined" && window.self !== window.top;
 export const setPreviewMode = (on: boolean) => {
   previewing = on;
 };

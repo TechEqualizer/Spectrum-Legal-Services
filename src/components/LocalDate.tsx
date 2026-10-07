@@ -5,9 +5,10 @@ import { useSyncExternalStore } from "react";
 const noSubscribe = () => () => {};
 
 /**
- * A date and time in the visitor's own time zone. Formatted in the browser
- * only: the server's time zone (UTC) would show an 8 PM Detroit night as the
- * next day. Until then it holds its place without text.
+ * A date and time in the visitor's own time zone, e.g. when a lead came in.
+ * Formatted in the browser only: the server's time zone (UTC) would differ.
+ * Until then it holds its place without text. For an event's date, use
+ * EventWhen, which shows it on the event's own clock.
  */
 export default function LocalDate({ iso, withTime = true }: { iso: string; withTime?: boolean }) {
   const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);

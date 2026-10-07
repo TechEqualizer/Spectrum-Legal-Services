@@ -83,6 +83,9 @@ const eventIds = new Set(spec.events.map((e) => e.id));
 for (const e of spec.events) {
   if (!e.id || !e.name || !e.startsAt || !e.ticketUrl) fail(`event needs id, name, startsAt and ticketUrl: ${JSON.stringify(e)}`);
   if (Number.isNaN(Date.parse(e.startsAt))) fail(`bad startsAt for ${e.id}: ${e.startsAt}`);
+  if (e.timeZone !== undefined) {
+    try { new Intl.DateTimeFormat("en-US", { timeZone: e.timeZone }); } catch { fail(`bad timeZone for ${e.id}: ${e.timeZone} (use one like "America/Detroit")`); }
+  }
   if (!/^https:\/\//.test(e.ticketUrl)) fail(`ticketUrl must start with https:// (${e.id})`);
 }
 const hex = /^#[0-9a-fA-F]{6}$/;

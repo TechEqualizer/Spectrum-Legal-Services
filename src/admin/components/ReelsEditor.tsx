@@ -34,6 +34,8 @@ import { REEL_ORDER, coreReels, type FunnelDraft, type ReelRole } from "@/lib/fu
 import { HERO_PROMPT, keepPrompts, usePrompts } from "@/admin/prompts";
 import { publishedFunnel, toPublication } from "@/admin/publish";
 import type { FunnelEvent } from "@/data/funnel-types";
+import { eventDate, eventDay } from "@/lib/event-time";
+import { formatEventDate } from "@/lib/events";
 import type { ScreenCopy } from "@/lib/publication";
 import { useResults } from "@/admin/results";
 import type { ReelTotals } from "@/admin/stats";
@@ -96,13 +98,13 @@ export default function ReelsEditor() {
   // The event's dates, for linking reels ("Sells tickets for", and the chip on each row).
   const allDates = events ?? liveFunnel.events;
   const dateLabel = (e: FunnelEvent) =>
-    `${new Date(e.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}: ${e.name}`;
+    `${formatEventDate(e)}: ${e.name}`;
   const dateOptions = allDates
     ? [...allDates].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)).map((e) => ({ id: e.id, label: dateLabel(e) }))
     : undefined;
   const shortDateOf = (eventId?: string) => {
     const e = eventId ? allDates?.find((d) => d.id === eventId) : undefined;
-    return e ? new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : undefined;
+    return e ? eventDate(e, { month: "short", day: "numeric" }) : undefined;
   };
 
   /** A look matched to a flyer, optionally with the flyer behind the opening screen. Undo puts both back. */
@@ -127,10 +129,6 @@ export default function ReelsEditor() {
   const applyDraft = (draft: FunnelDraft) => {
     const before = { library, funnels, screen };
     const dates = events ?? liveFunnel.events ?? [];
-    const dayOf = (iso: string) => {
-      const d = new Date(iso);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    };
     const taken = new Set(library.map((r) => r.id));
     const prompts: Record<string, string> = { [HERO_PROMPT]: draft.heroPrompt };
     const reels = draft.reels.map((d): EditorReel => {
@@ -138,7 +136,7 @@ export default function ReelsEditor() {
       taken.add(id);
       prompts[id] = d.videoPrompt;
       // The date it sells; with only one date, every reel sells that one.
-      const event = d.date ? dates.find((e) => dayOf(e.startsAt) === d.date) : dates.length === 1 ? dates[0] : undefined;
+      const event = d.date ? dates.find((e) => eventDay(e) === d.date) : dates.length === 1 ? dates[0] : undefined;
       return {
         id,
         title: d.title,
@@ -461,7 +459,7 @@ export default function ReelsEditor() {
   const datesOpening = (reelId: string) =>
     (allDates ?? [])
       .filter((e) => dateOpener(shown, e) === reelId)
-      .map((e) => new Date(e.startsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
+      .map((e) => eventDate(e, { month: "short", day: "numeric" }));
   const stops: PathStop[] = [
     { id: "opening", kind: "opening", title: "Opening" },
     ...shown.order.flatMap((id, i): PathStop[] => {

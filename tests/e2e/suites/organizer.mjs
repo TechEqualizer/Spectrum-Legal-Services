@@ -56,7 +56,7 @@ const cards = visitor.getByRole('listitem');
 const names = await cards.allInnerTexts();
 check('bio link offers both nights', names.length === 2, String(names.length));
 check('soonest first', /masquerade on the runway/i.test(names[0] ?? '') && /new year/i.test(names[1] ?? ''), names.join(' | '));
-check('dates in the visitor\'s time', (names[0] ?? '').includes('Sat, Oct 31 · 8 PM') && (names[1] ?? '').includes('Thu, Dec 31 · 9 PM'), names.join(' | '));
+check('dates on each event\'s clock', (names[0] ?? '').includes('Sat, Oct 31 · 8 PM') && (names[1] ?? '').includes('Thu, Dec 31 · 9 PM'), names.join(' | '));
 check('fits the phone', await visitor.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 await visitor.screenshot({ path: S + '/bio-link-choice-390.jpg', fullPage: true });
 check('chooser names the organizer', (await visitor.getByRole('heading', { level: 1 }).textContent()).includes('Big Love Productions'));
