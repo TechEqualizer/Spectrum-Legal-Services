@@ -131,8 +131,28 @@ function Scene({ media, paused, live, zoom }: { media?: ReelMedia; paused: boole
     const el = video.current;
     if (!el) return;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (paused || still) el.pause();
-    else el.play().catch(() => {});
+    if (paused || still) {
+      el.pause();
+      return;
+    }
+    // Some phones won't start it by itself (an iPhone in Low Power Mode, some
+    // apps' built-in browsers): it starts on the visitor's first touch instead.
+    let waiting = false;
+    const start = () => {
+      el.play().catch(() => {});
+      removeEventListener("touchend", start, true);
+      removeEventListener("click", start, true);
+    };
+    el.play().catch(() => {
+      waiting = true;
+      addEventListener("touchend", start, true);
+      addEventListener("click", start, true);
+    });
+    return () => {
+      if (!waiting) return;
+      removeEventListener("touchend", start, true);
+      removeEventListener("click", start, true);
+    };
   }, [paused]);
 
   return (

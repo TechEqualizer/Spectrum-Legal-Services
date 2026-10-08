@@ -418,6 +418,7 @@ export default function ReelViewer({
               isPaused={isPaused || sheet !== null}
               isMuted={isMuted}
               onSoundBlocked={() => setIsMuted(true)}
+              onSoundOn={() => setIsMuted(false)}
               onProgress={(fraction) => setProgress({ step, fraction })}
               onFinished={() => advance("completed")}
             />
@@ -923,6 +924,8 @@ type ReelSlideProps = {
   isMuted: boolean;
   /** The browser won't play this video with sound yet; it carries on muted. */
   onSoundBlocked: () => void;
+  /** The visitor tapped Play on a video the browser wouldn't start by itself: it plays with sound. */
+  onSoundOn: () => void;
   onProgress: (fraction: number) => void;
   onFinished: () => void;
 };
@@ -949,11 +952,15 @@ function VideoSlide({
   isPaused,
   isMuted,
   onSoundBlocked,
+  onSoundOn,
   onProgress,
   onFinished,
 }: ReelSlideProps & { media: Extract<ReelMedia, { kind: "video" }> }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const soundBlocked = useLatest(onSoundBlocked);
+  // Some phones won't start a video by itself even muted (an iPhone in Low
+  // Power Mode, some apps' built-in browsers): it waits for a tap on Play.
+  const [needsTap, setNeedsTap] = useState(false);
 
   // Runs again once muted, so a video the browser wouldn't play with sound
   // starts playing without it.
@@ -962,31 +969,70 @@ function VideoSlide({
     if (!video) return;
     if (isPaused) video.pause();
     else
-      video.play().catch((error: unknown) => {
-        if (!video.muted && error instanceof DOMException && error.name === "NotAllowedError") soundBlocked.current();
-      });
+      video.play().then(
+        () => setNeedsTap(false),
+        (error: unknown) => {
+          if (!(error instanceof DOMException && error.name === "NotAllowedError")) return;
+          if (!video.muted) soundBlocked.current();
+          else setNeedsTap(true);
+        }
+      );
   }, [isPaused, isMuted, soundBlocked]);
 
+  // Called in the tap itself, which is what these phones wait for.
+  const playFromTap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = false;
+    video.play().then(
+      () => {
+        setNeedsTap(false);
+        onSoundOn();
+      },
+      () => {
+        video.muted = true;
+        video.play().then(() => setNeedsTap(false), () => {});
+      }
+    );
+  };
+
   return (
-    <video
-      ref={videoRef}
-      className="absolute inset-0 h-full w-full bg-black object-cover"
-      src={media.src}
-      poster={media.poster}
-      muted={isMuted}
-      autoPlay={!isPaused}
-      playsInline
-      preload="metadata"
-      onTimeUpdate={(e) => {
-        const v = e.currentTarget;
-        if (v.duration) onProgress(v.currentTime / v.duration);
-      }}
-      onEnded={onFinished}
-    >
-      {media.captions && (
-        <track kind="captions" src={media.captions} srcLang="en" label="English" default />
+    <>
+      {needsTap && !isPaused && (
+        <button
+          type="button"
+          onClick={playFromTap}
+          aria-label="Play"
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/25"
+        >
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 text-black shadow-2xl">
+            <svg className="ml-1 h-9 w-9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M8 5.5v13l11-6.5z" />
+            </svg>
+          </span>
+        </button>
       )}
-    </video>
+      <video
+        ref={videoRef}
+        className="absolute inset-0 h-full w-full bg-black object-cover"
+        src={media.src}
+        poster={media.poster}
+        muted={isMuted}
+        autoPlay={!isPaused}
+        playsInline
+        preload="metadata"
+        onTimeUpdate={(e) => {
+          const v = e.currentTarget;
+          if (v.duration) onProgress(v.currentTime / v.duration);
+        }}
+        onEnded={onFinished}
+      >
+        {media.captions && (
+          <track kind="captions" src={media.captions} srcLang="en" label="English" default />
+        )}
+      </video>
+    </>
   );
 }
 

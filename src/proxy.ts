@@ -14,8 +14,30 @@ import {
 
 const OPEN = ["/admin/login", "/api/admin/login", "/api/admin/status"];
 
+// Link-preview crawlers: Facebook (and iMessage, which borrows its name),
+// X, LinkedIn, Slack, WhatsApp, Telegram, Discord, Pinterest and the like.
+const PREVIEW_BOT =
+  /facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|whatsapp|telegrambot|discordbot|pinterest|redditbot|skypeuripreview|embedly|iframely|applebot|snapchat|vkshare|bingpreview/i;
+const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/i;
+
+/**
+ * A link that opens on a reel (/f/<slug>?start=<reel>) previews that reel:
+ * crawlers get /f/<slug>/r/<reel>, the same page with that reel's card.
+ * Everyone else gets the link as it is (and its page stays cached).
+ */
+function reelPreview(request: NextRequest) {
+  const [, , slug, ...rest] = request.nextUrl.pathname.split("/");
+  const start = request.nextUrl.searchParams.get("start");
+  if (rest.length || !slug || !start || !SLUG.test(slug) || !SLUG.test(start)) return NextResponse.next();
+  if (!PREVIEW_BOT.test(request.headers.get("user-agent") ?? "")) return NextResponse.next();
+  const url = request.nextUrl.clone();
+  url.pathname = `/f/${slug}/r/${start}`;
+  return NextResponse.rewrite(url);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/f/")) return reelPreview(request);
   if (OPEN.includes(pathname)) return NextResponse.next();
 
   let access = request.cookies.get(ACCESS_COOKIE)?.value;
@@ -52,5 +74,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/f/:path*"],
 };

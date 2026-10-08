@@ -33,6 +33,15 @@ Building replaces the app's `.next` folder with a test build, so run
     (with Unmute) when the browser refuses sound. Headless Chromium never
     refuses, so the suite plays by a phone's rule (no sound before a tap),
     with `fixtures/sample-reel-sound.webm`, a clip with an audio track.
+    A stricter rule (nothing plays outside a tap, like an iPhone in Low
+    Power Mode) checks the Play button and the opening scene starting on
+    the first touch.
+  - `share-card`: the link preview card (the art with a play button, the
+    date and where tickets stand, and the words under it), and a `?start=`
+    link previewing its reel for link-preview crawlers only. The cards are
+    saved as `share-card-*.png`.
+  - `tour`: the admin's guided tour, on desktop and phone. Other suites
+    start as someone who has had it (`browser.mjs`).
   - `book-first`: a book-first link that isn't live (`/f/skin-notes`, the
     test-only Lumen Skin Studio from `fixtures/book-first.mjs`: Book is the
     main action; forms simulate).
