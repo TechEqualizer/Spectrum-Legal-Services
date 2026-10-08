@@ -7,6 +7,7 @@ import { isConcept } from "@/config/site";
 import { funnels } from "@/data/funnels";
 import { applyPublication } from "@/lib/publication";
 import { resolveLink } from "@/lib/server/links";
+import { shareMetadata } from "@/lib/server/share-card";
 
 // The shareable link: a reel funnel on its own, with no website around it.
 // A slug is a built-in demo (src/data/funnels.ts), an organizer's event, or
@@ -51,18 +52,17 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
       robots: { index: true, follow: true },
     };
   }
-  const funnel = target.funnel;
-  const title = `${funnel.brand.seriesLabel} | ${funnel.brand.name}`;
-  const description = `${funnel.cover.heading} ${funnel.cover.intro}`;
+  const funnel = applyPublication(target.funnel, target.publication);
+  // The date, where tickets stand and what it is, under the card (see share-card.tsx).
+  const shared = shareMetadata(funnel);
+  const title = String(shared.title);
   const labeled = Boolean(funnel.sample) || isConcept(funnel);
   return {
+    ...shared,
     title: funnel.sample ? `${title} (Sample)` : isConcept(funnel) ? `${title} (Preview)` : title,
-    description,
     // The funnel's own business is the author, not Showlnk.
     authors: [{ name: funnel.brand.name }],
     keywords: null,
-    openGraph: { title, description, type: "website", siteName: funnel.brand.name },
-    twitter: { card: "summary_large_image", title, description },
     // A sample business never appears in search results.
     // A live client's link is indexed even while the concept site isn't.
     robots: labeled ? { index: false, follow: false } : funnel.live ? { index: true, follow: true } : undefined,

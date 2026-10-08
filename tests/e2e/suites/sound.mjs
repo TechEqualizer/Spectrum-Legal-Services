@@ -39,9 +39,24 @@ const phoneRule = () => {
     return play.call(this);
   };
 };
-const visit = async (path, tap) => {
+// Stricter, like an iPhone in Low Power Mode or some apps' built-in
+// browsers: nothing plays, muted or not, unless play() is called in a tap.
+const strictRule = () => {
+  let inTap = false;
+  for (const type of ['click', 'touchend']) addEventListener(type, () => { inTap = true; setTimeout(() => { inTap = false; }); }, true);
+  const allowed = new WeakSet();
+  const play = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function () {
+    if (!inTap && !allowed.has(this)) return Promise.reject(new DOMException('Needs a tap', 'NotAllowedError'));
+    allowed.add(this);
+    return play.call(this);
+  };
+  // The autoplay attribute doesn't start anything either.
+  addEventListener('play', (e) => { if (!allowed.has(e.target)) e.target.pause(); }, true);
+};
+const visit = async (path, tap, rule = phoneRule) => {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  await ctx.addInitScript(phoneRule);
+  await ctx.addInitScript(rule);
   await ctx.route('**/e2e-sound.webm', (r) => r.fulfill({ status: 200, contentType: 'video/webm', body: CLIP }));
   const p = await ctx.newPage();
   p.on('pageerror', (e) => errs.push(e.message));
@@ -74,6 +89,39 @@ const visit = async (path, tap) => {
   await p.getByRole('button', { name: 'Unmute' }).click({ timeout: 3000 }).catch(() => {}); await settle(p, 300);
   const after = await video(p);
   check('Unmute brings the sound back', after?.muted === false && after?.playing === true, JSON.stringify(after));
+  await ctx.close();
+}
+
+// A phone that won't autoplay at all, on a link straight to a reel: a Play
+// button, and tapping it plays with sound. (Opened with a tap, it plays: the
+// reel starts within that tap.)
+{
+  const { ctx, p } = await visit('/f/sound-night?start=sn-video', false, strictRule);
+  const play = p.getByRole('button', { name: 'Play', exact: true });
+  await play.waitFor({ timeout: 5000 }).catch(() => {});
+  check('no autoplay: Play button shown', await play.isVisible());
+  await p.screenshot({ path: S + '/sound-tap-to-play-390.jpg' });
+  await play.click(); await settle(p, 500);
+  const v = await video(p);
+  check('no autoplay: tapping Play plays it', v?.playing === true, JSON.stringify(v));
+  check('no autoplay: with sound', v?.muted === false, JSON.stringify(v));
+  check('no autoplay: Play button gone', (await play.count()) === 0);
+  await ctx.close();
+}
+{
+  const { ctx, p } = await visit('/f/sound-night', true, strictRule);
+  const v = await video(p);
+  check('no autoplay, opened with a tap: plays', v?.playing === true, JSON.stringify(v));
+  await ctx.close();
+}
+// The opening scene's video, refused by itself, starts on the first touch.
+{
+  const { ctx, p } = await visit('/f/sound-night', false, strictRule);
+  const scene = () => p.evaluate(() => { const v = [...document.querySelectorAll('video')].find((e) => e.loop); return v ? !v.paused : null; });
+  const before = await scene();
+  await p.mouse.click(195, 120); await settle(p, 800);
+  const after = await scene();
+  check('opening scene: waits, then plays on first touch', before === false && after === true, `${before} → ${after}`);
   await ctx.close();
 }
 

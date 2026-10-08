@@ -5,5 +5,17 @@
       "maxFindings": 5,
       "maxChars": 8000
     }
+  },
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "${family.replace(/",
+        "createdAt": "2026-10-08T00:26:52.845Z",
+        "reason": "Claude: a Google Fonts URL built from the link's existing title fonts (lookFonts.ts), not a new UI font"
+      }
+    ]
   }
 }
