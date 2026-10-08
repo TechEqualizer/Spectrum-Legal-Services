@@ -10,7 +10,7 @@ import { CheckIcon } from "@/admin/components/ui/icons";
 import { useAllResults, type EventResults } from "@/admin/results";
 import { useAdminSession } from "@/admin/session";
 import { formatNumber, formatPercent } from "@/admin/viz";
-import type { FunnelEvent } from "@/data/funnel-types";
+import type { FunnelEvent, Reel, ReelMedia } from "@/data/funnel-types";
 import { eventDaysAway, eventWhen } from "@/lib/event-time";
 import { upcomingEvents } from "@/lib/events";
 import { REEL_DRIVERS, REEL_ROLES, coreReels } from "@/lib/funnel-draft";
@@ -151,9 +151,9 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
   }
 
   const { e, date } = next;
-  const poster = thumbnailOf(sceneMediaOf(e.live));
+  const scene = sceneMediaOf(e.live);
   const title = e.live.cover.hero?.title ?? date.name;
-  const opening = Boolean(sceneMediaOf(e.live));
+  const opening = Boolean(scene);
   const steps = [
     { name: "Opening scene", hint: "What people see first", state: opening ? "ready" : "missing" },
     ...coreReels(e.live.reels).map(({ role, reel }) => ({
@@ -168,10 +168,7 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
     <section aria-labelledby={id} data-tour="home-next" className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
       <div className="flex flex-wrap items-start gap-4">
         <span className="relative h-24 w-[4.5rem] flex-shrink-0 overflow-hidden rounded-lg bg-deep-navy" aria-hidden="true">
-          {poster && (
-            // eslint-disable-next-line @next/next/no-img-element -- the event's own poster
-            <img src={poster} alt="" className="h-full w-full object-cover object-top" />
-          )}
+          <EventPoster scene={scene} reels={e.live.reels} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-wider text-teal-700">{countdown(date, now)}</p>
@@ -331,5 +328,28 @@ function Daily({ results }: { results: EventResults[] }) {
       <p className="mb-4 text-sm text-gray-600">All events combined. Hover or use the arrow keys for each day.</p>
       <ViewsChart data={daily} />
     </section>
+  );
+}
+
+/**
+ * The event's picture: the opening scene's still, else its first frame (a
+ * video uploaded without one), else the first reel with a picture (often
+ * the flyer). Empty only when the event has nothing to show yet.
+ */
+function EventPoster({ scene, reels }: { scene: ReelMedia | undefined; reels: Reel[] }) {
+  const sceneStill = thumbnailOf(scene);
+  const still = sceneStill ?? reels.map((r) => thumbnailOf(r.media)).find(Boolean);
+  // A video without a still: its frame (#t: just in, not a possibly black
+  // first one), over a reel's picture for browsers that won't load a frame
+  // before it plays (iPhones).
+  const frame = !sceneStill && scene?.kind === "video" ? `${scene.src}#t=0.5` : undefined;
+  return (
+    <>
+      {still && (
+        // eslint-disable-next-line @next/next/no-img-element -- the event's own poster
+        <img src={still} alt="" className="absolute inset-0 h-full w-full object-cover object-top" />
+      )}
+      {frame && <video src={frame} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover object-top" />}
+    </>
   );
 }

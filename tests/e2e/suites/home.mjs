@@ -48,6 +48,7 @@ check('never NaN', !/NaN/.test(text));
 // Next up: the next night and its four things.
 const next = p.getByRole('region', { name: /^Next up:/ });
 check('next night shown', /Masquerade on the Runway/.test(await next.innerText()) && /(Tonight|Tomorrow|In \d+ days)/i.test(await next.innerText()));
+check('next night: its picture shows', await next.evaluate((el) => [...el.querySelectorAll('img, video')].some((m) => m.getBoundingClientRect().width > 0)));
 const steps = next.getByRole('listitem');
 check('the four things, in order', JSON.stringify(await steps.evaluateAll((els) => els.map((e) => e.querySelector('.font-semibold').textContent))) === JSON.stringify(['Opening scene', 'The Night', 'Your People', 'Last Call']));
 check('each says where it stands', (await next.getByRole('button', { name: /: (ready|needs video|missing)\. Open in Reels\.$/ }).count()) === 4);
