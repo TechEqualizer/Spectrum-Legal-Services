@@ -68,9 +68,8 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await viewer.waitFor();
   const frame = viewer.locator('iframe');
   check(w+': youtube plays in nocookie player', (await frame.getAttribute('src'))?.startsWith('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1'));
-  check(w+': rail in preview', await viewer.getByRole('link',{name:'Tickets',exact:true}).isVisible() && await viewer.getByRole('button',{name:'Like',exact:true}).isVisible());
-  await viewer.getByRole('button',{name:'Like',exact:true}).click();
-  check(w+': like toggles', await viewer.getByRole('button',{name:'Liked'}).getAttribute('aria-pressed')==='true');
+  check(w+': rail in preview', await viewer.getByRole('link',{name:'Tickets',exact:true}).isVisible() && await viewer.getByRole('button',{name:'Share',exact:true}).isVisible());
+  check(w+': no like button', await viewer.getByRole('button',{name:/^Liked?$/}).count()===0);
   await p.screenshot({path:`preview-yt-${w}.jpg`, quality:70});
   await p.keyboard.press('Escape');
   await p.getByRole('button',{name:`Preview ${second}`}).click();
