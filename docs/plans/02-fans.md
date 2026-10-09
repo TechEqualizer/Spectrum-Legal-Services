@@ -1,0 +1,212 @@
+# Plan 2: Fans
+
+The audience moat. A visitor follows an organizer with their email, and
+following is worth something:
+
+- fan-only reels;
+- presale access before tickets go public;
+- every new night in their phone's calendar.
+
+The organizer gets a list they own, one their audience asked to join.
+
+Built after Plan 1 (it reads dates as rows and the one stage rule).
+Everything here is free for Big Love while it's built. The $29 Core plan
+(Plan 3) gates it later.
+
+## First principles
+
+1. **A follow must be worth more than it costs.** The fan gives an email
+   and a click. In return they get access that non-followers don't:
+   presale first, reveals, fan-only reels. If following gives nothing,
+   the list stays empty and the moat never forms.
+2. **Consent is the product, not a checkbox.** Only confirmed emails go on
+   the list (double opt-in). Every email carries one-tap unfollow, and fans
+   can delete themselves. A list of people who asked to hear from an
+   organizer is worth more, and lands in more inboxes, than a list that
+   was scraped.
+3. **Gating has to be real.** A fan-only reel never reaches someone who
+   isn't a follower:
+   - not in the page's HTML;
+   - not in a public storage address;
+   - not in a link preview card.
+
+   Otherwise "exclusive" is a lie the first time someone views the page
+   source.
+4. **Value comes from timing and access, not secrecy.** Anything that plays
+   on a screen can be screen-recorded. Presale windows and early reveals
+   keep their value even after a leak.
+5. **The content rule:** suggestive yes, explicit no.
+   - No nudity or sex acts.
+   - Consent from anyone identifiable in a fan-only reel.
+   - It's written into the organizer terms and shown beside the fans-only
+     switch.
+
+## Where we are (facts, from the code)
+
+- **Lead forms (text):** "Text me later" saves a phone number with consent
+  wording to `leads` (intent `text_later`) and sends nothing. The Leads
+  page lists these.
+- **Lead forms (email):** email goes out through Resend's API in
+  `src/app/api/leads/route.ts`, as a notice to the organizer only. No
+  sending domain is set up for messages to fans.
+- **Reel media:** stored in the public `reel-media` bucket. Anyone with the
+  address can fetch it.
+- **Reels:** a reel has no visibility. Every reel in the published document
+  is in the page's HTML.
+- **Showlnk's waitlist:** the `waitlist` table is Showlnk's own product
+  waitlist (organizers), not fans.
+- **Admins vs fans:** admins sign in with Supabase Auth plus `admin_users`.
+  Fans have no accounts.
+
+## Design
+
+- **Fans and follows (rows):**
+  - `fans`: one row per confirmed email.
+  - `follows`: fan × organizer, with the source tag and the event they
+    followed from, the consent wording they saw, and when they confirmed
+    or unfollowed.
+  - Server-only tables, like the Eventbrite ones: row-level security on,
+    no policies, secret key only.
+- **Fan sign-in without passwords or Supabase Auth:**
+  - **Email link:** a single-use link, valid 20 minutes, sent by Resend
+    in the organizer's name. Its token is stored hashed, like the
+    Eventbrite tokens.
+  - **Cookie:** confirming sets a signed, httpOnly cookie (180 days)
+    holding the fan's id.
+  - **Why not Supabase Auth:** keeping fans separate keeps them out of
+    the admin sign-in system, and lets emails carry the organizer's
+    brand.
+- **Fan-only reels:**
+  - Reels get `visibility: "public" | "fans"` in the published document.
+  - Media for fan-only reels goes to a private bucket,
+    `reel-media-fans`.
+  - **In the page:** the reel shows as a locked card (title, a blurred
+    cover and "Follow to watch"). Its media address is never sent.
+  - **For a follower:** the player asks `/api/fans/media?reel=…` for a
+    short-lived signed address. The server checks the cookie and the
+    follow first.
+  - **Link previews:** cards and per-reel previews skip fan-only reels.
+- **Presale:**
+  - A date gets an optional `presale: { url, opensAt, endsAt }`. The url
+    is the organizer's Eventbrite access-code link or hidden ticket link.
+  - Shown only to followers, between `opensAt` and `endsAt`.
+  - Non-followers see "Fans get tickets first: follow for presale".
+- **Calendar:**
+  - `/f/<organizer>/calendar.ics` is a subscribable feed of the
+    organizer's upcoming public dates, built from the date rows.
+  - The follow confirmation page offers "Add every <organizer> night to
+    your calendar" with webcal links for Apple and Google.
+  - Public and identical for everyone, so it holds no personal data and
+    caches well.
+- **Email in this plan:** sign-in links and the follow confirmation only.
+  Blasts to followers are Plan 4, the Email add-on.
+  - **Sender:** "<Organizer> via Showlnk <fans@showlnk.com>".
+  - **Footer:** one-tap unfollow, plus the sender's postal address, as
+    US anti-spam law (CAN-SPAM) requires.
+
+## Steps
+
+Each step is one PR.
+
+### 0. Content rule and fan terms
+
+- Organizer terms add the content rule and a promise that fans can be
+  removed on request.
+- A short fan privacy note: what's stored, who sees it, how to unfollow
+  or delete.
+- Live page impact: none (pages only).
+
+### 1. Fan tables and sign-in (additive)
+
+- Migration (confirmed before it runs): `fans`, `follows`,
+  `fan_login_tokens`, the private bucket, and server-only access.
+- Routes:
+  - `POST /api/fans/start`: email + organizer. Rate-limited per email and
+    per IP, then sends the link.
+  - `GET /api/fans/confirm`: sets the cookie and the follow, then shows
+    the confirmation page.
+  - `POST /api/fans/unfollow`.
+  - `POST /api/fans/forget`: deletes the fan and their follows.
+- Resend sending domain for showlnk.com. DNS records are added by you;
+  I'll give you the exact records.
+- Tests: the mock Supabase and a mock Resend capture the email, so suites
+  follow the link.
+- Live page impact: none (nothing on the page uses it yet).
+
+### 2. Follow on the link
+
+- "Follow <organizer>" in the reel rail, on the end card, on the
+  organizer's choose-a-night page and on the recap.
+  - It replaces "Text me later" for event links.
+  - Existing phone leads stay where they are, on the Leads page.
+- Email field → "Check your email" → confirmed → "You're following, add
+  every night to your calendar".
+- A returning follower sees "Following ✓" instead of the button.
+- Live page impact: **yes, visible.** The rail's Updates button becomes
+  Follow. Shipped behind a per-organizer setting, so it's switched on for
+  Big Love only when you say.
+
+### 3. Fan-only reels
+
+- **Editor:** a "Fans only" switch per reel, with the content rule shown
+  beside it. Uploads for fan-only reels go to the private bucket.
+- **Player:** the locked card for non-followers, and signed media for
+  followers.
+- **Gating tests:** the page HTML, the preview card and the public media
+  address never carry a fan-only reel's media.
+- Live page impact: none until a reel is switched to fans only.
+
+### 4. Presale
+
+- Presale link and window on each date (the Dates editor), stored on the
+  date rows.
+- On the link, followers see the presale button during the window.
+  Others see the follow prompt.
+- Live page impact: none until a date has a presale.
+
+### 5. Calendar feed
+
+- `/f/<organizer>/calendar.ics` from the date rows, plus the subscribe
+  links.
+- Live page impact: one new link, on the confirmation page only.
+
+### 6. Fans in the admin
+
+- **A Fans page:**
+  - followers, with when and where each one followed (source tag, event);
+  - CSV export (the organizer's list, theirs to keep);
+  - remove a fan.
+- Home and Results gain **Follows** next to ticket clicks, plus the share
+  of visitors who follow.
+- The guided tour gains a Fans step.
+- Live page impact: none (admin only).
+
+## Measures
+
+| Measure | What it shows |
+|---|---|
+| Follow rate (visitors who follow) and confirm rate (follows confirmed by email) | Is following worth it to fans? |
+| Followers per organizer, and how many come back for the next event | Is the list becoming an asset? |
+| Presale conversion vs public sale conversion | Is the fan advantage real money? |
+| Fans following 2 or more organizers in a city | The network forming. Plan 5 builds on it |
+
+## Deliberately not in this plan
+
+- **Email blasts:** Plan 4, the Email add-on.
+- **Texts:** later, once email works. Texting needs proper TCPA consent and
+  a sending service, and costs more per message.
+- **Ads:** a later add-on.
+- **Billing:** Plan 3.
+- **Ticket protection:** check-in and dispute evidence packs, Plan 5.
+- **Fan accounts with passwords, fan profiles, comments or likes.**
+- **Per-fan unique presale codes:** the shared access-code link comes
+  first.
+
+## Open questions
+
+- **The sender's postal address for the email footer** (required by US
+  anti-spam law): the organizer's address, or Showlnk's?
+- **Should following be per organizer only, or per event too?** This plan
+  says per organizer: one list, every night.
+- **When does Big Love switch Follow on?** Proposed: after Oct 31, so the
+  masquerade's ticket flow stays as it is.
