@@ -101,8 +101,8 @@ Everything here is free for Big Love while it's built. The $29 Core plan
 - **Email in this plan:** sign-in links and the follow confirmation only.
   Blasts to followers are Plan 4, the Email add-on.
   - **Sender:** "<Organizer> via Showlnk <fans@showlnk.com>".
-  - **Footer:** one-tap unfollow, plus the sender's postal address, as
-    US anti-spam law (CAN-SPAM) requires.
+  - **Footer:** one-tap unfollow, plus Showlnk's postal address, as US
+    anti-spam law (CAN-SPAM) requires.
 
 ## Steps
 
@@ -202,11 +202,16 @@ Each step is one PR.
 - **Per-fan unique presale codes:** the shared access-code link comes
   first.
 
+## Decided
+
+- **Email sign-in first.** Texts come later.
+- **The content rule:** suggestive yes, explicit no, with consent from
+  anyone identifiable.
+- **Email footer:** Showlnk's postal address, from a setting
+  (`SHOWLNK_POSTAL_ADDRESS`), in every fan email.
+- **Following is per organizer:** one list, every night.
+
 ## Open questions
 
-- **The sender's postal address for the email footer** (required by US
-  anti-spam law): the organizer's address, or Showlnk's?
-- **Should following be per organizer only, or per event too?** This plan
-  says per organizer: one list, every night.
 - **When does Big Love switch Follow on?** Proposed: after Oct 31, so the
   masquerade's ticket flow stays as it is.
