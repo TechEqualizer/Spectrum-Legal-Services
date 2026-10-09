@@ -3,7 +3,7 @@
 // minutes old otherwise.
 
 import type { Funnel } from "@/data/funnel-types";
-import { getFunnel, getFunnelById } from "@/lib/server/funnels";
+import { getFunnel, getFunnelById, listOrganizerEvents } from "@/lib/server/funnels";
 import { applyPublication, parsePublication, type Publication } from "@/lib/publication";
 
 export const publicationTag = (slug: string) => `funnel-publication:${slug}`;
@@ -35,9 +35,38 @@ export async function getPublication(slug: string): Promise<StoredPublication | 
   }
 }
 
-/** The funnel as visitors see it: built-in content with any published edits. */
+/**
+ * An event three ways: as Showlnk built it (what "Take down published edits"
+ * returns to), its published edits, and the two combined, which is what
+ * visitors see. Readers outside the editor use `live`; only these helpers
+ * combine the two.
+ */
+export type EventVersions = { base: Funnel; publication: Publication | null; live: Funnel };
+
+/** A built event with its published edits, and the two combined. */
+export async function versionsOf(base: Funnel): Promise<EventVersions> {
+  const publication = (await getPublication(base.slug))?.publication ?? null;
+  return { base, publication, live: applyPublication(base, publication) };
+}
+
+/** An event's versions by its link (slug). */
+export async function getEventVersions(slug: string): Promise<EventVersions | undefined> {
+  const base = await getFunnel(slug);
+  return base ? versionsOf(base) : undefined;
+}
+
+/** Every event of an organizer, with its versions. */
+export async function listOrganizerEventVersions(organizer: string): Promise<EventVersions[]> {
+  return Promise.all((await listOrganizerEvents(organizer)).map(versionsOf));
+}
+
+/** The funnel as visitors see it, by its link (slug). */
+export async function getLiveFunnel(slug: string): Promise<Funnel | undefined> {
+  return (await getEventVersions(slug))?.live;
+}
+
+/** The funnel as visitors see it, by its id (stored with every lead and reel event). */
 export async function getLiveFunnelById(id: string): Promise<Funnel | undefined> {
   const base = await getFunnelById(id);
-  if (!base) return undefined;
-  return applyPublication(base, (await getPublication(base.slug))?.publication);
+  return base ? (await versionsOf(base)).live : undefined;
 }

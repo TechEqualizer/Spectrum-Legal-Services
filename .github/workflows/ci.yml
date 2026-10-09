@@ -1,5 +1,5 @@
 # Checks every pull request (and every push to a pull request's branch):
-# lint and types, the end-to-end tests against the mocks, and the Impeccable
+# lint, types and unit tests, the end-to-end tests against the mocks, and the Impeccable
 # design detector as a report. See tests/e2e/README.md and DESIGN.md.
 name: CI
 
@@ -31,6 +31,8 @@ jobs:
       # Route types (PageProps and friends) are generated, not committed.
       - run: npx next typegen
       - run: npx tsc --noEmit
+      # Fast unit tests for pure logic (tests/unit), straight from TypeScript.
+      - run: npm run test:unit
 
   e2e:
     name: End-to-end tests

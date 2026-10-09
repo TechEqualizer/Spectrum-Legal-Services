@@ -10,7 +10,7 @@ import { applyPublication, type Publication } from "@/lib/publication";
 import { funnelReel } from "@/data/reels";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import SourceLink from "@/components/SourceLink";
-import { eventChip, formatEventDate, isOver, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
+import { eventChip, formatEventDate, isOver, lastDate, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
 import { eventDate, eventDayOfMonth, eventTime, type EventClock } from "@/lib/event-time";
 import { DEFAULT_EFFECT } from "@/lib/look";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
@@ -110,9 +110,9 @@ export default function FunnelExperience({
   // recap, and sends them to the organizer's next night (or takes their
   // number for it) instead of selling tickets that are gone.
   const over = isEvents && upcoming.length === 0;
-  const lastNight = over ? [...funnel.events!].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0] : undefined;
+  const lastNight = over ? lastDate(funnel) : undefined;
   // The page can be a few minutes old: only a night that's still to come.
-  const next = over && nextNight && Date.parse(nextNight.startsAt) + 6 * HOUR > now ? nextNight : undefined;
+  const next = over && nextNight && !isOver(nextNight, now) ? nextNight : undefined;
   const nextWhen = next && formatEventDate(next);
   const [updates, setUpdates] = useState(false);
   // Its words were about getting tickets; now they're about the night that was.

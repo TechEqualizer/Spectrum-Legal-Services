@@ -6,25 +6,27 @@
 // it's over it can send people on.
 
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
-import { upcomingEvents, type NextNight } from "@/lib/events";
-import { applyPublication, type Publication } from "@/lib/publication";
-import { getFunnel, getOrganizer, listOrganizerEvents, organizerOf, type Organizer } from "@/lib/server/funnels";
-import { getPublication } from "@/lib/server/publications";
+import { lastStart, upcomingEvents, type NextNight } from "@/lib/events";
+import { getOrganizer, organizerOf, type Organizer } from "@/lib/server/funnels";
+import { getEventVersions, listOrganizerEventVersions, type EventVersions } from "@/lib/server/publications";
 
+/**
+ * An event link: the event as visitors see it (`live`), plus the built copy
+ * and its published edits for the page's own player (which re-applies edits
+ * in the admin's live preview). An organizer link with several events
+ * coming up: a choice between them, each as visitors see it.
+ */
 export type LinkTarget =
-  | { kind: "event"; funnel: Funnel; publication: Publication | null; nextNight?: NextNight }
+  | ({ kind: "event"; nextNight?: NextNight } & EventVersions)
   | { kind: "choose"; organizer: Organizer; events: { funnel: Funnel; next: FunnelEvent }[] };
 
-const lastStart = (f: Funnel) => Math.max(0, ...(f.events ?? []).map((e) => Date.parse(e.startsAt)));
+/** The event a link shows, as visitors see it (the soonest one, for a choice). */
+export const shownFunnel = (target: LinkTarget): Funnel => (target.kind === "event" ? target.live : target.events[0].funnel);
+
 
 /** An organizer's events as visitors see them, each with its next date (if any), soonest first. */
 async function organizerNights(organizer: string, now: number) {
-  const events = await Promise.all(
-    (await listOrganizerEvents(organizer)).map(async (base) => {
-      const publication = (await getPublication(base.slug))?.publication ?? null;
-      return { base, publication, live: applyPublication(base, publication) };
-    })
-  );
+  const events = await listOrganizerEventVersions(organizer);
   const upcoming = events
     .flatMap((e) => {
       const next = upcomingEvents(e.live, now)[0];
@@ -35,13 +37,12 @@ async function organizerNights(organizer: string, now: number) {
 }
 
 export async function resolveLink(slug: string, now = Date.now()): Promise<LinkTarget | undefined> {
-  const funnel = await getFunnel(slug);
-  if (funnel) {
-    const publication = (await getPublication(slug))?.publication ?? null;
+  const versions = await getEventVersions(slug);
+  if (versions) {
     const organizer = await organizerOf(slug);
     const next = organizer ? (await organizerNights(organizer, now)).upcoming.find((e) => e.base.slug !== slug) : undefined;
     const nextNight = next && { slug: next.base.slug, name: next.live.cover.hero?.title ?? next.live.brand.seriesLabel, startsAt: next.next.startsAt, ...(next.next.timeZone ? { timeZone: next.next.timeZone } : {}) };
-    return { kind: "event", funnel, publication, ...(nextNight ? { nextNight } : {}) };
+    return { kind: "event", ...versions, ...(nextNight ? { nextNight } : {}) };
   }
 
   const organizer = await getOrganizer(slug);
@@ -52,5 +53,5 @@ export async function resolveLink(slug: string, now = Date.now()): Promise<LinkT
     return { kind: "choose", organizer, events: upcoming.map(({ live, next }) => ({ funnel: live, next })) };
   }
   const shown = upcoming[0] ?? [...events].sort((a, b) => lastStart(b.live) - lastStart(a.live))[0];
-  return { kind: "event", funnel: shown.base, publication: shown.publication };
+  return { kind: "event", base: shown.base, publication: shown.publication, live: shown.live };
 }

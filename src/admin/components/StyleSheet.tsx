@@ -25,6 +25,7 @@ import {
 } from "@/lib/look";
 import { eventDate, eventDayOfMonth } from "@/lib/event-time";
 import { thumbnailOf } from "@/lib/media";
+import { upcomingEvents } from "@/lib/events";
 
 /** What goes behind the opening screen's words. */
 type Backdrop = "keep" | "poster" | "blur" | "glow";
@@ -450,10 +451,7 @@ export function StylePreview({
 }) {
   // The next three dates, as the circles visitors see.
   const [now] = useState(() => Date.now());
-  const days = (funnel.events ?? [])
-    .filter((e) => Date.parse(e.startsAt) > now)
-    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
-    .slice(0, 3);
+  const days = upcomingEvents(funnel, now).slice(0, 3);
   const theme = { ...colors, "--on-accent": onAccent(colors), "--fx-color": effectColor(colors) } as React.CSSProperties;
   const still = thumbnailOf(media);
   return (

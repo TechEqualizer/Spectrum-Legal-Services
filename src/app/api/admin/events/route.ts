@@ -2,10 +2,9 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { parseFunnelRecord } from "@/lib/funnel-record";
 import { EVENT_SLUG, newEventFrom, type NewEventMode } from "@/lib/new-event";
-import { applyPublication } from "@/lib/publication";
 import { asAdmin, getAdmin, managesOrganizer } from "@/lib/server/admin-auth";
 import { EVENT_FUNNELS_TAG, listEventFunnels, slugIsFree } from "@/lib/server/funnels";
-import { getPublication } from "@/lib/server/publications";
+import { versionsOf } from "@/lib/server/publications";
 
 // Adds an event for an organizer, made from one of their events: "fresh"
 // (New event) keeps who they are and starts the words over; "copy"
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
   }
 
   // Start from what visitors see now: the event with its published edits.
-  const live = applyPublication(source.funnel, (await getPublication(source.funnel.slug))?.publication);
+  const { live } = await versionsOf(source.funnel);
   const funnel = newEventFrom(live, { slug, name }, mode);
   const checked = parseFunnelRecord(JSON.parse(JSON.stringify(funnel)));
   if (typeof checked === "string") {

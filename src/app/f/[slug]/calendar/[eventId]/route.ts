@@ -1,6 +1,4 @@
-import { getFunnel } from "@/lib/server/funnels";
-import { applyPublication } from "@/lib/publication";
-import { getPublication } from "@/lib/server/publications";
+import { getLiveFunnel } from "@/lib/server/publications";
 
 // "Add to calendar" for an event date: a calendar file (.ics) that phones
 // and computers open in their own calendar app. Uses the published date.
@@ -14,10 +12,8 @@ const stamp = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, "").re
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string; eventId: string }> }) {
   const { slug, eventId } = await params;
-  const base = await getFunnel(slug);
-  if (!base) return new Response("Not found", { status: 404 });
-  const funnel = applyPublication(base, (await getPublication(slug))?.publication);
-  const event = funnel.events?.find((e) => e.id === eventId);
+  const funnel = await getLiveFunnel(slug);
+  const event = funnel?.events?.find((e) => e.id === eventId);
   if (!event) return new Response("Not found", { status: 404 });
 
   // The moment itself, in UTC: calendar apps show it on the phone's own

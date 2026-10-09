@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { funnels } from "@/data/funnels";
-import { applyPublication } from "@/lib/publication";
-import { resolveLink } from "@/lib/server/links";
+import { resolveLink, shownFunnel } from "@/lib/server/links";
 import { SHARE_CARD_SIZE, shareCard } from "@/lib/server/share-card";
 
 // The preview card people see when a funnel link is pasted into a text, DM
@@ -22,6 +21,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const target = await resolveLink((await params).slug);
   if (!target) notFound();
   // An organizer's permanent link previews the night it shows (or the soonest one).
-  const funnel = target.kind === "event" ? applyPublication(target.funnel, target.publication) : target.events[0].funnel;
+  const funnel = shownFunnel(target);
   return shareCard(funnel);
 }
