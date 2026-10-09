@@ -6,7 +6,7 @@
 // it's over it can send people on.
 
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
-import { upcomingEvents, type NextNight } from "@/lib/events";
+import { lastStart, upcomingEvents, type NextNight } from "@/lib/events";
 import { getOrganizer, organizerOf, type Organizer } from "@/lib/server/funnels";
 import { getEventVersions, listOrganizerEventVersions, type EventVersions } from "@/lib/server/publications";
 
@@ -23,7 +23,6 @@ export type LinkTarget =
 /** The event a link shows, as visitors see it (the soonest one, for a choice). */
 export const shownFunnel = (target: LinkTarget): Funnel => (target.kind === "event" ? target.live : target.events[0].funnel);
 
-const lastStart = (f: Funnel) => Math.max(0, ...(f.events ?? []).map((e) => Date.parse(e.startsAt)));
 
 /** An organizer's events as visitors see them, each with its next date (if any), soonest first. */
 async function organizerNights(organizer: string, now: number) {

@@ -11,8 +11,7 @@ import { requestImport } from "@/admin/import-request";
 import { runsOrganizer, useAdminSession } from "@/admin/session";
 import EventWhen from "@/components/EventWhen";
 import type { Funnel } from "@/data/funnel-types";
-import { eventDaysAway } from "@/lib/event-time";
-import { isOver, upcomingEvents } from "@/lib/events";
+import { dateStage, lastDate, lastStart, upcomingEvents } from "@/lib/events";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
 import { EVENT_SLUG, slugFromName, type NewEventMode } from "@/lib/new-event";
 
@@ -22,15 +21,12 @@ const useOrigin = () => useSyncExternalStore(() => () => {}, () => window.locati
 function standing(live: Funnel, now: number) {
   const next = upcomingEvents(live, now)[0];
   if (next) {
-    // Today on the event's own calendar.
-    const today = eventDaysAway(next, now) <= 0;
-    return { next, label: today ? "Tonight" : "Upcoming", tone: "bg-teal-accent/15 text-deep-navy" };
+    const stage = dateStage(next, now);
+    const label = stage === "live" ? "On now" : stage === "tonight" ? "Tonight" : "Upcoming";
+    return { next, label, tone: "bg-teal-accent/15 text-deep-navy" };
   }
-  const dates = live.events ?? [];
-  if (!dates.length) return { label: "No dates yet", tone: "bg-amber-50 text-amber-800" };
-  const last = [...dates].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
-  // Started and not over yet: the night is on.
-  if (!isOver(last, now)) return { last, label: "On now", tone: "bg-teal-accent/15 text-deep-navy" };
+  const last = lastDate(live);
+  if (!last) return { label: "No dates yet", tone: "bg-amber-50 text-amber-800" };
   return { last, label: "Ended", tone: "bg-gray-100 text-gray-600" };
 }
 
@@ -409,4 +405,3 @@ function freeSlug(base: string, events: AdminEvent[]) {
   for (let n = 2; ; n++) if (!taken.has(`${stem}-${n}`)) return `${stem}-${n}`.slice(0, 64);
 }
 
-const lastStart = (f: Funnel) => Math.max(0, ...(f.events ?? []).map((e) => Date.parse(e.startsAt)));

@@ -3,7 +3,7 @@
 // platform's tracking codes added.
 
 import type { Funnel, FunnelEvent, Reel } from "@/data/funnel-types";
-import { eventDate, eventDaysAway } from "@/lib/event-time";
+import { eventDate, eventDaysAway, type EventClock } from "@/lib/event-time";
 
 /** An organizer's next night on another link, for an event that's over. */
 export type NextNight = { slug: string; name: string; startsAt: string; timeZone?: string };
@@ -15,8 +15,35 @@ const HOUR = 60 * 60 * 1000;
 // An event counts as over six hours after it starts.
 const RUNS_FOR = 6 * HOUR;
 
-export function isOver(event: FunnelEvent, now: number) {
-  return new Date(event.startsAt).getTime() + RUNS_FOR < now;
+export function isOver(event: Pick<FunnelEvent, "startsAt">, now: number) {
+  return Date.parse(event.startsAt) + RUNS_FOR < now;
+}
+
+/**
+ * Where a date stands, the one rule every screen uses:
+ * - `on_sale`: more than a week away
+ * - `final_week`: within the next 7 days, not today
+ * - `tonight`: today on the event's own calendar, not started yet
+ * - `live`: started, and not over yet (6 hours after the start)
+ * - `over`
+ */
+export type DateStage = "on_sale" | "final_week" | "tonight" | "live" | "over";
+
+export function dateStage(event: EventClock, now: number): DateStage {
+  if (isOver(event, now)) return "over";
+  if (Date.parse(event.startsAt) <= now) return "live";
+  const days = eventDaysAway(event, now);
+  if (days <= 0) return "tonight";
+  if (days <= 7) return "final_week";
+  return "on_sale";
+}
+
+/** When the funnel's latest date starts, in ms (0 without dates): to sort events by their latest night. */
+export const lastStart = (funnel: Funnel) => Date.parse(lastDate(funnel)?.startsAt ?? "1970-01-01T00:00:00Z");
+
+/** The funnel's latest date, over or not. */
+export function lastDate(funnel: Funnel): FunnelEvent | undefined {
+  return [...(funnel.events ?? [])].sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
 }
 
 /** Events that haven't finished, soonest first. */
