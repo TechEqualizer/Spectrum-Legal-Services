@@ -59,6 +59,9 @@ still moves forward during a run.
     date and where tickets stand, and the words under it), and a `?start=`
     link previewing its reel for link-preview crawlers only. The cards are
     saved as `share-card-*.png`.
+  - `event-dates`: publishing writes an event's dates as rows
+    (`event_dates`, through `set_event_dates`), with Eventbrite's event id;
+    taking edits down restores the built dates; others can't write them.
   - `tour`: the admin's guided tour, on desktop and phone. Other suites
     start as someone who has had it (`browser.mjs`).
   - `book-first`: a book-first link that isn't live (`/f/skin-notes`, the
