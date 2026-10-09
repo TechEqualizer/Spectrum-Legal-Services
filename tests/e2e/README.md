@@ -22,6 +22,25 @@ Eventbrite) must be free.
 Building replaces the app's `.next` folder with a test build, so run
 `npm run build` again before `npm start` for real.
 
+## The test calendar
+
+Every run happens on Oct 7, 2026, whatever today's date is. The suites were
+written around Big Love's Oct 31 night, so they keep passing after it. Time
+still moves forward during a run.
+
+- **Processes:** the app, its build and the mocks load `shift-time.cjs` (through
+  `NODE_OPTIONS`), which moves their clock by a fixed offset.
+- **Pages:** shifted the same way inside the browser (`browser.mjs`).
+- **Suites:** keep the real clock, because Playwright works out cookie expiry
+  there. Use `testNow()` from `browser.mjs` for dates a suite builds.
+- **A page's own clock:** set with `page.clock` or `context.clock`, it takes
+  over for that page. `clock.install()` without a time starts at the run's
+  calendar.
+- **A different moment:** `E2E_NOW=2026-11-15T12:00:00Z npm run test:e2e` runs
+  the whole run at that time.
+- **Data cache:** every run starts with the app's data cache cleared, so one
+  run's events never leak into the next.
+
 ## What's here
 
 - `suites/`: one script per area. Each prints `PASS  name` or `FAIL  name`

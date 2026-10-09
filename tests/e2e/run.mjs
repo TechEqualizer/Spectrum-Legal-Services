@@ -50,6 +50,16 @@ env.EVENTBRITE_CLIENT_ID = "test-eb-client";
 env.EVENTBRITE_CLIENT_SECRET = "test-eb-secret";
 env.EVENTBRITE_TOKEN_KEY = Buffer.alloc(32, 7).toString("base64");
 env.EVENTBRITE_OAUTH_BASE = EVENTBRITE;
+// The calendar every process in the run sees (shift-time.cjs), so tests
+// written around Big Love's Oct 31 night don't depend on today's date.
+// E2E_NOW sets another moment, e.g. to try a run after the night.
+const TEST_NOW = process.env.E2E_NOW ?? "2026-10-07T16:00:00Z";
+env.E2E_TIME_OFFSET_MS = String(Date.parse(TEST_NOW) - Date.now());
+env.NODE_OPTIONS = `${env.NODE_OPTIONS ?? ""} --require ${join(here, "shift-time.cjs")}`.trim();
+// The suites themselves keep the real clock: Playwright works out cookie
+// expiry times there, and the browser keeps cookies by the real clock.
+// Pages are shifted inside the browser instead (browser.mjs).
+const suiteEnv = { ...env, NODE_OPTIONS: process.env.NODE_OPTIONS ?? "" };
 env.EVENTBRITE_API_BASE = `${EVENTBRITE}/v3`;
 
 const children = [];
@@ -106,11 +116,13 @@ await waitFor(`${SUPABASE}/__state`, "Mock Supabase");
 await waitFor(`${CLAUDE}/__last`, "Mock Claude");
 await waitFor(`${EVENTBRITE}/__state`, "Mock Eventbrite");
 
+// The app's data cache from an earlier run would serve that run's events
+// and publications, so every run starts without it (built or not).
+rmSync(join(root, ".next/cache/fetch-cache"), { recursive: true, force: true });
+
 if (build) {
   console.log("Building the app against the mocks...");
-  // A data cache from another build would serve its publications, and
   // Turbopack's build cache has served a stale stylesheet after CSS edits.
-  rmSync(join(root, ".next/cache/fetch-cache"), { recursive: true, force: true });
   rmSync(join(root, ".next/cache/turbopack"), { recursive: true, force: true });
   const b = await run("npx", ["next", "build"], { stdio: ["ignore", "pipe", "pipe"] });
   if (b.code !== 0) {
@@ -126,7 +138,7 @@ app.stdout.on("data", (d) => (appLog += d));
 app.stderr.on("data", (d) => (appLog += d));
 await waitFor(APP, "The app");
 
-const auth = await run("node", [join(here, "auth.mjs"), out]);
+const auth = await run("node", [join(here, "auth.mjs"), out], { env: suiteEnv });
 if (!/login 200/.test(auth.output)) {
   console.error("Test sign-in failed:\n" + auth.output);
   process.exit(1);
@@ -139,7 +151,7 @@ for (const suite of suites) {
   await fetch(`${CLAUDE}/__mode`, { method: "POST", body: "multi" });
   await fetch(`${EVENTBRITE}/__reset`, { method: "POST" });
   const started = Date.now();
-  const r = await run("node", [join(here, "suites", `${suite}.mjs`), out], { cwd: out });
+  const r = await run("node", [join(here, "suites", `${suite}.mjs`), out], { cwd: out, env: suiteEnv });
   const lines = r.output.split("\n");
   const pass = lines.filter((l) => l.startsWith("PASS")).length;
   const fails = lines.filter((l) => l.startsWith("FAIL"));

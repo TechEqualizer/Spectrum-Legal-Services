@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, settle, testNow } from '../browser.mjs';
 import { addGoldenHour } from '../fixtures/golden-hour.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
@@ -6,7 +6,7 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 // The test event's dates move with the calendar (fixtures/golden-hour.mjs): its
 // "this Sunday" is today until 9pm, then next Sunday. Visit on that Sunday
 // morning, so the page always sells a date under 48 hours away.
-const now = new Date();
+const now = new Date(testNow());
 const sunday = new Date(now);
 sunday.setDate(now.getDate() + ((7 - now.getDay()) % 7 || (now.getHours() >= 21 ? 7 : 0)));
 sunday.setHours(10, 0, 0, 0);

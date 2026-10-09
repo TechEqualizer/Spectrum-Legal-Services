@@ -6,14 +6,14 @@
 import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium, settle } from '../browser.mjs';
+import { chromium, settle, testNow } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const EB = 'http://localhost:54600'; const SB = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
 const errs = [];
 const EVENT = '1998119183265'; // Big Love's Masquerade, from its ticket link
-const daysAgo = (d) => new Date(Date.now() - d * 864e5).toISOString().replace(/\.\d+Z$/, 'Z');
+const daysAgo = (d) => new Date(testNow() - d * 864e5).toISOString().replace(/\.\d+Z$/, 'Z');
 const attendees = (aff, n, extra = {}) => Array.from({ length: n }, () => ({ affiliate: aff, status: 'Attending', cancelled: false, refunded: false, ...extra }));
 const ebState = async () => (await fetch(`${EB}/__state`)).json();
 const sbState = async () => (await fetch(`${SB}/__state`)).json();

@@ -1,4 +1,4 @@
-import { chromium, settle } from '../browser.mjs';
+import { chromium, settle, testNow } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
@@ -11,8 +11,8 @@ const reels = [
 ];
 const publish = async (ms, status) => {
   const events = [
-    { id: 'past', name: 'Masquerade on the Runway', startsAt: new Date(Date.now() - 7 * 24 * H).toISOString(), venue: '1600 East Grand Blvd, Detroit', ticketUrl: 'https://example.com/old' },
-    { id: 'only', name: 'Masquerade on the Runway', startsAt: new Date(Date.now() + ms).toISOString(), venue: 'Grand Blvd', price: 'From $40', ticketUrl: 'https://example.com/t', reelId: 'mr-masks-on', ...(status ? { status } : {}) },
+    { id: 'past', name: 'Masquerade on the Runway', startsAt: new Date(testNow() - 7 * 24 * H).toISOString(), venue: '1600 East Grand Blvd, Detroit', ticketUrl: 'https://example.com/old' },
+    { id: 'only', name: 'Masquerade on the Runway', startsAt: new Date(testNow() + ms).toISOString(), venue: 'Grand Blvd', price: 'From $40', ticketUrl: 'https://example.com/t', reelId: 'mr-masks-on', ...(status ? { status } : {}) },
   ];
   const r = await admin.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade', publication: { version: 1, reels, funnel: { order: reels.map(r => r.id), topics: {}, paths: {}, primaryCta: 'tickets' }, events } } });
   if (!r.ok()) throw new Error(await r.text());

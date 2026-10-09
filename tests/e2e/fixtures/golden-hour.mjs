@@ -4,9 +4,11 @@
 // suites add it to the mock database (POST /__event) before they open it;
 // it isn't live, so its forms simulate (nothing is sent) while tracking is real.
 //
-// Dates are relative to today, so it never goes stale: last Sunday is a
+// Dates are relative to the run's today (testNow), so it never goes stale: last Sunday is a
 // recap, then the next two Sundays (the second sold out) and a late-night
 // special. The ticket links go to example.com, a domain reserved for examples.
+
+import { testNow } from '../browser.mjs';
 
 export const SLUG = 'sundays';
 export const ORGANIZER = 'goldenhour';
@@ -18,7 +20,7 @@ export const ORGANIZER = 'goldenhour';
  * this-Sunday to sell.
  */
 function sunday(weeks, hour) {
-  const d = new Date();
+  const d = new Date(testNow());
   const ahead = (7 - d.getDay()) % 7 || (d.getHours() >= 21 ? 7 : 0);
   d.setDate(d.getDate() + ahead + weeks * 7);
   d.setHours(hour, 0, 0, 0);

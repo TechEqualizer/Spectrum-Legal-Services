@@ -55,22 +55,26 @@ what the live Big Love page shows.
 
 Each step is one PR.
 
-### 0. Tests own their clock (now, before Oct 31)
+### 0. Tests own their clock (done)
 
-- The seed's date and the suites' dates become relative to "now", for
-  example 24 days out.
-- Server and client accept a test-only fixed time (env `TEST_NOW`; mocks
-  only, never read in production builds).
-- Live page impact: none (test files and a test-only switch).
+- Every test run happens on a fixed calendar (Oct 7, 2026), with time still
+  moving. The app, its build, the mocks and the pages are shifted by a
+  test-only offset (`tests/e2e/shift-time.cjs`, `browser.mjs`). Suites build
+  dates with `testNow()`. No app code changed.
+- The data cache is cleared before every run, which also removes the
+  long-standing problem of the home suite failing when run on its own.
+- Live page impact: none (test files only).
 
-### 1. One combined event
+### 1. One combined event for readers
 
-- `getEvent(slug)` returns the published, combined funnel.
-- `resolveLink` returns combined funnels only.
-- The editor's starting point is the combined funnel. Drafts still layer
-  on top.
-- Remove every built-versus-published choice from readers.
-  `applyPublication` is called in one place.
+The built copy can't simply go away: it's what **Take down published
+edits** returns to, and the admin's preview re-applies edits as they're
+typed. So step 1 keeps it for the editor and hides it from everyone else.
+
+- Server readers get the combined event from one function (`resolveLink`
+  includes it). None of them combines the two copies on its own again.
+- The editor keeps the built copy and the publication, with honest names
+  (`ReelsEditor`'s `liveFunnel` is the built copy and gets renamed).
 - Live page impact: none in what it shows (pure refactor; the full e2e
   suite and the share-card suite prove the HTML and card match).
 
