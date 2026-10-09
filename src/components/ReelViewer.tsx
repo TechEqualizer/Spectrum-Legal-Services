@@ -39,12 +39,7 @@ type ReelViewerProps = {
 // How far through a "builds" reel the main action fills with the brand color.
 const CTA_REVEAL_AT = 0.6;
 
-// Two taps closer together than this count as a double-tap.
-const DOUBLE_TAP_MS = 260;
-
 // Icon paths (24x24, stroked).
-const HEART =
-  "M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4h2c.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z";
 const CALENDAR = "M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM8 12h3v3H8z";
 const PHONE =
   "M5 4h3l2 5-2.5 1.5a11 11 0 006 6L15 14l5 2v3a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z";
@@ -167,40 +162,8 @@ export default function ReelViewer({
     },
   };
 
-  // Likes this visit. Double-tapping an already-liked reel replays the heart.
-  const [likedIds, setLikedIds] = useState<ReadonlySet<string>>(() => new Set());
-  const [burst, setBurst] = useState(0);
-  const liked = reel ? likedIds.has(reel.id) : false;
-  const like = (on: boolean) => {
-    if (!reel) return;
-    if (on && !likedIds.has(reel.id)) trackReelEvent(funnel, reel.id, "liked");
-    setLikedIds((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(reel.id);
-      else next.delete(reel.id);
-      return next;
-    });
-  };
-  const toggleLike = () => like(!liked);
-
-  // One tap pauses or plays; two quick taps like the reel.
-  const tapTimer = useRef<number | null>(null);
-  useEffect(() => () => {
-    if (tapTimer.current !== null) window.clearTimeout(tapTimer.current);
-  }, []);
-  const onMediaTap = () => {
-    if (tapTimer.current !== null) {
-      window.clearTimeout(tapTimer.current);
-      tapTimer.current = null;
-      like(true);
-      setBurst((b) => b + 1);
-      return;
-    }
-    tapTimer.current = window.setTimeout(() => {
-      tapTimer.current = null;
-      setIsPaused((p) => !p);
-    }, DOUBLE_TAP_MS);
-  };
+  // A tap on the video pauses or plays it.
+  const onMediaTap = () => setIsPaused((p) => !p);
 
   const { copied, share: shareLink } = useShareLink(funnel);
   const share = () => reel && shareLink(reel.id);
@@ -308,9 +271,6 @@ export default function ReelViewer({
       inert={sheet !== null}
       onClick={(e) => e.stopPropagation()}
     >
-      <RailButton placement={placement} label={liked ? "Liked" : "Like"} pressed={liked} onClick={toggleLike}>
-        <path d={HEART} fill={liked ? "currentColor" : "none"} />
-      </RailButton>
       {funnel.primaryCta === "tickets" ? (
         waitlist ? (
           <>
@@ -424,7 +384,7 @@ export default function ReelViewer({
             />
           )}
 
-          {/* Tap to pause, double-tap to like, as in the social apps. */}
+          {/* Tap to pause, as in the social apps. */}
           {!ended && (
             <div
               className="absolute inset-0 z-10"
@@ -432,17 +392,6 @@ export default function ReelViewer({
               aria-hidden="true"
               data-testid="reel-tap-area"
             />
-          )}
-          {burst > 0 && (
-            <svg
-              key={burst}
-              className="animate-heart-pop pointer-events-none absolute left-1/2 top-1/2 z-30 -ml-12 -mt-12 h-24 w-24 text-white drop-shadow-lg"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path d={HEART} />
-            </svg>
           )}
 
           {/* Top: back on the left, sound and pause on the right, as in Shorts */}

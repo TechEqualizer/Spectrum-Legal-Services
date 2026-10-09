@@ -48,6 +48,7 @@ check('never NaN', !/NaN/.test(text));
 // Next up: the next night and its four things.
 const next = p.getByRole('region', { name: /^Next up:/ });
 check('next night shown', /Masquerade on the Runway/.test(await next.innerText()) && /(Tonight|Tomorrow|In \d+ days)/i.test(await next.innerText()));
+check('next night: its picture shows', await next.evaluate((el) => [...el.querySelectorAll('img, video')].some((m) => m.getBoundingClientRect().width > 0)));
 const steps = next.getByRole('listitem');
 check('the four things, in order', JSON.stringify(await steps.evaluateAll((els) => els.map((e) => e.querySelector('.font-semibold').textContent))) === JSON.stringify(['Opening scene', 'The Night', 'Your People', 'Last Call']));
 check('each says where it stands', (await next.getByRole('button', { name: /: (ready|needs video|missing)\. Open in Reels\.$/ }).count()) === 4);
@@ -63,7 +64,9 @@ await p.screenshot({ path: S + '/home-1440.jpg', fullPage: true });
 
 // Open in Reels: the studio, on that event.
 await next.getByRole('button', { name: 'Open in Reels', exact: true }).click(); await p.waitForURL(/\/admin$/); await settle(p, 800);
-check('opens the event in the studio', (await p.locator('#admin-business').inputValue()) === 'masquerade');
+// The event picker shows only when there's more than one event; either way the choice is remembered.
+const picked = (await p.locator('#admin-business').count()) ? await p.locator('#admin-business').inputValue() : await p.evaluate(() => localStorage.getItem('admin_business'));
+check('opens the event in the studio', picked === 'masquerade', String(picked));
 
 // Phone: one column, nothing sideways.
 const phone = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'America/Detroit' });

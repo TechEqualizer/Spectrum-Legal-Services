@@ -95,23 +95,6 @@
 }
 
 /* Subtle animations */
-/* The heart that pops on a double-tap like. */
-@keyframes heart-pop {
-  0% { transform: scale(0.3); opacity: 0; }
-  25% { transform: scale(1.15); opacity: 1; }
-  45% { transform: scale(0.95); }
-  80% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.1) translateY(-12px); opacity: 0; }
-}
-
-.animate-heart-pop {
-  animation: heart-pop 0.8s ease-out forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-heart-pop { animation-duration: 0.01ms; }
-}
-
 @keyframes fadeInUp {
   from {
     opacity: 0;

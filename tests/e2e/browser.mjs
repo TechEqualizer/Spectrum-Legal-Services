@@ -47,10 +47,61 @@ const tourSeen = () => {
   } catch {}
 };
 
+// Pages see the run's calendar too (shift-time.cjs): the real clock plus the run's offset.
+// A suite that sets a page's own clock (page.clock) switches the shift off
+// for that page with its own flag, read on every call: init scripts run in
+// no set order, so this script never writes the flag.
+const shiftTime = (offset) => {
+  if (!offset) return;
+  const RealDate = Date;
+  const now = () => RealDate.now() + (window.__e2eOwnClock ? 0 : offset);
+  function ShiftedDate(...args) {
+    if (!new.target) return new RealDate(now()).toString();
+    return args.length ? new RealDate(...args) : new RealDate(now());
+  }
+  Object.setPrototypeOf(ShiftedDate, RealDate);
+  ShiftedDate.prototype = RealDate.prototype;
+  // Not enumerable, like Date's own: Playwright's fake clock copies the
+  // enumerable ones onto its Date, and must keep its own now().
+  for (const [name, value] of [['now', now], ['parse', RealDate.parse], ['UTC', RealDate.UTC]]) {
+    Object.defineProperty(ShiftedDate, name, { value, writable: true, configurable: true, enumerable: false });
+  }
+  window.Date = ShiftedDate;
+};
+const OFFSET = Number(process.env.E2E_TIME_OFFSET_MS || 0);
+
+/** Now on the run's calendar, for dates a suite builds (suites themselves run on the real clock). */
+export const testNow = () => Date.now() + OFFSET;
+
 async function trackContext(ctx, { tour = false } = {}) {
   await ctx.addInitScript(countTimers);
+  await ctx.addInitScript(shiftTime, OFFSET);
   if (!tour) await ctx.addInitScript(tourSeen);
   ctx.on('page', track);
+  // A suite that sets a page's clock owns its time: the shift stops for that
+  // page, and page.clock.install starts at the run's calendar unless it names a time.
+  if (OFFSET) {
+    // The same for a whole context's clock (ctx.clock).
+    const cclock = ctx.clock;
+    const ownAll = async () => { await ctx.addInitScript(() => { window.__e2eOwnClock = true; }); for (const p of ctx.pages()) await p.evaluate(() => { window.__e2eOwnClock = true; }).catch(() => {}); };
+    for (const name of ['install', 'setFixedTime', 'setSystemTime']) {
+      const fn = cclock[name].bind(cclock);
+      cclock[name] = async (arg) => { await ownAll(); return fn(name === 'install' ? { time: testNow(), ...(arg ?? {}) } : arg); };
+    }
+    ctx.on('page', (page) => {
+      const own = async () => {
+        await page.addInitScript(() => { window.__e2eOwnClock = true; });
+        await page.evaluate(() => { window.__e2eOwnClock = true; }).catch(() => {});
+      };
+      const clock = page.clock;
+      const install = clock.install.bind(clock);
+      const setFixedTime = clock.setFixedTime.bind(clock);
+      const setSystemTime = clock.setSystemTime.bind(clock);
+      clock.install = async (options = {}) => { await own(); return install({ time: testNow(), ...options }); };
+      clock.setFixedTime = async (time) => { await own(); return setFixedTime(time); };
+      clock.setSystemTime = async (time) => { await own(); return setSystemTime(time); };
+    });
+  }
   for (const page of ctx.pages()) track(page);
   return ctx;
 }
