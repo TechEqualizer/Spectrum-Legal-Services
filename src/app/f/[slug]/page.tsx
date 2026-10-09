@@ -5,8 +5,7 @@ import FunnelExperience, { FunnelSplash } from "@/components/FunnelExperience";
 import OrganizerEvents from "@/components/OrganizerEvents";
 import { isConcept } from "@/config/site";
 import { funnels } from "@/data/funnels";
-import { applyPublication } from "@/lib/publication";
-import { resolveLink } from "@/lib/server/links";
+import { resolveLink, shownFunnel } from "@/lib/server/links";
 import { shareMetadata } from "@/lib/server/share-card";
 
 // The shareable link: a reel funnel on its own, with no website around it.
@@ -24,7 +23,7 @@ export async function generateViewport({ params }: PageProps<"/f/[slug]">): Prom
   const target = await resolveLink((await params).slug);
   // A published look (e.g. matched to a flyer) recolors it too.
   const shown =
-    target?.kind === "event" ? applyPublication(target.funnel, target.publication) : target?.events[0]?.funnel;
+    target && shownFunnel(target);
   // Colors the browser bar (and in-app browsers that honor it) to match.
   return {
     themeColor: shown?.brand.theme?.["--deep-navy"] ?? "#0E1A2B",
@@ -52,7 +51,7 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
       robots: { index: true, follow: true },
     };
   }
-  const funnel = applyPublication(target.funnel, target.publication);
+  const funnel = target.live;
   // The date, where tickets stand and what it is, under the card (see share-card.tsx).
   const shared = shareMetadata(funnel);
   const title = String(shared.title);
@@ -73,12 +72,13 @@ export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
   const target = await resolveLink((await params).slug);
   if (!target) notFound();
   if (target.kind === "choose") return <OrganizerEvents organizer={target.organizer} events={target.events} />;
-  // Edits published from the admin are applied on top; the page is rebuilt when they change.
-  const { funnel, publication, nextNight } = target;
+  // The player applies the published edits itself (the admin's preview
+  // re-applies them as they're typed); the page is rebuilt when they change.
+  const { base, publication, nextNight } = target;
   return (
     // useSearchParams (for ?start=) needs a Suspense boundary on a static page.
-    <Suspense fallback={<FunnelSplash funnel={funnel} publication={publication} />}>
-      <FunnelExperience funnel={funnel} publication={publication} nextNight={nextNight} />
+    <Suspense fallback={<FunnelSplash funnel={base} publication={publication} />}>
+      <FunnelExperience funnel={base} publication={publication} nextNight={nextNight} />
     </Suspense>
   );
 }

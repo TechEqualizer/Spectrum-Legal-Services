@@ -30,10 +30,9 @@
 
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import type { Funnel } from "@/data/funnel-types";
-import { applyPublication } from "@/lib/publication";
 import { getAdmin, managesOrganizer, type Admin } from "@/lib/server/admin-auth";
-import { getOrganizer, listOrganizerEvents, type Organizer } from "@/lib/server/funnels";
-import { getPublication } from "@/lib/server/publications";
+import { getOrganizer, type Organizer } from "@/lib/server/funnels";
+import { listOrganizerEventVersions } from "@/lib/server/publications";
 import { normalizeSourceTag } from "@/lib/source-tag";
 
 // ---------------------------------------------------------------- config
@@ -320,9 +319,7 @@ type EventMatch = { funnelId: string; eventId?: string };
 
 /** Eventbrite event id -> the organizer's funnel and date it sells, from each date's live ticket link. */
 async function organizerEventMap(organizer: string): Promise<Map<string, EventMatch>> {
-  const funnels: Funnel[] = await Promise.all(
-    (await listOrganizerEvents(organizer)).map(async (base) => applyPublication(base, (await getPublication(base.slug))?.publication))
-  );
+  const funnels: Funnel[] = (await listOrganizerEventVersions(organizer)).map((e) => e.live);
   const map = new Map<string, EventMatch>();
   for (const funnel of funnels) {
     for (const date of funnel.events ?? []) {

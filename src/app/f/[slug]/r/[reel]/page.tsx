@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FunnelSplash } from "@/components/FunnelExperience";
-import { applyPublication } from "@/lib/publication";
-import { resolveLink } from "@/lib/server/links";
+import { resolveLink, shownFunnel } from "@/lib/server/links";
 import { shareMetadata, sharedReel } from "@/lib/server/share-card";
 
 // A link that opens on a reel (/f/<slug>?start=<reel>), as link previews see
@@ -15,9 +14,8 @@ type Props = { params: Promise<{ slug: string; reel: string }> };
 async function funnelOf(slug: string) {
   const target = await resolveLink(slug);
   if (!target) return null;
-  return target.kind === "event"
-    ? { funnel: applyPublication(target.funnel, target.publication), base: target.funnel, publication: target.publication }
-    : { funnel: target.events[0].funnel, base: target.events[0].funnel, publication: null };
+  const funnel = shownFunnel(target);
+  return target.kind === "event" ? { funnel, base: target.base, publication: target.publication } : { funnel, base: funnel, publication: null };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

@@ -66,8 +66,11 @@ function withoutReel(event: FunnelEvent): FunnelEvent {
 export default function ReelsEditor() {
   const business = useAdminBusiness();
   const session = useAdminSession();
-  const liveFunnel = business.funnel;
-  const slug = liveFunnel.slug;
+  // The event as Showlnk built it, before published edits (what "Take down"
+  // returns to). The editor layers the published edits and this browser's
+  // draft on top; visitors see the combined event.
+  const builtFunnel = business.funnel;
+  const slug = builtFunnel.slug;
   const editor = useEditor();
   const { library, setLibrary, funnels, setFunnels, heroMedia, setHeroMedia, screen, setScreen, events, setEvents, look, setLook, activeId, setActiveId, live, setToast } = editor;
   // Results for the last 30 days, keyed by reel.
@@ -96,7 +99,7 @@ export default function ReelsEditor() {
   /** Plays a reel: in the studio's phone, or full screen. */
   const play = (reelId: string) => (wide ? setGo((g) => ({ reelId, key: g.key + 1 })) : setPreview({ reelId, key: Date.now() }));
   // The event's dates, for linking reels ("Sells tickets for", and the chip on each row).
-  const allDates = events ?? liveFunnel.events;
+  const allDates = events ?? builtFunnel.events;
   const dateLabel = (e: FunnelEvent) =>
     `${formatEventDate(e)}: ${e.name}`;
   const dateOptions = allDates
@@ -128,7 +131,7 @@ export default function ReelsEditor() {
    */
   const applyDraft = (draft: FunnelDraft) => {
     const before = { library, funnels, screen };
-    const dates = events ?? liveFunnel.events ?? [];
+    const dates = events ?? builtFunnel.events ?? [];
     const taken = new Set(library.map((r) => r.id));
     const prompts: Record<string, string> = { [HERO_PROMPT]: draft.heroPrompt };
     const reels = draft.reels.map((d): EditorReel => {
@@ -141,7 +144,7 @@ export default function ReelsEditor() {
         id,
         title: d.title,
         summary: d.summary,
-        practiceArea: liveFunnel.brand.services[0],
+        practiceArea: builtFunnel.brand.services[0],
         cta: "funnel",
         ...(event ? { eventId: event.id } : {}),
         role: d.role,
@@ -153,7 +156,7 @@ export default function ReelsEditor() {
     setLibrary([...reels, ...library]);
     setFunnels(funnels.map((f) => (f.id === target.id ? { ...f, order: reels.map((r) => r.id), paths: {}, topics: {} } : f)));
     setActiveId(target.id);
-    const words: ScreenCopy = liveFunnel.cover.hero
+    const words: ScreenCopy = builtFunnel.cover.hero
       ? { title: draft.screen.title, tagline: draft.screen.tagline, watchLabel: draft.screen.watchLabel, heading: draft.screen.heading }
       : { heading: draft.screen.title || draft.screen.heading, intro: draft.screen.tagline };
     const next: ScreenCopy = { ...screen };
@@ -173,7 +176,7 @@ export default function ReelsEditor() {
   const dateOpener = (f: EditorFunnel, e: FunnelEvent) =>
     e.reelId && f.order.includes(e.reelId) ? e.reelId : f.order.find((id) => library.find((r) => r.id === id)?.eventId === e.id);
   const dateStarts = (f: EditorFunnel) =>
-    (events ?? liveFunnel.events ?? []).map((e) => dateOpener(f, e)).filter((id): id is string => Boolean(id));
+    (events ?? builtFunnel.events ?? []).map((e) => dateOpener(f, e)).filter((id): id is string => Boolean(id));
   const reach = reachable(funnel, funnel.id === publishedFunnel(funnels).id ? dateStarts(funnel) : []);
 
   const updateFunnel = (patch: Partial<EditorFunnel> | ((f: EditorFunnel) => EditorFunnel)) =>
@@ -215,7 +218,7 @@ export default function ReelsEditor() {
     // A new reel made for a date (or given one) becomes what that date opens, unless it already opens another.
     if (isNew && saved.eventId) {
       setEvents((list) =>
-        (list ?? liveFunnel.events)?.map((e) => (e.id === saved.eventId && !e.reelId ? { ...e, reelId: id } : e))
+        (list ?? builtFunnel.events)?.map((e) => (e.id === saved.eventId && !e.reelId ? { ...e, reelId: id } : e))
       );
     }
     setEditing(null);
@@ -228,7 +231,7 @@ export default function ReelsEditor() {
    * tickets (moving it off any other date), or a new reel is started for it.
    */
   const saveDate = (event: FunnelEvent, choice: string, isNew: boolean) => {
-    const all = events ?? liveFunnel.events ?? [];
+    const all = events ?? builtFunnel.events ?? [];
     const saved: FunnelEvent = choice && choice !== "new" ? { ...withoutReel(event), reelId: choice } : withoutReel(event);
     // A reel opens one date: the date it moved from falls back to its other reels.
     const fix = (e: FunnelEvent) => (e.id === saved.id ? saved : choice && e.reelId === choice ? withoutReel(e) : e);
@@ -239,7 +242,7 @@ export default function ReelsEditor() {
     if (choice === "new") {
       // New reels go into the funnel that gets published.
       setActiveId(publishedFunnel(funnels).id);
-      setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0], title: saved.name, eventId: saved.id });
+      setEditing({ ...blankReel, practiceArea: builtFunnel.brand.services[0], title: saved.name, eventId: saved.id });
       setToast(isNew ? "Date added. Now add its reel" : "Date saved. Now add its reel");
     } else {
       setToast(isNew ? "Date added" : "Date saved");
@@ -276,7 +279,7 @@ export default function ReelsEditor() {
         </div>
         <div className="flex flex-wrap gap-2">
           <a
-            href={`/f/${liveFunnel.slug}`}
+            href={`/f/${builtFunnel.slug}`}
             target="_blank"
             rel="noopener"
             className="flex min-h-11 items-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50"
@@ -294,7 +297,7 @@ export default function ReelsEditor() {
           <button
             type="button"
             data-tour="add-reel"
-            onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
+            onClick={() => setEditing({ ...blankReel, practiceArea: builtFunnel.brand.services[0] })}
             className="inline-flex min-h-11 items-center gap-2 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
           >
             <PlusIcon />
@@ -308,8 +311,8 @@ export default function ReelsEditor() {
   const heroEl = (
     <>
       <HeroMediaCard
-        funnel={liveFunnel}
-        live={sceneMediaOf(liveFunnel)}
+        funnel={builtFunnel}
+        live={sceneMediaOf(builtFunnel)}
         value={heroMedia}
         screen={screen}
         look={look}
@@ -337,10 +340,10 @@ export default function ReelsEditor() {
 
   const datesEl = (
     <>
-      {liveFunnel.events && (
+      {builtFunnel.events && (
         <DatesCard
           slug={slug}
-          events={events ?? liveFunnel.events}
+          events={events ?? builtFunnel.events}
           reels={publishedFunnel(funnels)
             .order.map((id) => byId.get(id))
             .filter((r): r is EditorReel => Boolean(r))}
@@ -359,7 +362,7 @@ export default function ReelsEditor() {
     </>
   );
 
-  const funnelsEl = <FunnelTabs funnels={funnels} activeId={activeId} liveId={liveFunnel.id} onSelect={setActiveId} onNew={newFunnel} />;
+  const funnelsEl = <FunnelTabs funnels={funnels} activeId={activeId} liveId={builtFunnel.id} onSelect={setActiveId} onNew={newFunnel} />;
 
   const orderEl = (
     <ReelOrder
@@ -424,7 +427,7 @@ export default function ReelsEditor() {
       {preview && (
         <ReelViewer
           key={preview.key}
-          funnel={toPreviewFunnel(liveFunnel, funnel, library)}
+          funnel={toPreviewFunnel(builtFunnel, funnel, library)}
           startReelId={preview.reelId}
           onClose={() => setPreview(null)}
         />
@@ -436,7 +439,7 @@ export default function ReelsEditor() {
           reel={editing}
           funnel={funnel}
           library={library}
-          services={liveFunnel.brand.services}
+          services={builtFunnel.brand.services}
           topicLabel={business.terms.topic}
           dates={dateOptions}
           videoPrompt={prompts[editing.id]}
@@ -450,7 +453,7 @@ export default function ReelsEditor() {
     </>
   );
 
-  const shownMedia = heroMedia === undefined ? sceneMediaOf(liveFunnel) : heroMedia ?? undefined;
+  const shownMedia = heroMedia === undefined ? sceneMediaOf(builtFunnel) : heroMedia ?? undefined;
 
   // The path strip follows the funnel the preview (and the live link) shows.
   const shown = publishedFunnel(funnels);
@@ -489,7 +492,7 @@ export default function ReelsEditor() {
    * funnels only: the demos aren't nights out.
    */
   const missingCore = (() => {
-    if (!liveFunnel.events) return [];
+    if (!builtFunnel.events) return [];
     const inOrder = shown.order.map((id) => byId.get(id)).filter((r): r is EditorReel => Boolean(r));
     return coreReels(inOrder)
       .filter((slot) => !slot.reel)
@@ -504,7 +507,7 @@ export default function ReelsEditor() {
     setInsertAt(index);
     setEditing({
       ...blankReel,
-      practiceArea: liveFunnel.brand.services[0],
+      practiceArea: builtFunnel.brand.services[0],
       ...(role ? { role, ...(role === "last_call" ? { emphasis: "bold" as const } : {}) } : {}),
       // With one date, every reel sells it.
       ...(allDates?.length === 1 ? { eventId: allDates[0].id } : {}),
@@ -524,7 +527,7 @@ export default function ReelsEditor() {
     return (
       <Studio
         slug={slug}
-        title={liveFunnel.brand.name}
+        title={builtFunnel.brand.name}
         publication={toPublication(editor.current)}
         go={go}
         onRestart={() => setGo((g) => ({ key: g.key + 1 }))}
@@ -539,24 +542,24 @@ export default function ReelsEditor() {
         publishError={editor.publishError}
         onPublish={editor.runPublish}
         onDiscard={editor.resetToLive}
-        liveHref={`/f/${liveFunnel.slug}`}
+        liveHref={`/f/${builtFunnel.slug}`}
         story={
           <>
             <StoryStep n={1} title="Opening scene" hint="What people see first" onShow={() => setGo((g) => ({ key: g.key + 1 }))}>
               {heroEl}
             </StoryStep>
-            {liveFunnel.events && (
+            {builtFunnel.events && (
               <StoryStep n={2} title="Dates" hint="Each is a circle that opens its reel" onShow={() => setGo((g) => ({ key: g.key + 1 }))}>
                 {datesEl}
               </StoryStep>
             )}
-            <StoryStep n={liveFunnel.events ? 3 : 2} title="Reels" hint="The Night, Your People, Last Call" onShow={() => funnel.order[0] && setGo((g) => ({ reelId: funnel.order[0], key: g.key + 1 }))}>
+            <StoryStep n={builtFunnel.events ? 3 : 2} title="Reels" hint="The Night, Your People, Last Call" onShow={() => funnel.order[0] && setGo((g) => ({ reelId: funnel.order[0], key: g.key + 1 }))}>
               {funnelsEl}
               {orderEl}
               <button
                 type="button"
                 data-tour="add-reel"
-                onClick={() => setEditing({ ...blankReel, practiceArea: liveFunnel.brand.services[0] })}
+                onClick={() => setEditing({ ...blankReel, practiceArea: builtFunnel.brand.services[0] })}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-400 text-sm font-semibold text-deep-navy hover:bg-white"
               >
                 <PlusIcon />
@@ -569,8 +572,8 @@ export default function ReelsEditor() {
         design={
           <StyleSheet
             panel
-            funnel={liveFunnel}
-            title={liveFunnel.cover.hero ? screen?.title ?? liveFunnel.cover.hero.title : screen?.heading ?? liveFunnel.cover.heading}
+            funnel={builtFunnel}
+            title={builtFunnel.cover.hero ? screen?.title ?? builtFunnel.cover.hero.title : screen?.heading ?? builtFunnel.cover.heading}
             look={look}
             media={shownMedia}
             onDone={(nextLook, media) => {

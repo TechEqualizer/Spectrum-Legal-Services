@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { applyPublication } from "@/lib/publication";
-import { resolveLink } from "@/lib/server/links";
+import { resolveLink, shownFunnel } from "@/lib/server/links";
 import { SHARE_CARD_SIZE, shareCard, sharedReel } from "@/lib/server/share-card";
 
 // The preview card for a link that opens on a reel: that reel's frame.
@@ -14,6 +13,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const { slug, reel } = await params;
   const target = await resolveLink(slug);
   if (!target) notFound();
-  const funnel = target.kind === "event" ? applyPublication(target.funnel, target.publication) : target.events[0].funnel;
+  const funnel = shownFunnel(target);
   return shareCard(funnel, sharedReel(funnel, reel));
 }
