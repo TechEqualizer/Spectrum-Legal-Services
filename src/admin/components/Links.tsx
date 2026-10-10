@@ -36,7 +36,10 @@ export default function Links() {
   const [start, setStart] = useState("");
   const [range, setRange] = useState(ranges[1]);
 
-  const customTag = normalizeSourceTag(custom.replace(/\s+/g, "-"));
+  // Typed in their own words ("DJ Mike's story"): the link gets a tag made of
+  // it (dj-mikes-story), and Results shows it back as words.
+  const customTag = normalizeSourceTag(slugify(custom));
+  const samePlace = customTag ? SOURCE_PRESETS.find((p) => p.tag === customTag) : undefined;
   const tag = preset === CUSTOM ? customTag : preset;
   const query = new URLSearchParams();
   if (tag) query.set("src", tag);
@@ -110,20 +113,24 @@ export default function Links() {
             </select>
             {preset === CUSTOM && (
               <div className="mt-2">
-                <label htmlFor="link-custom" className="sr-only">Tag name</label>
+                <label htmlFor="link-custom" className="sr-only">Name of the place</label>
                 <input
                   id="link-custom"
                   className="form-input text-sm"
-                  placeholder="e.g. bus-bench or flyer-drop"
-                  maxLength={40}
+                  placeholder="e.g. Bus bench, DJ Mike's story"
+                  maxLength={60}
                   value={custom}
                   onChange={(e) => { setCustom(e.target.value); }}
                   aria-describedby="link-custom-help"
                 />
-                <p id="link-custom-help" className="mt-1 text-xs text-gray-600">
-                  {custom && !customTag
-                    ? "Use letters, numbers and dashes, starting with a letter or number."
-                    : "Letters, numbers and dashes."}
+                <p id="link-custom-help" className="mt-1 text-xs text-gray-600" aria-live="polite">
+                  {!custom.trim()
+                    ? "Name it in your own words. It shows in Results by this name."
+                    : !customTag
+                      ? "Use at least one letter or number."
+                      : samePlace
+                        ? `That's the same as “${samePlace.label}”, so it counts there.`
+                        : `Shows in Results as “${sourceLabel(customTag)}”.`}
                 </p>
               </div>
             )}
@@ -278,4 +285,16 @@ export default function Links() {
       </section>
     </div>
   );
+}
+
+/** A tag from words: lowercase, letters and numbers, dashes between words, 40 at most. */
+function slugify(words: string) {
+  return words
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f'\u2019]/g, "")
+    .replace(/[^a-z0-9_]+/g, "-")
+    .replace(/^-+/, "")
+    .slice(0, 40)
+    .replace(/-+$/, "");
 }

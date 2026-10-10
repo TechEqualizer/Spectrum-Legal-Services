@@ -23,6 +23,12 @@ for (const [w,h] of sizes) {
   await p.selectOption('#link-start','mr-runway');
   const link = await p.getByLabel('Your link').textContent();
   check(w+': custom tag + start', link.endsWith('/f/masquerade?src=bus-bench&start=mr-runway'), link);
+  check(w+': says how it shows in Results', await p.getByText('Shows in Results as “Bus bench”.').isVisible());
+  await p.fill('#link-custom', "DJ Mike's story");
+  check(w+': any words make a tag', (await p.getByLabel('Your link').textContent()).includes('?src=dj-mikes-story&'), await p.getByLabel('Your link').textContent());
+  await p.fill('#link-custom', 'IG');
+  check(w+': another name for a place counts there', await p.getByText('That\'s the same as “Instagram bio”, so it counts there.').isVisible() && (await p.getByLabel('Your link').textContent()).includes('?src=instagram&'));
+  await p.fill('#link-custom', 'Bus Bench');
   check(w+': start explained', await p.getByText('Opens on “Haute couture Halloween looks”').isVisible());
   check(w+': admin fits width', await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await p.screenshot({path:`admin-links-${w}.jpg`, quality:70, fullPage:true});
@@ -158,6 +164,23 @@ for (const [w,h] of sizes) {
   check(w+': remembered src on return', events.some(e=>e.reelId==='vr-parking' && e.sourceTag==='instagram'), JSON.stringify(events[0]));
   await p.goto(B+'/f/velvet-room?start=not-a-reel',{waitUntil:'networkidle'});
   check(w+': bad ?start shows cover', await p.getByRole('heading',{name:'What do you want to know?'}).isVisible());
+  await ctx.close();
+}
+// A link without a tag (the bio link) is credited to where it was opened from.
+for (const [name, opts, want] of [
+  ['opened in Instagram', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Instagram 350.0.0' }, 'instagram'],
+  ['opened in TikTok', { userAgent: 'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Mobile/15E148 musical_ly_35.0 BytedanceWebview' }, 'tiktok'],
+  ['from Facebook', { referer: 'https://l.facebook.com/' }, 'facebook'],
+  ['from Google', { referer: 'https://www.google.com/' }, 'google-search'],
+  ['typed in', {}, undefined],
+]) {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, ...(opts.userAgent ? { userAgent: opts.userAgent } : {}) });
+  const p = await ctx.newPage(); watch(p, name);
+  const events = [];
+  await p.route('**/api/reel-events', (r) => { events.push(JSON.parse(r.request().postData() || '{}')); r.fulfill({ status: 204 }); });
+  await p.goto(B + '/f/velvet-room?start=vr-parking', { waitUntil: 'networkidle', ...(opts.referer ? { referer: opts.referer } : {}) });
+  await p.waitForTimeout(800);
+  check(`untagged, ${name}: credited to ${want ?? 'no tag'}`, events.length > 0 && events.every((e) => e.sourceTag === want), JSON.stringify(events.map((e) => e.sourceTag)));
   await ctx.close();
 }
 await b.close();

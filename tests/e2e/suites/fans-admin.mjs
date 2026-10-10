@@ -39,6 +39,9 @@ const rows = await list.getByRole('listitem').allTextContents();
 check('two following, newest first', rows.length === 2 && rows[0].includes('evil@example.com') && rows[1].includes('first@example.com'), rows.join(' | '));
 check('where each followed from', rows[1]?.includes('Instagram') && rows[1].includes('Masquerade on the Runway'), rows[1]);
 check('counts: following and unfollowed', (await p.locator('dl').first().innerText()).replace(/\s+/g, ' ').toLowerCase().includes('following 2 unfollowed 1'), await p.locator('dl').first().innerText());
+const from = p.getByRole('region', { name: 'Where your fans followed from' });
+const fromText = (await from.innerText().catch(() => '')).replace(/\s+/g, ' ');
+check('where fans followed from: by place and by flyer', /By where the link was shared Instagram bio 1 fan TikTok bio 1 fan/i.test(fromText) && /By flyer.*Masquerade on the Runway 1 fan/i.test(fromText), fromText);
 check('says Follow isn\'t on for these links yet', await p.getByText(/Follow isn.t switched on for your links yet/).isVisible());
 await p.screenshot({ path: 'fans-admin-1279.png' });
 

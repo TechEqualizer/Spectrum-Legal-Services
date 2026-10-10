@@ -112,6 +112,13 @@ export default function Fans() {
             </div>
           </dl>
 
+          {following.length > 1 && (
+            <Breakdown
+              byEvent={tally(following.map((f) => eventName(f.funnel_id) ?? "Other events"))}
+              byPlace={tally(following.map((f) => sourceLabel(f.source_tag ?? undefined)))}
+            />
+          )}
+
           {following.length === 0 ? (
             <section className="rounded-xl border border-gray-200 bg-white px-5 py-8 text-center" aria-labelledby="no-fans-title">
               <h2 id="no-fans-title" className="text-lg font-bold text-deep-navy">No fans yet</h2>
@@ -164,5 +171,54 @@ export default function Fans() {
         </>
       )}
     </div>
+  );
+}
+
+/** Counts of each value, most first. */
+function tally(values: string[]): [string, number][] {
+  const n = new Map<string, number>();
+  for (const v of values) n.set(v, (n.get(v) ?? 0) + 1);
+  return [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+/**
+ * Which flyers and which places bring fans, so the next flyer goes where
+ * people follow. By flyer only once fans came from more than one.
+ */
+function Breakdown({ byEvent, byPlace }: { byEvent: [string, number][]; byPlace: [string, number][] }) {
+  const groups = [
+    ...(byEvent.length > 1 ? [{ id: "fans-by-event", title: "By flyer", rows: byEvent }] : []),
+    { id: "fans-by-place", title: "By where the link was shared", rows: byPlace },
+  ];
+  return (
+    <section aria-labelledby="fans-from-title" className="rounded-xl border border-gray-200 bg-white p-5">
+      <h2 id="fans-from-title" className="text-base font-bold text-deep-navy">Where your fans followed from</h2>
+      <div className={`mt-4 grid gap-6 ${groups.length > 1 ? "md:grid-cols-2" : ""}`}>
+        {groups.map((g) => {
+          const most = g.rows[0]?.[1] ?? 0;
+          const shown = g.rows.slice(0, 5);
+          const rest = g.rows.slice(5).reduce((n, [, c]) => n + c, 0);
+          return (
+            <div key={g.id}>
+              <h3 id={g.id} className="text-xs font-bold uppercase tracking-wider text-gray-600">{g.title}</h3>
+              <ul role="list" aria-labelledby={g.id} className="mt-3 space-y-3">
+                {shown.map(([label, count]) => (
+                  <li key={label}>
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="truncate font-semibold text-deep-navy">{label}</span>
+                      <span className="flex-shrink-0 text-gray-600">{count === 1 ? "1 fan" : `${count} fans`}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 rounded-full bg-soft-gray" aria-hidden="true">
+                      <div className="h-full rounded-full bg-deep-navy" style={{ width: `${Math.max(4, most ? (count / most) * 100 : 0)}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {rest > 0 && <p className="mt-2 text-xs text-gray-600">And {rest} more from {g.id === "fans-by-event" ? "other flyers" : "other places"}.</p>}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
