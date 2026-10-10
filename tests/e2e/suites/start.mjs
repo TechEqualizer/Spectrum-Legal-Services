@@ -64,6 +64,57 @@ check('a reload keeps the draft', await p.getByText('From your flyer', { exact: 
 
 await next.click();
 check('step 2 is next', await p.getByRole('heading', { name: 'Your night, in reels.' }).isVisible() && (await p.locator('[aria-current="step"]').textContent()) === 'Your reels');
+
+// Step 2: the opening and three reels drafted from the flyer (in the same answer as the read), in the phone.
+const cards = p.locator('ol li').filter({ has: p.getByRole('button', { name: /^Play / }) });
+const reel = (label) => cards.filter({ hasText: label });
+await reel('Opening').getByLabel('Title').waitFor({ timeout: 15000 }).catch(() => {});
+check('the reels, in order', (await cards.locator('p.uppercase').allTextContents()).join('|') === 'Opening|1 · The Night|2 · Your People|3 · Last Call', (await cards.locator('p.uppercase').allTextContents()).join('|'));
+check('drafted from the flyer', (await reel('Opening').getByLabel('Title').inputValue()) === 'Masks on, Detroit' && (await reel('The Night').getByLabel('Title').inputValue()) === 'Masks on');
+check('each says what it answers', await reel('Your People').getByText('Is this for someone like me?').isVisible());
+await p.waitForTimeout(800);
+check('the phone: the drafted opening', await phone.getByText('Masks on, Detroit').first().isVisible().catch(() => false));
+check('the drafting read counted once', (await (await admin.request.get(B + '/api/admin/invites')).json()).invites.find((i) => i.note === 'Velvet Room')?.flyer_reads === 1);
+
+// Words change in place.
+await reel('Opening').getByLabel('Title').fill('Masks on, Motor City');
+await p.waitForTimeout(500);
+check('an edit shows in the phone', await phone.getByText('Masks on, Motor City').first().isVisible().catch(() => false));
+await reel('The Night').getByLabel('Title').fill('You, in gold');
+await p.getByRole('button', { name: 'Play The Night in the phone' }).click();
+await p.waitForTimeout(1200);
+check('Play: the reel, in the phone', await phone.getByText('You, in gold', { exact: true }).first().isVisible().catch(() => false));
+
+// Core, working, with the trial.
+check('Core: free for 14 days', await p.getByText('Core · free for 14 days').isVisible() && await p.getByText('No card needed.', { exact: false }).isVisible());
+await p.getByRole('button', { name: 'See Follow in the phone' }).click();
+await phone.getByText('Follow', { exact: true }).first().waitFor({ timeout: 8000 }).catch(() => {});
+check('the phone: Follow, beside the reel', await phone.getByText('Follow', { exact: true }).first().isVisible().catch(() => false));
+await p.getByRole('button', { name: 'See Presale for fans in the phone' }).click();
+await phone.getByText(/Presale for fans/).first().waitFor({ timeout: 8000 }).catch(() => {});
+check('the phone: the presale for fans', await phone.getByText(/Presale for fans/).first().isVisible().catch(() => false));
+await p.getByRole('button', { name: 'See Just for followers in the phone' }).click();
+await p.waitForTimeout(1200);
+check('the phone: a reel locked for followers', await phone.getByText('Follow to watch').first().isVisible().catch(() => false));
+check('still no visits', reelEvents.length === 0, reelEvents.join(' '));
+
+// Edits survive coming back.
+await p.reload(); await settle(p, 1500);
+await next.click();
+check('a reload keeps the edits', (await reel('Opening').getByLabel('Title').inputValue()) === 'Masks on, Motor City');
+await p.getByRole('button', { name: 'Continue' }).click();
+check('step 3 is next', await p.getByRole('heading', { name: 'Claim your link.' }).isVisible() && (await p.locator('[aria-current="step"]').textContent()) === 'Your link');
+await p.getByRole('button', { name: 'Back to your reels' }).click();
+await p.getByRole('button', { name: 'Back to your flyer' }).click();
+
+// Reels that couldn't be drafted: they start from the flyer's basics.
+await fetch(CLAUDE + '/__mode', { method: 'POST', body: 'nodraft' });
+await p.getByRole('button', { name: 'Use a different flyer' }).click();
+await p.locator('input[type=file]').setInputFiles(flyer);
+await p.getByText('From your flyer', { exact: true }).waitFor({ timeout: 15000 }).catch(() => {});
+await p.waitForTimeout(2000);
+await next.click();
+check("no draft: says so, and starts from the flyer", await p.getByText("We couldn't write these from your flyer just now", { exact: false }).isVisible() && (await reel('Opening').getByLabel('Title').inputValue()) === 'Golden Hour: Halloween', await reel('Opening').getByLabel('Title').inputValue().catch(() => ''));
 await p.getByRole('button', { name: 'Back to your flyer' }).click();
 
 // A flyer with no date.
@@ -93,6 +144,13 @@ m.on('pageerror', (e) => errs.push(e.message));
 await m.goto(B + '/start?invite=' + code); await settle(m, 1200);
 check('phone: fits', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 await m.screenshot({ path: 'start-390.png', fullPage: true });
+// Step 2 on a phone, with the draft made above.
+const saved = await p.evaluate(() => Object.entries(localStorage).filter(([k]) => k.startsWith('showlnk-start-')));
+await m.evaluate((entries) => entries.forEach(([k, v]) => localStorage.setItem(k, v)), saved);
+await m.reload(); await settle(m, 1200);
+await m.getByRole('button', { name: 'Continue' }).click(); await m.waitForTimeout(800);
+check('phone: step 2 fits', await m.getByRole('heading', { name: 'Your night, in reels.' }).isVisible() && await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+await m.screenshot({ path: 'start-reels-390.png', fullPage: true });
 
 check('no page errors', errs.length === 0, errs.join(' | '));
 await b.close();

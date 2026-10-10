@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { shrink } from "@/lib/flyer-file";
+import ReelsStep from "@/components/start/ReelsStep";
+import type { StartState } from "@/components/start/StartPreview";
+import type { FunnelDraft } from "@/lib/funnel-draft";
 import { draftLink, nightName, ROLES, type StartDraft } from "@/lib/start-draft";
 import type { ImportedDate } from "@/lib/server/flyer-import";
 import type { Look } from "@/lib/look";
@@ -26,6 +29,29 @@ function when(d: ImportedDate) {
   const [h, min] = d.time.split(":").map(Number);
   const time = new Date(2000, 0, 1, h, min).toLocaleTimeString(undefined, { hour: "numeric", minute: min ? "2-digit" : undefined });
   return `${date} · ${time}`;
+}
+
+/** Each JSON line of a streamed answer, as it arrives. */
+async function eachLine(res: Response, onLine: (line: Record<string, unknown>) => void) {
+  const reader = res.body?.getReader();
+  if (!reader) return;
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = done ? "" : lines.pop()!;
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        onLine(JSON.parse(line));
+      } catch {
+        // A cut-off line: whatever came before it still counts.
+      }
+    }
+    if (done) return;
+  }
 }
 
 // The draft lives in this browser (localStorage) until the link is claimed:
@@ -81,6 +107,12 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   const [error, setError] = useState("");
   const [readsLeft, setReadsLeft] = useState(initialReads);
   const [dragging, setDragging] = useState(false);
+  // The reels are being written (after the flyer is read, in the same answer).
+  const [drafting, setDrafting] = useState(false);
+  // Start the phone over, at a reel when given.
+  const [replay, setReplay] = useState<{ n: number; reelId?: string }>({ n: 0 });
+  const show = (reel?: string) => setReplay((r) => ({ n: r.n + 1, reelId: reel }));
+  const attempt = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
 
@@ -101,17 +133,51 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
     setReading(picture ?? "");
     // Small screens: bring the phone into view, where the night appears.
     if (window.matchMedia("(max-width: 1023px)").matches) phoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const mine = ++attempt.current;
+    setDrafting(false);
     const res = await fetch("/api/start/flyer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ invite, type: sent.type, data: sent.data, today: today() }),
     }).catch(() => null);
-    const out = (await res?.json().catch(() => null)) as { dates?: ImportedDate[]; look?: Look; error?: string } | null;
-    setReading(null);
-    if (!res?.ok || !out?.dates) return setError(out?.error ?? "Couldn't reach Showlnk. Check your connection and try again.");
-    setReadsLeft((n) => n - 1);
-    if (!out.dates.length) return setError("We couldn't find a date on that flyer. Try a clearer photo, or the one with the date on it.");
-    update({ flyer: picture, dates: out.dates, look: out.look });
+    if (!res?.ok) {
+      setReading(null);
+      const out = (await res?.json().catch(() => null)) as { error?: string } | null;
+      return setError(out?.error ?? "Couldn't reach Showlnk. Check your connection and try again.");
+    }
+    // First what the flyer says, then (a while later) the reels drafted from it.
+    let answered = false;
+    await eachLine(res, (line) => {
+      if (mine !== attempt.current) return; // A newer flyer took over.
+      if (typeof line.error === "string") {
+        answered = true;
+        setReading(null);
+        return setError(line.error);
+      }
+      const read = line.read as { dates?: ImportedDate[]; look?: Look } | undefined;
+      if (read?.dates) {
+        answered = true;
+        setReading(null);
+        setReadsLeft((n) => n - 1);
+        if (!read.dates.length) return setError("We couldn't find a date on that flyer. Try a clearer photo, or the one with the date on it.");
+        update({ flyer: picture, dates: read.dates, look: read.look, reels: undefined, reelsFailed: undefined });
+        return setDrafting(true);
+      }
+      if (line.draft) {
+        setDrafting(false);
+        return update({ reels: line.draft as FunnelDraft, reelsFailed: undefined });
+      }
+      if (typeof line.draftError === "string") {
+        setDrafting(false);
+        update({ reelsFailed: true });
+      }
+    }).catch(() => {});
+    if (mine !== attempt.current) return;
+    setDrafting(false);
+    if (!answered) {
+      setReading(null);
+      setError("Couldn't reach Showlnk. Check your connection and try again.");
+    }
   };
 
   const found = draft.dates?.[0];
@@ -260,24 +326,36 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
               )}
             </div>
           </section>
+        ) : step === 1 ? (
+          <ReelsStep
+            draft={draft}
+            drafting={drafting}
+            onChange={(reels) => update({ reels })}
+            onShow={(reel) => {
+              show(reel);
+              if (window.matchMedia("(max-width: 1023px)").matches) phoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            onBack={() => setStep(0)}
+            onNext={() => setStep(2)}
+          />
         ) : (
-          <section aria-labelledby={`${id}-next`} className="mt-10">
-            <p className="text-sm font-semibold text-[var(--sl-gold)]">Step 2 of 3</p>
-            <h1 id={`${id}-next`} className="sl-display mt-2 text-[clamp(2.75rem,9vw,4.5rem)] leading-[0.92]">
-              Your night, in reels.
+          <section aria-labelledby={`${id}-claim`} className="mt-10">
+            <p className="text-sm font-semibold text-[var(--sl-gold)]">Step 3 of 3</p>
+            <h1 id={`${id}-claim`} className="sl-display mt-2 text-[clamp(2.75rem,9vw,4.5rem)] leading-[0.92]">
+              Claim your link.
             </h1>
             <p className="mt-4 max-w-[34rem] text-lg text-[var(--sl-text)]/80">
-              {nightName(draft)} is next: an opening scene and three reels, made from your flyer. This part is on its way.
+              Your link for {nightName(draft)}, with your email and a password. This part is on its way.
             </p>
-            <button type="button" onClick={() => setStep(0)} className="mt-8 min-h-11 text-sm font-semibold text-[var(--sl-gold)] underline underline-offset-4">
-              Back to your flyer
+            <button type="button" onClick={() => setStep(1)} className="mt-8 min-h-11 text-sm font-semibold text-[var(--sl-gold)] underline underline-offset-4">
+              Back to your reels
             </button>
           </section>
         )}
       </div>
 
       <div ref={phoneRef} className="mx-auto w-full max-w-[300px] lg:sticky lg:top-8 lg:max-w-none lg:self-start">
-        <Phone draft={draft} reading={reading} />
+        <Phone draft={draft} reading={reading} core={step > 0} replay={replay} />
         <p className="mt-4 text-center text-sm text-[var(--sl-muted)]">
           {found ? "Your link, as fans will see it. Tap around." : "Your link, live. It fills in from your flyer."}
         </p>
@@ -287,7 +365,19 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
 }
 
 /** The phone: the real link player in a frame, sent the draft whenever it changes. While a flyer is read, the flyer itself, being scanned. */
-function Phone({ draft, reading }: { draft: StartDraft; reading: string | null }) {
+function Phone({
+  draft,
+  reading,
+  core,
+  replay,
+}: {
+  draft: StartDraft;
+  reading: string | null;
+  /** Past step 1: the drafted reels and Core's features. */
+  core: boolean;
+  /** Bumped to start the phone over, at a reel when given. */
+  replay: { n: number; reelId?: string };
+}) {
   const box = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const [scale, setScale] = useState(0);
@@ -308,10 +398,24 @@ function Phone({ draft, reading }: { draft: StartDraft; reading: string | null }
     };
   }, []);
 
+  // A new flyer, look, set of reels or step starts the link over, so the change is seen; typed words change in place.
+  const scene = [draft.flyer?.length, JSON.stringify(draft.look), JSON.stringify(draft.dates), core && Boolean(draft.reels), core].join("|");
+  const shown = useRef({ scene: "", n: 0 });
+
   useEffect(() => {
     if (!ready) return;
-    frame.current?.contentWindow?.postMessage({ type: "start:state", ...draftLink(draft) }, window.location.origin);
-  }, [ready, draft]);
+    const again = shown.current.scene !== scene || shown.current.n !== replay.n;
+    const startReelId = shown.current.n !== replay.n ? replay.reelId : undefined;
+    shown.current = { scene, n: replay.n };
+    const message: StartState = {
+      type: "start:state",
+      ...draftLink(draft, { core }),
+      ...(core ? { follow: { organizer: "your-night", name: nightName(draft) } } : {}),
+      replay: again,
+      ...(startReelId ? { startReelId } : {}),
+    };
+    frame.current?.contentWindow?.postMessage(message, window.location.origin);
+  }, [ready, draft, core, scene, replay]);
 
   return (
     <div className="sl-phone">
