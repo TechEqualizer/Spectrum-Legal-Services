@@ -122,19 +122,27 @@ Each step is one PR.
 
 ### 1. Fan tables and sign-in (additive)
 
-- Migration (confirmed before it runs): `fans`, `follows`,
-  `fan_login_tokens`, the private bucket, and server-only access.
+- Migration `20261018000000_fans.sql` (confirmed before it runs): `fans`,
+  `follows`, `fan_login_tokens`, the private `reel-media-fans` bucket.
+  - All server-only: row-level security on, no policies, no grants.
+  - The app uses six `fan_*` functions, callable with the secret key only.
+    They do the rate limits (3 links an hour per email, 10 per IP) and
+    make confirming atomic (a link works once).
+  - Only the SHA-256 of each link and a keyed hash of the IP are stored.
 - Routes:
-  - `POST /api/fans/start`: email + organizer. Rate-limited per email and
-    per IP, then sends the link.
-  - `GET /api/fans/confirm`: sets the cookie and the follow, then shows
-    the confirmation page.
-  - `POST /api/fans/unfollow`.
-  - `POST /api/fans/forget`: deletes the fan and their follows.
-- Resend sending domain for showlnk.com. DNS records are added by you;
-  I'll give you the exact records.
-- Tests: the mock Supabase and a mock Resend capture the email, so suites
-  follow the link.
+  - `POST /api/fans/start`: email + organizer, then sends the link.
+  - `/fans/confirm?token=`: the page the link opens. Opening it uses
+    nothing (mail scanners open links); its button (`POST
+    /api/fans/confirm`) follows and sets the cookie, signed, httpOnly,
+    180 days.
+  - `GET /api/fans/me`: who this browser follows.
+  - `POST /api/fans/unfollow` and `POST /api/fans/forget` (deletes the fan,
+    their follows and pending links). Same-site only.
+- Resend: showlnk.com is verified; links come from
+  "<Organizer> via Showlnk <fans@showlnk.com>".
+- Settings: `SUPABASE_SECRET_KEY`, `RESEND_API_KEY`, `FAN_COOKIE_SECRET`,
+  `SHOWLNK_POSTAL_ADDRESS`. Following stays off until all are set.
+- Tests: the `fans` suite, with a mock Resend that keeps the emails.
 - Live page impact: none (nothing on the page uses it yet).
 
 ### 2. Follow on the link
