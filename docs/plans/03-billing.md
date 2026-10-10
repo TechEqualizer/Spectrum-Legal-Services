@@ -1,9 +1,43 @@
 # Plan 3: Billing (draft for approval)
 
-Organizers pay for Showlnk: the $29 Core plan, monthly, per organizer.
-Until now everything has been free while it was built (Plan 2 says Core
-gates the fan features later). This plan is a draft: the decisions marked
-**Decide** below are yours before step 1.
+Organizers pay for Showlnk: the Core plan, per organizer. Until now
+everything has been free while it was built (Plan 2 says Core gates the
+fan features later). This plan is a draft: the decisions marked **Decide**
+below are yours before step 1.
+
+## What works elsewhere (researched Oct 2026)
+
+| Product | Closest to | How it charges |
+| --- | --- | --- |
+| Laylo | Follow, drops, presale codes | Free to start; Pro $25/mo or $300/yr (unlimited RSVPs, pixels, message on demand); texts and emails bought separately as credits ($10 per 650 texts, $10 per 5,000 emails) |
+| Linktree | The bio link | Free forever (unlimited links, email collection); Starter ~$8, Pro ~$15, Premium ~$35 a month; about 20% off yearly; 7-day trial on paid tiers |
+| Feature.fm / Hypeddit | Smart links, fan gates | Free smart links; fan gates and advanced features paid (~$9 to $39/mo) |
+| Posh, DICE | Nightlife ticketing | No subscription: a cut of each ticket (Posh 10% + $0.99, paid by the buyer; DICE negotiated) |
+
+What they agree on, and what this plan copies:
+
+1. **A generous free plan wins the bio.** Linktree and Laylo let anyone
+   start free; the paid plan sells scale and control, not the basics.
+2. **Let people taste the moat, then charge for scale.** Laylo's free plan
+   collects fans; Pro makes it unlimited and adds the power tools. Showlnk
+   copies that: Follow works on free up to a cap, so organizers see their
+   list grow before they pay.
+3. **Messaging is metered, never bundled.** Laylo sells texts and emails as
+   credits on top of the plan, because sending costs real money per
+   message. Plan 4 (email blasts) does the same.
+4. **Yearly at about two months free.** Laylo $25/$300, Linktree ~20% off.
+5. **Ticket cuts belong to the ticketing company.** Posh and DICE take a
+   cut of each ticket; Showlnk sends buyers to Eventbrite and stays a flat
+   subscription, so organizers keep every ticket dollar. That's the pitch
+   against Posh's fees.
+
+Sources: [Laylo](https://laylo.com/), [Laylo on Shopify](https://apps.shopify.com/laylo),
+[Linktree pricing 2026 (Unilink)](https://www.unilink.us/blog/linktree-pricing-2026),
+[Linktree pricing (u2l)](https://u2l.ai/blog/linktree-pricing.md),
+[Hypeddit vs ToneDen vs Feature.fm](https://twostorymelody.com/hypeddit-vs-toneden-vs-featurefm/),
+[Posh fees](https://www.ticketfairy.com/en-mx/event-ticketing/posh-vs-shotgun),
+[DICE alternatives](https://hi.events/dice-alternative). Several are
+competitors' pages; check prices on the vendors' own sites before quoting.
 
 ## First principles
 
@@ -40,6 +74,14 @@ gates the fan features later). This plan is a draft: the decisions marked
 
 ## Design
 
+- **Plans:**
+  - **Free:** the event link, reels, Results, Share, Leads, Eventbrite, and
+    Follow up to 100 fans (the list keeps growing in view; new follows past
+    100 wait until Core).
+  - **Core, $29/month or $290/year:** unlimited fans, fan-only reels,
+    presale for followers, the calendar feed, no Showlnk branding on the
+    link.
+  - **Email credits (Plan 4):** blasts to followers, bought as needed.
 - **Table `organizer_plans`** (one row per organizer): plan (`core`),
   status (`trialing`, `active`, `past_due`, `canceled`, `comped`), Stripe
   customer and subscription ids, when the period ends. Written only by the
@@ -87,17 +129,15 @@ gates the fan features later). This plan is a draft: the decisions marked
 ## Deliberately not in this plan
 
 - Email blasts to followers: Plan 4, the Email add-on.
-- Annual plans, coupons, per-seat pricing, taxes beyond Stripe Tax's
-  defaults.
+- Coupons, per-seat pricing, taxes beyond Stripe Tax's defaults.
 - A public pricing page (the waitlist landing stays as is).
 
 ## Open questions (Decide)
 
-1. **What's in Core vs free?** Proposal: free keeps the event link,
-   reels, Results, Share, Leads and Eventbrite; Core adds Follow, fan-only
-   reels, presale, the calendar feed and the Fans page's new followers.
-2. **Trial?** Proposal: 14 days of Core, no card needed to start; card
-   asked at the end.
+1. **Free vs Core** as in Design (Follow free up to 100 fans, like Laylo's
+   free start)? And is $29/$290 right next to Laylo's $25/$300?
+2. **Trial?** Proposal: 14 days of Core when they first hit the 100-fan cap
+   or switch on a Core feature, no card to start (Linktree gives 7).
 3. **Who pays:** the organizer directly, or Showlnk invoices agencies that
    run several organizers?
 4. **Stripe account:** do you have one for Showlnk (business details,
