@@ -44,7 +44,7 @@ const env = {
   ANTHROPIC_BASE_URL: CLAUDE,
   NEXT_TELEMETRY_DISABLED: "1",
 };
-for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "EVENTBRITE_CLIENT_ID", "EVENTBRITE_CLIENT_SECRET", "EVENTBRITE_TOKEN_KEY", "EVENTBRITE_OAUTH_BASE", "EVENTBRITE_API_BASE", "RESEND_API_BASE", "FAN_COOKIE_SECRET", "FAN_FROM_EMAIL", "SHOWLNK_POSTAL_ADDRESS", "SHOWLNK_CONTACT_EMAIL", "FOLLOW_ORGANIZERS", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_API_BASE"]) delete env[key];
+for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "EVENTBRITE_CLIENT_ID", "EVENTBRITE_CLIENT_SECRET", "EVENTBRITE_TOKEN_KEY", "EVENTBRITE_OAUTH_BASE", "EVENTBRITE_API_BASE", "RESEND_API_BASE", "FAN_COOKIE_SECRET", "FAN_FROM_EMAIL", "SHOWLNK_POSTAL_ADDRESS", "SHOWLNK_CONTACT_EMAIL", "FOLLOW_ORGANIZERS", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_API_BASE", "PLAN_CACHE_SECONDS"]) delete env[key];
 // The mock's own secret key, for Send login (Settings → Accounts) only.
 env.SUPABASE_SECRET_KEY = "test-secret";
 // Eventbrite goes to its mock: OAuth and the API, with a test app and token key.
@@ -63,6 +63,9 @@ env.SHOWLNK_POSTAL_ADDRESS = "1 Test Street, Detroit, MI 48201";
 // Follow is on only for the fan suites' own test organizers: Big Love's (and
 // Golden Hour's) links keep "Updates" and "Text me", as in production for now.
 env.FOLLOW_ORGANIZERS = "gh-follow,gh-reels,gh-presale";
+// Plans are kept a second (not a minute), so suites can switch an
+// organizer's plan mid-run; 0 would make the static link pages dynamic.
+env.PLAN_CACHE_SECONDS = "1";
 // The calendar every process in the run sees (shift-time.cjs), so tests
 // written around Big Love's Oct 31 night don't depend on today's date.
 // E2E_NOW sets another moment, e.g. to try a run after the night.

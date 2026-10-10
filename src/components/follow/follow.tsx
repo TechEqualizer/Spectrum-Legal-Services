@@ -14,6 +14,8 @@ export type FollowTarget = {
   name: string;
   /** The event link it's followed from, if any. */
   funnelId?: string;
+  /** The organizer has Core: presales and fans-only reels work for followers (else they stay closed). */
+  core?: boolean;
 };
 
 const FollowContext = createContext<FollowTarget | null>(null);

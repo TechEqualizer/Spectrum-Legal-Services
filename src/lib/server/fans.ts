@@ -10,6 +10,8 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
 import { FAN_BUCKET, FAN_REF_PREFIX, fanRefPath, fanRefsOf, isFanRef, isFansReel, swapFanRefs } from "@/lib/fan-reels";
 import { getOrganizer } from "@/lib/server/funnels";
+import { planOf } from "@/lib/server/plans";
+import type { Plan, PlanStatus } from "@/lib/plans";
 import { followConsent } from "@/lib/fans";
 import { normalizeSourceTag } from "@/lib/source-tag";
 
@@ -42,15 +44,23 @@ export function missingFanSettings(): string[] {
 }
 export const isFollowingConfigured = () => missingFanSettings().length === 0;
 
+/** Plans that came through Showlnk's own sign-up (a trial or Stripe), as opposed to an organizer Showlnk set up and comped. */
+const SELF_SERVE: PlanStatus[] = ["trialing", "active", "past_due", "canceled"];
+
 /**
- * Whether an organizer's links show Follow: FOLLOW_ORGANIZERS lists the
- * organizers who have it on (comma-separated slugs, or * for all), and the
- * deployment must have every fan setting.
+ * Whether an organizer's links show Follow. The deployment must have every
+ * fan setting; then Follow is on for organizers who signed up themselves
+ * (their plan came from a trial or Stripe), and, during the rollout, for
+ * those FOLLOW_ORGANIZERS lists (comma-separated slugs, or * for all), which
+ * is how organizers Showlnk set up (Big Love) get it. Pass the plan when
+ * it's already loaded.
  */
-export function followOn(organizer: string | undefined): boolean {
+export async function followOn(organizer: string | undefined, plan?: Plan): Promise<boolean> {
   if (!organizer || !isFollowingConfigured()) return false;
   const list = (env("FOLLOW_ORGANIZERS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-  return list.includes("*") || list.includes(organizer);
+  if (list.includes("*") || list.includes(organizer)) return true;
+  const p = plan ?? (await planOf(organizer));
+  return Boolean(p && SELF_SERVE.includes(p.status));
 }
 
 type Rpc<T> = { ok: true; data: T } | { ok: false; status: number };

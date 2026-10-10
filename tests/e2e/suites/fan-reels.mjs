@@ -17,6 +17,11 @@ const SECRET = 'reels-sundays/secret-after-hours.webm';
 const REF = 'fans:' + SECRET;
 
 await fetch(DB + '/__organizer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: ORGANIZER, name: 'Golden Hour Sundays' }) });
+// Fans-only reels are part of Core.
+const setPlan = (row) => fetch(DB + '/__plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organizer: ORGANIZER, ...row }) });
+// The app keeps a plan for a second, then refreshes it on the next ask: wait, ask once, then look.
+const switchPlan = async (row, ask) => { await setPlan(row); await new Promise((r) => setTimeout(r, 1500)); await ask(); await new Promise((r) => setTimeout(r, 500)); };
+await setPlan({ status: 'comped' });
 const gh = await addGoldenHour((g) => ({ ...g, slug: 'reels-sundays', id: 'reels-sundays' }), DB, ORGANIZER);
 await fetch(DB + '/__fan-file?path=' + SECRET, { method: 'POST', headers: { 'Content-Type': 'video/webm' }, body: readFileSync('sample-reel.webm') });
 
@@ -82,6 +87,12 @@ check('no locked card for a follower', await p.getByText('Fans only', { exact: t
 const media = await ctx.request.get(`${B}/api/fans/media?slug=${gh.slug}`);
 const body = await media.json();
 check('the media answer is private and only the fans-only reel', media.headers()['cache-control']?.includes('no-store') && Object.keys(body.reels ?? {}).join() === locked.id, JSON.stringify(body).slice(0, 200));
+
+// Without Core (Free): it stays locked, followers too; back with Core, it plays.
+await switchPlan({}, () => ctx.request.get(`${B}/api/fans/media?slug=${gh.slug}`));
+check('on Free: locked for a follower too', (await ctx.request.get(`${B}/api/fans/media?slug=${gh.slug}`)).status() === 403);
+await switchPlan({ status: 'comped' }, () => ctx.request.get(`${B}/api/fans/media?slug=${gh.slug}`));
+check('with Core again: it plays', (await ctx.request.get(`${B}/api/fans/media?slug=${gh.slug}`)).status() === 200);
 
 // Following someone else doesn't unlock it.
 const other = await b.newContext();

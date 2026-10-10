@@ -8,6 +8,7 @@ import { createLogin, deleteLogin } from "@/lib/server/auth-admin";
 import { syncEventDates } from "@/lib/server/event-dates";
 import { EVENT_FUNNELS_TAG, ORGANIZERS_TAG, slugIsFree } from "@/lib/server/funnels";
 import { claimInvite, inviteStatus } from "@/lib/server/invites";
+import { planTag } from "@/lib/server/plans";
 import { publicationTag } from "@/lib/server/publications";
 import { isTimeZone } from "@/lib/event-time";
 import { REEL_ROLES, type FunnelDraft } from "@/lib/funnel-draft";
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
   revalidateTag(ORGANIZERS_TAG, { expire: 0 });
   revalidateTag(EVENT_FUNNELS_TAG, { expire: 0 });
   revalidateTag(publicationTag(eventSlug), { expire: 0 });
+  revalidateTag(planTag(slug), { expire: 0 });
 
   const tokens = await signInWithPassword(email, password);
   const signedIn = typeof tokens === "object" && "access_token" in tokens;

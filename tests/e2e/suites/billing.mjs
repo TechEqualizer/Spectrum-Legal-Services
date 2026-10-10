@@ -41,6 +41,23 @@ await p.waitForURL(/\/admin\/settings\?billing=canceled/); await settle(p, 800);
 check('back from checkout: nothing charged', await p.getByText('Checkout was canceled. Nothing was charged.').isVisible());
 check('still Free', /Free Big Love Productions · Follow for up to 100 fans/.test(await cardText()), await cardText());
 
+// On Free, Core's features say so where they're set up (billing step 3).
+await p.goto(B + '/admin', { waitUntil: 'networkidle' });
+const firstTitle = await p.locator('section[aria-labelledby="order-title"] ol > li').first().locator('p.font-bold').textContent();
+await p.getByRole('button', { name: `Edit ${firstTitle}` }).click();
+const dlg = p.getByRole('dialog');
+const fansSwitch = dlg.getByRole('switch', { name: /Fans only/ });
+await dlg.getByText('Part of Core.').waitFor({ timeout: 5000 }).catch(() => {});
+check('on Free: Fans only is part of Core', await fansSwitch.isDisabled() && await dlg.getByText('Start Core to make reels only your followers can watch.').isVisible() && (await dlg.getByRole('link', { name: 'Start Core' }).getAttribute('href')) === '/admin/settings#plan');
+await p.keyboard.press('Escape');
+await p.locator('section[aria-labelledby="dates-title"]').locator(':scope > ul > li').first().getByRole('button').click();
+const ds = p.locator('dialog[open]');
+await ds.getByText('Part of Core.').waitFor({ timeout: 5000 }).catch(() => {});
+check('on Free: presales are part of Core', await ds.getByRole('switch', { name: 'Presale for followers' }).isDisabled() && await ds.getByText('Start Core to give your followers tickets first.').isVisible());
+await p.keyboard.press('Escape');
+check('on Free: the fans list says it is Free', (await (await p.request.get(`${B}/api/admin/fans?slug=${gh.slug}`)).json()).core === false);
+await open();
+
 // Yearly, paid.
 await card().getByRole('button', { name: 'Start Core' }).click();
 await p.waitForURL(/localhost:54800\/pay\//);

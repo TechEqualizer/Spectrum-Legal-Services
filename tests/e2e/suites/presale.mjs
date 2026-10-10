@@ -15,6 +15,11 @@ const ORGANIZER = 'gh-presale';
 const LINK = 'https://www.eventbrite.com/e/golden-hour-tickets-123456789?discount=FANSFIRST';
 
 await fetch(DB + '/__organizer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: ORGANIZER, name: 'Golden Hour Sundays' }) });
+// Presales for followers are part of Core.
+const setPlan = (row) => fetch(DB + '/__plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organizer: ORGANIZER, ...row }) });
+// The app keeps a plan for a second, then refreshes it on the next ask: wait, ask once, then look.
+const switchPlan = async (row, ask) => { await setPlan(row); await new Promise((r) => setTimeout(r, 1500)); await ask(); await new Promise((r) => setTimeout(r, 500)); };
+await setPlan({ status: 'comped' });
 const gh = await addGoldenHour((g) => ({ ...g, slug: 'presale-sundays', id: 'presale-sundays' }), DB, ORGANIZER);
 const b = await chromium.launch();
 const admin = await b.newContext({ storageState: S + '/auth.json' });
@@ -81,6 +86,18 @@ check('a follower gets the presale button', await buy.isVisible());
 check('with the presale link', (await buy.getAttribute('href')) === LINK, await buy.getAttribute('href').catch(() => ''));
 check('it opens in a new tab', (await buy.getAttribute('target')) === '_blank');
 await animationsDone(p, 4000); await p.screenshot({ path: 'presale-follower-390.png' });
+
+// Without Core (Free): no presale, for anyone; back with Core, it's there again.
+await switchPlan({}, () => ctx.request.get(`${B}/api/fans/presale?slug=${gh.slug}`));
+check('on Free: no presale link, even for a follower', JSON.stringify(await (await ctx.request.get(`${B}/api/fans/presale?slug=${gh.slug}`)).json()) === '{"dates":{}}');
+// The page is rebuilt in the background once its plan is a second old: the second visit has it.
+await p.goto(B + '/f/' + gh.slug); await settle(p, 1500);
+await p.goto(B + '/f/' + gh.slug); await settle(p, 2000);
+check('on Free: no presale notice', await p.getByText(/Presale for fans/).count() === 0);
+await switchPlan({ status: 'trialing', trial_ends_at: new Date(Date.now() + 5 * 864e5).toISOString() }, () => ctx.request.get(`${B}/api/fans/presale?slug=${gh.slug}`));
+check('on the trial: the presale link again', Object.values((await (await ctx.request.get(`${B}/api/fans/presale?slug=${gh.slug}`)).json()).dates ?? {}).includes(LINK));
+await switchPlan({ status: 'comped' }, () => ctx.request.get(`${B}/api/fans/presale?slug=${gh.slug}`));
+await p.goto(B + '/f/' + gh.slug); await settle(p, 1500);
 
 // Following someone else: no link.
 const other = await b.newContext();

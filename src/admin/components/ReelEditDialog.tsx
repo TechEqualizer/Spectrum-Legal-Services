@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useAdminBusiness } from "@/admin/AdminBusiness";
+import CoreNote from "@/admin/components/CoreNote";
+import { useHasCore } from "@/admin/plan";
 import MediaPicker from "@/admin/components/MediaPicker";
 import VideoPrompt from "@/admin/components/VideoPrompt";
 import {
@@ -67,6 +70,8 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
   const [isTopic, setIsTopic] = useState(reel.id in funnel.topics);
   const [topic, setTopic] = useState(funnel.topics[reel.id] ?? reel.practiceArea);
   const [error, setError] = useState("");
+  // Fans-only reels are part of Core.
+  const core = useHasCore(useAdminBusiness().funnel.slug);
 
   // Opened as a modal dialog: the browser traps focus and closes it on Escape.
   useEffect(() => {
@@ -154,7 +159,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
             <textarea className="form-input min-h-20 text-sm" maxLength={300} value={draft.summary} onChange={(e) => set({ summary: e.target.value })} />
           </label>
           <MediaPicker value={media} onChange={setMedia} />
-          <FansOnly id={id} on={draft.fans} media={media} onChange={(fans) => set({ fans })} />
+          <FansOnly id={id} on={draft.fans} media={media} core={core} onChange={(fans) => set({ fans })} />
           {videoPrompt && <VideoPrompt prompt={videoPrompt} />}
           {dates && (
             <label className="block">
@@ -268,7 +273,9 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
  * it's on go to private storage when published; media that's already at a
  * public address (or on YouTube) stays reachable there, so it says so.
  */
-function FansOnly({ id, on, media, onChange }: { id: string; on: boolean; media: ReelMedia | undefined; onChange: (on: boolean) => void }) {
+function FansOnly({ id, on, media, core, onChange }: { id: string; on: boolean; media: ReelMedia | undefined; core: boolean | undefined; onChange: (on: boolean) => void }) {
+  // On Free: can't be turned on; one that's on stays locked for everyone until Core.
+  const locked = core === false;
   const src = media && "src" in media ? media.src : undefined;
   const publicAlready = on && media && (media.kind === "youtube" || (src && !src.startsWith("blob:") && !src.startsWith("fans:")));
   return (
@@ -285,9 +292,10 @@ function FansOnly({ id, on, media, onChange }: { id: string; on: boolean; media:
           role="switch"
           aria-checked={on}
           aria-labelledby={`${id}-fans-label`}
-          aria-describedby={`${id}-fans-help${on ? ` ${id}-fans-rule` : ""}`}
+          aria-describedby={`${id}-fans-help${on ? ` ${id}-fans-rule` : ""}${locked ? ` ${id}-fans-core` : ""}`}
+          disabled={locked && !on}
           onClick={() => onChange(!on)}
-          className={`relative mt-0.5 inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${
+          className={`relative mt-0.5 inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${
             on ? "bg-teal-accent" : "bg-gray-300"
           }`}
         >
@@ -297,6 +305,12 @@ function FansOnly({ id, on, media, onChange }: { id: string; on: boolean; media:
           />
         </button>
       </div>
+      {locked && (
+        <CoreNote
+          id={`${id}-fans-core`}
+          text={on ? "Without it, this reel stays locked for everyone, followers too." : "Start Core to make reels only your followers can watch."}
+        />
+      )}
       {on && (
         <div id={`${id}-fans-rule`} className="mt-3 rounded-md bg-soft-gray px-3 py-2.5 text-xs text-gray-700">
           <p className="font-semibold text-deep-navy">{CONTENT_RULE.summary}</p>

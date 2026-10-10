@@ -40,7 +40,8 @@ export function useFanMedia(funnel: Funnel): Funnel {
   }, [refs, funnel.slug]);
 
   useEffect(() => {
-    if (!needsFollow || !isFollowing || isPreviewMode()) return;
+    // Without Core, fans-only reels stay locked for everyone.
+    if (!needsFollow || !isFollowing || follow?.core === false || isPreviewMode()) return;
     let live = true;
     fetch(`/api/fans/media?slug=${encodeURIComponent(funnel.slug)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
@@ -49,7 +50,7 @@ export function useFanMedia(funnel: Funnel): Funnel {
     return () => {
       live = false;
     };
-  }, [needsFollow, isFollowing, funnel.slug]);
+  }, [needsFollow, isFollowing, follow?.core, funnel.slug]);
 
   return useMemo(() => {
     if (!fansReels.length) return funnel;

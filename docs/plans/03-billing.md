@@ -133,11 +133,31 @@ competitors' pages; check prices on the vendors' own sites before quoting.
    (`src/lib/server/stripe.ts`); a mock Stripe in the tests. Until the two
    keys are set, the card shows Core without a button. Live page impact:
    none.
-3. **Gates, the trial and upgrade prompts.** The gates read the plan with
-   the secret key (`planOf()`); "Part of Core" where the features live; the
-   14-day trial starts at claim (Plan 5); lapsed plans turn Follow off for new fans as
-   described above. Live page
-   impact: only for organizers without Core.
+3. **Gates, the trial and upgrade prompts (built).** `planOf()` reads an
+   organizer's plan with the secret key, kept a minute and cleared the
+   moment it changes (the webhook, a claim); if it can't be read, the gates
+   keep what fans already have.
+   - **Follow** is on for organizers who signed up themselves (a trial or
+     Stripe plan), and, until step 4, for those `FOLLOW_ORGANIZERS` lists:
+     how organizers Showlnk set up (Big Love, comped) get it, so Big
+     Love's Follow still waits for that switch.
+   - **Presales for followers** need Core: on Free the link shows no
+     presale and `/api/fans/presale` gives no links.
+   - **Fans-only reels** need Core: on Free they stay locked for everyone,
+     followers too (`/api/fans/media` refuses); nothing leaks.
+   - **The fan list:** on Free, the Fans page and the export show the first
+     100 following (by when they confirmed) and say how many more are
+     waiting; following never fails for a fan.
+   - **Part of Core** in the editor: on Free, the Fans only switch and the
+     presale switch can't be turned on, with "Part of Core. … Start Core"
+     (Settings → Plan); one already on can be turned off.
+   - The calendar feed stays for everyone: it's what existing followers
+     already have (first principle 2).
+   - The 14-day trial starts at claim (Plan 5).
+
+   Live page impact: none today (Big Love is comped and keeps its
+   `FOLLOW_ORGANIZERS` state); organizers on Free lose presales and
+   fans-only reels.
 4. **Go live.** Switch to live keys; retire `FOLLOW_ORGANIZERS`; a receipt
    and "card declined" email check. Live page impact: none for Big Love
    (comped).

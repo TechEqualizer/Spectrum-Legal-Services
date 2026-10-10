@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   if (fans === null) return NextResponse.json({ error: "Only the organizer's own admins can see its fans." }, { status: 403, headers: NO_STORE });
   if (!fans) return NextResponse.json({ error: "Couldn't load your fans." }, { status: 502, headers: NO_STORE });
   return NextResponse.json(
-    { organizer: t.organizer.slug, followOn: followOn(t.organizer.slug), ...fanCounts(fans, days, params.get("funnel") ?? undefined) },
+    { organizer: t.organizer.slug, followOn: await followOn(t.organizer.slug), ...fanCounts(fans, days, params.get("funnel") ?? undefined) },
     { headers: NO_STORE }
   );
 }

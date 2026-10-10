@@ -101,6 +101,11 @@ check('the dates as rows', dates.length === 2, JSON.stringify(dates));
 const fan = await (await b.newContext()).newPage();
 await fan.goto(B + '/f/golden-hour-halloween'); await settle(fan, 1500);
 check('the night is live, in their words', await fan.getByText('Masks on, Motor City').first().isVisible().catch(() => false));
+// They signed up themselves: Follow is on for them, and Core's presale and fans-only parts with the trial.
+await fan.getByRole('button', { name: /Sneak peek inside|Step inside/ }).first().click().catch(() => {});
+const followShown = fan.getByText('Follow', { exact: true }).locator('visible=true').first();
+await followShown.waitFor({ timeout: 8000 }).catch(() => {});
+check('their link has Follow', await followShown.isVisible().catch(() => false));
 
 // The invite is used up; the draft left the browser.
 await p.goto(B + '/start?invite=' + code); await settle(p, 500);

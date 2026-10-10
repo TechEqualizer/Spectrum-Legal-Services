@@ -12,12 +12,13 @@ import { isPreviewMode } from "@/lib/reel-tracking";
  * A presale for followers, while one is open: a follower gets the presale
  * button (its link fetched for them alone, /api/fans/presale); anyone else,
  * "Fans get tickets first", which opens Follow. Nothing where the organizer
- * doesn't have Follow on.
+ * doesn't have Follow on, or without Core.
  */
 export default function PresaleNotice({ funnel, now }: { funnel: Funnel; now: number }) {
   const target = useFollowTarget();
   const isFollowing = useIsFollowing(target?.organizer);
-  const event = target ? openPresale(funnel, now) : undefined;
+  // Presales for followers are part of Core.
+  const event = target && target.core !== false ? openPresale(funnel, now) : undefined;
   const [links, setLinks] = useState<Record<string, string> | null>(null);
   const [following, setFollowing] = useState(false);
 
