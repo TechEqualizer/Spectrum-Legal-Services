@@ -190,7 +190,7 @@ http.createServer((req, res) => {
         invites.set(row.code_hash, row);
         return json(res, 200, row.id);
       }
-      if (p.endsWith('signup_invites_list')) return json(res, 200, [...invites.values()].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(({ code_hash, ...r }) => r));
+      if (p.endsWith('signup_invites_list')) return json(res, 200, [...invites.values()].sort((a, b) => b.created_at.localeCompare(a.created_at)).map((r) => { const copy = { ...r }; delete copy.code_hash; return copy; }));
       const row = [...invites.values()].find((r) => r.id === body.p_id && !r.revoked_at && !r.claimed_at);
       if (row) row.revoked_at = new Date().toISOString();
       return json(res, 200, Boolean(row));
@@ -221,7 +221,8 @@ http.createServer((req, res) => {
       if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: 'permission denied for table organizer_plans' });
       if (req.method === 'POST') {
         if (!organizers.has(body.organizer_slug)) return json(res, 409, { code: '23503', message: 'violates foreign key constraint' });
-        const { organizer_slug, updated_at, ...row } = body;
+        const { organizer_slug, ...row } = body;
+        delete row.updated_at;
         organizerPlans.set(organizer_slug, { ...(organizerPlans.get(organizer_slug) ?? {}), ...row });
         return json(res, 201);
       }

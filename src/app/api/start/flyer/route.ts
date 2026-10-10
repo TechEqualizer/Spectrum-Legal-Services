@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { flyerInputFrom, readFlyer } from "@/lib/server/flyer-import";
-import { inviteStatus, useInviteRead } from "@/lib/server/invites";
+import { inviteStatus, countInviteRead } from "@/lib/server/invites";
 
 // Reading a flyer can take a little while.
 export const maxDuration = 60;
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const input = flyerInputFrom({ type: body?.type, data: body?.data });
   if ("error" in input) return NextResponse.json({ error: input.error }, { status: input.status, headers: NO_STORE });
 
-  const allowed = await useInviteRead(code);
+  const allowed = await countInviteRead(code);
   if (allowed === undefined) return NextResponse.json({ error: "Couldn't check your invite. Try again in a minute." }, { status: 502, headers: NO_STORE });
   if (!allowed) {
     const s = await inviteStatus(code);

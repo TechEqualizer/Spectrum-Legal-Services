@@ -78,7 +78,7 @@ export async function inviteStatus(code: string, now = Date.now()): Promise<{ st
 }
 
 /** Counts one flyer read against the invite; false when it can't be used (or has read 5). undefined if unreachable. */
-export async function useInviteRead(code: string): Promise<boolean | undefined> {
+export async function countInviteRead(code: string): Promise<boolean | undefined> {
   if (!CODE.test(code)) return false;
   const s = service();
   if (!s) return undefined;
