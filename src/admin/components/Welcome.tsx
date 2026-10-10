@@ -1,17 +1,10 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useLinkOrigin } from "@/admin/link-origin";
 import type { AdminEvent } from "@/admin/AdminBusiness";
 import CopyButton from "@/admin/components/ui/CopyButton";
 import { startTour } from "@/admin/tour";
 import { TRIAL_DAYS } from "@/lib/plans";
-
-const useOrigin = () =>
-  useSyncExternalStore(
-    () => () => {},
-    () => window.location.origin,
-    () => ""
-  );
 
 /**
  * Home, right after an organizer claims their link in the sign-up wizard
@@ -19,7 +12,7 @@ const useOrigin = () =>
  * to do next. The tour waits until this is closed.
  */
 export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent; onOpen: (slug: string) => void; onClose: () => void }) {
-  const origin = useOrigin();
+  const origin = useLinkOrigin();
   const link = `${origin}/f/${event.organizer.slug}`;
   const steps: { title: string; text: string; action: React.ReactNode }[] = [
     {

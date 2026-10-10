@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
+import { useLinkOrigin } from "@/admin/link-origin";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { useResults } from "@/admin/results";
 import SalesHint from "@/admin/components/SalesHint";
@@ -18,18 +19,10 @@ const ranges = [
 
 const CUSTOM = "__custom";
 
-// The page's own origin, so built links point at wherever the site is hosted.
-const useOrigin = () =>
-  useSyncExternalStore(
-    () => () => {},
-    () => window.location.origin,
-    () => ""
-  );
-
 export default function Links() {
   const business = useAdminBusiness();
   const { funnel } = business;
-  const origin = useOrigin();
+  const origin = useLinkOrigin();
   // An organizer's event: their permanent link (the one for their bio) always shows the next event.
   const event = useAdminEvents().find((e) => e.funnel.slug === funnel.slug);
   const organizer = event?.organizer;

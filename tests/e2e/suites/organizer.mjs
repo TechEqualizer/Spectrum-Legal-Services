@@ -23,6 +23,12 @@ check('event listed under its organizer, upcoming', await org.getByRole('button'
 check('bio link shown, labeled on a phone', await org.getByText('/f/biglove').isVisible() && await org.getByText('Bio link', { exact: false }).first().isVisible());
 check('no demos listed', await p.getByRole('region', { name: 'Demos' }).count() === 0 && !/Aurelia|sample/i.test(await p.locator('main').innerText()));
 await p.screenshot({ path: S + '/events-390.jpg', fullPage: true });
+// A long address (a preview's is ~70 characters) still fits a phone: the link shortens, the page never slides sideways.
+const long = await org.getByText('/f/biglove').evaluate((el) => {
+  el.textContent = 'spectrum-legal-services-git-claude-report-rev-a11682-trust-cd32.vercel.app/f/biglove';
+  return { right: el.getBoundingClientRect().right, width: innerWidth, scroll: document.documentElement.scrollWidth };
+});
+check('phone: a long bio link shortens, nothing slides sideways', long.right <= long.width && long.scroll <= long.width, JSON.stringify(long));
 
 // 3. New event: name → link, then the studio opens on Import flyer.
 await p.getByRole('button', { name: 'New event' }).click();

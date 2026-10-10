@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useLinkOrigin } from "@/admin/link-origin";
 import { selectAdminBusiness, useAdminEvents, useMaybeAdminBusiness, type AdminEvent } from "@/admin/AdminBusiness";
 import NewClientSheet from "@/admin/components/NewClientSheet";
 import CopyButton from "@/admin/components/ui/CopyButton";
@@ -14,8 +15,6 @@ import type { Funnel } from "@/data/funnel-types";
 import { dateStage, lastDate, lastStart, upcomingEvents } from "@/lib/events";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
 import { EVENT_SLUG, slugFromName, type NewEventMode } from "@/lib/new-event";
-
-const useOrigin = () => useSyncExternalStore(() => () => {}, () => window.location.origin, () => "");
 
 /** Where an event stands, from its dates as visitors see them. */
 function standing(live: Funnel, now: number) {
@@ -40,7 +39,7 @@ export default function Events() {
   const events = useAdminEvents();
   const current = useMaybeAdminBusiness();
   const session = useAdminSession();
-  const origin = useOrigin();
+  const origin = useLinkOrigin();
   const [now] = useState(() => Date.now());
   const [sheet, setSheet] = useState<{ mode: NewEventMode; source?: AdminEvent } | null>(null);
   const [addingClient, setAddingClient] = useState(false);
@@ -106,7 +105,7 @@ export default function Events() {
           <section key={org.slug} aria-labelledby={`org-${org.slug}`} data-tour="events-list">
             <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
               <h2 id={`org-${org.slug}`} className="text-xs font-bold uppercase tracking-wider text-gray-600">{org.name}</h2>
-              <div className="flex flex-wrap items-center gap-x-3">
+              <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3">
                 <PermanentLink href={`${origin}/f/${org.slug}`} />
                 {fullAccess && (
                   <Link
@@ -180,7 +179,7 @@ export default function Events() {
 
 function PermanentLink({ href }: { href: string }) {
   return (
-    <p className="flex min-w-0 items-center gap-2 text-sm text-gray-600">
+    <p className="flex min-w-0 max-w-full items-center gap-2 text-sm text-gray-600">
       <span className="flex-shrink-0">
         Bio link<span className="hidden sm:inline">, always the next event</span>:
       </span>
