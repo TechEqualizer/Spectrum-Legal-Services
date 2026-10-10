@@ -107,7 +107,9 @@ competitors' pages; check prices on the vendors' own sites before quoting.
    Showlnk Stripe account (not Adsure's), set up in test mode first:
    - a product "Showlnk Core" with two prices, $29 monthly with lookup key
      `core_month` and $290 yearly with lookup key `core_year`;
-   - a webhook endpoint at `https://showlnk.com/api/stripe/webhook` for
+   - a webhook endpoint at `https://www.showlnk.com/api/stripe/webhook`
+     (the `www` address: `showlnk.com` redirects there, and Stripe doesn't
+     follow redirects) for
      `checkout.session.completed` and `customer.subscription.created`,
      `.updated`, `.deleted`;
    - the customer portal switched on (update card, invoices, cancel);
@@ -176,6 +178,45 @@ competitors' pages; check prices on the vendors' own sites before quoting.
 
    Live page impact: none for Big Love (held); other organizers' links
    get Follow once `RESEND_API_KEY` is set.
+
+## Upgrade nudges (Oct 10, 2026)
+
+Settings → Plan alone is too easy to miss. Core is sold where the
+organizer always looks: the sidebar.
+
+**What works elsewhere:**
+- GitLab tested a trial widget in the sidebar showing the days left and an
+  upgrade button, with more emphasis when 14 to 7 days and then 3 or fewer
+  days remain. It reported more trial conversions with it (its own
+  experiment; the shared figure is a click-through rate).
+- Reverse trials (Calendly's 14 days of its premium plan with no card,
+  Toggl's 30-day all-access pass) give everything first and then fall back
+  to Free; the nudges remind people what they'd lose.
+- Common advice is a calm, informative message a week out and a more
+  direct one in the last 1 to 3 days, and as little friction to upgrade as
+  possible.
+
+**What we do:**
+- **Sidebar card**, on a trial without a card: "Core trial · N days left",
+  a bar of the trial used, "Keep Core now. You won't be charged until
+  <date>." and Keep Core. In the last 3 days it turns gold and says what
+  stops (Follow past 100 fans, presales, fans-only reels). On Free: "Get
+  Core". With a declined card: "Update card". Nothing once they pay or are
+  comped. Folded sidebar: a gold badge with the days. Phones: a chip beside
+  the account.
+- **No reason to wait:** Keep Core during the trial carries the trial's
+  free days into Stripe (`trial_end`), so the first charge is the day the
+  trial would have ended. The Plan card says so ("No charge until your
+  trial ends"); afterwards it reads "Core · Your first charge is <date>".
+  (Stripe needs that date two days out; in the last two days, paying starts
+  at once.)
+
+Sources: [GitLab: trial days remaining in the sidebar](https://gitlab.com/gitlab-org/gitlab/-/issues/334936),
+[Trial-ending reminders (Knock)](https://knock.app/template-library/workflows/trial-ending),
+[SaaS free trial best practices (UserMotion)](https://usermotion.com/blog/saas-free-trial-best-practices),
+[Reverse trials (Candu)](https://www.candu.ai/blog/reverse-reverse-the-definitive-guide-to-reverse-trials),
+[Reverse trials (Userpilot)](https://userpilot.com/blog/?p=13042).
+Figures in these are vendors' own and unverified.
 
 ## Measures
 

@@ -21,22 +21,28 @@ function load(eventSlug: string): Promise<Plan | null> {
   return p;
 }
 
+/** This event's organizer's plan, once known (undefined while loading or if it couldn't be read). */
+export function usePlan(eventSlug: string | undefined): Plan | undefined {
+  const [state, setState] = useState<{ slug: string; plan: Plan | undefined }>({ slug: "", plan: undefined });
+  useEffect(() => {
+    if (!eventSlug) return;
+    let live = true;
+    load(eventSlug).then((plan) => live && setState({ slug: eventSlug, plan: plan ?? undefined }));
+    return () => {
+      live = false;
+    };
+  }, [eventSlug]);
+  return state.slug === eventSlug ? state.plan : undefined;
+}
+
 /**
  * Whether this event's organizer has Core: true or false once known, and
  * undefined while loading or if it couldn't be read (screens then don't
  * stand in the way; the live link's own gates decide).
  */
 export function useHasCore(eventSlug: string | undefined): boolean | undefined {
-  const [state, setState] = useState<{ slug: string; core: boolean | undefined }>({ slug: "", core: undefined });
-  useEffect(() => {
-    if (!eventSlug) return;
-    let live = true;
-    load(eventSlug).then((plan) => live && setState({ slug: eventSlug, core: plan ? hasCore(plan) : undefined }));
-    return () => {
-      live = false;
-    };
-  }, [eventSlug]);
-  return state.slug === eventSlug ? state.core : undefined;
+  const plan = usePlan(eventSlug);
+  return plan ? hasCore(plan) : undefined;
 }
 
 /** Where Start Core is: Settings → Plan. */

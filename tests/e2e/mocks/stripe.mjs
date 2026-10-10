@@ -85,13 +85,13 @@ http.createServer((req, res) => {
       const s = sessions.get(m[1]);
       if (!s) return json(404, { error: 'no session' });
       if (req.method === 'GET') {
-        return page(res, 'Stripe test checkout', `<p>${s.interval === 'year' ? '$290.00 per year' : '$29.00 per month'} · Showlnk Core</p><p>${s.customer_email ?? s.customer ?? ''}</p><form method="post"><button name="do" value="pay">Pay</button> <button name="do" value="cancel">Back</button></form>`);
+        return page(res, 'Stripe test checkout', `<p>${s.interval === 'year' ? '$290.00 per year' : '$29.00 per month'} · Showlnk Core</p>${s.trial_end ? `<p>Free until ${new Date(s.trial_end * 1000).toISOString().slice(0, 10)}</p>` : ''}<p>${s.customer_email ?? s.customer ?? ''}</p><form method="post"><button name="do" value="pay">Pay</button> <button name="do" value="cancel">Back</button></form>`);
       }
       if (parseForm(text).do === 'cancel') return redirect(res, s.cancel_url);
       const customer = s.customer ?? id('cus');
       customers.set(customer, { id: customer, email: s.customer_email });
       const now = Math.floor(Date.now() / 1000);
-      const sub = { id: id('sub'), object: 'subscription', customer, status: 'active', metadata: { organizer: s.organizer }, trial_end: null, items: { data: [{ current_period_end: now + (s.interval === 'year' ? 365 : 30) * DAY, price: { id: s.price, recurring: { interval: s.interval } } }] } };
+      const sub = { id: id('sub'), object: 'subscription', customer, status: s.trial_end ? 'trialing' : 'active', metadata: { organizer: s.organizer }, trial_end: s.trial_end, items: { data: [{ current_period_end: now + (s.interval === 'year' ? 365 : 30) * DAY, price: { id: s.price, recurring: { interval: s.interval } } }] } };
       subscriptions.set(sub.id, sub);
       s.status = 'complete';
       await send('checkout.session.completed', { id: s.id, object: 'checkout.session', customer, subscription: sub.id, client_reference_id: s.organizer, metadata: { organizer: s.organizer } });
@@ -114,7 +114,7 @@ http.createServer((req, res) => {
     if (p === '/v1/checkout/sessions' && req.method === 'POST') {
       const b = parseForm(text);
       if (b.mode !== 'subscription' || !b.line_items?.[0]?.price || !b.success_url || !b.cancel_url) return json(400, { error: { message: 'bad checkout session' } });
-      const s = { id: id('cs'), price: b.line_items[0].price, interval: b.line_items[0].price.endsWith('year') ? 'year' : 'month', organizer: b.subscription_data?.metadata?.organizer, customer: b.customer, customer_email: b.customer_email, success_url: b.success_url, cancel_url: b.cancel_url, status: 'open' };
+      const s = { id: id('cs'), price: b.line_items[0].price, interval: b.line_items[0].price.endsWith('year') ? 'year' : 'month', organizer: b.subscription_data?.metadata?.organizer, customer: b.customer, customer_email: b.customer_email, trial_end: b.subscription_data?.trial_end ? Number(b.subscription_data.trial_end) : null, success_url: b.success_url, cancel_url: b.cancel_url, status: 'open' };
       sessions.set(s.id, s);
       return json(200, { id: s.id, url: `${HERE}/pay/${s.id}` });
     }

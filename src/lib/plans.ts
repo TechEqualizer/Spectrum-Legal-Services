@@ -52,6 +52,8 @@ export function planSummary(plan: Plan, now = Date.now()): { title: string; deta
         : { title: "Free", detail: `Your free Core ended ${day(plan.compedUntil!)}.` };
     case "trialing": {
       if (!core) return { title: "Free", detail: "Your Core trial ended." };
+      // Paid during the trial: Core stays, and the first charge waits for the trial's end.
+      if (plan.interval) return { title: "Core", detail: `Your first charge is ${day(plan.trialEndsAt!)}.` };
       const n = daysLeft(plan.trialEndsAt!, now);
       return { title: "Core trial", detail: `${n === 1 ? "1 day" : `${n} days`} left, until ${day(plan.trialEndsAt!)}.` };
     }

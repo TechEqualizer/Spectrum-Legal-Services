@@ -18,12 +18,16 @@ export async function POST(request: Request) {
   const plan = await planForAdmin(t.admin, t.organizer.slug);
   if (plan === null) return NextResponse.json({ error: "Only the organizer's own admins can start Core." }, { status: 403, headers: NO_STORE });
   if (!plan) return NextResponse.json({ error: "Couldn't load your plan. Try again." }, { status: 502, headers: NO_STORE });
-  if (plan.status === "active" || plan.status === "past_due" || (plan.status === "comped" && hasCore(plan))) {
+  // A trial already paid for (a card on file) counts too.
+  if (plan.status === "active" || plan.status === "past_due" || (plan.status === "comped" && hasCore(plan)) || (plan.status === "trialing" && plan.interval)) {
     return NextResponse.json({ error: "You already have Core." }, { status: 409, headers: NO_STORE });
   }
+  // Keeping Core during the trial costs nothing until it ends, so there's no
+  // reason to wait. (Stripe needs a trial end at least two days out.)
+  const trialEnd = plan.status === "trialing" && plan.trialEndsAt && Date.parse(plan.trialEndsAt) - Date.now() > 2 * 864e5 + 3_600_000 ? Math.floor(Date.parse(plan.trialEndsAt) / 1000) : undefined;
   const billing = await billingOf(t.organizer.slug);
   const returnTo = `${new URL(request.url).origin}/admin/settings`;
-  const url = await checkoutUrl({ organizer: t.organizer.slug, interval, customerId: billing?.customerId, email: t.admin.email, returnTo });
+  const url = await checkoutUrl({ organizer: t.organizer.slug, interval, customerId: billing?.customerId, email: t.admin.email, returnTo, ...(trialEnd ? { trialEnd } : {}) });
   if (!url) return NextResponse.json({ error: "Couldn't open checkout. Try again in a minute." }, { status: 502, headers: NO_STORE });
   return NextResponse.json({ url }, { headers: NO_STORE });
 }
