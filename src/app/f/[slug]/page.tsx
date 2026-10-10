@@ -2,9 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import FunnelExperience, { FunnelSplash } from "@/components/FunnelExperience";
+import { FollowProvider, type FollowTarget } from "@/components/follow/follow";
 import OrganizerEvents from "@/components/OrganizerEvents";
 import { isConcept } from "@/config/site";
 import { funnels } from "@/data/funnels";
+import { followOn } from "@/lib/server/fans";
+import { getOrganizer, organizerOf } from "@/lib/server/funnels";
 import { resolveLink, shownFunnel } from "@/lib/server/links";
 import { shareMetadata } from "@/lib/server/share-card";
 
@@ -71,14 +74,27 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
 export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
   const target = await resolveLink((await params).slug);
   if (!target) notFound();
-  if (target.kind === "choose") return <OrganizerEvents organizer={target.organizer} events={target.events} />;
+  if (target.kind === "choose") {
+    const { organizer } = target;
+    return (
+      <FollowProvider value={followOn(organizer.slug) ? { organizer: organizer.slug, name: organizer.name } : undefined}>
+        <OrganizerEvents organizer={target.organizer} events={target.events} />
+      </FollowProvider>
+    );
+  }
   // The player applies the published edits itself (the admin's preview
   // re-applies them as they're typed); the page is rebuilt when they change.
   const { base, publication, nextNight } = target;
+  // Follow, where the event's organizer has it on (FOLLOW_ORGANIZERS).
+  const organizerSlug = await organizerOf(base.slug);
+  const organizer = followOn(organizerSlug) ? await getOrganizer(organizerSlug!) : undefined;
+  const follow: FollowTarget | undefined = organizer && { organizer: organizer.slug, name: organizer.name, funnelId: base.id };
   return (
-    // useSearchParams (for ?start=) needs a Suspense boundary on a static page.
-    <Suspense fallback={<FunnelSplash funnel={base} publication={publication} />}>
-      <FunnelExperience funnel={base} publication={publication} nextNight={nextNight} />
-    </Suspense>
+    <FollowProvider value={follow}>
+      {/* useSearchParams (for ?start=) needs a Suspense boundary on a static page. */}
+      <Suspense fallback={<FunnelSplash funnel={base} publication={publication} />}>
+        <FunnelExperience funnel={base} publication={publication} nextNight={nextNight} />
+      </Suspense>
+    </FollowProvider>
   );
 }
