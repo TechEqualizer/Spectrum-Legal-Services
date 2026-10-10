@@ -68,6 +68,8 @@ export async function checkoutUrl(input: {
   customerId?: string;
   email?: string;
   returnTo: string;
+  /** Paying during the trial: the first charge waits until it ends (unix seconds). */
+  trialEnd?: number;
 }): Promise<string | null> {
   const prices = await stripe<{ data: { id: string }[] }>("GET", "/v1/prices", { lookup_keys: [PRICE_LOOKUP[input.interval]], active: true });
   const price = prices?.data[0]?.id;
@@ -80,7 +82,7 @@ export async function checkoutUrl(input: {
     line_items: [{ price, quantity: 1 }],
     client_reference_id: input.organizer,
     metadata: { organizer: input.organizer },
-    subscription_data: { metadata: { organizer: input.organizer } },
+    subscription_data: { metadata: { organizer: input.organizer }, ...(input.trialEnd ? { trial_end: input.trialEnd } : {}) },
     ...(input.customerId ? { customer: input.customerId } : input.email ? { customer_email: input.email } : {}),
     success_url: `${input.returnTo}?billing=started`,
     cancel_url: `${input.returnTo}?billing=canceled`,

@@ -206,7 +206,9 @@ check('token never in an API answer', apiBodies.length > 5 && !apiBodies.some((t
 
 // 14. Not configured: the same build without the Eventbrite settings (port 3003).
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const env = { ...process.env, PORT: '3003' };
+// On the run's clock, like the main app (shift-time.cjs): otherwise every
+// sign-in looks expired to it, and its pages' requests race to refresh it.
+const env = { ...process.env, PORT: '3003', NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --require ${new URL('../shift-time.cjs', import.meta.url).pathname}`.trim() };
 for (const k of ['EVENTBRITE_CLIENT_ID', 'EVENTBRITE_CLIENT_SECRET', 'EVENTBRITE_TOKEN_KEY']) delete env[k];
 const bare = spawn('npx', ['next', 'start', '-p', '3003'], { cwd: root, env, stdio: 'ignore', detached: true });
 try {

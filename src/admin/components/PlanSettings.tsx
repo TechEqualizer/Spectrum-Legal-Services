@@ -74,8 +74,9 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
   const summary = plan ? planSummary(plan) : null;
   const core = plan ? hasCore(plan) : false;
   const canStart = Boolean(data?.billing && plan && !core && plan.status !== "past_due");
-  // A trial (no card yet) can start paying before it ends, too.
-  const offer = canStart || Boolean(data?.billing && plan?.status === "trialing" && core);
+  // A trial (no card yet) can keep Core before it ends, at no charge until then.
+  const inTrial = Boolean(plan?.status === "trialing" && core && !plan.interval);
+  const offer = canStart || Boolean(data?.billing && inTrial);
 
   return (
     <section id="plan" ref={sectionRef} aria-labelledby={`${id}-title`} className="scroll-mt-6">
@@ -100,7 +101,7 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                   {organizer.name} · {summary.detail}
                 </p>
               </div>
-              {data?.billing && data.manage && (plan.status === "active" || plan.status === "past_due" || plan.status === "canceled") && (
+              {data?.billing && data.manage && (plan.status === "active" || plan.status === "past_due" || plan.status === "canceled" || (plan.status === "trialing" && plan.interval)) && (
                 <button
                   type="button"
                   disabled={busy}
@@ -146,12 +147,13 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                       onClick={() => go("/api/admin/billing/checkout", { slug: eventSlug, interval: cadence })}
                       className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue disabled:opacity-40"
                     >
-                      {busy ? "Opening…" : "Start Core"}
+                      {busy ? "Opening…" : inTrial ? "Keep Core" : "Start Core"}
                     </button>
                   </div>
                 )}
                 {offer && (
                   <p className="mt-2 text-xs text-gray-600">
+                    {inTrial && plan?.trialEndsAt ? `No charge until your trial ends, ${new Date(plan.trialEndsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}. ` : ""}
                     {cadence === "year" ? "Two months free. " : ""}You pay on Stripe&apos;s secure page; cancel any time from here.
                   </p>
                 )}

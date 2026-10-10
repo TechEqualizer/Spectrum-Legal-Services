@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { selectAdminBusiness, useAdminBusinesses, useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
+import CoreNudge, { CoreNudgeChip } from "@/admin/components/CoreNudge";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
 import { startTour } from "@/admin/tour";
@@ -115,7 +116,13 @@ export default function AdminNav() {
           </>)}
           {businesses.length <= 1 && <p className="mt-1 text-sm font-semibold">{funnel ? funnel.brand.name : "No events yet"}</p>}
         </div>
-        <Account collapsed={collapsed} />
+        <div className="flex items-center gap-2 lg:block">
+          {/* Phones: Core's nudge beside the account (the sidebar has its own). */}
+          <span className="lg:hidden">
+            <CoreNudgeChip />
+          </span>
+          <Account collapsed={collapsed} />
+        </div>
       </div>
       {/* Phones: a bottom tab bar, every place visible and in thumb reach. Desktop: the sidebar. */}
       <ul
@@ -159,6 +166,8 @@ export default function AdminNav() {
         })}
       </ul>
       <div className="hidden space-y-1 px-3 pb-5 lg:mt-auto lg:block">
+        {/* Core: the trial's days left and Keep Core, or Get Core on Free. */}
+        <CoreNudge collapsed={collapsed} />
         <Link
           href="/admin/settings"
           aria-current={pathname.startsWith("/admin/settings") ? "page" : undefined}
