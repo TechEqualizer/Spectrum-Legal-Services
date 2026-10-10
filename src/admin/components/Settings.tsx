@@ -5,6 +5,7 @@ import { Suspense, useId, useRef, useState } from "react";
 import { useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import Accounts from "@/admin/components/Accounts";
 import EventbriteSettings from "@/admin/components/EventbriteSettings";
+import Invites from "@/admin/components/Invites";
 import OrganizerPhotos from "@/admin/components/OrganizerPhotos";
 import PlanSettings from "@/admin/components/PlanSettings";
 import Waitlist from "@/admin/components/Waitlist";
@@ -231,6 +232,8 @@ export default function Settings() {
       {fullAccess && <Accounts />}
 
       {/* Showlnk's own waitlist, from the home page. */}
+      {fullAccess && <Invites />}
+
       {fullAccess && <Waitlist />}
 
       {changing && <PasswordSheet onClose={() => setChanging(false)} />}

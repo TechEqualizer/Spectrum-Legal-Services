@@ -83,6 +83,9 @@ still moves forward during a run.
     mock Stripe (`mocks/stripe.mjs`): checkout and back, paying, signed
     webhooks only, a declined card, canceling in the portal, starting again
     with the same customer, comped and other businesses refused.
+  - `invites`: Settings → Invites (sign-up step 0): a link shown once,
+    each invite's state, revoking, the wizard's check (valid, unknown,
+    reads left, expired, revoked), and only Showlnk can see or make them.
   - `plan`: Settings → Plan (billing step 1): comped, trial days left and
     Free with what Core adds; only the organizer's own admins can read it.
   - `calendar-feed`: the organizer's calendar feed (step 5): upcoming

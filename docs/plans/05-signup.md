@@ -91,8 +91,14 @@ Most conversion figures in these are vendors' own and unverified.
 
 ## Steps
 
-0. **Invites.** Migration for `signup_invites`; Settings → Invites for
-   full admins. Live page impact: none.
+0. **Invites (built).** Migration `20261024000000_signup_invites.sql`:
+   `signup_invites` (only a hash of each code), with create, list and
+   revoke for full admins and `use_signup_invite_read()` for the server
+   (5 flyer reads each). Settings → Invites: who it's for, Make invite
+   link (shown once, Copy link), each invite's state (waiting with reads
+   used, joined, expired, revoked) and Revoke. `/api/start/invite?code=`
+   tells the wizard whether an invite is usable, and nothing about whom
+   it's for. Invites last 30 days. Live page impact: none.
 1. **Step 1, the flyer.** `/start` with a valid invite: upload, role, the
    phone filling in as the flyer is read. Live page impact: none
    (invite-only).
@@ -122,9 +128,6 @@ Most conversion figures in these are vendors' own and unverified.
 - Core's 14-day trial starts at claim (Oct 10, 2026), replacing "when they
   reach 100 fans".
 - Invite-only for now.
-
-## Open questions
-
-1. **Roles:** Promoter, Venue, Artist or DJ, Organizer. Right list?
-2. **Sign-in at claim:** email and password (like the admin today), or an
-   emailed sign-in link (no password to remember)?
+- Roles: Promoter, Venue, Artist or DJ, Organizer.
+- Claim with email and password (the admin's own sign-in): no detour to an
+  inbox at the moment they're most sold.

@@ -47,6 +47,7 @@ const fanTokens = new Map(); // token_hash -> row
 const signedFans = new Map(); // signed-address token -> { path, until }
 const presales = new Map(); // funnel_id -> [{ funnel_id, date_id, url }], like event_presales
 const sourceNames = new Map(); // organizer_slug -> Map(tag -> name), like source_names
+const invites = new Map(); // code_hash -> row, like signup_invites
 const organizerPlans = new Map(); // organizer_slug -> row, like organizer_plans (Big Love comped, as the migration seeds)
 const seedPlans = () => { organizerPlans.clear(); organizerPlans.set('biglove', { status: 'comped', billing_interval: null, trial_ends_at: null, current_period_end: null, comped_until: null }); };
 seedPlans();
@@ -89,7 +90,7 @@ http.createServer((req, res) => {
     // Test control: every pending sign-in link expires now.
     if (p === '/__fan-expire') { for (const t of fanTokens.values()) t.expires_at = Date.now() - 1000; return json(res, 200, { ok: true }); }
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); presales.clear(); sourceNames.clear(); seedPlans(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); presales.clear(); sourceNames.clear(); invites.clear(); seedPlans(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -178,6 +179,34 @@ http.createServer((req, res) => {
       return json(res, 200, mine
         .map(([, f]) => ({ email: fans.get(f.fan_id)?.email, source_tag: f.source_tag, funnel_id: f.funnel_id, confirmed_at: new Date(f.confirmed_at).toISOString(), unfollowed_at: f.unfollowed_at ? new Date(f.unfollowed_at).toISOString() : null }))
         .sort((a, b) => b.confirmed_at.localeCompare(a.confirmed_at)));
+    }
+    // Like create_signup_invite / signup_invites_list / revoke_signup_invite: full admins only.
+    if (p === '/rest/v1/rpc/create_signup_invite' || p === '/rest/v1/rpc/signup_invites_list' || p === '/rest/v1/rpc/revoke_signup_invite') {
+      const email = emailOf(req);
+      if (!email || !users[email]?.admin || !users[email].slugs.includes('*')) return json(res, 403, { code: '42501', message: 'not allowed' });
+      if (p.endsWith('create_signup_invite')) {
+        if (!/^[0-9a-f]{64}$/.test(body.p_code_hash) || !String(body.p_note ?? '').trim()) return json(res, 400, { code: '23514', message: 'check constraint' });
+        const row = { id: crypto.randomUUID(), code_hash: body.p_code_hash, note: body.p_note.trim(), created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 30 * 864e5).toISOString(), flyer_reads: 0, claimed_at: null, claimed_organizer: null, revoked_at: null };
+        invites.set(row.code_hash, row);
+        return json(res, 200, row.id);
+      }
+      if (p.endsWith('signup_invites_list')) return json(res, 200, [...invites.values()].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(({ code_hash, ...r }) => r));
+      const row = [...invites.values()].find((r) => r.id === body.p_id && !r.revoked_at && !r.claimed_at);
+      if (row) row.revoked_at = new Date().toISOString();
+      return json(res, 200, Boolean(row));
+    }
+    // The invites table itself: the secret key only (the wizard checks an invite).
+    if (p === '/rest/v1/signup_invites') {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: 'permission denied for table signup_invites' });
+      const row = invites.get((url.searchParams.get('code_hash') || '').replace(/^eq\./, ''));
+      return json(res, 200, row ? [{ expires_at: row.expires_at, flyer_reads: row.flyer_reads, claimed_at: row.claimed_at, revoked_at: row.revoked_at }] : []);
+    }
+    // Test control: change an invite by its note (expires_at, flyer_reads, claimed_at).
+    if (p === '/__invite' && req.method === 'POST') {
+      const row = [...invites.values()].find((r) => r.note === body.note);
+      if (!row) return json(res, 404, { error: 'no invite' });
+      Object.assign(row, body.set);
+      return json(res, 200, { ok: true });
     }
     // The plans table itself: the secret key only (the webhook writes it, billing reads its Stripe ids).
     if (p === '/rest/v1/organizer_plans') {
