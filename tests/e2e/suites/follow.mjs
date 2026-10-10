@@ -25,7 +25,6 @@ const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile
 await ctx.route(/i\.ytimg\.com/, (r) => r.fulfill({ status: 200, contentType: 'image/png', body: png }));
 await ctx.route(/youtube-nocookie\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<body></body>' }));
 const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
-const rail = () => p.getByRole('dialog').first();
 
 // Big Love doesn't have Follow on: its link is unchanged.
 await p.goto(B + '/f/masquerade?src=instagram'); await settle(p, 2000);
