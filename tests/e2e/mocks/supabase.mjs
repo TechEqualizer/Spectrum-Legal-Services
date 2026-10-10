@@ -45,6 +45,7 @@ const fans = new Map(); // id -> { id, email }
 const follows = new Map(); // `${fanId}|${organizer}` -> row
 const fanTokens = new Map(); // token_hash -> row
 const signedFans = new Map(); // signed-address token -> { path, until }
+const presales = new Map(); // funnel_id -> [{ funnel_id, date_id, url }], like event_presales
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
 let seq = 0;
@@ -80,11 +81,11 @@ http.createServer((req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     // Test controls
     if (p === '/__log') return json(res, 200, log);
-    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()], eventbriteConnections: [...ebConnections.values()], ticketSales: [...ticketSales.values()], eventDates: Object.fromEntries(eventDates), fans: [...fans.values()], follows: [...follows.values()], fanTokens: [...fanTokens.values()] });
+    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()], eventbriteConnections: [...ebConnections.values()], ticketSales: [...ticketSales.values()], eventDates: Object.fromEntries(eventDates), presales: Object.fromEntries(presales), fans: [...fans.values()], follows: [...follows.values()], fanTokens: [...fanTokens.values()] });
     // Test control: every pending sign-in link expires now.
     if (p === '/__fan-expire') { for (const t of fanTokens.values()) t.expires_at = Date.now() - 1000; return json(res, 200, { ok: true }); }
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); presales.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -158,6 +159,22 @@ http.createServer((req, res) => {
         if (users[target]) users[target].admin = false;
         return json(res, 204);
       }
+    }
+    // Like set_event_presales / event_presales_for: an event's presale links, for its admins only.
+    if (p === '/rest/v1/rpc/set_event_presales' || p === '/rest/v1/rpc/event_presales_for') {
+      const email = emailOf(req);
+      if (!email || !canPublishFunnel(email, body.p_slug)) return json(res, 403, { code: '42501', message: 'not allowed' });
+      const ef = eventFunnels.get(body.p_slug);
+      if (p.endsWith('event_presales_for')) return json(res, 200, ef ? (presales.get(ef.funnel_id) ?? []).map((r) => ({ date_id: r.date_id, url: r.url })) : []);
+      if (!ef) return json(res, 200, 0);
+      if (body.p_presales.some((x) => !/^https:\/\//.test(x.url))) return json(res, 400, { code: '23514', message: 'check constraint' });
+      presales.set(ef.funnel_id, body.p_presales.map((x) => ({ funnel_id: ef.funnel_id, date_id: x.dateId, url: x.url })));
+      return json(res, 200, body.p_presales.length);
+    }
+    // The table itself: the secret key only.
+    if (p === '/rest/v1/event_presales') {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: 'permission denied for table event_presales' });
+      return json(res, 200, presales.get((url.searchParams.get('funnel_id') || '').replace(/^eq\./, '')) ?? []);
     }
     // Like set_event_dates: an event's dates as rows, for an admin who may publish it.
     if (p === '/rest/v1/rpc/set_event_dates') {

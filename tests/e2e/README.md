@@ -73,8 +73,12 @@ still moves forward during a run.
     watch"; a follower's signed address that plays; a follower of another
     organizer refused; admins' private uploads and preview addresses; the
     editor's switch with the content rule.
+  - `presale`: a presale for followers (step 4): the link kept out of the
+    published edits and the page; "Fans get tickets first" for a visitor,
+    "Get presale tickets" for a follower, nothing after the window;
+    others refused; the date sheet's presale fields.
   - `follow`: Follow on the link (step 2), on only for the fan suites' own
-    test organizers (`FOLLOW_ORGANIZERS=gh-follow,gh-reels`, added to the
+    test organizers (`FOLLOW_ORGANIZERS=gh-follow,gh-reels,gh-presale`, added to the
     mock with `/__organizer`, with Golden Hour's event at their own links:
     the app keeps what earlier suites saw at `/f/sundays` for the run). Big Love's link keeps Updates. The rail's Follow, the
     sheet, "Check your email", Following after confirming, unfollow, a
@@ -138,6 +142,7 @@ still moves forward during a run.
   the test key only) instead of sending it. Control routes: `/__emails`
   (every email, oldest first), `/__fail` (the next send fails), `/__reset`.
   The Supabase mock has the `fan_*` functions (secret key only), the
+  presale functions and table (`event_presales`), the
   private `reel-media-fans` bucket (signed addresses only), `/__fan-expire`
   (expires every pending sign-in link) and `/__fan-file?path=` (puts a file
   in the private bucket).

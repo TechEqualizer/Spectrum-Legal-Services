@@ -56,6 +56,13 @@ export type FunnelEvent = {
   ticketUrl: string;
   status?: "on_sale" | "few_left" | "sold_out";
   /**
+   * A presale for the organizer's followers: when it opens and ends (ISO
+   * moments). Its link (`url`) is private: it's kept out of the published
+   * edits and pages (event_presales), and only the editor and followers
+   * during the window get it.
+   */
+  presale?: { opensAt: string; endsAt: string; url?: string };
+  /**
    * The reel this date's circle opens. Without it (or if that reel is gone),
    * the first reel whose eventId is this date.
    */

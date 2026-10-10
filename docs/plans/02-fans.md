@@ -181,12 +181,22 @@ Each step is one PR.
 - **Gating tests:** the `fan-reels` suite.
 - Live page impact: none until a reel is switched to fans only.
 
-### 4. Presale
+### 4. Presale (built)
 
-- Presale link and window on each date (the Dates editor), stored on the
-  date rows.
-- On the link, followers see the presale button during the window.
-  Others see the follow prompt.
+- **Editor:** "Presale for followers" on each date (the date sheet): the
+  link (an access-code or hidden ticket link) and when it opens and ends,
+  on the date's own clock.
+- **Where it's kept:** the window is published with the date (anyone can
+  read published edits); the link isn't. It lives in `event_presales`
+  (migration `20261020000000_presales.sql`): the event's admins write and
+  read it through `set_event_presales` / `event_presales_for`, the server
+  reads it with the secret key. Publishing takes the link out first;
+  taking edits down clears them.
+- **On the link,** during the window, where the organizer has Follow on:
+  followers get "Get presale tickets" (the link from
+  `/api/fans/presale`, which checks the cookie, the follow and the
+  window); everyone else gets "Fans get tickets first" and Follow.
+- Tests: the `presale` suite.
 - Live page impact: none until a date has a presale.
 
 ### 5. Calendar feed

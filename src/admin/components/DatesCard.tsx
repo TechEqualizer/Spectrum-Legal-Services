@@ -319,6 +319,11 @@ function DateSheet({
   const [price, setPrice] = useState(event.price ?? "");
   const [ticketUrl, setTicketUrl] = useState(event.ticketUrl);
   const [status, setStatus] = useState<Status>(event.status ?? "on_sale");
+  // A presale for followers: its link and window, on the date's own clock.
+  const [presaleOn, setPresaleOn] = useState(Boolean(event.presale));
+  const [presaleUrl, setPresaleUrl] = useState(event.presale?.url ?? "");
+  const [opens, setOpens] = useState(() => instantToZoned(event.presale?.opensAt ?? new Date().toISOString(), timeZone));
+  const [ends, setEnds] = useState(() => instantToZoned(event.presale?.endsAt ?? new Date(Date.now() + 2 * 864e5).toISOString(), timeZone));
   const [reel, setReel] = useState<ReelChoice>(initialReel);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Where the chosen reel sells tickets now, if that's another date (choosing it moves it here).
@@ -338,6 +343,18 @@ function DateSheet({
     } catch {
       problems.ticketUrl = "Paste the ticket page link, starting with https://.";
     }
+    let presale: FunnelEvent["presale"];
+    if (presaleOn) {
+      try {
+        if (new URL(presaleUrl.trim()).protocol !== "https:") throw new Error();
+      } catch {
+        problems.presaleUrl = "Paste the presale link (your access-code or hidden ticket link), starting with https://.";
+      }
+      const opensAt = zonedToInstant(opens.date, opens.time || "00:00", timeZone);
+      const endsAt = zonedToInstant(ends.date, ends.time || "00:00", timeZone);
+      if (!opensAt || !endsAt || Date.parse(endsAt) <= Date.parse(opensAt)) problems.presaleWindow = "The presale must end after it opens.";
+      else presale = { opensAt, endsAt, url: presaleUrl.trim() };
+    }
     setErrors(problems);
     if (Object.keys(problems).length) return;
     onSave({
@@ -350,6 +367,7 @@ function DateSheet({
       ...(venue.trim() ? { venue: venue.trim() } : {}),
       ...(price.trim() ? { price: price.trim() } : {}),
       ...(status !== "on_sale" ? { status } : {}),
+      ...(presale ? { presale } : {}),
     }, reel);
   };
 
@@ -423,6 +441,58 @@ function DateSheet({
               />
               {err("ticketUrl")}
             </div>
+          </div>
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
+              <p id={`${id}-presale`} className="text-xs font-semibold uppercase tracking-wider text-gray-500">Presale for followers</p>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={presaleOn}
+                aria-labelledby={`${id}-presale`}
+                onClick={() => setPresaleOn((on) => !on)}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${presaleOn ? "bg-teal-accent" : "bg-gray-300"}`}
+              >
+                <span aria-hidden="true" className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${presaleOn ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+            </div>
+            {presaleOn ? (
+              <div className="divide-y divide-gray-100 rounded-xl bg-white">
+                <div className="px-4 py-3">
+                  <label htmlFor={`${id}-presale-url`} className="text-sm font-semibold text-deep-navy">Presale link</label>
+                  <input
+                    id={`${id}-presale-url`}
+                    type="url"
+                    inputMode="url"
+                    className={field}
+                    placeholder="Your access-code or hidden ticket link"
+                    value={presaleUrl}
+                    onChange={(e) => setPresaleUrl(e.target.value)}
+                    aria-invalid={Boolean(errors.presaleUrl)}
+                    aria-describedby={`${id}-presale-help${errors.presaleUrl ? ` ${id}-presaleUrl-error` : ""}`}
+                  />
+                  {err("presaleUrl")}
+                  <p id={`${id}-presale-help`} className="mt-1 text-xs text-gray-500">Only followers get it, during the window. Everyone else sees &ldquo;Fans get tickets first&rdquo;.</p>
+                </div>
+                {([["Opens", opens, setOpens], ["Ends", ends, setEnds]] as const).map(([label, value, set]) => (
+                  <div key={label} className="grid grid-cols-2 gap-3 px-4 py-3">
+                    <div>
+                      <label htmlFor={`${id}-presale-${label}-date`} className="text-sm font-semibold text-deep-navy">{label}</label>
+                      <input id={`${id}-presale-${label}-date`} type="date" className={field} value={value.date} onChange={(e) => set({ ...value, date: e.target.value })} />
+                    </div>
+                    <div>
+                      <label htmlFor={`${id}-presale-${label}-time`} className="text-sm font-semibold text-deep-navy">At</label>
+                      <input id={`${id}-presale-${label}-time`} type="time" className={field} value={value.time} onChange={(e) => set({ ...value, time: e.target.value })} />
+                      {timeZone && <p className="mt-1 text-xs text-gray-500">{zoneName(timeZone)} time</p>}
+                    </div>
+                  </div>
+                ))}
+                {errors.presaleWindow && <div className="px-4 py-2">{err("presaleWindow")}</div>}
+              </div>
+            ) : (
+              <p className="px-1 text-xs text-gray-500">Give followers tickets first, with a link only they get.</p>
+            )}
           </div>
 
           <div>

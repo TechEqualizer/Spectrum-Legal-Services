@@ -12,6 +12,7 @@ import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import FollowSheet from "@/components/follow/FollowSheet";
 import { followLabel, useFollowTarget, useIsFollowing } from "@/components/follow/follow";
 import { useFanMedia } from "@/components/follow/fan-media";
+import PresaleNotice from "@/components/follow/PresaleNotice";
 import SourceLink from "@/components/SourceLink";
 import { eventChip, formatEventDate, isOver, lastDate, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
 import { eventDate, eventDayOfMonth, eventTime, type EventClock } from "@/lib/event-time";
@@ -322,11 +323,18 @@ export default function FunnelExperience({
         funnel={coverFunnel}
         revealed
         eyebrow={eyebrow}
-        actions={actions}
+        actions={actions && (
+          <>
+            {/* A presale for followers, while one is open (only where Follow is on). */}
+            {!over && <PresaleNotice funnel={funnel} now={now} />}
+            {actions}
+          </>
+        )}
         paused={Boolean(visit)}
         onSwipeUp={hero && !visit ? () => startAt(over ? recapReel : peekReel) : undefined}
       >
         {!hero && (<>
+        <PresaleNotice funnel={funnel} now={now} />
         <ul className="mt-1 grid gap-2" role="list">
           {isEvents
             ? upcoming.map((event) => {
