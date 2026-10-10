@@ -4,7 +4,10 @@
 // "Check your email"; after confirming, the link shows "Following ✓" and
 // can unfollow. The organizer's choose-a-night page has Follow too.
 import { chromium, settle } from '../browser.mjs';
-import { addGoldenHour, ORGANIZER } from '../fixtures/golden-hour.mjs';
+import { addGoldenHour } from '../fixtures/golden-hour.mjs';
+// Its own test organizer and links: other suites visit Golden Hour's link
+// first, and the app keeps what it saw (no Follow there) for the whole run.
+const ORGANIZER = 'gh-follow';
 const B = 'http://localhost:3002';
 const DB = 'http://localhost:54321';
 const MAIL = 'http://localhost:54700';
@@ -15,10 +18,10 @@ const state = async () => (await fetch(DB + '/__state')).json();
 const linkIn = (mail) => mail.text.match(/https?:\/\/\S+\/fans\/confirm\?token=[A-Za-z0-9_-]{43}/)?.[0];
 
 await fetch(DB + '/__organizer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: ORGANIZER, name: 'Golden Hour Sundays' }) });
-const gh = await addGoldenHour();
+const gh = await addGoldenHour((g) => ({ ...g, slug: 'follow-sundays', id: 'follow-sundays' }), DB, ORGANIZER);
 // A second event, so the organizer's permanent link is a choose-a-night page
 // (added before any visit: the app caches the organizer's events).
-await addGoldenHour((g) => ({ ...g, slug: 'sundays-two', id: 'golden-hour-two' }));
+await addGoldenHour((g) => ({ ...g, slug: 'follow-sundays-two', id: 'follow-sundays-two' }), DB, ORGANIZER);
 const b = await chromium.launch();
 const errs = [];
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -33,7 +36,7 @@ check("Big Love's rail keeps Updates", await p.getByRole('button', { name: 'Upda
 check("Big Love's rail has no Follow", await p.getByRole('button', { name: /^Follow/ }).count() === 0);
 
 // Golden Hour has it on: the rail's text-me button is Follow.
-await p.goto(B + '/f/sundays?src=tiktok'); await settle(p, 2000);
+await p.goto(B + '/f/' + gh.slug + '?src=tiktok'); await settle(p, 2000);
 await p.getByRole('button', { name: /^(Sneak peek inside|Watch)$/ }).first().click(); await settle(p, 1000);
 const follow = p.getByRole('button', { name: 'Follow', exact: true }).first();
 check('the rail shows Follow', await follow.isVisible());
@@ -58,7 +61,7 @@ check('Keep watching closes the sheet', await p.getByRole('heading', { name: 'Ch
 // Confirming in the same browser: the link then shows Following.
 await p.goto(linkIn(mail)); await settle(p, 800);
 await p.getByRole('button', { name: 'Confirm and follow' }).click(); await p.waitForURL(/following=/); await settle(p, 800);
-await p.goto(B + '/f/sundays'); await settle(p, 2000);
+await p.goto(B + '/f/' + gh.slug); await settle(p, 2000);
 await p.getByRole('button', { name: /^(Sneak peek inside|Watch)$/ }).first().click(); await settle(p, 1500);
 const following = p.getByRole('button', { name: 'Following', exact: true }).first();
 await following.waitFor({ timeout: 5000 }).catch(() => {});

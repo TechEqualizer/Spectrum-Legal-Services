@@ -110,14 +110,15 @@ export function goldenHour() {
 /**
  * Adds /f/sundays to the mock database (a suite's mock state starts
  * fresh) and returns the funnel. `change` makes a variant first, e.g. one at
- * another slug with no opening footage.
+ * another slug with no opening footage; `organizer` files it under another
+ * (test-only) organizer.
  */
-export async function addGoldenHour(change = (f) => f, mock = 'http://localhost:54321') {
+export async function addGoldenHour(change = (f) => f, mock = 'http://localhost:54321', organizer = ORGANIZER) {
   const data = change(goldenHour());
   const res = await fetch(mock + '/__event', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ slug: data.slug, funnel_id: data.id, organizer_slug: ORGANIZER, data }),
+    body: JSON.stringify({ slug: data.slug, funnel_id: data.id, organizer_slug: organizer, data }),
   });
   if (!res.ok) throw new Error(`Couldn't add ${data.slug} to the mock: ${res.status}`);
   return data;

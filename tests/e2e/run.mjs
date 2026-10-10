@@ -56,9 +56,9 @@ env.RESEND_API_KEY = "test-resend";
 env.RESEND_API_BASE = RESEND;
 env.FAN_COOKIE_SECRET = "test-fan-cookie-secret";
 env.SHOWLNK_POSTAL_ADDRESS = "1 Test Street, Detroit, MI 48201";
-// Follow is on for the test-only Golden Hour organizer alone: Big Love's
-// links keep "Updates" and "Text me", as in production for now.
-env.FOLLOW_ORGANIZERS = "goldenhour";
+// Follow is on only for the fan suites' own test organizers: Big Love's (and
+// Golden Hour's) links keep "Updates" and "Text me", as in production for now.
+env.FOLLOW_ORGANIZERS = "gh-follow,gh-reels";
 // The calendar every process in the run sees (shift-time.cjs), so tests
 // written around Big Love's Oct 31 night don't depend on today's date.
 // E2E_NOW sets another moment, e.g. to try a run after the night.
