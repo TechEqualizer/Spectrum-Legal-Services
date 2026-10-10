@@ -13,7 +13,8 @@ const CTAS: FunnelCta[] = ["call", "book", "tickets"];
 const EMPHASES: ReelEmphasis[] = ["quiet", "builds", "bold"];
 const STATUSES = ["on_sale", "few_left", "sold_out"];
 const PROVIDERS = ["eventbrite", "posh", "dice", "other"];
-const THEME_KEYS = ["--deep-navy", "--royal-blue", "--teal-accent", "--sky-accent", "--soft-gray", "--on-accent"];
+// Every key a theme can carry, including the two a saved look adds (themeOf).
+const THEME_KEYS = ["--deep-navy", "--royal-blue", "--teal-accent", "--sky-accent", "--soft-gray", "--on-accent", "--fx-color"];
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const COPY_TEXT = [
   "bookPrimary", "callBack", "callNow", "coverCallPrompt", "coverCall", "bookDone", "textLaterDone",
