@@ -67,6 +67,11 @@ still moves forward during a run.
     it only shows the page and its button confirms; the signed cookie; links
     that are used, expired, made up or rate-limited; unfollow and forget;
     the fan functions closed to visitors.
+  - `follow`: Follow on the link (step 2), on for the test-only Golden Hour
+    organizer only (`FOLLOW_ORGANIZERS=goldenhour`; added to the mock with
+    `/__organizer`). Big Love's link keeps Updates. The rail's Follow, the
+    sheet, "Check your email", Following after confirming, unfollow, a
+    refused follow's message, and the choose-a-night page's Follow.
   - `legal`: the organizer terms (`/terms`, with the content rule) and the
     privacy note (`/privacy`), linked from the home page's footer and
     readable on a phone.

@@ -1,5 +1,6 @@
 import BrandLogo from "@/components/BrandLogo";
 import EventWhen from "@/components/EventWhen";
+import FollowButton from "@/components/follow/FollowButton";
 import SourceLink from "@/components/SourceLink";
 import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
@@ -33,6 +34,7 @@ export default function OrganizerEvents({
             <span className="sr-only">{organizer.name}: </span>Coming up
           </h1>
           <p className="mt-2 text-sm text-gray-300">Tap a night to watch, then get tickets.</p>
+          <FollowButton className="mt-5 inline-flex min-h-11 items-center rounded-full bg-white/10 px-5 text-sm font-semibold text-white ring-1 ring-white/20 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-accent" />
         </header>
 
         <ul role="list" className="mt-6 space-y-4">

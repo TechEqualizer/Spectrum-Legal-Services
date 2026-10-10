@@ -14,6 +14,8 @@ import { thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
 import { eventDate } from "@/lib/event-time";
 import { eventChip, eventOf, formatEventDate, isOver, ticketHref, ticketTarget, type NextNight } from "@/lib/events";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
+import FollowSheet from "@/components/follow/FollowSheet";
+import { followLabel, useFollowTarget, useIsFollowing } from "@/components/follow/follow";
 import SourceLink from "@/components/SourceLink";
 import type { LeadIntent } from "@/lib/leads";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
@@ -44,6 +46,9 @@ const CALENDAR = "M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 
 const PHONE =
   "M5 4h3l2 5-2.5 1.5a11 11 0 006 6L15 14l5 2v3a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z";
 const MESSAGE = "M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z";
+// A person with a plus (Follow), and with a tick (Following).
+const FOLLOW = "M15 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9 10a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19 8v6M16 11h6";
+const FOLLOWING = "M15 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9 10a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM16 11l2 2 4-4";
 const TICKET =
   "M4 7a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4V7zM14 5v2M14 11v2M14 17v2";
 const SHARE = "M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13";
@@ -79,8 +84,11 @@ export default function ReelViewer({
   // the browser still refuses sound, it plays muted: see VideoSlide). YouTube
   // starts muted: its player stays stopped rather than falling back.
   const [isMuted, setIsMuted] = useState(() => funnelReel(funnel, startReelId)?.media?.kind !== "video");
-  // The booking or "text me later" form, open over the reel.
-  const [sheet, setSheet] = useState<LeadIntent | null>(null);
+  // The booking or "text me later" form, or Follow, open over the reel.
+  const [sheet, setSheet] = useState<LeadIntent | "follow" | null>(null);
+  // Where the organizer has Follow on, it takes "Text me later"'s place.
+  const follow = useFollowTarget();
+  const isFollowing = useIsFollowing(follow?.organizer);
   const isModal = variant === "modal";
   const closeLabel = isModal ? "Back to the site" : "Pick another topic";
   const brand = funnel.brand;
@@ -160,6 +168,7 @@ export default function ReelViewer({
       trackReelEvent(funnel, reel.id, "text_later_clicked");
       setSheet("text_later");
     },
+    ...(follow ? { onFollow: () => setSheet("follow"), followText: followLabel(isFollowing) } : {}),
   };
 
   // A tap on the video pauses or plays it.
@@ -321,11 +330,16 @@ export default function ReelViewer({
         </>
       )}
       {/* On a sold-out date, Waitlist already is the text-me button. */}
-      {!waitlist && (
-        <RailButton placement={placement} label={brand.copy.textLaterButton ?? "Text me"} onClick={ctas.onTextLater}>
-          <path d={MESSAGE} />
-        </RailButton>
-      )}
+      {!waitlist &&
+        (ctas.onFollow ? (
+          <RailButton placement={placement} label={isFollowing ? "Following" : "Follow"} onClick={ctas.onFollow}>
+            <path d={isFollowing ? FOLLOWING : FOLLOW} />
+          </RailButton>
+        ) : (
+          <RailButton placement={placement} label={brand.copy.textLaterButton ?? "Text me"} onClick={ctas.onTextLater}>
+            <path d={MESSAGE} />
+          </RailButton>
+        ))}
       <RailButton placement={placement} label={copied ? "Copied" : "Share"} onClick={share}>
         <path d={SHARE} />
       </RailButton>
@@ -483,7 +497,16 @@ export default function ReelViewer({
           )}
         </div>
 
-        {sheet && (
+        {sheet === "follow" && follow && (
+          <FollowSheet
+            target={follow}
+            onClose={() => {
+              setSheet(null);
+              dialogRef.current?.focus();
+            }}
+          />
+        )}
+        {sheet && sheet !== "follow" && (
           <FunnelLeadSheet
             key={sheet}
             funnel={funnel}
@@ -546,6 +569,9 @@ type CtaHandlers = {
   onCall: () => void;
   onBook: () => void;
   onTextLater: () => void;
+  /** Follow the organizer, where they have it on: it replaces "Text me later". */
+  onFollow?: () => void;
+  followText?: string;
 };
 
 const primaryClass =
@@ -567,6 +593,8 @@ function CtaButtons({
   onCall,
   onBook,
   onTextLater,
+  onFollow,
+  followText,
 }: CtaHandlers & { brand: FunnelBrand; primary: Funnel["primaryCta"] }) {
   const phone = brand.phone;
   const call = (className: string, label: string) =>
@@ -581,8 +609,8 @@ function CtaButtons({
     </button>
   );
   const textLater = (className: string) => (
-    <button type="button" onClick={onTextLater} className={className}>
-      {brand.copy.textLaterButton ?? "Text me later"}
+    <button type="button" onClick={onFollow ?? onTextLater} className={className}>
+      {onFollow ? followText : (brand.copy.textLaterButton ?? "Text me later")}
     </button>
   );
   const main =

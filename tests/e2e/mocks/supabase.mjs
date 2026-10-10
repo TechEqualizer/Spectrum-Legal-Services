@@ -203,6 +203,8 @@ http.createServer((req, res) => {
     if (p === '/rest/v1/organizers' && req.method === 'GET') {
       return json(res, 200, [...organizers.values()].filter((o) => !eq('slug') || o.slug === eq('slug')));
     }
+    // Test control: add an organizer straight to the table (a test-only one, e.g. Golden Hour's).
+    if (p === '/__organizer' && req.method === 'POST') { organizers.set(body.slug, { slug: body.slug, name: body.name }); return json(res, 201); }
     // Test control: add an event straight to the table (a second organizer event, dated).
     if (p === '/__event' && req.method === 'POST') { eventFunnels.set(body.slug, body); return json(res, 201); }
     // Test control: visitors' past reel events, dated `daysAgo` days back (for results over several periods).

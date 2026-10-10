@@ -9,6 +9,8 @@ import type { Funnel, FunnelEvent } from "@/data/funnel-types";
 import { applyPublication, type Publication } from "@/lib/publication";
 import { funnelReel } from "@/data/reels";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
+import FollowSheet from "@/components/follow/FollowSheet";
+import { followLabel, useFollowTarget, useIsFollowing } from "@/components/follow/follow";
 import SourceLink from "@/components/SourceLink";
 import { eventChip, formatEventDate, isOver, lastDate, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
 import { eventDate, eventDayOfMonth, eventTime, type EventClock } from "@/lib/event-time";
@@ -115,6 +117,9 @@ export default function FunnelExperience({
   const next = over && nextNight && !isOver(nextNight, now) ? nextNight : undefined;
   const nextWhen = next && formatEventDate(next);
   const [updates, setUpdates] = useState(false);
+  // Where the organizer has Follow on, it takes Updates' place.
+  const follow = useFollowTarget();
+  const isFollowing = useIsFollowing(follow?.organizer);
   // Its words were about getting tickets; now they're about the night that was.
   const afterLine = next ? "Relive the night, then see what's next." : "Relive the night.";
   const coverFunnel = over
@@ -176,7 +181,7 @@ export default function FunnelExperience({
           </SourceLink>
         ) : (
           <button type="button" onClick={() => setUpdates(true)} className={`${GLASS} px-5 max-[380px]:px-4`}>
-            {brand.copy.textLaterButton ?? "Updates"}
+            {follow ? followLabel(isFollowing) : (brand.copy.textLaterButton ?? "Updates")}
           </button>
         )}
       </div>
@@ -410,7 +415,8 @@ export default function FunnelExperience({
           after={over ? { next } : undefined}
         />
       )}
-      {updates && funnelReel(funnel, recapReel) && (
+      {updates && follow && <FollowSheet target={follow} onClose={() => setUpdates(false)} />}
+      {updates && !follow && funnelReel(funnel, recapReel) && (
         <FunnelLeadSheet
           funnel={funnel}
           intent="text_later"

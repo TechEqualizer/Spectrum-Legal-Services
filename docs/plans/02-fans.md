@@ -145,18 +145,22 @@ Each step is one PR.
 - Tests: the `fans` suite, with a mock Resend that keeps the emails.
 - Live page impact: none (nothing on the page uses it yet).
 
-### 2. Follow on the link
+### 2. Follow on the link (built)
 
-- "Follow <organizer>" in the reel rail, on the end card, on the
-  organizer's choose-a-night page and on the recap.
-  - It replaces "Text me later" for event links.
+- "Follow" in the reel rail, on the end card, after the night (in place of
+  Updates) and on the organizer's choose-a-night page.
+  - It replaces "Text me later" for event links. A sold-out date's
+    Waitlist stays a text sign-up.
   - Existing phone leads stay where they are, on the Leads page.
-- Email field → "Check your email" → confirmed → "You're following, add
-  every night to your calendar".
-- A returning follower sees "Following ✓" instead of the button.
-- Live page impact: **yes, visible.** The rail's Updates button becomes
-  Follow. Shipped behind a per-organizer setting, so it's switched on for
-  Big Love only when you say.
+- Email field → "Check your email" → confirmed → "You're following".
+  (The calendar offer comes with step 5.)
+- A returning follower sees "Following" (the rail) or "Following ✓", and
+  the sheet lets them unfollow.
+- The switch: `FOLLOW_ORGANIZERS` (organizer slugs, or `*`). Without it,
+  and without every fan setting, links are exactly as before. The admin's
+  preview and demos never show Follow.
+- Live page impact: **yes, visible, once switched on.** The rail's Updates
+  button becomes Follow. Big Love is switched on only when you say.
 
 ### 3. Fan-only reels
 

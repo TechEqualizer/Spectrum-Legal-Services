@@ -40,6 +40,17 @@ export function missingFanSettings(): string[] {
 }
 export const isFollowingConfigured = () => missingFanSettings().length === 0;
 
+/**
+ * Whether an organizer's links show Follow: FOLLOW_ORGANIZERS lists the
+ * organizers who have it on (comma-separated slugs, or * for all), and the
+ * deployment must have every fan setting.
+ */
+export function followOn(organizer: string | undefined): boolean {
+  if (!organizer || !isFollowingConfigured()) return false;
+  const list = (env("FOLLOW_ORGANIZERS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return list.includes("*") || list.includes(organizer);
+}
+
 type Rpc<T> = { ok: true; data: T } | { ok: false; status: number };
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<Rpc<T>> {
