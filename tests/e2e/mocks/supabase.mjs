@@ -46,6 +46,7 @@ const follows = new Map(); // `${fanId}|${organizer}` -> row
 const fanTokens = new Map(); // token_hash -> row
 const signedFans = new Map(); // signed-address token -> { path, until }
 const presales = new Map(); // funnel_id -> [{ funnel_id, date_id, url }], like event_presales
+const sourceNames = new Map(); // organizer_slug -> Map(tag -> name), like source_names
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
 let seq = 0;
@@ -85,7 +86,7 @@ http.createServer((req, res) => {
     // Test control: every pending sign-in link expires now.
     if (p === '/__fan-expire') { for (const t of fanTokens.values()) t.expires_at = Date.now() - 1000; return json(res, 200, { ok: true }); }
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); presales.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); presales.clear(); sourceNames.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -174,6 +175,20 @@ http.createServer((req, res) => {
       return json(res, 200, mine
         .map(([, f]) => ({ email: fans.get(f.fan_id)?.email, source_tag: f.source_tag, funnel_id: f.funnel_id, confirmed_at: new Date(f.confirmed_at).toISOString(), unfollowed_at: f.unfollowed_at ? new Date(f.unfollowed_at).toISOString() : null }))
         .sort((a, b) => b.confirmed_at.localeCompare(a.confirmed_at)));
+    }
+    // Like set_source_name / source_names_for: an organizer's names for its link tags, for its admins only.
+    if (p === '/rest/v1/rpc/set_source_name' || p === '/rest/v1/rpc/source_names_for') {
+      const email = emailOf(req);
+      if (!email || !managesOrganizer(email, body.p_organizer)) return json(res, 403, { code: '42501', message: 'not allowed' });
+      const mine = sourceNames.get(body.p_organizer) ?? new Map();
+      sourceNames.set(body.p_organizer, mine);
+      if (p.endsWith('source_names_for')) return json(res, 200, [...mine].sort().map(([tag, name]) => ({ tag, name })));
+      if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(body.p_tag ?? '')) return json(res, 400, { code: '23514', message: 'check constraint' });
+      const name = String(body.p_name ?? '').trim();
+      if (!name) return json(res, 200, mine.delete(body.p_tag));
+      if (name.length > 60) return json(res, 400, { code: '23514', message: 'check constraint' });
+      mine.set(body.p_tag, name);
+      return json(res, 200, true);
     }
     // Like set_event_presales / event_presales_for: an event's presale links, for its admins only.
     if (p === '/rest/v1/rpc/set_event_presales' || p === '/rest/v1/rpc/event_presales_for') {

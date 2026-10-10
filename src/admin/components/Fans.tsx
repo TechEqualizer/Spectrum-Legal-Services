@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import PeopleTabs from "@/admin/components/PeopleTabs";
 import LocalDate from "@/components/LocalDate";
-import { sourceLabel } from "@/lib/source-tag";
+import { useSourceLabel } from "@/admin/source-names";
 
 /** One follow, as /api/admin/fans returns it (the database's organizer_fans). */
 type Fan = { email: string; source_tag: string | null; funnel_id: string | null; confirmed_at: string; unfollowed_at: string | null };
@@ -19,6 +19,7 @@ type State = { slug: string; data: Loaded | null; error: string };
 export default function Fans() {
   const slug = useAdminBusiness().funnel.slug;
   const events = useAdminEvents();
+  const labelOf = useSourceLabel(events.filter((e) => e.funnel.slug === slug));
   const [state, setState] = useState<State>({ slug: "", data: null, error: "" });
   // The fan asked about ("Remove?"), and one just removed, for the status line.
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -115,7 +116,7 @@ export default function Fans() {
           {following.length > 1 && (
             <Breakdown
               byEvent={tally(following.map((f) => eventName(f.funnel_id) ?? "Other events"))}
-              byPlace={tally(following.map((f) => sourceLabel(f.source_tag ?? undefined)))}
+              byPlace={tally(following.map((f) => labelOf(f.source_tag)))}
             />
           )}
 
@@ -137,7 +138,7 @@ export default function Fans() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-bold text-deep-navy">{f.email}</span>
                       <span className="block text-sm text-gray-600">
-                        {[sourceLabel(f.source_tag ?? undefined), eventName(f.funnel_id)].filter(Boolean).join(" · ")} · <LocalDate iso={f.confirmed_at} />
+                        {[labelOf(f.source_tag), eventName(f.funnel_id)].filter(Boolean).join(" · ")} · <LocalDate iso={f.confirmed_at} />
                       </span>
                     </span>
                     {confirming === f.email ? (
