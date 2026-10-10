@@ -3,7 +3,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { applyPublication } from "@/lib/publication";
-import { basicReels, draftLink, FANS_REEL_ID, type StartDraft } from "@/lib/start-draft";
+import { basicReels, claimPublication, draftLink, FANS_REEL_ID, httpsLink, needsTicketLink, suggestedName, type StartDraft } from "@/lib/start-draft";
 
 const now = Date.parse("2026-10-07T12:00:00Z");
 const date = (d: string, extra: Partial<NonNullable<StartDraft["dates"]>[number]> = {}) => ({
@@ -66,4 +66,35 @@ test("the basics: true to the flyer, nothing invented", () => {
   assert.match(r.screen.tagline, /The Rooftop/);
   assert.deepEqual(r.reels.map((x) => x.role), ["the_night", "your_people", "last_call"]);
   assert.match(r.reels[2].summary, /From \$30/);
+});
+
+test("the claim publishes the words and dates, not the preview's extras", () => {
+  const pub = claimPublication(draft, "America/Detroit", "https://posh.vip/e/gh");
+  assert.deepEqual(pub.reels.map((r) => r.role), ["the_night", "your_people", "last_call"]);
+  assert.deepEqual(pub.funnel.order, pub.reels.map((r) => r.id));
+  assert.equal(pub.backdrop, undefined);
+  assert.ok(pub.reels.every((r) => !r.media));
+  assert.equal(pub.events?.length, 2);
+  assert.ok(pub.events.every((e) => !e.presale && e.timeZone === "America/Detroit"));
+});
+
+test("the claim: a date without a ticket link borrows one, or is left off", () => {
+  const one = { ...draft, dates: [date("2026-10-31", { ticketUrl: "eventbrite.com/e/123" }), date("2026-11-08")] };
+  assert.deepEqual(claimPublication(one).events?.map((e) => e.ticketUrl), ["https://eventbrite.com/e/123", "https://eventbrite.com/e/123"]);
+  assert.deepEqual(claimPublication(draft, undefined, "https://posh.vip/e/gh").events?.map((e) => e.ticketUrl), ["https://posh.vip/e/gh", "https://posh.vip/e/gh"]);
+  assert.equal(claimPublication(draft).events, undefined);
+  assert.equal(needsTicketLink(draft), true);
+  assert.equal(needsTicketLink(one), false);
+});
+
+test("ticket links: https only", () => {
+  assert.equal(httpsLink("dice.fm/event/x"), "https://dice.fm/event/x");
+  assert.equal(httpsLink("http://example.com"), "");
+  assert.equal(httpsLink("javascript:alert(1)"), "");
+  assert.equal(httpsLink("tickets"), "");
+});
+
+test("the name to suggest: before the colon", () => {
+  assert.equal(suggestedName({ dates: [date("2026-10-31", { name: "Golden Hour: Halloween" })] }), "Golden Hour");
+  assert.equal(suggestedName({}), "");
 });

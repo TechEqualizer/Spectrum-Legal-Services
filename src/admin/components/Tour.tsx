@@ -64,7 +64,8 @@ export default function Tour({ canStart }: { canStart: boolean }) {
   const next = useRef<HTMLButtonElement>(null);
   const step = n === null ? null : TOUR_STEPS[n];
 
-  // First visit to Home (or a link with ?tour=1): start.
+  // First visit to Home (or a link with ?tour=1): start. Not just after
+  // claiming a link (?welcome=): the welcome comes first, and offers the tour.
   useEffect(() => {
     if (!canStart) return;
     const url = new URL(window.location.href);
@@ -72,7 +73,7 @@ export default function Tour({ canStart }: { canStart: boolean }) {
       url.searchParams.delete("tour");
       window.history.replaceState(window.history.state, "", url);
       startTour();
-    } else if (pathname === "/admin/home" && !tourSeen()) {
+    } else if (pathname === "/admin/home" && !tourSeen() && !url.searchParams.has("welcome")) {
       startTour();
     }
     // Once per page load.

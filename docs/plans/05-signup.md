@@ -125,8 +125,29 @@ Most conversion figures in these are vendors' own and unverified.
    See it; the phone runs them in preview mode (Follow sends nothing). If
    drafting fails, the reels start from the flyer's basics and say so. Edits
    stay in the browser with the rest of the draft. Live page impact: none.
-3. **Step 3, the claim.** Account, organizer, event and trial in one step;
-   signed in on Home. Live page impact: none.
+3. **Step 3, the claim (built).** Migration
+   `20261025000000_signup_claim.sql`: `claim_signup_invite()` (the server's
+   secret key only) makes, all or nothing, the organizer, its first event
+   (the night from the flyer, published with the reels' words, opening
+   words, dates and look; not the preview's locked reel, made-up presale or
+   flyer picture), `admin_users` access to that organizer, Core trialing
+   for 14 days, and the invite marked claimed. The form: "Your name, as
+   fans see it" (suggested from the flyer, the part before any colon), the
+   link `showlnk.com/f/<name>` (follows the name until changed, checked as
+   they type: `/api/start/link`), "Where fans buy tickets" only when the
+   flyer had no ticket link (optional; a date without one borrows it or
+   another date's, else waits for the studio), email, password (8+, Show),
+   the trial and the price, once ("$29 a month or $290 a year, or stay on
+   Free… No card now."), and the terms with the content rule.
+   `/api/start/claim` makes the login first (Supabase Auth), then claims;
+   if the claim fails (email already on Showlnk, link taken meanwhile,
+   invite used) the login is removed. Then it signs them in, writes the
+   dates as rows, and the wizard clears the draft and opens
+   `/admin/home?welcome=<event>`: "Welcome to Showlnk, <name>", "Your link
+   is ready" with Copy link, and next steps (Open your reels, Put it in your
+   bio, Take the tour); the tour waits for it. The event is live at its own
+   link from the claim (like New client's). Live page impact: none
+   (invite-only).
 4. **The trial's end.** Plan card and Home count the days; an email 3
    days before it ends (Resend); on the last day, Core falls back to Free
    unless they started paying. (With Plan 3 step 3, the gates.)

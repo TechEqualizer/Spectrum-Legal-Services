@@ -1,7 +1,7 @@
 // Sign-up invites (supabase/migrations/*_signup_invites.sql). A code is
 // random and shown once; the database keeps only its SHA-256. Full admins
 // manage invites with their own sign-in (the database checks); the wizard
-// checks and uses them with the secret key.
+// checks, uses and claims them with the secret key.
 
 import { createHash, randomBytes } from "node:crypto";
 import { asAdmin, type Admin } from "@/lib/server/admin-auth";
@@ -90,6 +90,44 @@ export async function countInviteRead(code: string): Promise<boolean | undefined
     });
     if (!res.ok) return undefined;
     return (await res.json()) === true;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Why a claim didn't go through, or "claimed" (supabase/migrations/*_signup_claim.sql). */
+export type ClaimResult = "claimed" | "invite" | "slug_taken" | "event_taken" | "email_taken";
+
+/**
+ * Claims the invite in one step: the organizer, its first event (published),
+ * the login's access to it, Core's 14-day trial, and the invite marked used.
+ * undefined if the database couldn't be reached.
+ */
+export async function claimInvite(
+  code: string,
+  claim: { email: string; organizer: { slug: string; name: string }; event: { slug: string; funnelId: string; data: unknown }; publication: unknown }
+): Promise<ClaimResult | undefined> {
+  if (!CODE.test(code)) return "invite";
+  const s = service();
+  if (!s) return undefined;
+  try {
+    const res = await fetch(`${s.url}/rest/v1/rpc/claim_signup_invite`, {
+      method: "POST",
+      headers: { ...s.headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        p_code_hash: hashInviteCode(code),
+        p_email: claim.email,
+        p_organizer_slug: claim.organizer.slug,
+        p_organizer_name: claim.organizer.name,
+        p_event_slug: claim.event.slug,
+        p_funnel_id: claim.event.funnelId,
+        p_event: claim.event.data,
+        p_publication: claim.publication,
+      }),
+    });
+    if (!res.ok) return undefined;
+    const out = await res.json();
+    return ["claimed", "invite", "slug_taken", "event_taken", "email_taken"].includes(out) ? (out as ClaimResult) : undefined;
   } catch {
     return undefined;
   }

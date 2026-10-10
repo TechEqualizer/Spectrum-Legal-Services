@@ -105,6 +105,14 @@ http.createServer((req, res) => {
         users[body.email] = { admin: false, slugs: [], organizers: [], ...users[body.email], password: body.password, mustChange: Boolean(body.user_metadata?.must_change_password) };
         return json(res, 200, { id: idOf(body.email), email: body.email });
       }
+      if (req.method === 'DELETE') {
+        const email = withLogin.find((e) => p.endsWith('/' + idOf(e)));
+        if (!email) return json(res, 404, { msg: 'not found' });
+        // The login goes; an admin_users row (a separate table) stays.
+        if (users[email].admin) users[email].password = null;
+        else delete users[email];
+        return json(res, 200, {});
+      }
       if (req.method === 'PUT') {
         const email = withLogin.find((e) => p.endsWith('/' + idOf(e)));
         if (!email) return json(res, 404, { msg: 'not found' });
@@ -202,6 +210,25 @@ http.createServer((req, res) => {
       const ok = Boolean(row && !row.revoked_at && !row.claimed_at && Date.parse(row.expires_at) > Date.now() && row.flyer_reads < 5);
       if (ok) row.flyer_reads += 1;
       return json(res, 200, ok);
+    }
+    // Like claim_signup_invite: all or nothing, the secret key only.
+    if (p === '/rest/v1/rpc/claim_signup_invite') {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: 'permission denied' });
+      const b = body;
+      const row = invites.get(b.p_code_hash);
+      if (!row || row.revoked_at || row.claimed_at || Date.parse(row.expires_at) <= Date.now()) return json(res, 200, 'invite');
+      if (organizers.has(b.p_organizer_slug) || eventFunnels.has(b.p_organizer_slug)) return json(res, 200, 'slug_taken');
+      if (organizers.has(b.p_event_slug) || eventFunnels.has(b.p_event_slug) || [...eventFunnels.values()].some((r) => r.funnel_id === b.p_funnel_id)) return json(res, 200, 'event_taken');
+      const email = b.p_email.toLowerCase();
+      if (users[email]?.admin) return json(res, 200, 'email_taken');
+      organizers.set(b.p_organizer_slug, { slug: b.p_organizer_slug, name: b.p_organizer_name.trim() });
+      eventFunnels.set(b.p_event_slug, { slug: b.p_event_slug, funnel_id: b.p_funnel_id, organizer_slug: b.p_organizer_slug, data: b.p_event });
+      if (b.p_publication) publications.set(b.p_event_slug, { slug: b.p_event_slug, data: b.p_publication, published_at: new Date().toISOString(), published_by: email });
+      users[email] = { password: null, mustChange: false, ...users[email], admin: true, slugs: [], organizers: [b.p_organizer_slug], created: new Date().toISOString() };
+      organizerPlans.set(b.p_organizer_slug, { status: 'trialing', billing_interval: null, trial_ends_at: new Date(Date.now() + 14 * 864e5).toISOString(), current_period_end: null, comped_until: null });
+      row.claimed_at = new Date().toISOString();
+      row.claimed_organizer = b.p_organizer_slug;
+      return json(res, 200, 'claimed');
     }
     // The invites table itself: the secret key only (the wizard checks an invite).
     if (p === '/rest/v1/signup_invites') {
