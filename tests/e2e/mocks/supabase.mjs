@@ -179,12 +179,25 @@ http.createServer((req, res) => {
         .map(([, f]) => ({ email: fans.get(f.fan_id)?.email, source_tag: f.source_tag, funnel_id: f.funnel_id, confirmed_at: new Date(f.confirmed_at).toISOString(), unfollowed_at: f.unfollowed_at ? new Date(f.unfollowed_at).toISOString() : null }))
         .sort((a, b) => b.confirmed_at.localeCompare(a.confirmed_at)));
     }
+    // The plans table itself: the secret key only (the webhook writes it, billing reads its Stripe ids).
+    if (p === '/rest/v1/organizer_plans') {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: 'permission denied for table organizer_plans' });
+      if (req.method === 'POST') {
+        if (!organizers.has(body.organizer_slug)) return json(res, 409, { code: '23503', message: 'violates foreign key constraint' });
+        const { organizer_slug, updated_at, ...row } = body;
+        organizerPlans.set(organizer_slug, { ...(organizerPlans.get(organizer_slug) ?? {}), ...row });
+        return json(res, 201);
+      }
+      const slug = (url.searchParams.get('organizer_slug') || '').replace(/^eq\./, '');
+      const row = organizerPlans.get(slug);
+      return json(res, 200, row ? [row] : []);
+    }
     // Like organizer_plan: an organizer's plan, for its admins only (no row: Free).
     if (p === '/rest/v1/rpc/organizer_plan') {
       const email = emailOf(req);
       if (!email || !managesOrganizer(email, body.p_organizer)) return json(res, 403, { code: '42501', message: 'not allowed' });
       const row = organizerPlans.get(body.p_organizer);
-      return json(res, 200, row ? [row] : []);
+      return json(res, 200, row ? [{ status: row.status, billing_interval: row.billing_interval ?? null, trial_ends_at: row.trial_ends_at ?? null, current_period_end: row.current_period_end ?? null, comped_until: row.comped_until ?? null }] : []);
     }
     // Test control: set (or, with no status, clear) an organizer's plan row.
     if (p === '/__plan' && req.method === 'POST') {

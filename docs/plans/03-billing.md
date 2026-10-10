@@ -103,10 +103,18 @@ competitors' pages; check prices on the vendors' own sites before quoting.
 
 ## Steps
 
-0. **Decisions and a Stripe account.** Decisions made (below). Still to do:
-   a Stripe account in test mode; the Core product and price created in
-   Stripe; keys added to Vercel (`STRIPE_SECRET_KEY`,
-   `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_CORE`). Live page impact: none.
+0. **Decisions and a Stripe account.** Decisions made (below). A separate
+   Showlnk Stripe account (not Adsure's), set up in test mode first:
+   - a product "Showlnk Core" with two prices, $29 monthly with lookup key
+     `core_month` and $290 yearly with lookup key `core_year`;
+   - a webhook endpoint at `https://showlnk.com/api/stripe/webhook` for
+     `checkout.session.completed` and `customer.subscription.created`,
+     `.updated`, `.deleted`;
+   - the customer portal switched on (update card, invoices, cancel);
+   - in Vercel: `STRIPE_SECRET_KEY` (test `sk_test_…` first) and
+     `STRIPE_WEBHOOK_SECRET` (the endpoint's `whsec_…`).
+
+   Live page impact: none.
 1. **Plans table and the Plan card (built).** Migration
    `20261023000000_organizer_plans.sql`: `organizer_plans` (no row is Free)
    and `organizer_plan()` for the organizer's admins; Big Love comped. The
@@ -115,13 +123,19 @@ competitors' pages; check prices on the vendors' own sites before quoting.
    Plan says the plan in words and, on Free, what Core adds. Nothing is
    gated yet: Follow still follows `FOLLOW_ORGANIZERS` until step 3. Live
    page impact: none.
-2. **Start Core and Manage billing.** Settings → Plan card; Checkout and
-   portal sessions; the webhook. Test mode end to end. Live page impact:
+2. **Start Core and Manage billing (built).** Settings → Plan: monthly or
+   yearly (yearly picked first, two months free), Start Core opens Stripe
+   Checkout; back from it, the card says what happened and waits for the
+   webhook. Manage billing (Update card when a card is declined) opens
+   Stripe's portal. `/api/stripe/webhook` takes only events Stripe signed
+   and re-reads the subscription from Stripe, so a late event can't undo a
+   newer one. Stripe's REST API over fetch, no SDK
+   (`src/lib/server/stripe.ts`); a mock Stripe in the tests. Until the two
+   keys are set, the card shows Core without a button. Live page impact:
    none.
 3. **Gates, the trial and upgrade prompts.** The gates read the plan with
    the secret key (`planOf()`); "Part of Core" where the features live; the
-   14-day trial starts when an organizer first reaches 100 fans or switches
-   on a Core feature; lapsed plans turn Follow off for new fans as
+   14-day trial starts at claim (Plan 5); lapsed plans turn Follow off for new fans as
    described above. Live page
    impact: only for organizers without Core.
 4. **Go live.** Switch to live keys; retire `FOLLOW_ORGANIZERS`; a receipt
@@ -144,13 +158,14 @@ competitors' pages; check prices on the vendors' own sites before quoting.
 - **Free vs Core:** Follow is free up to 100 fans; Core is $29/month or
   $290/year for unlimited fans, fan-only reels, presale and the calendar
   feed.
-- **Trial:** 14 days of Core, no card to start; it begins when an
-  organizer first reaches 100 fans or switches on a Core feature.
+- **Trial:** 14 days of Core, no card to start. It begins when an
+  organizer claims their link in the sign-up wizard (Plan 5), a reverse
+  trial: everything on from day one, then Free unless they pay. (Changed
+  Oct 10, 2026 from "when they first reach 100 fans".)
 - **Who pays:** each organizer, directly.
+- **Stripe:** a separate Showlnk account (not Adsure's), test mode first.
 
 ## Open questions
 
-1. **Stripe account:** does Showlnk have one (business details, payouts
-   bank)? Needed before step 2; you sign up at stripe.com.
-2. **Big Love:** comped indefinitely, or until a date? (Comped with no end
+1. **Big Love:** comped indefinitely, or until a date? (Comped with no end
    for now.)

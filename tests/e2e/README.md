@@ -79,6 +79,10 @@ still moves forward during a run.
     New followers tiles on Home and Results (counts only, no emails); the
     organizer's own names for its places on the page and in the CSV, and
     only its admins can read or change them.
+  - `billing`: Start Core and Manage billing (billing step 2) against the
+    mock Stripe (`mocks/stripe.mjs`): checkout and back, paying, signed
+    webhooks only, a declined card, canceling in the portal, starting again
+    with the same customer, comped and other businesses refused.
   - `plan`: Settings → Plan (billing step 1): comped, trial days left and
     Free with what Core adds; only the organizer's own admins can read it.
   - `calendar-feed`: the organizer's calendar feed (step 5): upcoming
@@ -151,6 +155,15 @@ still moves forward during a run.
   refused), `/__state`, `/__reset`. The Supabase mock keeps
   `eventbrite_connections` and `ticket_sales` (the secret key only, like
   the real tables) and adds tickets sold to `funnel_stats`.
+- `mocks/stripe.mjs`: the Stripe calls billing makes (prices by lookup
+  key, Checkout sessions, subscriptions, portal sessions; the test key
+  only) and the two Stripe-hosted pages as plain pages (`/pay/:id`: Pay or
+  Back; `/portal/:customer`: Cancel plan). Paying and canceling send the
+  app a webhook signed with `STRIPE_WEBHOOK_SECRET`. Control routes:
+  `/__subscription` (change one and send the event), `/__send` (any event,
+  `signature: "bad"` to forge one), `/__state`, `/__reset`. The Supabase
+  mock keeps `organizer_plans` (Big Love comped; the secret key only) and
+  `organizer_plan` for admins, and `/__plan` sets a row.
 - `mocks/resend.mjs`: keeps every email the app sends (`/emails`, with
   the test key only) instead of sending it. Control routes: `/__emails`
   (every email, oldest first), `/__fail` (the next send fails), `/__reset`.
