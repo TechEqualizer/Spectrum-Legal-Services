@@ -31,6 +31,7 @@ let users = initialUsers();
 const managesOrganizer = (email, org) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].organizers.includes(org));
 const canPublishFunnel = (email, slug) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].slugs.includes(slug) || users[email].organizers.includes(eventFunnels.get(slug)?.organizer_slug));
 const publications = new Map(); // slug -> row
+const eventDates = new Map(); // funnel_id -> rows, like event_dates
 // What visitors did, like reel_events and leads (kept for funnel_stats).
 const reelEvents = []; // { at, visitor, funnel, reel, event, tag }
 const leadRows = []; // { id, at, funnel, visitor, intent, tag, name, phone, email, caseType, message, reel }
@@ -74,9 +75,9 @@ http.createServer((req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     // Test controls
     if (p === '/__log') return json(res, 200, log);
-    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()], eventbriteConnections: [...ebConnections.values()], ticketSales: [...ticketSales.values()] });
+    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()], eventbriteConnections: [...ebConnections.values()], ticketSales: [...ticketSales.values()], eventDates: Object.fromEntries(eventDates) });
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -150,6 +151,15 @@ http.createServer((req, res) => {
         if (users[target]) users[target].admin = false;
         return json(res, 204);
       }
+    }
+    // Like set_event_dates: an event's dates as rows, for an admin who may publish it.
+    if (p === '/rest/v1/rpc/set_event_dates') {
+      const email = emailOf(req);
+      if (!email || !canPublishFunnel(email, body.p_slug)) return json(res, 403, { code: '42501', message: 'not allowed' });
+      const ef = eventFunnels.get(body.p_slug);
+      if (!ef) return json(res, 200, 0);
+      eventDates.set(ef.funnel_id, body.p_dates.map((d) => ({ funnel_id: ef.funnel_id, id: d.id, name: d.name, starts_at: new Date(d.startsAt).toISOString(), starts_at_text: d.startsAt, time_zone: d.timeZone ?? null, venue: d.venue ?? null, price: d.price ?? null, ticket_url: d.ticketUrl, eb_event_id: d.ebEventId ?? null, status: d.status ?? null, opening_reel_id: d.reelId ?? null })));
+      return json(res, 200, body.p_dates.length);
     }
     if (p === '/rest/v1/funnel_publications') {
       const slug = (url.searchParams.get('slug') || '').replace('eq.', '') || body?.slug;

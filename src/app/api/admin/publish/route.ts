@@ -1,8 +1,9 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { getFunnel, organizerOf } from "@/lib/server/funnels";
-import { parsePublication } from "@/lib/publication";
+import { applyPublication, parsePublication } from "@/lib/publication";
 import { asAdmin, canPublish, getAdmin } from "@/lib/server/admin-auth";
+import { syncEventDates } from "@/lib/server/event-dates";
 import { publicationTag } from "@/lib/server/publications";
 
 async function authorize(slug: string) {
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
     body: JSON.stringify({ slug, data: publication, published_at: publishedAt, published_by: admin.email.toLowerCase() }),
   });
   if (!res?.ok) return NextResponse.json({ error: "Couldn't publish. Try again." }, { status: 502 });
+  await syncEventDates(slug, applyPublication(funnel, publication), admin.accessToken);
   // The next visit gets the new version straight away.
   revalidateTag(publicationTag(slug), { expire: 0 });
   return NextResponse.json({ publishedAt });
@@ -59,10 +61,12 @@ export async function POST(request: Request) {
 // Takes the published edits down: the link goes back to its built-in content.
 export async function DELETE(request: Request) {
   const slug = new URL(request.url).searchParams.get("slug") ?? "";
-  const { admin, error } = await authorize(slug);
+  const { admin, funnel, error } = await authorize(slug);
   if (error) return error;
   const res = await asAdmin(`/rest/v1/funnel_publications?slug=eq.${encodeURIComponent(slug)}`, admin.accessToken, { method: "DELETE" });
   if (!res?.ok) return NextResponse.json({ error: "Couldn't restore the original. Try again." }, { status: 502 });
+  // Back to the built dates.
+  await syncEventDates(slug, funnel, admin.accessToken);
   revalidateTag(publicationTag(slug), { expire: 0 });
   return NextResponse.json({ ok: true });
 }
