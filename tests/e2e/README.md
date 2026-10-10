@@ -62,6 +62,9 @@ still moves forward during a run.
   - `event-dates`: publishing writes an event's dates as rows
     (`event_dates`, through `set_event_dates`), with Eventbrite's event id;
     taking edits down restores the built dates; others can't write them.
+  - `legal`: the organizer terms (`/terms`, with the content rule) and the
+    privacy note (`/privacy`), linked from the home page's footer and
+    readable on a phone.
   - `tour`: the admin's guided tour, on desktop and phone. Other suites
     start as someone who has had it (`browser.mjs`).
   - `book-first`: a book-first link that isn't live (`/f/skin-notes`, the

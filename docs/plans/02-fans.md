@@ -108,13 +108,17 @@ Everything here is free for Big Love while it's built. The $29 Core plan
 
 Each step is one PR.
 
-### 0. Content rule and fan terms
+### 0. Content rule and fan terms (done)
 
-- Organizer terms add the content rule and a promise that fans can be
-  removed on request.
-- A short fan privacy note: what's stored, who sees it, how to unfollow
-  or delete.
-- Live page impact: none (pages only).
+- `/terms`: the organizer terms, with the content rule and a promise that
+  fans can be removed on request. The rule is written once
+  (`src/lib/content-rule.ts`), so step 3 shows the same words beside the
+  fans-only switch.
+- `/privacy`: a short note for visitors and fans: what's stored, who sees
+  it, how to unfollow or delete.
+- Both are linked from the home page's footer. Contact details come from
+  settings (`SHOWLNK_CONTACT_EMAIL`, `SHOWLNK_POSTAL_ADDRESS`).
+- Live page impact: none (new pages; event links unchanged).
 
 ### 1. Fan tables and sign-in (additive)
 

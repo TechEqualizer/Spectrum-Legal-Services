@@ -177,9 +177,17 @@ export default function ShowlnkHome() {
             <Wordmark />
           </span>
           <span>© 2026 Showlnk. Reels that sell the night.</span>
-          <Link href="/admin/login" className="flex min-h-11 items-center font-semibold hover:text-[var(--sl-text)]">
-            Organizer log in
-          </Link>
+          <nav aria-label="Showlnk footer" className="flex flex-wrap items-center gap-x-5">
+            <Link href="/terms" className="flex min-h-11 items-center hover:text-[var(--sl-text)]">
+              Terms
+            </Link>
+            <Link href="/privacy" className="flex min-h-11 items-center hover:text-[var(--sl-text)]">
+              Privacy
+            </Link>
+            <Link href="/admin/login" className="flex min-h-11 items-center font-semibold hover:text-[var(--sl-text)]">
+              Organizer log in
+            </Link>
+          </nav>
         </div>
       </footer>
       <Dock />
