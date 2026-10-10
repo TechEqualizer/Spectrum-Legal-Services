@@ -64,6 +64,7 @@ export default function AdminNav() {
     const group = groups.find((g) => g.label === label) ?? groups[groups.push({ label, items: [] }) - 1];
     group.items.push(b);
   }
+  const organizerName = funnel ? events.find((e) => e.funnel.slug === funnel.slug)?.organizer.name ?? funnel.brand.name : undefined;
   const collapsed = useCollapsed();
   // Styles that only apply to the folded sidebar (phones never fold).
   const folded = (on: string, off = "") => (collapsed ? on : off);
@@ -72,15 +73,17 @@ export default function AdminNav() {
       className={`bg-deep-navy text-white lg:sticky lg:top-0 lg:z-40 lg:flex lg:h-screen lg:flex-shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 motion-reduce:transition-none ${folded("lg:w-[4.5rem]", "lg:w-60")}`}
       aria-label="Admin"
     >
-      <div className={`flex items-center justify-between gap-4 px-4 py-3 lg:block lg:py-6 ${folded("lg:px-3", "lg:px-5")}`}>
-        <Link href="/" aria-label="Back to the site" className={`inline-flex ${folded("lg:hidden")}`}>
+      {/* Phones: one compact bar, the event on the left (tap to switch), Core and the account on the right.
+          Nothing in it may push the others off screen, however long the name. Desktop: the sidebar's head. */}
+      <div className={`flex items-center gap-2 py-2 pl-4 pr-2 lg:block lg:px-5 lg:py-6 ${folded("lg:px-3")}`}>
+        <Link href="/" aria-label="Back to the site" className={`hidden lg:inline-flex ${folded("lg:hidden")}`}>
           {funnel ? <BrandLogo brand={funnel.brand} size="sm" /> : <span className="text-lg font-black tracking-tight">Showlnk</span>}
         </Link>
-        {collapsed && funnel && (
+        {funnel && (
           <span
             title={funnel.brand.name}
             aria-hidden="true"
-            className="relative hidden h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-white/10 text-lg font-bold text-white lg:flex"
+            className={`relative hidden h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/10 text-lg font-bold text-white ${folded("lg:flex")}`}
           >
             {funnel.brand.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element -- the organizer's own photo
@@ -90,17 +93,27 @@ export default function AdminNav() {
             )}
           </span>
         )}
-        <div className={`lg:mt-5 ${folded("lg:hidden")}`}>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-sky-accent">
-            Admin
+        <div className={`relative flex min-h-11 min-w-0 flex-1 flex-col justify-center lg:mt-5 lg:block lg:min-h-0 ${folded("lg:hidden")}`}>
+          <p className="truncate text-[11px] font-bold uppercase tracking-widest text-sky-accent">
+            <span className="lg:hidden">{organizerName ?? "Admin"}</span>
+            <span className="hidden lg:inline">Admin</span>
+          </p>
+          {/* Phones: the event's name, cut short to fit; the select lies over it, so a tap opens the phone's own picker. */}
+          <p className="flex min-w-0 items-center gap-1 lg:hidden" aria-hidden={businesses.length > 1}>
+            <span className="truncate text-[15px] font-bold leading-snug">{funnel ? (businesses.length > 1 ? funnel.brand.seriesLabel : funnel.brand.name) : "No events yet"}</span>
+            {businesses.length > 1 && (
+              <svg className="h-4 w-4 flex-shrink-0 text-white/70" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            )}
           </p>
           {businesses.length > 1 && (<>
-          <label htmlFor="admin-business" className="sr-only">Business</label>
+          <label htmlFor="admin-business" className="sr-only">Event</label>
           <select
             id="admin-business"
             value={funnel?.slug}
             onChange={(e) => selectAdminBusiness(e.target.value)}
-            className="mt-1 w-full max-w-48 rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-sky-accent lg:max-w-none [&>option]:text-charcoal"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 lg:static lg:mt-1 lg:h-auto lg:rounded-md lg:border lg:border-white/20 lg:bg-white/10 lg:px-2 lg:py-1.5 lg:text-sm lg:font-semibold lg:text-white lg:opacity-100 lg:focus:outline-none lg:focus:ring-2 lg:focus:ring-sky-accent [&>option]:text-charcoal"
           >
             {/* Each client's events by name. */}
             {groups.map((g) => (
@@ -114,9 +127,9 @@ export default function AdminNav() {
             ))}
           </select>
           </>)}
-          {businesses.length <= 1 && <p className="mt-1 text-sm font-semibold">{funnel ? funnel.brand.name : "No events yet"}</p>}
+          {businesses.length <= 1 && <p className="mt-1 hidden text-sm font-semibold lg:block">{funnel ? funnel.brand.name : "No events yet"}</p>}
         </div>
-        <div className="flex items-center gap-2 lg:block">
+        <div className="flex flex-shrink-0 items-center gap-1 lg:block">
           {/* Phones: Core's nudge beside the account (the sidebar has its own). */}
           <span className="lg:hidden">
             <CoreNudgeChip />
@@ -141,7 +154,7 @@ export default function AdminNav() {
                 aria-current={active ? "page" : undefined}
                 data-tour={`nav-${link.label.toLowerCase()}`}
                 title={collapsed ? link.label : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors lg:min-h-11 lg:flex-row lg:gap-3 lg:rounded-md lg:px-3 lg:text-sm ${folded("lg:justify-center", "lg:justify-start")} ${
+                className={`flex min-h-14 flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-[11px] font-semibold leading-tight transition-colors lg:min-h-11 lg:py-0 lg:flex-row lg:gap-3 lg:rounded-md lg:px-3 lg:text-sm ${folded("lg:justify-center", "lg:justify-start")} ${
                   active
                     ? "text-white lg:bg-white/10"
                     : "text-gray-400 hover:text-white lg:hover:bg-white/5"
@@ -159,7 +172,7 @@ export default function AdminNav() {
                 >
                   <path d={link.icon} />
                 </svg>
-                <span className={folded("lg:sr-only")}>{link.label}</span>
+                <span className={`max-w-full truncate ${folded("lg:sr-only")}`}>{link.label}</span>
               </Link>
             </li>
           );

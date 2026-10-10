@@ -25,13 +25,14 @@ export default function BrandLogo({
         height={logo.height}
         loading={eager ? "eager" : "lazy"}
         fetchPriority={eager ? "high" : "auto"}
-        className={size === "sm" ? "h-9 w-auto lg:h-11" : "h-12 w-auto"}
+        className={`max-w-full object-contain object-left ${size === "sm" ? "h-9 w-auto lg:h-11" : "h-12 w-auto"}`}
       />
     );
   }
   return (
-    <span className="block leading-none" aria-label={brand.name} role="img">
-      <span className={`${wordmarkFont.className} block whitespace-nowrap text-white ${size === "sm" ? "text-3xl" : "text-4xl"}`}>
+    <span className="block max-w-full leading-none" aria-label={brand.name} role="img">
+      {/* A long name takes two lines rather than running past the screen or the sidebar. */}
+      <span className={`${wordmarkFont.className} block text-balance leading-[0.95] text-white [overflow-wrap:anywhere] ${size === "sm" ? "text-3xl" : "text-4xl"}`}>
         {logo.text}
       </span>
       {logo.tagline && (

@@ -121,8 +121,8 @@ export default function DatesCard({
 
   return (
     <section aria-labelledby="dates-title" className="rounded-xl border border-gray-200 bg-white">
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-5">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-gray-100 px-4 py-3 sm:px-5">
+        <div className="min-w-0">
           <h2 id="dates-title" className={inStudio ? "sr-only" : "font-bold text-deep-navy"}>Dates</h2>
           <p className="text-xs text-gray-600">
             <span className={inStudio ? "sr-only" : undefined}>Shown as circles on your opening screen.</span>
