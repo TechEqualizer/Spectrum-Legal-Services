@@ -76,7 +76,9 @@ still moves forward during a run.
   - `fans-admin`: the Fans page beside Leads (step 6): followers newest
     first, counts, the CSV (current fans only, formulas defused), removing
     a fan from one organizer only, and only the organizer's admins; the
-    New followers tiles on Home and Results (counts only, no emails).
+    New followers tiles on Home and Results (counts only, no emails); the
+    organizer's own names for its places on the page and in the CSV, and
+    only its admins can read or change them.
   - `calendar-feed`: the organizer's calendar feed (step 5): upcoming
     nights only, soonest first, tagged links, an event's own feed, and the
     confirmation's Apple, Google and Outlook links.
@@ -111,9 +113,9 @@ still moves forward during a run.
     second app on port 3003 without the settings shows "not turned on yet".
   - `link`: a call-first link that isn't live yet (`/f/velvet-room`, added
     to the mock for the suite: forms simulate, tracking is real), plus the
-    admin's link builder (a place named in any words, and what Results will
-    call it), and untagged visits credited to the app or site they came
-    from. `tests/unit/source-tag.test.ts` pins the names and merged aliases.
+    admin's link builder (a place named in any words and saved as typed
+    once the link is copied, renaming, what Results will call it), and
+    untagged visits credited to the app or site they came from. `tests/unit/source-tag.test.ts` pins the names and merged aliases.
   - The rest: the admin (dates, flyer import, the "Draft my funnel" draft,
     look and style, opening screen, studio and path strip, publishing,
     saving, media).

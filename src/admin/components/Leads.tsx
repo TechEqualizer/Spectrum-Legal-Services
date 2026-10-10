@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
+import { useSourceLabel } from "@/admin/source-names";
 import PeopleTabs from "@/admin/components/PeopleTabs";
 import LocalDate from "@/components/LocalDate";
 import type { Funnel } from "@/data/funnel-types";
 import { funnelReel } from "@/data/reels";
-import { sourceLabel } from "@/lib/source-tag";
 
 /** One lead, as /api/admin/leads returns it (the database's funnel_leads). */
 export type AdminLead = {
@@ -39,7 +39,9 @@ export default function Leads() {
   const business = useAdminBusiness();
   const slug = business.funnel.slug;
   // Reels as visitors see them, so a reel added since it was built still has its title.
-  const funnel = useAdminEvents().find((e) => e.funnel.slug === slug)?.live ?? business.funnel;
+  const event = useAdminEvents().find((e) => e.funnel.slug === slug);
+  const funnel = event?.live ?? business.funnel;
+  const labelOf = useSourceLabel(event ? [event] : []);
   const [state, setState] = useState<State>({ slug: "", leads: null, error: "" });
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -120,7 +122,7 @@ export default function Leads() {
                           <span className="text-xs font-semibold text-gray-600">{asked(l)}</span>
                         </span>
                         <span className="mt-0.5 line-clamp-2 text-sm text-gray-600">
-                          {[l.case_type, reel ? `from "${reel.title}"` : null, sourceLabel(l.source_tag ?? undefined)].filter(Boolean).join(" · ")}
+                          {[l.case_type, reel ? `from "${reel.title}"` : null, labelOf(l.source_tag)].filter(Boolean).join(" · ")}
                         </span>
                       </span>
                       <span className="flex-shrink-0 pt-0.5 text-xs text-gray-600">
@@ -130,7 +132,7 @@ export default function Leads() {
                     {/* Phones and tablets: the details open under the lead. */}
                     {open && (
                       <div className="border-t border-gray-100 bg-white px-4 py-4 xl:hidden">
-                        <LeadDetails lead={l} funnel={funnel} />
+                        <LeadDetails lead={l} funnel={funnel} labelOf={labelOf} />
                       </div>
                     )}
                   </li>
@@ -141,7 +143,7 @@ export default function Leads() {
 
           {shown && (
             <aside className="hidden rounded-xl border border-gray-200 bg-white p-5 xl:block xl:self-start" aria-label="Lead details" aria-live="polite">
-              <LeadDetails lead={shown} funnel={funnel} />
+              <LeadDetails lead={shown} funnel={funnel} labelOf={labelOf} />
             </aside>
           )}
         </div>
@@ -151,14 +153,14 @@ export default function Leads() {
 }
 
 /** One lead: how to reach them, what they asked for, and the reels they watched first. */
-function LeadDetails({ lead, funnel }: { lead: AdminLead; funnel: Funnel }) {
+function LeadDetails({ lead, funnel, labelOf }: { lead: AdminLead; funnel: Funnel; labelOf: (tag: string | null | undefined) => string }) {
   const reel = lead.referring_reel_id ? funnelReel(funnel, lead.referring_reel_id) : undefined;
   const textLater = lead.intent === "text_later";
   const rows = [
     { label: "Asked for", value: textLater ? "Updates by text" : "A call back" },
     { label: "Interested in", value: lead.case_type },
     { label: "From reel", value: reel?.title ?? "The link" },
-    { label: "Link shared on", value: sourceLabel(lead.source_tag ?? undefined) },
+    { label: "Link shared on", value: labelOf(lead.source_tag) },
   ];
   return (
     <div className="space-y-5">

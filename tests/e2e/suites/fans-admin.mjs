@@ -20,12 +20,14 @@ async function follow(email, organizer, extra = {}) {
 await fetch(DB + '/__organizer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: 'gh-admin', name: 'Golden Hour Sundays' }) });
 await follow('first@example.com', 'biglove', { sourceTag: 'instagram', funnelId: 'masquerade-v1' });
 await follow('first@example.com', 'gh-admin');
-await follow('=cmd|evil@example.com', 'biglove', { sourceTag: 'tiktok' });
+await follow('=cmd|evil@example.com', 'biglove', { sourceTag: 'dj-mikes-story' });
 const leaving = await follow('leaving@example.com', 'biglove');
 await leaving.request.post(B + '/api/fans/unfollow', { headers: { Origin: B }, data: { organizer: 'biglove' } });
 
 // The page, beside Leads.
 const p = await b.newPage({ storageState: S + '/auth.json', viewport: { width: 1279, height: 900 } });
+// The organizer named that place in the link builder, in their own words.
+check('names a place as typed', (await p.request.put(B + '/api/admin/source-names', { data: { slug: 'masquerade', tag: 'dj-mikes-story', name: "DJ Mike's story" } })).ok());
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
 await p.goto(B + '/admin/leads'); await settle(p, 800);
 const tabs = p.getByRole('navigation', { name: 'Leads and fans' });
@@ -41,7 +43,7 @@ check('where each followed from', rows[1]?.includes('Instagram') && rows[1].incl
 check('counts: following and unfollowed', (await p.locator('dl').first().innerText()).replace(/\s+/g, ' ').toLowerCase().includes('following 2 unfollowed 1'), await p.locator('dl').first().innerText());
 const from = p.getByRole('region', { name: 'Where your fans followed from' });
 const fromText = (await from.innerText().catch(() => '')).replace(/\s+/g, ' ');
-check('where fans followed from: by place and by flyer', /By where the link was shared Instagram bio 1 fan TikTok bio 1 fan/i.test(fromText) && /By flyer.*Masquerade on the Runway 1 fan/i.test(fromText), fromText);
+check('where fans followed from: by place and by flyer', /By where the link was shared DJ Mike's story 1 fan Instagram bio 1 fan/i.test(fromText) && /By flyer.*Masquerade on the Runway 1 fan/i.test(fromText), fromText);
 check('says Follow isn\'t on for these links yet', await p.getByText(/Follow isn.t switched on for your links yet/).isVisible());
 await p.screenshot({ path: 'fans-admin-1279.png' });
 
@@ -50,6 +52,7 @@ const csvRes = await p.request.get(B + '/api/admin/fans/export?slug=masquerade')
 const csv = await csvRes.text();
 check('a CSV download', csvRes.headers()['content-type']?.startsWith('text/csv') && csvRes.headers()['content-disposition']?.includes('biglove-fans.csv'));
 check('header and current fans only', csv.startsWith('"Email","Followed","Shared on","Followed from"') && csv.includes('"first@example.com"') && !csv.includes('leaving@example.com'), csv.slice(0, 200));
+check('the CSV uses the name as typed', csv.includes(`"DJ Mike's story"`));
 check("a cell that looks like a formula can't run", csv.includes(`"'=cmd|evil@example.com"`));
 
 // The numbers on Home and Results: new followers (no one's email), against the period before.
@@ -90,6 +93,8 @@ const rival = await b.newContext();
 await rival.request.post(B + '/api/admin/login', { data: { email: 'rival@example.com', password: 'rival-pass-1' } });
 check("another business's admin can't list them", (await rival.request.get(B + '/api/admin/fans?slug=masquerade')).status() === 403);
 check("or export them", (await rival.request.get(B + '/api/admin/fans/export?slug=masquerade')).status() === 403);
+check("or see its link names", (await rival.request.get(B + '/api/admin/source-names?slug=masquerade')).status() === 403);
+check("or rename one", (await rival.request.put(B + '/api/admin/source-names', { data: { slug: 'masquerade', tag: 'dj-mikes-story', name: 'Ours' } })).status() === 403);
 check("or remove one", (await rival.request.delete(B + '/api/admin/fans?slug=masquerade&email=evil@example.com')).status() === 403);
 check('signed out: nothing', (await fetch(B + '/api/admin/fans?slug=masquerade')).status === 401);
 

@@ -23,13 +23,24 @@ for (const [w,h] of sizes) {
   await p.selectOption('#link-start','mr-runway');
   const link = await p.getByLabel('Your link').textContent();
   check(w+': custom tag + start', link.endsWith('/f/masquerade?src=bus-bench&start=mr-runway'), link);
-  check(w+': says how it shows in Results', await p.getByText('Shows in Results as “Bus bench”.').isVisible());
+  check(w+': says what Results will call it', await p.getByText('Shows in Results as “Bus Bench” once you copy or open the link.').isVisible() || await p.getByText('Shows in Results as “Bus Bench”.').isVisible());
   await p.fill('#link-custom', "DJ Mike's story");
   check(w+': any words make a tag', (await p.getByLabel('Your link').textContent()).includes('?src=dj-mikes-story&'), await p.getByLabel('Your link').textContent());
+  await p.getByRole('button', { name: 'Copy link' }).click();
+  await p.getByText(/Shows in Results as “DJ Mike's story”\./).waitFor({ timeout: 5000 }).catch(() => {});
+  check(w+': copying saves the name as typed', await p.getByText(/Shows in Results as “DJ Mike's story”\./).isVisible());
+  await p.fill('#link-custom', 'dj mikes story');
+  check(w+': the same link under another name says it renames', await p.getByText('Same link as “DJ Mike\'s story”. Copying it renames it “dj mikes story”.').isVisible());
   await p.fill('#link-custom', 'IG');
   check(w+': another name for a place counts there', await p.getByText('That\'s the same as “Instagram bio”, so it counts there.').isVisible() && (await p.getByLabel('Your link').textContent()).includes('?src=instagram&'));
   await p.fill('#link-custom', 'Bus Bench');
   check(w+': start explained', await p.getByText('Opens on “Haute couture Halloween looks”').isVisible());
+  if (w === 390) {
+    const names = await p.request.get(B + '/api/admin/source-names?slug=masquerade');
+    check('the name is saved for the organizer', (await names.json()).names?.['dj-mikes-story'] === "DJ Mike's story");
+    check("a builder place's name can't be changed", (await p.request.put(B + '/api/admin/source-names', { data: { slug: 'masquerade', tag: 'instagram', name: 'Mine' } })).status() === 400);
+    check('a tag must be a tag', (await p.request.put(B + '/api/admin/source-names', { data: { slug: 'masquerade', tag: 'Not A Tag', name: 'x' } })).status() === 400);
+  }
   check(w+': admin fits width', await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await p.screenshot({path:`admin-links-${w}.jpg`, quality:70, fullPage:true});
   await ctx.close();

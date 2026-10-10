@@ -5,6 +5,7 @@ import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { useResults } from "@/admin/results";
 import SalesHint from "@/admin/components/SalesHint";
 import CopyButton from "@/admin/components/ui/CopyButton";
+import { saveSourceName, savedSourceName, useSourceLabel } from "@/admin/source-names";
 import { formatNumber, viz } from "@/admin/viz";
 import { funnelReel } from "@/data/reels";
 import { normalizeSourceTag, SOURCE_PRESETS, sourceLabel } from "@/lib/source-tag";
@@ -30,7 +31,9 @@ export default function Links() {
   const { funnel } = business;
   const origin = useOrigin();
   // An organizer's event: their permanent link (the one for their bio) always shows the next event.
-  const organizer = useAdminEvents().find((e) => e.funnel.slug === funnel.slug)?.organizer;
+  const event = useAdminEvents().find((e) => e.funnel.slug === funnel.slug);
+  const organizer = event?.organizer;
+  const labelOf = useSourceLabel(event ? [event] : []);
   const [preset, setPreset] = useState<string>(SOURCE_PRESETS[0].tag);
   const [custom, setCustom] = useState("");
   const [start, setStart] = useState("");
@@ -40,6 +43,14 @@ export default function Links() {
   // it (dj-mikes-story), and Results shows it back as words.
   const customTag = normalizeSourceTag(slugify(custom));
   const samePlace = customTag ? SOURCE_PRESETS.find((p) => p.tag === customTag) : undefined;
+  const customName = custom.trim().replace(/\s+/g, " ").slice(0, 60);
+  // An organizer's own place keeps the name as typed, saved once the link is copied or opened.
+  const savedName = organizer && customTag ? savedSourceName(organizer.slug, customTag) : undefined;
+  const [nameSaved, setNameSaved] = useState<"" | "saved" | "failed">("");
+  const nameIt = () => {
+    if (preset !== CUSTOM || !event || !customTag || samePlace || !customName) return;
+    saveSourceName(event, customTag, customName).then((ok) => setNameSaved(ok ? "saved" : "failed"));
+  };
   const tag = preset === CUSTOM ? customTag : preset;
   const query = new URLSearchParams();
   if (tag) query.set("src", tag);
@@ -120,7 +131,7 @@ export default function Links() {
                   placeholder="e.g. Bus bench, DJ Mike's story"
                   maxLength={60}
                   value={custom}
-                  onChange={(e) => { setCustom(e.target.value); }}
+                  onChange={(e) => { setCustom(e.target.value); setNameSaved(""); }}
                   aria-describedby="link-custom-help"
                 />
                 <p id="link-custom-help" className="mt-1 text-xs text-gray-600" aria-live="polite">
@@ -130,7 +141,15 @@ export default function Links() {
                       ? "Use at least one letter or number."
                       : samePlace
                         ? `That's the same as “${samePlace.label}”, so it counts there.`
-                        : `Shows in Results as “${sourceLabel(customTag)}”.`}
+                        : !organizer
+                          ? `Shows in Results as “${sourceLabel(customTag)}”.`
+                          : nameSaved === "failed"
+                            ? `Couldn't save the name, so Results shows “${labelOf(customTag)}”. Copy the link again to retry.`
+                            : savedName === customName
+                              ? `${nameSaved === "saved" ? "Saved. " : ""}Shows in Results as “${customName}”.`
+                              : savedName
+                                ? `Same link as “${savedName}”. Copying it renames it “${customName}”.`
+                                : `Shows in Results as “${customName}” once you copy or open the link.`}
                 </p>
               </div>
             )}
@@ -162,13 +181,14 @@ export default function Links() {
               text={url}
               label="Copy link"
               announce="Link copied"
+              onCopy={nameIt}
               className={
                 organizer
                   ? "min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50"
                   : "min-h-11 rounded-md bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue"
               }
             />
-            <a href={path} target="_blank" rel="noopener" className="flex min-h-11 items-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50">
+            <a href={path} target="_blank" rel="noopener" onClick={nameIt} className="flex min-h-11 items-center rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-gray-50">
               Open
             </a>
           </div>
@@ -230,7 +250,7 @@ export default function Links() {
               {rows.map((r) => (
                 <tr key={r.tag ?? "direct"} className="border-b border-gray-100">
                   <td className="py-2.5 pr-4">
-                    <span className="font-medium text-deep-navy">{sourceLabel(r.tag)}</span>
+                    <span className="font-medium text-deep-navy">{labelOf(r.tag)}</span>
                     {r.tag && <span className="ml-2 hidden text-xs text-gray-600 sm:inline">src={r.tag}</span>}
                   </td>
                   <td className="py-2.5 pr-4 text-right">{formatNumber(r.visitors)}</td>

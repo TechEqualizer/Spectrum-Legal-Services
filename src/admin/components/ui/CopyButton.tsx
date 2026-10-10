@@ -12,8 +12,11 @@ export default function CopyButton({
   label = "Copy",
   announce = "Copied",
   className,
+  onCopy,
 }: {
   text: string;
+  /** Also on a blocked clipboard: the link is still going somewhere. */
+  onCopy?: () => void;
   label?: string;
   /** What a screen reader hears once it's copied. */
   announce?: string;
@@ -21,6 +24,7 @@ export default function CopyButton({
 }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
+    onCopy?.();
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);

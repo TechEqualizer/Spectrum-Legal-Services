@@ -10,13 +10,13 @@ import { CheckIcon } from "@/admin/components/ui/icons";
 import { showsFans, useFanCounts, type FanCounts } from "@/admin/fan-counts";
 import { useAllResults, type EventResults } from "@/admin/results";
 import { useAdminSession } from "@/admin/session";
+import { useSourceLabel } from "@/admin/source-names";
 import { formatNumber, formatPercent } from "@/admin/viz";
 import type { FunnelEvent, Reel, ReelMedia } from "@/data/funnel-types";
 import { eventDaysAway, eventWhen } from "@/lib/event-time";
 import { upcomingEvents } from "@/lib/events";
 import { REEL_DRIVERS, REEL_ROLES, coreReels } from "@/lib/funnel-draft";
 import { sceneMediaOf, thumbnailOf } from "@/lib/media";
-import { sourceLabel } from "@/lib/source-tag";
 
 const DAYS = 30;
 const change = (now: number, before: number) => (before ? now / before - 1 : undefined);
@@ -246,6 +246,7 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
 /** Where visitors came from across every event: the tagged links in bios, texts and ads. */
 function Sources({ results }: { results: EventResults[] }) {
   const id = useId();
+  const labelOf = useSourceLabel(results.map((r) => r.event));
   const byTag = new Map<string, { visitors: number; tickets: number; sold: number }>();
   for (const { results: r } of results) {
     for (const s of r.sources) {
@@ -266,7 +267,7 @@ function Sources({ results }: { results: EventResults[] }) {
           {rows.map(([tag, t]) => (
             <li key={tag}>
               <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="truncate font-semibold text-deep-navy">{sourceLabel(tag || undefined)}</span>
+                <span className="truncate font-semibold text-deep-navy">{labelOf(tag)}</span>
                 <span className="flex-shrink-0 text-gray-600">
                   {formatNumber(t.visitors)} {t.visitors === 1 ? "visitor" : "visitors"} · {formatNumber(t.tickets)} {t.tickets === 1 ? "ticket click" : "ticket clicks"}
                   {showSold && <> · <span className="font-semibold text-deep-navy">{formatNumber(t.sold)} sold</span></>}
