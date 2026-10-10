@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
+import PeopleTabs from "@/admin/components/PeopleTabs";
 import LocalDate from "@/components/LocalDate";
 import type { Funnel } from "@/data/funnel-types";
 import { funnelReel } from "@/data/reels";
@@ -67,6 +68,7 @@ export default function Leads() {
 
   return (
     <div className="space-y-6">
+      <PeopleTabs />
       <div>
         <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Leads</h1>
         <p className="text-sm text-gray-600">{business.terms.leadsIntro}</p>

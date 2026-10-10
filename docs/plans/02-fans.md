@@ -214,15 +214,20 @@ Each step is one PR.
 - Tests: the `calendar-feed` suite.
 - Live page impact: one new link, on the confirmation page only.
 
-### 6. Fans in the admin
+### 6. Fans in the admin (built, in part)
 
-- **A Fans page:**
-  - followers, with when and where each one followed (source tag, event);
-  - CSV export (the organizer's list, theirs to keep);
-  - remove a fan.
-- Home and Results gain **Follows** next to ticket clicks, plus the share
-  of visitors who follow.
-- The guided tour gains a Fans step.
+- **A Fans page** (built), beside Leads at `/admin/leads/fans` with a
+  Leads | Fans switch on both, so the nav keeps its few places:
+  - followers, newest first, with when and where each one followed
+    (source tag, event), and how many have unfollowed;
+  - CSV export of current fans (the organizer's list, theirs to keep;
+    formula-looking cells are defused);
+  - remove a fan, from this organizer only (asked first);
+  - a note when Follow isn't switched on for their links yet.
+  - Migration `20261021000000_organizer_fans.sql`: `organizer_fans` and
+    `remove_fan`, for admins who manage the organizer.
+- Not yet: Home and Results gaining **Follows** next to ticket clicks (plus
+  the share of visitors who follow), and a Fans step in the guided tour.
 - Live page impact: none (admin only).
 
 ## Measures

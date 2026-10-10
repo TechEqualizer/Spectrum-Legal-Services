@@ -160,6 +160,21 @@ http.createServer((req, res) => {
         return json(res, 204);
       }
     }
+    // Like organizer_fans / remove_fan: an organizer's fans, for admins who manage it.
+    if (p === '/rest/v1/rpc/organizer_fans' || p === '/rest/v1/rpc/remove_fan') {
+      const email = emailOf(req);
+      if (!email || !managesOrganizer(email, body.p_organizer)) return json(res, 403, { code: '42501', message: 'not allowed' });
+      const mine = [...follows.entries()].filter(([, f]) => f.organizer_slug === body.p_organizer);
+      if (p.endsWith('remove_fan')) {
+        const target = String(body.p_email).trim().toLowerCase();
+        const hit = mine.find(([, f]) => fans.get(f.fan_id)?.email === target);
+        if (hit) follows.delete(hit[0]);
+        return json(res, 200, Boolean(hit));
+      }
+      return json(res, 200, mine
+        .map(([, f]) => ({ email: fans.get(f.fan_id)?.email, source_tag: f.source_tag, funnel_id: f.funnel_id, confirmed_at: new Date(f.confirmed_at).toISOString(), unfollowed_at: f.unfollowed_at ? new Date(f.unfollowed_at).toISOString() : null }))
+        .sort((a, b) => b.confirmed_at.localeCompare(a.confirmed_at)));
+    }
     // Like set_event_presales / event_presales_for: an event's presale links, for its admins only.
     if (p === '/rest/v1/rpc/set_event_presales' || p === '/rest/v1/rpc/event_presales_for') {
       const email = emailOf(req);

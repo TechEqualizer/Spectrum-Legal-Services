@@ -73,6 +73,9 @@ still moves forward during a run.
     watch"; a follower's signed address that plays; a follower of another
     organizer refused; admins' private uploads and preview addresses; the
     editor's switch with the content rule.
+  - `fans-admin`: the Fans page beside Leads (step 6): followers newest
+    first, counts, the CSV (current fans only, formulas defused), removing
+    a fan from one organizer only, and only the organizer's admins.
   - `calendar-feed`: the organizer's calendar feed (step 5): upcoming
     nights only, soonest first, tagged links, an event's own feed, and the
     confirmation's Apple, Google and Outlook links.
