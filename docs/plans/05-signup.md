@@ -129,8 +129,10 @@ Most conversion figures in these are vendors' own and unverified.
    `20261025000000_signup_claim.sql`: `claim_signup_invite()` (the server's
    secret key only) makes, all or nothing, the organizer, its first event
    (the night from the flyer, published with the reels' words, opening
-   words, dates and look; not the preview's locked reel, made-up presale or
-   flyer picture), `admin_users` access to that organizer, Core trialing
+   words, dates and look, and the flyer: stored in the event's folder of
+   the public `reel-media` bucket by the server, then the opening scene's
+   backdrop, behind each reel until its video comes, and the look's flyer;
+   not the preview's locked reel or made-up presale), `admin_users` access to that organizer, Core trialing
    for 14 days, and the invite marked claimed. The form: "Your name, as
    fans see it" (suggested from the flyer, the part before any colon), the
    link `showlnk.com/f/<name>` (follows the name until changed, checked as

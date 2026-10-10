@@ -98,3 +98,13 @@ test("the name to suggest: before the colon", () => {
   assert.equal(suggestedName({ dates: [date("2026-10-31", { name: "Golden Hour: Halloween" })] }), "Golden Hour");
   assert.equal(suggestedName({}), "");
 });
+
+test("the claim, with the flyer stored: the opening scene, behind each reel, and the look's flyer", () => {
+  const flyer = "https://example.supabase.co/storage/v1/object/public/reel-media/night/abc-flyer.jpg";
+  const look = { colors: { background: "#000000", depth: "#111111", button: "#d4af37", highlight: "#8a6d1f", light: "#ffffff" }, font: "regal" } as unknown as NonNullable<StartDraft["look"]>;
+  const pub = claimPublication({ ...draft, look }, undefined, "https://posh.vip/e/gh", flyer);
+  assert.deepEqual(pub.backdrop, { kind: "image", src: flyer, fit: "poster" });
+  assert.ok(pub.reels.every((r) => r.media?.kind === "image" && r.media.src === flyer));
+  assert.equal(pub.look?.flyer, flyer);
+  assert.equal(claimPublication(draft, undefined, "https://posh.vip/e/gh").backdrop, undefined);
+});

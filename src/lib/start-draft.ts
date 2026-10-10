@@ -206,18 +206,21 @@ export const suggestedName = (d: StartDraft) => {
 
 /**
  * What the claim publishes on the new event: the reels' words, the opening's
- * words, the dates and the look. Not the preview's extras (the locked reel,
- * the made-up presale) or the flyer picture (it stays in their browser; they
- * add their own media in the studio).
+ * words, the dates and the look, and the flyer (once stored at `flyerUrl`)
+ * as the opening scene and behind each reel. Not the preview's extras (the
+ * locked reel, the made-up presale).
  */
-export function claimPublication(d: StartDraft, timeZone?: string, ticketUrl?: string): Publication {
+export function claimPublication(d: StartDraft, timeZone?: string, ticketUrl?: string, flyerUrl?: string): Publication {
   // A date needs a ticket link to go live: the flyer's, else the one they gave, else another date's.
   const fallback = httpsLink(ticketUrl) || d.dates?.map((x) => httpsLink(x.ticketUrl)).find(Boolean) || "";
   const dates = d.dates?.map((x) => ({ ...x, ticketUrl: httpsLink(x.ticketUrl) || fallback })).filter((x) => x.ticketUrl);
-  const { publication } = draftLink({ ...d, dates, flyer: undefined }, { core: true, timeZone });
+  // The flyer, once stored at its own address: the opening scene and, until their videos come, behind each reel.
+  const { publication } = draftLink({ ...d, dates, flyer: flyerUrl }, { core: true, timeZone });
   const reels = publication.reels.filter((r) => r.id !== FANS_REEL_ID);
   const claimed: Publication = { ...publication, reels, funnel: { ...publication.funnel, order: reels.map((r) => r.id) } };
-  delete claimed.backdrop;
+  if (!flyerUrl) delete claimed.backdrop;
+  // Kept as the event's flyer too, for the Style sheet's background choices.
+  if (flyerUrl && claimed.look) claimed.look = { ...claimed.look, flyer: flyerUrl };
   if (claimed.events) claimed.events = claimed.events.map((e) => ({ ...e, presale: undefined }));
   return claimed;
 }

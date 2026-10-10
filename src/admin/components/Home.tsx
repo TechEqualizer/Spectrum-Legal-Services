@@ -101,6 +101,10 @@ export default function Home() {
   );
 }
 
+/** A reel's media that's just the opening scene's picture (the flyer), not a video of its own. */
+const isFlyerOnly = (media: ReelMedia, scene: ReelMedia | undefined) =>
+  media.kind === "image" && scene?.kind === "image" && media.src === scene.src;
+
 /** The headline numbers, summed across events, against the 30 days before. */
 function Totals({ results, fans }: { results: EventResults[]; fans?: FanCounts[] }) {
   const sum = (pick: (r: EventResults) => number) => results.reduce((n, r) => n + pick(r), 0);
@@ -184,7 +188,8 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
     ...coreReels(e.live.reels).map(({ role, reel }) => ({
       name: REEL_ROLES[role],
       hint: REEL_DRIVERS[role].question,
-      state: !reel ? "missing" : reel.media ? "ready" : "video",
+      // A reel showing only the flyer (as a new link's do) still needs its video.
+      state: !reel ? "missing" : reel.media && !isFlyerOnly(reel.media, scene) ? "ready" : "video",
     })),
   ] as { name: string; hint: string; state: "ready" | "video" | "missing" }[];
   const left = steps.filter((s) => s.state !== "ready").length;

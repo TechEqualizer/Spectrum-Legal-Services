@@ -544,6 +544,14 @@ http.createServer((req, res) => {
       files.set(sign[1], { type: req.headers['content-type'], body: raw });
       return json(res, 200, { Key: sign[1] });
     }
+    // The server's own writes to the public bucket (a claimed flyer): the secret key only.
+    const direct = p.match(/^\/storage\/v1\/object\/reel-media\/(.+)$/);
+    if (direct && (req.method === 'POST' || req.method === 'DELETE')) {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 403, { message: 'new row violates row-level security policy' });
+      if (req.method === 'DELETE') { files.delete(direct[1]); return json(res, 200, {}); }
+      files.set(direct[1], { type: req.headers['content-type'], body: raw });
+      return json(res, 200, { Key: 'reel-media/' + direct[1] });
+    }
     // Profile photos: each admin writes only their own folder (like the avatars policies).
     const avatar = p.match(/^\/storage\/v1\/object\/avatars\/(.+)$/);
     if (avatar && (req.method === 'POST' || req.method === 'DELETE')) {
