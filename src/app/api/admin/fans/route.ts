@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   if (!all) return NextResponse.json({ error: "Couldn't load your fans. Reload to try again." }, { status: 502, headers: NO_STORE });
   const { fans, waiting } = fansOnPlan(all, plan);
   return NextResponse.json(
-    { organizer: { slug: t.organizer.slug, name: t.organizer.name }, followOn: await followOn(t.organizer.slug, plan), core: !plan || hasCore(plan), fans, waiting },
+    { organizer: { slug: t.organizer.slug, name: t.organizer.name }, followOn: followOn(t.organizer.slug), core: !plan || hasCore(plan), fans, waiting },
     { headers: NO_STORE }
   );
 }

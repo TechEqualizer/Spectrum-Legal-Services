@@ -100,9 +100,9 @@ still moves forward during a run.
     published edits and the page; "Fans get tickets first" for a visitor,
     "Get presale tickets" for a follower, nothing after the window;
     others refused; the date sheet's presale fields.
-  - `follow`: Follow on the link (step 2), on only for the fan suites' own
-    test organizers (`FOLLOW_ORGANIZERS=gh-follow,gh-reels,gh-presale`, added to the
-    mock with `/__organizer`, with Golden Hour's event at their own links:
+  - `follow`: Follow on the link (step 2), on for every organizer but Big
+    Love (`FOLLOW_HOLD=biglove`), here the fan suites' own test organizers
+    (added to the mock with `/__organizer`, with Golden Hour's event at their own links:
     the app keeps what earlier suites saw at `/f/sundays` for the run). Big Love's link keeps Updates. The rail's Follow, the
     sheet, "Check your email", Following after confirming, unfollow, a
     refused follow's message, and the choose-a-night page's Follow.

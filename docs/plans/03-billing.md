@@ -137,10 +137,9 @@ competitors' pages; check prices on the vendors' own sites before quoting.
    organizer's plan with the secret key, kept a minute and cleared the
    moment it changes (the webhook, a claim); if it can't be read, the gates
    keep what fans already have.
-   - **Follow** is on for organizers who signed up themselves (a trial or
-     Stripe plan), and, until step 4, for those `FOLLOW_ORGANIZERS` lists:
-     how organizers Showlnk set up (Big Love, comped) get it, so Big
-     Love's Follow still waits for that switch.
+   - **Follow** was on for organizers who signed up themselves (a trial or
+     Stripe plan), and for those `FOLLOW_ORGANIZERS` listed, until step 4
+     made it on for everyone but `FOLLOW_HOLD`.
    - **Presales for followers** need Core: on Free the link shows no
      presale and `/api/fans/presale` gives no links.
    - **Fans-only reels** need Core: on Free they stay locked for everyone,
@@ -158,9 +157,25 @@ competitors' pages; check prices on the vendors' own sites before quoting.
    Live page impact: none today (Big Love is comped and keeps its
    `FOLLOW_ORGANIZERS` state); organizers on Free lose presales and
    fans-only reels.
-4. **Go live.** Switch to live keys; retire `FOLLOW_ORGANIZERS`; a receipt
-   and "card declined" email check. Live page impact: none for Big Love
-   (comped).
+4. **Go live.**
+   - **Follow for everyone (built).** `FOLLOW_ORGANIZERS` is retired: every
+     organizer's links have Follow (Free includes it, up to 100 fans) once
+     the deployment has every fan setting, except those `FOLLOW_HOLD` lists.
+     `FOLLOW_HOLD=biglove` is set in Vercel (production and preview, Oct 10,
+     2026): Big Love's Follow waits until after its Oct 31 night and the
+     owner's go-ahead (then remove it from the list).
+   - **Waiting on the owner:**
+     - `RESEND_API_KEY` in Vercel. Without it Follow is off everywhere in
+       production: it sends the confirm emails.
+     - The Showlnk Stripe account (step 0), test keys first:
+       `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Vercel; a full
+       test-mode run (Start Core, the webhook, the portal, a declined card);
+       then the live keys and the live webhook's secret.
+     - Stripe → Settings → Customer emails: successful payments (receipts)
+       and failed payments on; check one of each arrives in test mode.
+
+   Live page impact: none for Big Love (held); other organizers' links
+   get Follow once `RESEND_API_KEY` is set.
 
 ## Measures
 

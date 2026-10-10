@@ -107,7 +107,7 @@ export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
  * the plan can't be read, they keep working: nothing fans have breaks.
  */
 async function followTarget(organizer: Organizer, funnelId?: string): Promise<FollowTarget | undefined> {
+  if (!followOn(organizer.slug)) return undefined;
   const plan = await planOf(organizer.slug);
-  if (!(await followOn(organizer.slug, plan))) return undefined;
   return { organizer: organizer.slug, name: organizer.name, ...(funnelId ? { funnelId } : {}), core: !plan || hasCore(plan) };
 }
