@@ -1,9 +1,8 @@
-# Plan 3: Billing (draft for approval)
+# Plan 3: Billing
 
 Organizers pay for Showlnk: the Core plan, per organizer. Until now
 everything has been free while it was built (Plan 2 says Core gates the
-fan features later). This plan is a draft: the decisions marked **Decide**
-below are yours before step 1.
+fan features later). Decided Oct 10, 2026 (see Decided below).
 
 ## What works elsewhere (researched Oct 2026)
 
@@ -104,18 +103,26 @@ competitors' pages; check prices on the vendors' own sites before quoting.
 
 ## Steps
 
-0. **Decisions and a Stripe account.** Your answers to the questions below;
+0. **Decisions and a Stripe account.** Decisions made (below). Still to do:
    a Stripe account in test mode; the Core product and price created in
    Stripe; keys added to Vercel (`STRIPE_SECRET_KEY`,
    `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_CORE`). Live page impact: none.
-1. **Plans table and the one gate.** Migration for `organizer_plans`;
-   `planOf()`; Big Love comped. `followOn()` reads the plan (and still the
-   environment variable, until step 4). Live page impact: none.
+1. **Plans table and the Plan card (built).** Migration
+   `20261023000000_organizer_plans.sql`: `organizer_plans` (no row is Free)
+   and `organizer_plan()` for the organizer's admins; Big Love comped. The
+   rules in `src/lib/plans.ts` (`hasCore`, `planSummary`: trial days, the
+   7-day grace for a declined card, comps with an end date). Settings →
+   Plan says the plan in words and, on Free, what Core adds. Nothing is
+   gated yet: Follow still follows `FOLLOW_ORGANIZERS` until step 3. Live
+   page impact: none.
 2. **Start Core and Manage billing.** Settings → Plan card; Checkout and
    portal sessions; the webhook. Test mode end to end. Live page impact:
    none.
-3. **Gates and upgrade prompts.** "Part of Core" where the features live;
-   lapsed plans turn Follow off for new fans as described above. Live page
+3. **Gates, the trial and upgrade prompts.** The gates read the plan with
+   the secret key (`planOf()`); "Part of Core" where the features live; the
+   14-day trial starts when an organizer first reaches 100 fans or switches
+   on a Core feature; lapsed plans turn Follow off for new fans as
+   described above. Live page
    impact: only for organizers without Core.
 4. **Go live.** Switch to live keys; retire `FOLLOW_ORGANIZERS`; a receipt
    and "card declined" email check. Live page impact: none for Big Love
@@ -132,14 +139,18 @@ competitors' pages; check prices on the vendors' own sites before quoting.
 - Coupons, per-seat pricing, taxes beyond Stripe Tax's defaults.
 - A public pricing page (the waitlist landing stays as is).
 
-## Open questions (Decide)
+## Decided
 
-1. **Free vs Core** as in Design (Follow free up to 100 fans, like Laylo's
-   free start)? And is $29/$290 right next to Laylo's $25/$300?
-2. **Trial?** Proposal: 14 days of Core when they first hit the 100-fan cap
-   or switch on a Core feature, no card to start (Linktree gives 7).
-3. **Who pays:** the organizer directly, or Showlnk invoices agencies that
-   run several organizers?
-4. **Stripe account:** do you have one for Showlnk (business details,
-   payouts bank)? I can't create it; you sign up at stripe.com.
-5. **Big Love:** comped indefinitely, or comped until a date?
+- **Free vs Core:** Follow is free up to 100 fans; Core is $29/month or
+  $290/year for unlimited fans, fan-only reels, presale and the calendar
+  feed.
+- **Trial:** 14 days of Core, no card to start; it begins when an
+  organizer first reaches 100 fans or switches on a Core feature.
+- **Who pays:** each organizer, directly.
+
+## Open questions
+
+1. **Stripe account:** does Showlnk have one (business details, payouts
+   bank)? Needed before step 2; you sign up at stripe.com.
+2. **Big Love:** comped indefinitely, or until a date? (Comped with no end
+   for now.)
