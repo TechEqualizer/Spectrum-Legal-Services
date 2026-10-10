@@ -4,7 +4,7 @@ import { getFunnel, organizerOf } from "@/lib/server/funnels";
 import { flyerInputFrom, readFlyer } from "@/lib/server/flyer-import";
 
 // Reading a flyer can take a little while.
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // Reads a flyer (photo, PDF, or pasted text) and returns the dates on it, for
 // the admin to review. Nothing is saved.

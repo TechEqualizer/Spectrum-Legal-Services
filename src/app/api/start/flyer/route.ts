@@ -3,7 +3,7 @@ import { flyerInputFrom, readFlyer } from "@/lib/server/flyer-import";
 import { inviteStatus, countInviteRead } from "@/lib/server/invites";
 
 // Reading a flyer can take a little while.
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
