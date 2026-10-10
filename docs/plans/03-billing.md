@@ -135,8 +135,7 @@ competitors' pages; check prices on the vendors' own sites before quoting.
    none.
 3. **Gates, the trial and upgrade prompts.** The gates read the plan with
    the secret key (`planOf()`); "Part of Core" where the features live; the
-   14-day trial starts when an organizer first reaches 100 fans or switches
-   on a Core feature; lapsed plans turn Follow off for new fans as
+   14-day trial starts at claim (Plan 5); lapsed plans turn Follow off for new fans as
    described above. Live page
    impact: only for organizers without Core.
 4. **Go live.** Switch to live keys; retire `FOLLOW_ORGANIZERS`; a receipt
@@ -159,8 +158,10 @@ competitors' pages; check prices on the vendors' own sites before quoting.
 - **Free vs Core:** Follow is free up to 100 fans; Core is $29/month or
   $290/year for unlimited fans, fan-only reels, presale and the calendar
   feed.
-- **Trial:** 14 days of Core, no card to start; it begins when an
-  organizer first reaches 100 fans or switches on a Core feature.
+- **Trial:** 14 days of Core, no card to start. It begins when an
+  organizer claims their link in the sign-up wizard (Plan 5), a reverse
+  trial: everything on from day one, then Free unless they pay. (Changed
+  Oct 10, 2026 from "when they first reach 100 fans".)
 - **Who pays:** each organizer, directly.
 - **Stripe:** a separate Showlnk account (not Adsure's), test mode first.
 
