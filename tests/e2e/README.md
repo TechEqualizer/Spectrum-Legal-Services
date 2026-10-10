@@ -17,8 +17,8 @@ check fails. Each suite's full output, plus screenshots, goes to
 `tests/e2e/.out` (not committed).
 
 Ports 3002, 3003 (the `eventbrite` suite's second app, without Eventbrite
-settings), 54321 (mock Supabase), 54400 (mock Claude) and 54600 (mock
-Eventbrite) must be free.
+settings), 54321 (mock Supabase), 54400 (mock Claude), 54600 (mock
+Eventbrite) and 54700 (mock Resend) must be free.
 Building replaces the app's `.next` folder with a test build, so run
 `npm run build` again before `npm start` for real.
 
@@ -62,6 +62,11 @@ still moves forward during a run.
   - `event-dates`: publishing writes an event's dates as rows
     (`event_dates`, through `set_event_dates`), with Eventbrite's event id;
     taking edits down restores the built dates; others can't write them.
+  - `fans`: following an organizer by email (Plan 2, step 1; no Follow
+    button on links yet). The link goes out through the mock Resend, opening
+    it only shows the page and its button confirms; the signed cookie; links
+    that are used, expired, made up or rate-limited; unfollow and forget;
+    the fan functions closed to visitors.
   - `legal`: the organizer terms (`/terms`, with the content rule) and the
     privacy note (`/privacy`), linked from the home page's footer and
     readable on a phone.
@@ -117,6 +122,11 @@ still moves forward during a run.
   refused), `/__state`, `/__reset`. The Supabase mock keeps
   `eventbrite_connections` and `ticket_sales` (the secret key only, like
   the real tables) and adds tickets sold to `funnel_stats`.
+- `mocks/resend.mjs`: keeps every email the app sends (`/emails`, with
+  the test key only) instead of sending it. Control routes: `/__emails`
+  (every email, oldest first), `/__fail` (the next send fails), `/__reset`.
+  The Supabase mock has the `fan_*` functions (secret key only), and
+  `/__fan-expire` expires every pending sign-in link.
 - `mocks/claude.mjs`: answers flyer reads (`POST /__mode` with `multi`,
   `single`, `none` or `refusal`) and funnel drafts. `/__last` returns the
   last request, so suites can check the model, schema and prompt.

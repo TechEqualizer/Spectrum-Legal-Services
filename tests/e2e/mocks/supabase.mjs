@@ -40,6 +40,10 @@ const files = new Map(); // path -> {type, body}
 // Eventbrite (server-only tables: like the real ones, the secret key alone reads and writes them).
 const ebConnections = new Map(); // organizer_slug -> row
 const ticketSales = new Map(); // eventbrite_order_id -> row
+// Fans (server-only too): the fan_* functions below, like the database's.
+const fans = new Map(); // id -> { id, email }
+const follows = new Map(); // `${fanId}|${organizer}` -> row
+const fanTokens = new Map(); // token_hash -> row
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
 let seq = 0;
@@ -75,9 +79,11 @@ http.createServer((req, res) => {
     if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
     // Test controls
     if (p === '/__log') return json(res, 200, log);
-    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()], eventbriteConnections: [...ebConnections.values()], ticketSales: [...ticketSales.values()], eventDates: Object.fromEntries(eventDates) });
+    if (p === '/__state') return json(res, 200, { publications: [...publications.values()], files: [...files.keys()], eventFunnels: [...eventFunnels.keys()], eventbriteConnections: [...ebConnections.values()], ticketSales: [...ticketSales.values()], eventDates: Object.fromEntries(eventDates), fans: [...fans.values()], follows: [...follows.values()], fanTokens: [...fanTokens.values()] });
+    // Test control: every pending sign-in link expires now.
+    if (p === '/__fan-expire') { for (const t of fanTokens.values()) t.expires_at = Date.now() - 1000; return json(res, 200, { ok: true }); }
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -207,6 +213,53 @@ http.createServer((req, res) => {
     if (p === '/rest/v1/rpc/log_reel_event_v2') {
       reelEvents.push({ at: Date.now(), visitor: body.p_visitor_id, funnel: body.p_funnel_id, reel: body.p_reel_id, event: body.p_event, tag: body.p_source_tag ?? null });
       return json(res, 204);
+    }
+    // The fan_* functions: like the database's, callable with the secret key only.
+    if (p.startsWith('/rest/v1/rpc/fan_')) {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: `permission denied for function ${p.split('/').pop()}` });
+      const fn = p.split('/').pop();
+      const now = Date.now();
+      const hour = (rows) => rows.filter((t) => t.created_at > now - 3600e3).length;
+      if (fn === 'fan_start') {
+        const email = String(body.p_email).trim().toLowerCase();
+        if (!organizers.has(body.p_organizer)) return json(res, 200, 'unknown_organizer');
+        const all = [...fanTokens.values()];
+        if (hour(all.filter((t) => t.email === email)) >= 3 || (body.p_ip_hash && hour(all.filter((t) => t.ip_hash === body.p_ip_hash)) >= 10)) return json(res, 200, 'rate_limited');
+        fanTokens.set(body.p_token_hash, { token_hash: body.p_token_hash, email, organizer_slug: body.p_organizer, source_tag: body.p_source_tag || null, funnel_id: body.p_funnel_id || null, consent_text: body.p_consent_text, ip_hash: body.p_ip_hash ?? null, created_at: now, expires_at: now + 20 * 60e3, used_at: null });
+        return json(res, 200, 'ok');
+      }
+      const status = (t) => (t.used_at ? 'used' : t.expires_at <= now ? 'expired' : 'valid');
+      if (fn === 'fan_token_info') {
+        const t = fanTokens.get(body.p_token_hash);
+        return json(res, 200, t ? [{ organizer_slug: t.organizer_slug, email: t.email, status: status(t) }] : []);
+      }
+      if (fn === 'fan_confirm') {
+        const t = fanTokens.get(body.p_token_hash);
+        if (!t || status(t) !== 'valid') return json(res, 200, []);
+        t.used_at = now;
+        let fan = [...fans.values()].find((f) => f.email === t.email);
+        if (!fan) { fan = { id: crypto.randomUUID(), email: t.email }; fans.set(fan.id, fan); }
+        const key = `${fan.id}|${t.organizer_slug}`;
+        const had = follows.get(key);
+        if (!had || had.unfollowed_at) follows.set(key, { fan_id: fan.id, organizer_slug: t.organizer_slug, source_tag: t.source_tag, funnel_id: t.funnel_id, consent_text: t.consent_text, confirmed_at: now, unfollowed_at: null });
+        return json(res, 200, [{ fan_id: fan.id, organizer_slug: t.organizer_slug }]);
+      }
+      if (fn === 'fan_following') return json(res, 200, [...follows.values()].filter((f) => f.fan_id === body.p_fan_id && !f.unfollowed_at).map((f) => f.organizer_slug).sort());
+      if (fn === 'fan_unfollow') {
+        const f = follows.get(`${body.p_fan_id}|${body.p_organizer}`);
+        if (!f || f.unfollowed_at) return json(res, 200, false);
+        f.unfollowed_at = now;
+        return json(res, 200, true);
+      }
+      if (fn === 'fan_forget') {
+        const fan = fans.get(body.p_fan_id);
+        if (!fan) return json(res, 200, false);
+        fans.delete(fan.id);
+        for (const [k, f] of follows) if (f.fan_id === fan.id) follows.delete(k);
+        for (const [k, t] of fanTokens) if (t.email === fan.email) fanTokens.delete(k);
+        return json(res, 200, true);
+      }
+      return json(res, 404, { message: `no function ${fn}` });
     }
     // Eventbrite's tables: RLS on with no policies and no grants, so only the secret key (service role) gets in.
     if (p === '/rest/v1/eventbrite_connections' || p === '/rest/v1/ticket_sales') {

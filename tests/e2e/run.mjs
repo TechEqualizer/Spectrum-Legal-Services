@@ -21,6 +21,7 @@ const APP = "http://localhost:3002";
 const SUPABASE = "http://localhost:54321";
 const CLAUDE = "http://localhost:54400";
 const EVENTBRITE = "http://localhost:54600";
+const RESEND = "http://localhost:54700";
 
 const args = process.argv.slice(2);
 const build = !args.includes("--no-build");
@@ -42,7 +43,7 @@ const env = {
   ANTHROPIC_BASE_URL: CLAUDE,
   NEXT_TELEMETRY_DISABLED: "1",
 };
-for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "EVENTBRITE_CLIENT_ID", "EVENTBRITE_CLIENT_SECRET", "EVENTBRITE_TOKEN_KEY", "EVENTBRITE_OAUTH_BASE", "EVENTBRITE_API_BASE"]) delete env[key];
+for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "EVENTBRITE_CLIENT_ID", "EVENTBRITE_CLIENT_SECRET", "EVENTBRITE_TOKEN_KEY", "EVENTBRITE_OAUTH_BASE", "EVENTBRITE_API_BASE", "RESEND_API_BASE", "FAN_COOKIE_SECRET", "FAN_FROM_EMAIL", "SHOWLNK_POSTAL_ADDRESS", "SHOWLNK_CONTACT_EMAIL"]) delete env[key];
 // The mock's own secret key, for Send login (Settings → Accounts) only.
 env.SUPABASE_SECRET_KEY = "test-secret";
 // Eventbrite goes to its mock: OAuth and the API, with a test app and token key.
@@ -50,6 +51,11 @@ env.EVENTBRITE_CLIENT_ID = "test-eb-client";
 env.EVENTBRITE_CLIENT_SECRET = "test-eb-secret";
 env.EVENTBRITE_TOKEN_KEY = Buffer.alloc(32, 7).toString("base64");
 env.EVENTBRITE_OAUTH_BASE = EVENTBRITE;
+// Fans: sign-in emails go to the mock Resend, which keeps them for the suites.
+env.RESEND_API_KEY = "test-resend";
+env.RESEND_API_BASE = RESEND;
+env.FAN_COOKIE_SECRET = "test-fan-cookie-secret";
+env.SHOWLNK_POSTAL_ADDRESS = "1 Test Street, Detroit, MI 48201";
 // The calendar every process in the run sees (shift-time.cjs), so tests
 // written around Big Love's Oct 31 night don't depend on today's date.
 // E2E_NOW sets another moment, e.g. to try a run after the night.
@@ -98,7 +104,7 @@ async function waitFor(url, what, ms = 60000) {
 }
 
 // Something already on these ports (an earlier run, a dev server) would answer instead.
-for (const [url, what] of [[APP, "port 3002"], [SUPABASE, "port 54321"], [CLAUDE, "port 54400"], [EVENTBRITE, "port 54600"], ["http://localhost:3003", "port 3003"]]) {
+for (const [url, what] of [[APP, "port 3002"], [SUPABASE, "port 54321"], [CLAUDE, "port 54400"], [EVENTBRITE, "port 54600"], [RESEND, "port 54700"], ["http://localhost:3003", "port 3003"]]) {
   if (await fetch(url).then(() => true, () => false)) {
     console.error(`Something is already running on ${what}. Stop it, then run the tests again.`);
     process.exit(2);
@@ -108,13 +114,15 @@ for (const [url, what] of [[APP, "port 3002"], [SUPABASE, "port 54321"], [CLAUDE
 mkdirSync(out, { recursive: true });
 cpSync(join(here, "fixtures"), out, { recursive: true });
 
-console.log("Starting the mock Supabase, Claude and Eventbrite servers...");
+console.log("Starting the mock Supabase, Claude, Eventbrite and Resend servers...");
 start("node", [join(here, "mocks/supabase.mjs")]);
 start("node", [join(here, "mocks/claude.mjs")]);
 start("node", [join(here, "mocks/eventbrite.mjs")]);
+start("node", [join(here, "mocks/resend.mjs")]);
 await waitFor(`${SUPABASE}/__state`, "Mock Supabase");
 await waitFor(`${CLAUDE}/__last`, "Mock Claude");
 await waitFor(`${EVENTBRITE}/__state`, "Mock Eventbrite");
+await waitFor(`${RESEND}/__emails`, "Mock Resend");
 
 // The app's data cache from an earlier run would serve that run's events
 // and publications, so every run starts without it (built or not).
@@ -150,6 +158,7 @@ for (const suite of suites) {
   await fetch(`${SUPABASE}/__reset`, { method: "POST" });
   await fetch(`${CLAUDE}/__mode`, { method: "POST", body: "multi" });
   await fetch(`${EVENTBRITE}/__reset`, { method: "POST" });
+  await fetch(`${RESEND}/__reset`, { method: "POST" });
   const started = Date.now();
   const r = await run("node", [join(here, "suites", `${suite}.mjs`), out], { cwd: out, env: suiteEnv });
   const lines = r.output.split("\n");
