@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage, { ContactLines } from "@/components/showlnk/LegalPage";
 import { CONTENT_RULE } from "@/lib/content-rule";
+import { CORE_PRICE, FREE_FAN_LIMIT, GRACE_DAYS, TRIAL_DAYS } from "@/lib/plans";
 
 // The terms organizers agree to, including the content rule for reels.
 
@@ -75,10 +76,26 @@ export default function TermsPage() {
         any time; the counts already made stay.
       </p>
 
-      <h2>6. Price</h2>
+      <h2>6. Plans and price</h2>
       <p>
-        Showlnk is free while it&apos;s in early access. Before we start charging, we&apos;ll email you the price at least 30 days
-        ahead, and you can leave before paying anything.
+        Each organizer has its own plan. <strong>Free</strong> includes your links, reels, results, leads, the Eventbrite
+        connection, and Follow for up to {FREE_FAN_LIMIT} fans. <strong>Core</strong> adds unlimited fans, reels only your
+        followers can watch, presales for followers and the fan calendar, for ${CORE_PRICE.month} a month or ${CORE_PRICE.year} a
+        year, plus any tax.
+      </p>
+      <p>
+        Core is free for the first {TRIAL_DAYS} days, starting when you claim your link. No card is needed for the trial. When it
+        ends, you&apos;re on Free unless you&apos;ve started paying; nothing is charged without you choosing a plan.
+      </p>
+      <p>
+        Payments are handled by Stripe; Showlnk never sees your card number. Core renews automatically each month or year until
+        you cancel, which you can do at any time in Settings → Plan. Cancelling stops the next renewal, and Core stays on until
+        the end of the period you&apos;ve paid for. If a payment fails, Core stays on for {GRACE_DAYS} days while the card is
+        retried.
+      </p>
+      <p>
+        Moving to Free never deletes your links, results, leads or fans. We&apos;ll email you at least 30 days before a price
+        change takes effect, and it applies from your next renewal.
       </p>
 
       <h2>7. Leaving, and suspensions</h2>
