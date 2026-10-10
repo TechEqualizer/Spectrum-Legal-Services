@@ -75,8 +75,8 @@ export default function AdminNav() {
     >
       {/* Phones: one compact bar, the event on the left (tap to switch), Core and the account on the right.
           Nothing in it may push the others off screen, however long the name. Desktop: the sidebar's head. */}
-      <div className={`flex items-center gap-2 py-2 pl-4 pr-2 lg:block lg:px-5 lg:py-6 ${folded("lg:px-3")}`}>
-        <Link href="/" aria-label="Back to the site" className={`hidden lg:inline-flex ${folded("lg:hidden")}`}>
+      <div className={`flex items-center gap-2 py-2 pl-4 pr-2 lg:block lg:py-6 ${folded("lg:px-3", "lg:px-5")}`}>
+        <Link href="/" aria-label="Back to the site" className={`hidden ${folded("", "lg:inline-flex")}`}>
           {funnel ? <BrandLogo brand={funnel.brand} size="sm" /> : <span className="text-lg font-black tracking-tight">Showlnk</span>}
         </Link>
         {funnel && (
@@ -93,7 +93,7 @@ export default function AdminNav() {
             )}
           </span>
         )}
-        <div className={`relative flex min-h-11 min-w-0 flex-1 flex-col justify-center lg:mt-5 lg:block lg:min-h-0 ${folded("lg:hidden")}`}>
+        <div className={`relative flex min-h-11 min-w-0 flex-1 flex-col justify-center lg:mt-5 lg:min-h-0 ${folded("lg:hidden", "lg:block")}`}>
           <p className="truncate text-[11px] font-bold uppercase tracking-widest text-sky-accent">
             <span className="lg:hidden">{organizerName ?? "Admin"}</span>
             <span className="hidden lg:inline">Admin</span>
