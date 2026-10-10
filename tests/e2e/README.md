@@ -67,9 +67,16 @@ still moves forward during a run.
     it only shows the page and its button confirms; the signed cookie; links
     that are used, expired, made up or rate-limited; unfollow and forget;
     the fan functions closed to visitors.
-  - `follow`: Follow on the link (step 2), on for the test-only Golden Hour
-    organizer only (`FOLLOW_ORGANIZERS=goldenhour`; added to the mock with
-    `/__organizer`). Big Love's link keeps Updates. The rail's Follow, the
+  - `fan-reels`: fans-only reels (step 3). A private file (added with
+    `/__fan-file`) on a published fans-only reel: not in the page, its reel
+    page or a public address; a visitor's locked card and "Follow to
+    watch"; a follower's signed address that plays; a follower of another
+    organizer refused; admins' private uploads and preview addresses; the
+    editor's switch with the content rule.
+  - `follow`: Follow on the link (step 2), on only for the fan suites' own
+    test organizers (`FOLLOW_ORGANIZERS=gh-follow,gh-reels`, added to the
+    mock with `/__organizer`, with Golden Hour's event at their own links:
+    the app keeps what earlier suites saw at `/f/sundays` for the run). Big Love's link keeps Updates. The rail's Follow, the
     sheet, "Check your email", Following after confirming, unfollow, a
     refused follow's message, and the choose-a-night page's Follow.
   - `legal`: the organizer terms (`/terms`, with the content rule) and the
@@ -130,8 +137,10 @@ still moves forward during a run.
 - `mocks/resend.mjs`: keeps every email the app sends (`/emails`, with
   the test key only) instead of sending it. Control routes: `/__emails`
   (every email, oldest first), `/__fail` (the next send fails), `/__reset`.
-  The Supabase mock has the `fan_*` functions (secret key only), and
-  `/__fan-expire` expires every pending sign-in link.
+  The Supabase mock has the `fan_*` functions (secret key only), the
+  private `reel-media-fans` bucket (signed addresses only), `/__fan-expire`
+  (expires every pending sign-in link) and `/__fan-file?path=` (puts a file
+  in the private bucket).
 - `mocks/claude.mjs`: answers flyer reads (`POST /__mode` with `multi`,
   `single`, `none` or `refusal`) and funnel drafts. `/__last` returns the
   last request, so suites can check the model, schema and prompt.

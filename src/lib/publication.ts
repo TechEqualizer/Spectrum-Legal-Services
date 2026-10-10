@@ -5,6 +5,7 @@
 import { withEdits, type EditorFunnel, type EditorReel, type PathTarget, type ReelCta } from "@/admin/editor-model";
 import type { Funnel, FunnelCta, FunnelEvent, ReelEmphasis, ReelMedia } from "@/data/funnel-types";
 import { isTimeZone } from "@/lib/event-time";
+import { fanRefFolder, isFanRef } from "@/lib/fan-reels";
 import { parseLook, themeOf, type Look } from "@/lib/look";
 import { REEL_ROLES, type ReelRole } from "@/lib/funnel-draft";
 
@@ -106,17 +107,22 @@ export function isMediaUrl(v: unknown) {
   }
 }
 
-export function checkMedia(m: unknown): string | null {
+/**
+ * What's wrong with media, if anything. `fansFolder`: a fans-only reel of
+ * this event, which may also name private files in its own folder.
+ */
+export function checkMedia(m: unknown, fansFolder?: string): string | null {
   if (!isObject(m)) return "media must be an object";
+  const ok = (v: unknown) => isMediaUrl(v) || (fansFolder !== undefined && isFanRef(v) && fanRefFolder(v) === fansFolder);
   if (m.kind === "youtube") return typeof m.id === "string" && YOUTUBE_ID.test(m.id) ? null : "bad YouTube id";
   if (m.kind === "image") {
     if (m.fit !== undefined && m.fit !== "poster" && m.fit !== "blur") return "unknown photo fit";
-    return isMediaUrl(m.src) ? null : "photo needs an https link";
+    return ok(m.src) ? null : "photo needs an https link";
   }
   if (m.kind === "video") {
-    if (!isMediaUrl(m.src)) return "video needs an https link";
-    if (m.poster !== undefined && !isMediaUrl(m.poster)) return "cover image needs an https link";
-    if (m.captions !== undefined && !isMediaUrl(m.captions)) return "captions need an https link";
+    if (!ok(m.src)) return "video needs an https link";
+    if (m.poster !== undefined && !ok(m.poster)) return "cover image needs an https link";
+    if (m.captions !== undefined && !ok(m.captions)) return "captions need an https link";
     return null;
   }
   return "unknown media kind";
@@ -140,8 +146,9 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
     if (r.emphasis !== undefined && !EMPHASES.includes(r.emphasis as ReelEmphasis)) return `Reel "${r.id}" has an unknown selling style.`;
     if (!text(r.badge, 40, true) || !text(r.duration, 20, true) || !text(r.eventId, 80, true)) return `Reel "${r.id}" has a bad field.`;
     if (r.role !== undefined && !(typeof r.role === "string" && r.role in REEL_ROLES)) return `Reel "${r.id}" has an unknown role.`;
+    if (r.visibility !== undefined && r.visibility !== "fans") return `Reel "${r.id}" has an unknown audience.`;
     if (r.media !== undefined) {
-      const problem = checkMedia(r.media);
+      const problem = checkMedia(r.media, r.visibility === "fans" ? base.slug : undefined);
       if (problem) return `Reel "${r.title}": ${problem}.`;
     }
     ids.add(r.id);
@@ -157,6 +164,7 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
       ...(r.emphasis ? { emphasis: r.emphasis as ReelEmphasis } : {}),
       ...(r.role ? { role: r.role as ReelRole } : {}),
       ...(r.media ? { media: r.media as ReelMedia } : {}),
+      ...(r.visibility === "fans" ? { visibility: "fans" as const } : {}),
     });
   }
 

@@ -162,14 +162,23 @@ Each step is one PR.
 - Live page impact: **yes, visible, once switched on.** The rail's Updates
   button becomes Follow. Big Love is switched on only when you say.
 
-### 3. Fan-only reels
+### 3. Fan-only reels (built)
 
 - **Editor:** a "Fans only" switch per reel, with the content rule shown
-  beside it. Uploads for fan-only reels go to the private bucket.
-- **Player:** the locked card for non-followers, and signed media for
-  followers.
-- **Gating tests:** the page HTML, the preview card and the public media
-  address never carry a fan-only reel's media.
+  beside it, and a "Fans only" chip on the reel's row. Files added while
+  it's on upload to the private bucket (`reel-media-fans`, a folder per
+  event; migration `20261019000000_fan_reel_uploads.sql` lets an event's
+  admins upload there). The reel names them `fans:<event>/<file>`.
+  - Media already at a public address (or on YouTube) stays reachable
+    there; the editor says so and asks for a fresh upload.
+- **What visitors get:** `resolveLink` drops fans-only media, so the page,
+  its reel pages and link previews never carry it. The published JSON
+  holds only `fans:` references, and the bucket has no public address.
+- **Player:** a locked card (lock, title, "Follow to watch") for
+  non-followers; a follower's player asks `/api/fans/media`, which checks
+  the cookie and the follow, then signs addresses that work for an hour.
+  The admin's preview signs its own (`/api/admin/fan-media`).
+- **Gating tests:** the `fan-reels` suite.
 - Live page impact: none until a reel is switched to fans only.
 
 ### 4. Presale

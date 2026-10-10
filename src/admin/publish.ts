@@ -110,14 +110,14 @@ const EXT: Record<string, string> = {
   "image/png": "png", "image/webp": "webp", "image/gif": "gif", "text/vtt": "vtt",
 };
 
-async function uploadOne(slug: string, blobUrl: string): Promise<string> {
+async function uploadOne(slug: string, blobUrl: string, fans: boolean): Promise<string> {
   const blob = await fetch(blobUrl).then((r) => r.blob()).catch(() => null);
   if (!blob) throw new Error("An uploaded file is missing from this browser. Upload it again, then publish.");
   const type = blob.type === "text/plain" ? "text/vtt" : blob.type;
   const { uploadUrl, publicUrl } = await call<{ uploadUrl: string; publicUrl: string }>("/api/admin/upload-url", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ slug, name: `upload.${EXT[type] ?? "bin"}`, type, size: blob.size }),
+    body: JSON.stringify({ slug, name: `upload.${EXT[type] ?? "bin"}`, type, size: blob.size, fans }),
   });
   const put = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": type }, body: blob }).catch(() => null);
   if (!put?.ok) throw new Error("A file didn't upload. Check your connection and try again.");
@@ -140,14 +140,19 @@ export async function publish(
   onProgress: (message: string) => void
 ): Promise<{ state: EditorState; publishedAt: string }> {
   const uploads = new Set<string>();
-  const collect = (m: ReelMedia | null | undefined) => {
+  // A fans-only reel's files go to the private bucket.
+  const privately = new Set<string>();
+  const collect = (m: ReelMedia | null | undefined, fans = false) => {
     if (!m || m.kind === "youtube") return;
     for (const s of [m.src, m.kind === "video" ? m.poster : undefined, m.kind === "video" ? m.captions : undefined]) {
-      if (s?.startsWith("blob:")) uploads.add(s);
+      if (s?.startsWith("blob:")) {
+        uploads.add(s);
+        if (fans) privately.add(s);
+      }
     }
   };
   const used = new Set(publishedFunnel(state.funnels).order);
-  state.reels.filter((r) => used.has(r.id)).forEach((r) => collect(r.media));
+  state.reels.filter((r) => used.has(r.id)).forEach((r) => collect(r.media, r.visibility === "fans"));
   collect(state.heroMedia);
   // The flyer kept with the look, so its background choices work after a reload.
   if (state.look?.flyer?.startsWith("blob:")) uploads.add(state.look.flyer);
@@ -156,7 +161,7 @@ export async function publish(
   let n = 0;
   for (const blobUrl of uploads) {
     onProgress(`Uploading ${++n} of ${uploads.size}...`);
-    urls.set(blobUrl, await uploadOne(slug, blobUrl));
+    urls.set(blobUrl, await uploadOne(slug, blobUrl, privately.has(blobUrl)));
   }
   const next: EditorState = {
     reels: state.reels.map((r) => (r.media ? { ...r, media: swapMedia(r.media, urls) } : r)),

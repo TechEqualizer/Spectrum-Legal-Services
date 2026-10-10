@@ -12,6 +12,7 @@ import {
 } from "@/admin/editor-model";
 import type { ReelEmphasis, ReelMedia } from "@/data/funnel-types";
 import type { FunnelTrigger } from "@/data/reels";
+import { CONTENT_RULE } from "@/lib/content-rule";
 import { REEL_DRIVERS, REEL_ROLES } from "@/lib/funnel-draft";
 
 export type ReelEditResult = {
@@ -59,6 +60,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
     cta: reel.cta,
     emphasis: reel.emphasis ?? "builds",
     eventId: reel.eventId ?? "",
+    fans: reel.visibility === "fans",
   });
   const [media, setMedia] = useState<ReelMedia | undefined>(reel.media);
   const [paths, setPaths] = useState(funnel.paths[reel.id] ?? {});
@@ -94,6 +96,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
         emphasis: draft.emphasis === "builds" ? undefined : draft.emphasis,
         eventId: draft.eventId || undefined,
         media,
+        visibility: draft.fans ? "fans" : undefined,
       },
       paths,
       topic: isTopic ? topic.trim() || draft.practiceArea : undefined,
@@ -151,6 +154,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
             <textarea className="form-input min-h-20 text-sm" maxLength={300} value={draft.summary} onChange={(e) => set({ summary: e.target.value })} />
           </label>
           <MediaPicker value={media} onChange={setMedia} />
+          <FansOnly id={id} on={draft.fans} media={media} onChange={(fans) => set({ fans })} />
           {videoPrompt && <VideoPrompt prompt={videoPrompt} />}
           {dates && (
             <label className="block">
@@ -256,5 +260,60 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
         </div>
       </form>
     </dialog>
+  );
+}
+
+/**
+ * The "Fans only" switch, with the content rule beside it. Files added while
+ * it's on go to private storage when published; media that's already at a
+ * public address (or on YouTube) stays reachable there, so it says so.
+ */
+function FansOnly({ id, on, media, onChange }: { id: string; on: boolean; media: ReelMedia | undefined; onChange: (on: boolean) => void }) {
+  const src = media && "src" in media ? media.src : undefined;
+  const publicAlready = on && media && (media.kind === "youtube" || (src && !src.startsWith("blob:") && !src.startsWith("fans:")));
+  return (
+    <div className="rounded-lg border border-gray-200 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <span>
+          <span id={`${id}-fans-label`} className="block text-sm font-semibold text-deep-navy">Fans only</span>
+          <span id={`${id}-fans-help`} className="mt-0.5 block text-xs text-gray-600">
+            Only people who follow you can watch it. Everyone else sees a locked card that asks them to follow.
+          </span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-labelledby={`${id}-fans-label`}
+          aria-describedby={`${id}-fans-help${on ? ` ${id}-fans-rule` : ""}`}
+          onClick={() => onChange(!on)}
+          className={`relative mt-0.5 inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${
+            on ? "bg-teal-accent" : "bg-gray-300"
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${on ? "translate-x-6" : "translate-x-1"}`}
+          />
+        </button>
+      </div>
+      {on && (
+        <div id={`${id}-fans-rule`} className="mt-3 rounded-md bg-soft-gray px-3 py-2.5 text-xs text-gray-700">
+          <p className="font-semibold text-deep-navy">{CONTENT_RULE.summary}</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            {CONTENT_RULE.rules.map((rule) => (
+              <li key={rule}>{rule}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {publicAlready && (
+        <p role="status" className="mt-3 text-xs font-semibold text-amber-800">
+          {media?.kind === "youtube"
+            ? "Anyone with the YouTube link can still watch this video. For a private reel, upload the file instead."
+            : "This file is already at a public address. Upload it again to keep it private: files added while Fans only is on go to private storage."}
+        </p>
+      )}
+    </div>
   );
 }

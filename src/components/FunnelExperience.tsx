@@ -11,6 +11,7 @@ import { funnelReel } from "@/data/reels";
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import FollowSheet from "@/components/follow/FollowSheet";
 import { followLabel, useFollowTarget, useIsFollowing } from "@/components/follow/follow";
+import { useFanMedia } from "@/components/follow/fan-media";
 import SourceLink from "@/components/SourceLink";
 import { eventChip, formatEventDate, isOver, lastDate, nextOnSale, openingReel, ticketHref, upcomingEvents, type NextNight } from "@/lib/events";
 import { eventDate, eventDayOfMonth, eventTime, type EventClock } from "@/lib/event-time";
@@ -74,7 +75,9 @@ export default function FunnelExperience({
   /** The organizer's next night on another link, for when this one is over. */
   nextNight?: NextNight;
 }) {
-  const funnel = useMemo(() => applyPublication(base, publication), [base, publication]);
+  const published = useMemo(() => applyPublication(base, publication), [base, publication]);
+  // Fans-only reels play for followers (and in the admin's preview); others see them locked.
+  const funnel = useFanMedia(published);
   const { brand } = funnel;
   // The main button's effect (only the PRIMARY button shows it).
   const effect = brand.buttonEffect ?? DEFAULT_EFFECT;

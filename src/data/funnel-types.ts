@@ -30,6 +30,11 @@ export type Reel = {
   eventId?: string;
   /** Which of the three core reels this is (The Night, Your People, Last Call), when it's one of them. */
   role?: ReelRole;
+  /**
+   * "fans": only the organizer's followers can watch it. Visitors get a
+   * locked card; its media never reaches them (src/lib/fan-reels.ts).
+   */
+  visibility?: "fans";
 };
 
 /** One date of an event series, sold on the organizer's own ticketing page. */

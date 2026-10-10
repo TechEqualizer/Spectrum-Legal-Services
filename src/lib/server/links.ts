@@ -7,6 +7,7 @@
 
 import type { Funnel, FunnelEvent } from "@/data/funnel-types";
 import { lastStart, upcomingEvents, type NextNight } from "@/lib/events";
+import { publicationWithoutFanMedia, withoutFanMedia } from "@/lib/fan-reels";
 import { getOrganizer, organizerOf, type Organizer } from "@/lib/server/funnels";
 import { getEventVersions, listOrganizerEventVersions, type EventVersions } from "@/lib/server/publications";
 
@@ -36,7 +37,18 @@ async function organizerNights(organizer: string, now: number) {
   return { events, upcoming };
 }
 
+/**
+ * What /f/<slug> shows, for visitors: fans-only reels never carry their
+ * media here (the page, its reel pages and link previews all read this).
+ */
 export async function resolveLink(slug: string, now = Date.now()): Promise<LinkTarget | undefined> {
+  const target = await resolve(slug, now);
+  if (!target) return undefined;
+  if (target.kind === "choose") return { ...target, events: target.events.map((e) => ({ ...e, funnel: withoutFanMedia(e.funnel) })) };
+  return { ...target, base: withoutFanMedia(target.base), publication: publicationWithoutFanMedia(target.publication), live: withoutFanMedia(target.live) };
+}
+
+async function resolve(slug: string, now: number): Promise<LinkTarget | undefined> {
   const versions = await getEventVersions(slug);
   if (versions) {
     const organizer = await organizerOf(slug);

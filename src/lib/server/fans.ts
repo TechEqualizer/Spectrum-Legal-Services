@@ -7,6 +7,8 @@
 // never get Supabase accounts.
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import type { Funnel, ReelMedia } from "@/data/funnel-types";
+import { FAN_BUCKET, FAN_REF_PREFIX, fanRefPath, fanRefsOf, isFanRef, isFansReel, swapFanRefs } from "@/lib/fan-reels";
 import { getOrganizer } from "@/lib/server/funnels";
 import { followConsent } from "@/lib/fans";
 import { normalizeSourceTag } from "@/lib/source-tag";
@@ -233,4 +235,46 @@ export async function unfollow(fanId: string, organizer: string): Promise<boolea
 export async function forget(fanId: string): Promise<boolean | null> {
   const r = await rpc<boolean>("fan_forget", { p_fan_id: fanId });
   return r.ok ? r.data === true : null;
+}
+
+// --- Fans-only reels: short-lived addresses for private files ---
+
+/** How long a signed address works: long enough to watch, short enough not to share. */
+export const FAN_MEDIA_TTL = 60 * 60;
+
+/** Signed addresses for private references (src/lib/fan-reels.ts), by reference; null if storage can't be reached. */
+export async function signFanRefs(refs: string[]): Promise<Record<string, string> | null> {
+  const c = config();
+  const unique = [...new Set(refs.filter(isFanRef))];
+  if (!unique.length) return {};
+  if (!c.supabaseUrl || !c.secret) return null;
+  try {
+    const res = await fetch(`${c.supabaseUrl}/storage/v1/object/sign/${FAN_BUCKET}`, {
+      method: "POST",
+      headers: { apikey: c.secret, Authorization: `Bearer ${c.secret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresIn: FAN_MEDIA_TTL, paths: unique.map(fanRefPath) }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error("[fans] signing failed", res.status, (await res.text()).slice(0, 300));
+      return null;
+    }
+    const rows = (await res.json()) as { path?: string; signedURL?: string | null; error?: string | null }[];
+    const urls: Record<string, string> = {};
+    for (const row of rows) {
+      if (row.path && row.signedURL) urls[`${FAN_REF_PREFIX}${row.path}`] = `${c.supabaseUrl}/storage/v1${row.signedURL}`;
+    }
+    return urls;
+  } catch (e) {
+    console.error("[fans] storage unreachable", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+/** A fans-only reel's media, ready to play (private files signed), by reel id. */
+export async function playableFanMedia(funnel: Funnel): Promise<Record<string, ReelMedia> | null> {
+  const reels = funnel.reels.filter((r) => isFansReel(r) && r.media);
+  const urls = await signFanRefs(reels.flatMap((r) => fanRefsOf(r.media)));
+  if (!urls) return null;
+  return Object.fromEntries(reels.map((r) => [r.id, swapFanRefs(r.media!, urls)]));
 }

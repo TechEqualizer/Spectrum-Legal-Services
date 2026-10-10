@@ -44,6 +44,7 @@ const ticketSales = new Map(); // eventbrite_order_id -> row
 const fans = new Map(); // id -> { id, email }
 const follows = new Map(); // `${fanId}|${organizer}` -> row
 const fanTokens = new Map(); // token_hash -> row
+const signedFans = new Map(); // signed-address token -> { path, until }
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
 let seq = 0;
@@ -83,7 +84,7 @@ http.createServer((req, res) => {
     // Test control: every pending sign-in link expires now.
     if (p === '/__fan-expire') { for (const t of fanTokens.values()) t.expires_at = Date.now() - 1000; return json(res, 200, { ok: true }); }
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -420,6 +421,40 @@ http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': f.type, ...cors });
       return res.end(f.body);
     }
+    // The private bucket for fans-only reels: admins upload to their events' folders;
+    // only the secret key signs addresses, and only a signed address reads a file.
+    const fansSign = p.match(/^\/storage\/v1\/object\/upload\/sign\/reel-media-fans\/(.+)$/);
+    if (fansSign && req.method === 'POST') {
+      const email = emailOf(req);
+      if (!email || !canPublishFunnel(email, fansSign[1].split('/')[0])) return json(res, 403, { message: 'new row violates row-level security policy' });
+      return json(res, 200, { url: `/object/upload/sign/reel-media-fans/${fansSign[1]}?token=t${++seq}` });
+    }
+    if (fansSign && req.method === 'PUT') {
+      files.set('fans/' + fansSign[1], { type: req.headers['content-type'], body: raw });
+      return json(res, 200, { Key: 'reel-media-fans/' + fansSign[1] });
+    }
+    if (p === '/storage/v1/object/sign/reel-media-fans' && req.method === 'POST') {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 400, { statusCode: '403', error: 'Unauthorized', message: 'new row violates row-level security policy' });
+      return json(res, 200, body.paths.map((path) => {
+        if (!files.has('fans/' + path)) return { path, signedURL: null, error: 'Either the requested resource does not exist or you do not have access to it' };
+        const token = `s${++seq}`;
+        signedFans.set(token, { path, until: Date.now() + body.expiresIn * 1000 });
+        return { path, signedURL: `/object/sign/reel-media-fans/${path}?token=${token}`, error: null };
+      }));
+    }
+    const fansGet = p.match(/^\/storage\/v1\/object\/sign\/reel-media-fans\/(.+)$/);
+    if (fansGet && req.method === 'GET') {
+      const t = signedFans.get(url.searchParams.get('token') ?? '');
+      if (!t || t.path !== fansGet[1] || t.until < Date.now()) return json(res, 400, { statusCode: '400', error: 'InvalidJWT', message: 'invalid signature' });
+      const f = files.get('fans/' + fansGet[1]);
+      if (!f) return json(res, 404, { message: 'not found' });
+      res.writeHead(200, { 'Content-Type': f.type, 'Accept-Ranges': 'bytes', ...cors });
+      return res.end(f.body);
+    }
+    // Like the real private bucket: there's no public address.
+    if (/^\/storage\/v1\/object\/(public\/)?reel-media-fans\//.test(p)) return json(res, 400, { statusCode: '404', error: 'not_found', message: 'Bucket not found' });
+    // Test control: a file straight into the private bucket.
+    if (p === '/__fan-file' && req.method === 'POST') { files.set('fans/' + url.searchParams.get('path'), { type: req.headers['content-type'] || 'video/mp4', body: raw }); return json(res, 201); }
     const pub = p.match(/^\/storage\/v1\/object\/public\/reel-media\/(.+)$/);
     if (pub) {
       const f = files.get(pub[1]);
