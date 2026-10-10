@@ -23,6 +23,7 @@ check('the content rule, in one line', terms.includes('Suggestive yes, explicit 
 check('no nudity or sex acts', /No nudity and no sex acts/.test(terms));
 check('consent from anyone identifiable in a fans-only reel', /recognize in a fans-only reel has agreed/.test(terms));
 check('AI footage never passed off as real', /AI-made footage is never presented as real/.test(terms));
+check('the plans and price, as the claim states them', /\$29 a month or \$290 a year/.test(terms) && /free for the first 14 days, starting when you claim your link/.test(terms) && /Follow for up to 100 fans/.test(terms) && !/free while it.s in early access/.test(terms));
 check('fans can be removed on request', /Anyone can be removed on request/.test(terms));
 check('the terms link the privacy note', await p.getByRole('main').getByRole('link', { name: 'privacy note' }).getAttribute('href') === '/privacy');
 

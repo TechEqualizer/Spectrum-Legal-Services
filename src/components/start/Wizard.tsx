@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { shrink } from "@/lib/flyer-file";
+import ClaimStep from "@/components/start/ClaimStep";
 import ReelsStep from "@/components/start/ReelsStep";
 import type { StartState } from "@/components/start/StartPreview";
 import type { FunnelDraft } from "@/lib/funnel-draft";
@@ -96,6 +98,7 @@ const parse = (raw: string | null): StartDraft | null => {
  */
 export default function Wizard({ invite, readsLeft: initialReads }: { invite: string; readsLeft: number }) {
   const id = useId();
+  const router = useRouter();
   const key = storageKey(invite);
   const raw = useSyncExternalStore(subscribe, () => readRaw(key), () => null);
   // Null until the browser has read the saved draft (and on the server).
@@ -184,7 +187,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   const canContinue = Boolean(found && draft.role);
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-24 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16 lg:pt-10">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 pb-24 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16 lg:pt-10">
       <div className="min-w-0">
         <ol aria-label="Steps" className="grid grid-cols-3 gap-2">
           {STEPS.map((label, i) => (
@@ -339,18 +342,18 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
             onNext={() => setStep(2)}
           />
         ) : (
-          <section aria-labelledby={`${id}-claim`} className="mt-10">
-            <p className="text-sm font-semibold text-[var(--sl-gold)]">Step 3 of 3</p>
-            <h1 id={`${id}-claim`} className="sl-display mt-2 text-[clamp(2.75rem,9vw,4.5rem)] leading-[0.92]">
-              Claim your link.
-            </h1>
-            <p className="mt-4 max-w-[34rem] text-lg text-[var(--sl-text)]/80">
-              Your link for {nightName(draft)}, with your email and a password. This part is on its way.
-            </p>
-            <button type="button" onClick={() => setStep(1)} className="mt-8 min-h-11 text-sm font-semibold text-[var(--sl-gold)] underline underline-offset-4">
-              Back to your reels
-            </button>
-          </section>
+          <ClaimStep
+            invite={invite}
+            draft={draft}
+            onBack={() => setStep(1)}
+            onClaimed={(eventSlug) => {
+              // Theirs now: the draft leaves this browser, and Home takes over.
+              try {
+                localStorage.removeItem(key);
+              } catch {}
+              router.push(`/admin/home?welcome=${encodeURIComponent(eventSlug)}`);
+            }}
+          />
         )}
       </div>
 

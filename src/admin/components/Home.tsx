@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 import { selectAdminBusiness, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
 import StatTile, { TileGrid } from "@/admin/components/StatTile";
 import ViewsChart from "@/admin/components/ViewsChart";
+import Welcome from "@/admin/components/Welcome";
 import { CheckIcon } from "@/admin/components/ui/icons";
 import { showsFans, useFanCounts, type FanCounts } from "@/admin/fan-counts";
 import { useAllResults, type EventResults } from "@/admin/results";
@@ -35,6 +36,9 @@ export default function Home() {
   const { results, failed } = useAllResults(DAYS);
   const fanCounts = useFanCounts(events, DAYS);
   const first = session.name?.trim().split(/\s+/)[0];
+  // Just claimed from the sign-up wizard: their new link, and what's next.
+  const welcomeSlug = useSearchParams().get("welcome");
+  const welcome = welcomeSlug ? events.find((e) => e.funnel.slug === welcomeSlug) : undefined;
 
   const open = (slug: string) => {
     selectAdminBusiness(slug);
@@ -46,7 +50,9 @@ export default function Home() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-gray-600">Your events</p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-deep-navy md:text-4xl">{first ? `Welcome back, ${first}` : "Welcome back"}</h1>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-deep-navy md:text-4xl">
+            {welcome ? `Welcome to Showlnk, ${welcome.organizer.name}` : first ? `Welcome back, ${first}` : "Welcome back"}
+          </h1>
           {events.length > 0 && (
             <p className="mt-1 text-sm text-gray-600">
               {events.length === 1 ? "Your event" : `All ${events.length} events`} over the last {DAYS} days.
@@ -54,6 +60,8 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {welcome && <Welcome event={welcome} onOpen={open} onClose={() => router.replace("/admin/home")} />}
 
       {events.length === 0 ? (
         <section className="rounded-xl border border-gray-200 bg-white px-5 py-8 text-center">
