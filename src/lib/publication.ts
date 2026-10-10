@@ -223,6 +223,15 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
       if (!isMediaUrl(e.ticketUrl) || (e.ticketUrl as string).startsWith("/")) return `"${e.name}" needs a ticket link starting with https://.`;
       if (e.status !== undefined && !STATUSES.includes(e.status as (typeof STATUSES)[number])) return `"${e.name}" has an unknown status.`;
       if (e.reelId !== undefined && !(typeof e.reelId === "string" && ids.has(e.reelId))) return `"${e.name}" opens a reel that isn't in the funnel.`;
+      let presale: FunnelEvent["presale"];
+      if (e.presale !== undefined) {
+        const p = e.presale;
+        if (!isObject(p) || typeof p.opensAt !== "string" || typeof p.endsAt !== "string") return `"${e.name}" has a bad presale.`;
+        const opens = Date.parse(p.opensAt), ends = Date.parse(p.endsAt);
+        if (Number.isNaN(opens) || Number.isNaN(ends) || ends <= opens) return `"${e.name}": the presale must end after it opens.`;
+        if (p.url !== undefined && !(isMediaUrl(p.url) && String(p.url).startsWith("https://"))) return `"${e.name}" needs a presale link starting with https://.`;
+        presale = { opensAt: new Date(opens).toISOString(), endsAt: new Date(ends).toISOString(), ...(p.url ? { url: p.url as string } : {}) };
+      }
       eventIds.add(e.id);
       events.push({
         id: e.id,
@@ -237,6 +246,7 @@ export function parsePublication(input: unknown, base: Funnel): Publication | st
         ...(typeof e.price === "string" && e.price.trim() ? { price: e.price.trim() } : {}),
         ...(e.status ? { status: e.status as FunnelEvent["status"] } : {}),
         ...(e.reelId ? { reelId: e.reelId as string } : {}),
+        ...(presale ? { presale } : {}),
       });
     }
     publication.events = events.sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));

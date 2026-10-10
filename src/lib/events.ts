@@ -125,3 +125,10 @@ export function ticketHref(
   }
   return url.toString();
 }
+
+/** Whether a date's presale for followers is open at `now` (and the date still to come). */
+export const presaleOpen = (event: Pick<FunnelEvent, "presale" | "startsAt">, now: number) =>
+  Boolean(event.presale && Date.parse(event.presale.opensAt) <= now && now < Date.parse(event.presale.endsAt) && !isOver(event, now));
+
+/** The next date with a presale open now, if any. */
+export const openPresale = (funnel: Funnel, now: number) => upcomingEvents(funnel, now).find((e) => presaleOpen(e, now));

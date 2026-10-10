@@ -35,8 +35,14 @@ check('a private file on a reel that isn\'t fans-only is refused', notFans.statu
 const pub = await publish(reels);
 check('publishes a fans-only reel', pub.ok(), String(pub.status()));
 
-// Nothing visitors receive carries it.
-const html = await (await fetch(B + '/f/' + gh.slug)).text();
+// Nothing visitors receive carries it. (Right after a publish, the first
+// visit can still get the page from before it: wait for the new one.)
+let html = '';
+for (let i = 0; i < 40 && !html.includes('visibility'); i++) {
+  html = await (await fetch(B + '/f/' + gh.slug)).text();
+  if (!html.includes('visibility')) await new Promise((r) => setTimeout(r, 250));
+}
+check('the page has the fans-only reel', html.includes('visibility'));
 check('the page names the reel', html.includes(locked.title.replace(/'/g, '&#x27;')) || html.includes(locked.title));
 check("the page doesn't carry its file", !html.includes('secret-after-hours') && !html.includes('fans:'));
 const reelPage = await (await fetch(`${B}/f/${gh.slug}/r/${locked.id}`)).text();

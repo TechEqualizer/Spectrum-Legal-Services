@@ -39,14 +39,28 @@ async function organizerNights(organizer: string, now: number) {
 
 /**
  * What /f/<slug> shows, for visitors: fans-only reels never carry their
- * media here (the page, its reel pages and link previews all read this).
+ * media here, nor dates their presale links (the page, its reel pages and
+ * link previews all read this).
  */
 export async function resolveLink(slug: string, now = Date.now()): Promise<LinkTarget | undefined> {
   const target = await resolve(slug, now);
   if (!target) return undefined;
-  if (target.kind === "choose") return { ...target, events: target.events.map((e) => ({ ...e, funnel: withoutFanMedia(e.funnel) })) };
-  return { ...target, base: withoutFanMedia(target.base), publication: publicationWithoutFanMedia(target.publication), live: withoutFanMedia(target.live) };
+  if (target.kind === "choose") return { ...target, events: target.events.map((e) => ({ ...e, funnel: forVisitors(e.funnel) })) };
+  const publication = publicationWithoutFanMedia(target.publication);
+  return {
+    ...target,
+    base: forVisitors(target.base),
+    publication: publication?.events ? { ...publication, events: publication.events.map(withoutPresaleLink) } : publication,
+    live: forVisitors(target.live),
+  };
 }
+
+/** A date without its presale link (it lives in event_presales; this is a second guard). */
+const withoutPresaleLink = (e: FunnelEvent): FunnelEvent => (e.presale?.url ? { ...e, presale: { opensAt: e.presale.opensAt, endsAt: e.presale.endsAt } } : e);
+const forVisitors = (funnel: Funnel): Funnel => {
+  const f = withoutFanMedia(funnel);
+  return f.events?.some((e) => e.presale?.url) ? { ...f, events: f.events.map(withoutPresaleLink) } : f;
+};
 
 async function resolve(slug: string, now: number): Promise<LinkTarget | undefined> {
   const versions = await getEventVersions(slug);
