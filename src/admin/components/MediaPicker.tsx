@@ -40,7 +40,9 @@ const srcOf = (media: ReelMedia | undefined) => (media && "src" in media ? media
 
 export default function MediaPicker({ value, onChange }: MediaPickerProps) {
   const id = useId();
-  const uploaded = Boolean(srcOf(value)?.startsWith("blob:"));
+  // A file uploaded here, or one already in private storage (a fans-only reel's).
+  const isPrivate = Boolean(srcOf(value)?.startsWith("fans:"));
+  const uploaded = Boolean(srcOf(value)?.startsWith("blob:")) || isPrivate;
   const fileRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"upload" | "link">(value && !uploaded ? "link" : "upload");
   const [link, setLink] = useState(
@@ -103,7 +105,14 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
       <div className="flex gap-4">
         {/* Preview, in the reel's 9:16 shape */}
         <div className="relative aspect-[9/16] w-24 flex-shrink-0 overflow-hidden rounded-md bg-deep-navy" aria-hidden="true">
-          {value?.kind === "video" && !value.poster ? (
+          {isPrivate ? (
+            <div className="flex h-full w-full items-center justify-center text-white/80">
+              <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                <rect x="5" y="11" width="14" height="10" rx="2" />
+                <path d="M8 11V8a4 4 0 118 0v3" />
+              </svg>
+            </div>
+          ) : value?.kind === "video" && !value.poster ? (
             <video src={`${value.src}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" onError={() => setBroken(true)} />
           ) : thumb && !broken ? (
             // eslint-disable-next-line @next/next/no-img-element -- previews any file or link the admin adds
@@ -181,7 +190,9 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
           {value?.kind === "youtube" && (
             <p className="text-xs text-gray-600">Plays in YouTube&apos;s privacy-enhanced player. Shorts fill the screen; wide videos are cropped to fit.</p>
           )}
-          {uploaded && (
+          {isPrivate ? (
+            <p className="text-xs text-gray-500">In private storage: only followers can watch it.</p>
+          ) : uploaded && (
             <p className="text-xs text-gray-500">Uploads are saved in this browser until the admin has a login.</p>
           )}
           {value && (
@@ -243,8 +254,8 @@ function ExtraFile({
           className="form-input min-w-0 py-2 text-sm"
           inputMode="url"
           placeholder="Link, or upload"
-          value={value?.startsWith("blob:") ? "Uploaded file" : value ?? ""}
-          readOnly={value?.startsWith("blob:")}
+          value={value?.startsWith("blob:") ? "Uploaded file" : value?.startsWith("fans:") ? "Private file" : value ?? ""}
+          readOnly={value?.startsWith("blob:") || value?.startsWith("fans:")}
           onChange={(e) => onChange(e.target.value.trim() || undefined)}
         />
         <label className="flex min-h-10 flex-shrink-0 cursor-pointer items-center rounded-md border border-gray-300 px-3 text-xs font-semibold text-deep-navy hover:bg-soft-gray">

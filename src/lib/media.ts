@@ -67,8 +67,9 @@ export function mediaFromLink(input: string): ReelMedia | string {
 export function thumbnailOf(media: ReelMedia | undefined): string | undefined {
   if (!media) return undefined;
   if (media.kind === "youtube") return `https://i.ytimg.com/vi/${media.id}/hqdefault.jpg`;
-  if (media.kind === "image") return media.src;
-  return media.poster;
+  const src = media.kind === "image" ? media.src : media.poster;
+  // A fans-only reel's private file has no address to show (src/lib/fan-reels.ts).
+  return src?.startsWith("fans:") ? undefined : src;
 }
 
 /** The privacy-enhanced YouTube player, set up to be driven by the reel viewer. */

@@ -16,6 +16,7 @@ import { eventChip, eventOf, formatEventDate, isOver, ticketHref, ticketTarget, 
 import FunnelLeadSheet from "@/components/FunnelLeadSheet";
 import FollowSheet from "@/components/follow/FollowSheet";
 import { followLabel, useFollowTarget, useIsFollowing } from "@/components/follow/follow";
+import { fanRefsOf, isFansReel } from "@/lib/fan-reels";
 import SourceLink from "@/components/SourceLink";
 import type { LeadIntent } from "@/lib/leads";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
@@ -395,11 +396,12 @@ export default function ReelViewer({
               onSoundOn={() => setIsMuted(false)}
               onProgress={(fraction) => setProgress({ step, fraction })}
               onFinished={() => advance("completed")}
+              onFollow={follow && !isFollowing ? () => setSheet("follow") : undefined}
             />
           )}
 
-          {/* Tap to pause, as in the social apps. */}
-          {!ended && (
+          {/* Tap to pause, as in the social apps (a locked fans-only reel has nothing to pause, and its Follow button must take taps). */}
+          {!ended && !(reel && isLockedHere(reel)) && (
             <div
               className="absolute inset-0 z-10"
               onClick={onMediaTap}
@@ -905,11 +907,17 @@ type ReelSlideProps = {
   onSoundOn: () => void;
   onProgress: (fraction: number) => void;
   onFinished: () => void;
+  /** Opens Follow, for a fans-only reel this visitor can't watch yet. */
+  onFollow?: () => void;
 };
+
+/** A fans-only reel this viewer can't play (yet): no media, or private files not signed. */
+const isLockedHere = (reel: Reel) => isFansReel(reel) && (!reel.media || fanRefsOf(reel.media).length > 0);
 
 // Keyed by reel id, so its timer and progress start fresh for every reel.
 function ReelSlide(props: ReelSlideProps) {
   const { media } = props.reel;
+  if (isLockedHere(props.reel)) return <LockedSlide {...props} />;
   if (media?.kind === "video") return <VideoSlide {...props} media={media} />;
   if (media?.kind === "youtube") return <YouTubeSlide {...props} id={media.id} />;
   return <TimedSlide {...props} />;
@@ -1090,6 +1098,48 @@ function YouTubeSlide({
           sync();
         }}
       />
+    </div>
+  );
+}
+
+/**
+ * A fans-only reel, for someone who can't watch it: what it is and how to
+ * get in. It waits (no timer), so there's time to follow.
+ */
+function LockedSlide({ reel, onFollow }: ReelSlideProps) {
+  const follow = useFollowTarget();
+  const isFollowing = useIsFollowing(follow?.organizer);
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-deep-navy via-royal-blue/60 to-deep-navy px-8 pb-28 text-center">
+      <div className="max-w-xs">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20">
+          <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="5" y="11" width="14" height="10" rx="2" />
+            <path d="M8 11V8a4 4 0 118 0v3" />
+          </svg>
+        </div>
+        <p className="text-xs font-bold uppercase tracking-wider text-sky-accent">Fans only</p>
+        <p className="mt-2 text-xl font-bold leading-snug text-white">{reel.title}</p>
+        <p className="mt-2 text-sm text-gray-200">
+          {isFollowing
+            ? "Unlocking..."
+            : follow
+              ? `Follow ${follow.name} to watch.`
+              : "Only followers can watch this one."}
+        </p>
+        {onFollow && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFollow();
+            }}
+            className="mt-5 inline-flex min-h-12 items-center justify-center rounded-full bg-teal-accent px-6 font-semibold text-on-accent shadow-md hover:brightness-110"
+          >
+            Follow to watch
+          </button>
+        )}
+      </div>
     </div>
   );
 }

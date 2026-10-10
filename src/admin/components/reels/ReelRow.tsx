@@ -81,6 +81,7 @@ export default function ReelRow({ date, hasPrompt, stats, reel, index, count, fu
             {date && <Chip tone="teal">{date}</Chip>}
             {reel.emphasis === "quiet" && <Chip>Quiet</Chip>}
             {reel.emphasis === "bold" && <Chip tone="navy">Bold</Chip>}
+            {reel.visibility === "fans" && <Chip tone="navy">Fans only</Chip>}
             {!reel.media && <Chip tone="amber">{hasPrompt ? "Needs video" : "No video yet"}</Chip>}
             {reel.media?.kind === "youtube" && <Chip>YouTube</Chip>}
             {reel.media?.kind === "image" && <Chip>Photo</Chip>}
