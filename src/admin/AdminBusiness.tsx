@@ -116,7 +116,8 @@ export function AdminFrame({
       style={business?.funnel.brand.theme as React.CSSProperties | undefined}
     >
       {nav}
-      <div className="min-w-0 flex-1">
+      {/* Clip sideways: one long word or link must never slide the whole admin on a phone. */}
+      <div className="min-w-0 flex-1 overflow-x-clip">
         <main
           key={business?.funnel.id ?? "none"}
           id="main-content"
