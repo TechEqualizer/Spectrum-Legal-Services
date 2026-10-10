@@ -36,7 +36,13 @@ work?** If a screen needs explaining, simplify the screen.
 8. **Undo over "Are you sure?".** Make actions easy to reverse (Reset,
    Restore) instead of stacking confirmations.
 9. **Fit the phone.** 44px touch targets, nothing wider than the screen, and
-   the main action visible without scrolling on a 390×844 screen.
+   the main action visible without scrolling on a 390×844 screen. Plan for
+   long names and large text (phones' text size setting): names truncate or
+   wrap, rows wrap instead of squeezing, grids use `grid-cols-1` with
+   `min-w-0` children. The phone top bar is one row: the event (tap to
+   switch) on the left, Core and the account on the right, and nothing in it
+   may push the others off screen. The `phone` e2e suite checks every admin
+   page this way; add new pages to it.
 10. **Pop-ups close themselves.** A menu or pop-over closes when people
     click or tap outside it, press Escape (focus returns to its button),
     tab out of it, pick an item, or go to another page. Nothing stays open

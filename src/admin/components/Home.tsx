@@ -88,7 +88,7 @@ export default function Home() {
             </>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 [&>*]:min-w-0">
             <NextUp events={events} onOpen={open} />
             {results && <Sources results={results} />}
           </div>
@@ -224,7 +224,7 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
       <h3 className="mt-5 text-sm font-bold text-deep-navy">
         The four things {left ? <span className="font-normal text-gray-600">· {left} to finish</span> : <span className="font-normal text-gray-600">· all set</span>}
       </h3>
-      <ol role="list" className="mt-2 grid gap-2 sm:grid-cols-2">
+      <ol role="list" className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 [&>*]:min-w-0">
         {steps.map((s) => (
           <li key={s.name}>
             <button

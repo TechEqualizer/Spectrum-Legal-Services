@@ -88,9 +88,12 @@ export function CoreNudgeChip() {
     <Link
       href={START_CORE_HREF}
       aria-label={`${nudge.eyebrow}: ${nudge.title}. ${nudge.action}`}
-      className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-[#e8be5a] px-3.5 text-xs font-bold text-deep-navy"
+      className="group inline-flex min-h-11 items-center px-0.5"
     >
-      {nudge.daysLeft !== undefined ? `Core · ${nudge.daysLeft}d` : nudge.action}
+      {/* A small pill in a full-size tap target. */}
+      <span className="whitespace-nowrap rounded-full bg-[#e8be5a] px-3 py-1.5 text-xs font-bold leading-none text-deep-navy group-hover:brightness-105">
+        {nudge.daysLeft !== undefined ? `Core · ${nudge.daysLeft}d` : nudge.action}
+      </span>
     </Link>
   );
 }
