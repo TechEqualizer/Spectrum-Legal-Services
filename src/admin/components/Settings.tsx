@@ -107,7 +107,8 @@ export default function Settings() {
             <span className="rounded-full bg-deep-navy">
               <Avatar name={session.name} email={session.email} url={session.avatarUrl} className="h-16 w-16 text-2xl" />
             </span>
-            <div className="min-w-0 flex-1">
+            {/* Room for a line of words first: on a narrow screen the button drops below instead of squeezing them. */}
+            <div className="min-w-[10rem] flex-1">
               <p className="font-semibold text-deep-navy">Photo</p>
               <p className="text-sm text-gray-600">Shown in your sidebar. Square photos look best.</p>
             </div>

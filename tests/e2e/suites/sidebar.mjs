@@ -10,8 +10,8 @@ await p.goto(B + '/admin/overview'); await settle(p, 800);
 const nav = p.getByRole('navigation', { name: 'Admin' });
 const width = async () => Math.round((await nav.boundingBox()).width);
 const toggle = nav.getByRole('button', { name: /sidebar$/ });
-// Which event is shown: a picker with more than one event, otherwise its name.
-const businessOf = (page) => page.locator('#admin-business').or(page.getByRole('navigation', { name: 'Admin' }).getByText('Big Love Productions', { exact: true }));
+// Which event is shown: a picker with more than one event, otherwise its name (phones show the organizer above the picker, so either may match).
+const businessOf = (page) => page.locator('#admin-business').or(page.getByRole('navigation', { name: 'Admin' }).getByText('Big Love Productions', { exact: true })).locator('visible=true').first();
 check('starts open', await width() === 240 && (await toggle.getAttribute('aria-label')) === 'Collapse sidebar' && (await toggle.getAttribute('aria-expanded')) === 'true', String(await width()));
 check('open: labels and business picker shown', await nav.getByRole('link', { name: 'Leads' }).getByText('Leads').isVisible() && await businessOf(p).isVisible());
 const column = p.locator('main').locator('xpath=..');
