@@ -47,6 +47,9 @@ const fanTokens = new Map(); // token_hash -> row
 const signedFans = new Map(); // signed-address token -> { path, until }
 const presales = new Map(); // funnel_id -> [{ funnel_id, date_id, url }], like event_presales
 const sourceNames = new Map(); // organizer_slug -> Map(tag -> name), like source_names
+const organizerPlans = new Map(); // organizer_slug -> row, like organizer_plans (Big Love comped, as the migration seeds)
+const seedPlans = () => { organizerPlans.clear(); organizerPlans.set('biglove', { status: 'comped', billing_interval: null, trial_ends_at: null, current_period_end: null, comped_until: null }); };
+seedPlans();
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
 let seq = 0;
@@ -86,7 +89,7 @@ http.createServer((req, res) => {
     // Test control: every pending sign-in link expires now.
     if (p === '/__fan-expire') { for (const t of fanTokens.values()) t.expires_at = Date.now() - 1000; return json(res, 200, { ok: true }); }
     if (p === '/__ttl') { accessTtl = Number(url.searchParams.get('s')); return json(res, 200, { ok: true }); }
-    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); presales.clear(); sourceNames.clear(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
+    if (p === '/__reset') { seed(); publications.clear(); eventDates.clear(); files.clear(); reelEvents.length = 0; leadRows.length = 0; waitlist.clear(); ebConnections.clear(); ticketSales.clear(); fans.clear(); follows.clear(); fanTokens.clear(); signedFans.clear(); presales.clear(); sourceNames.clear(); seedPlans(); users = initialUsers(); accessTtl = 3600; return json(res, 200, { ok: true }); }
     let body = null;
     try { body = raw.length && (req.headers['content-type'] || '').includes('json') ? JSON.parse(raw) : null; } catch {}
 
@@ -175,6 +178,19 @@ http.createServer((req, res) => {
       return json(res, 200, mine
         .map(([, f]) => ({ email: fans.get(f.fan_id)?.email, source_tag: f.source_tag, funnel_id: f.funnel_id, confirmed_at: new Date(f.confirmed_at).toISOString(), unfollowed_at: f.unfollowed_at ? new Date(f.unfollowed_at).toISOString() : null }))
         .sort((a, b) => b.confirmed_at.localeCompare(a.confirmed_at)));
+    }
+    // Like organizer_plan: an organizer's plan, for its admins only (no row: Free).
+    if (p === '/rest/v1/rpc/organizer_plan') {
+      const email = emailOf(req);
+      if (!email || !managesOrganizer(email, body.p_organizer)) return json(res, 403, { code: '42501', message: 'not allowed' });
+      const row = organizerPlans.get(body.p_organizer);
+      return json(res, 200, row ? [row] : []);
+    }
+    // Test control: set (or, with no status, clear) an organizer's plan row.
+    if (p === '/__plan' && req.method === 'POST') {
+      if (body.status) organizerPlans.set(body.organizer, { billing_interval: null, trial_ends_at: null, current_period_end: null, comped_until: null, ...body, organizer: undefined });
+      else organizerPlans.delete(body.organizer);
+      return json(res, 200, { ok: true });
     }
     // Like set_source_name / source_names_for: an organizer's names for its link tags, for its admins only.
     if (p === '/rest/v1/rpc/set_source_name' || p === '/rest/v1/rpc/source_names_for') {

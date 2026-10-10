@@ -6,6 +6,7 @@ import { useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import Accounts from "@/admin/components/Accounts";
 import EventbriteSettings from "@/admin/components/EventbriteSettings";
 import OrganizerPhotos from "@/admin/components/OrganizerPhotos";
+import PlanSettings from "@/admin/components/PlanSettings";
 import Waitlist from "@/admin/components/Waitlist";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import Avatar from "@/admin/components/ui/Avatar";
@@ -218,6 +219,10 @@ export default function Settings() {
         <Suspense>
           <EventbriteSettings key={eventOrganizer.slug} organizer={eventOrganizer} fullAccess={fullAccess} />
         </Suspense>
+      )}
+
+      {eventOrganizer && business && runsOrganizer(session, eventOrganizer.slug) && (
+        <PlanSettings key={eventOrganizer.slug} organizer={eventOrganizer} eventSlug={business.funnel.slug} />
       )}
 
       <OrganizerPhotos organizers={organizers} />

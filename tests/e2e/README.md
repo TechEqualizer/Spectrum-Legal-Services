@@ -79,6 +79,8 @@ still moves forward during a run.
     New followers tiles on Home and Results (counts only, no emails); the
     organizer's own names for its places on the page and in the CSV, and
     only its admins can read or change them.
+  - `plan`: Settings → Plan (billing step 1): comped, trial days left and
+    Free with what Core adds; only the organizer's own admins can read it.
   - `calendar-feed`: the organizer's calendar feed (step 5): upcoming
     nights only, soonest first, tagged links, an event's own feed, and the
     confirmation's Apple, Google and Outlook links.
