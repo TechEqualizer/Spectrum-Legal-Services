@@ -55,6 +55,8 @@ const ds = p.locator('dialog[open]');
 await ds.getByText('Part of Core.').waitFor({ timeout: 5000 }).catch(() => {});
 check('on Free: presales are part of Core', await ds.getByRole('switch', { name: 'Presale for followers' }).isDisabled() && await ds.getByText('Start Core to give your followers tickets first.').isVisible());
 await p.keyboard.press('Escape');
+// The plan is kept a second in the tests: ask once, then look.
+await p.request.get(`${B}/api/admin/fans?slug=${gh.slug}`); await p.waitForTimeout(600);
 check('on Free: the fans list says it is Free', (await (await p.request.get(`${B}/api/admin/fans?slug=${gh.slug}`)).json()).core === false);
 await open();
 
