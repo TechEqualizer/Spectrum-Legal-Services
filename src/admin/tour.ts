@@ -84,6 +84,12 @@ export const TOUR_STEPS: TourStep[] = [
     body: "People who left their number for updates. Tap a number to call or text them before the night.",
   },
   {
+    path: "/admin/leads",
+    target: "people-tabs",
+    title: "Fans",
+    body: "People who follow you by email hear first about your next nights. See who follows, and keep the list as a spreadsheet.",
+  },
+  {
     path: "/admin/settings",
     target: "eventbrite",
     title: "Eventbrite",

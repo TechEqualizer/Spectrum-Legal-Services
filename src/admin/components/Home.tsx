@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { selectAdminBusiness, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
-import StatTile from "@/admin/components/StatTile";
+import StatTile, { TileGrid } from "@/admin/components/StatTile";
 import ViewsChart from "@/admin/components/ViewsChart";
 import { CheckIcon } from "@/admin/components/ui/icons";
+import { showsFans, useFanCounts, type FanCounts } from "@/admin/fan-counts";
 import { useAllResults, type EventResults } from "@/admin/results";
 import { useAdminSession } from "@/admin/session";
 import { formatNumber, formatPercent } from "@/admin/viz";
@@ -32,6 +33,7 @@ export default function Home() {
   const session = useAdminSession();
   const events = useAdminEvents();
   const { results, failed } = useAllResults(DAYS);
+  const fanCounts = useFanCounts(events, DAYS);
   const first = session.name?.trim().split(/\s+/)[0];
 
   const open = (slug: string) => {
@@ -74,7 +76,7 @@ export default function Home() {
                   {failed === 1 ? "One event's numbers" : `${failed} events' numbers`} couldn&apos;t load, so they&apos;re left out. Reload to try again.
                 </p>
               )}
-              <Totals results={results} />
+              <Totals results={results} fans={showsFans(fanCounts) ? fanCounts! : undefined} />
             </>
           )}
 
@@ -92,7 +94,7 @@ export default function Home() {
 }
 
 /** The headline numbers, summed across events, against the 30 days before. */
-function Totals({ results }: { results: EventResults[] }) {
+function Totals({ results, fans }: { results: EventResults[]; fans?: FanCounts[] }) {
   const sum = (pick: (r: EventResults) => number) => results.reduce((n, r) => n + pick(r), 0);
   const views = sum((r) => r.results.current.views);
   const before = sum((r) => r.results.previous.views);
@@ -104,22 +106,37 @@ function Totals({ results }: { results: EventResults[] }) {
   const sold = withSales.reduce((n, r) => n + r.results.sales!.current, 0);
   const soldBefore = withSales.reduce((n, r) => n + r.results.sales!.previous, 0);
   const period = `${DAYS} days`;
+  const tiles = [
+    <StatTile key="views" label="Reel views" value={formatNumber(views)} delta={change(views, before)} periodLabel={period} />,
+    <StatTile key="tickets" label="Ticket clicks" value={formatNumber(tickets)} delta={change(tickets, ticketsBefore)} periodLabel={period} />,
+    withSales.length > 0 && <StatTile key="sold" label="Tickets sold" value={formatNumber(sold)} delta={change(sold, soldBefore)} periodLabel={period} />,
+    <StatTile
+      key="rate"
+      label="Views to tickets"
+      value={views ? `${(rate(tickets, views) * 100).toFixed(1)}%` : "–"}
+      delta={views && before ? change(rate(tickets, views), rate(ticketsBefore, before)) : undefined}
+      periodLabel={period}
+    />,
+    <StatTile key="updates" label="Update sign-ups" value={formatNumber(updates)} periodLabel={period} />,
+    fans && <FollowersTile key="fans" counts={fans} period={period} />,
+  ].filter(Boolean);
+  return <TileGrid>{tiles}</TileGrid>;
+}
+
+/** New followers across the organizers, with how many follow in all. */
+function FollowersTile({ counts, period }: { counts: FanCounts[]; period: string }) {
+  const sum = (pick: (c: FanCounts) => number) => counts.reduce((n, c) => n + pick(c), 0);
+  const current = sum((c) => c.current);
   return (
-    <div className={`grid grid-cols-2 gap-3 md:gap-4 ${withSales.length ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
-      <StatTile label="Reel views" value={formatNumber(views)} delta={change(views, before)} periodLabel={period} />
-      <StatTile label="Ticket clicks" value={formatNumber(tickets)} delta={change(tickets, ticketsBefore)} periodLabel={period} />
-      {withSales.length > 0 && <StatTile label="Tickets sold" value={formatNumber(sold)} delta={change(sold, soldBefore)} periodLabel={period} />}
+    <Link href="/admin/leads/fans" className="block h-full rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep-navy [&>div]:h-full [&>div]:transition-colors hover:[&>div]:border-gray-300">
       <StatTile
-        label="Views to tickets"
-        value={views ? `${(rate(tickets, views) * 100).toFixed(1)}%` : "–"}
-        delta={views && before ? change(rate(tickets, views), rate(ticketsBefore, before)) : undefined}
+        label="New followers"
+        value={formatNumber(current)}
+        delta={change(current, sum((c) => c.previous))}
         periodLabel={period}
+        note={`${formatNumber(sum((c) => c.following))} following in all`}
       />
-      {/* With five tiles, the last one fills the phone's last row. */}
-      <div className={withSales.length ? "col-span-2 lg:col-span-1 [&>div]:h-full" : "contents"}>
-        <StatTile label="Update sign-ups" value={formatNumber(updates)} periodLabel={period} />
-      </div>
-    </div>
+    </Link>
   );
 }
 

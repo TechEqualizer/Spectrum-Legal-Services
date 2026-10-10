@@ -19,6 +19,7 @@ const STEPS = [
   ['/admin/links', 'A link for every place you post', 'share-builder'],
   ['/admin/overview', 'Results', 'nav-results'],
   ['/admin/leads', 'Leads', 'nav-leads'],
+  ['/admin/leads', 'Fans', 'people-tabs'],
   ['/admin/settings', 'Eventbrite', 'eventbrite'],
   ['/admin/settings', "You're all set", 'account'],
 ];

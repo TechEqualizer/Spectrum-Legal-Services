@@ -11,7 +11,7 @@ export default function PeopleTabs() {
     { href: "/admin/leads/fans", label: "Fans" },
   ];
   return (
-    <nav aria-label="Leads and fans" className="inline-grid grid-cols-2 gap-1 rounded-xl bg-gray-200/70 p-1">
+    <nav aria-label="Leads and fans" data-tour="people-tabs" className="inline-grid grid-cols-2 gap-1 rounded-xl bg-gray-200/70 p-1">
       {tabs.map((t) => {
         const current = pathname === t.href;
         return (

@@ -214,7 +214,7 @@ Each step is one PR.
 - Tests: the `calendar-feed` suite.
 - Live page impact: one new link, on the confirmation page only.
 
-### 6. Fans in the admin (built, in part)
+### 6. Fans in the admin (built)
 
 - **A Fans page** (built), beside Leads at `/admin/leads/fans` with a
   Leads | Fans switch on both, so the nav keeps its few places:
@@ -226,8 +226,12 @@ Each step is one PR.
   - a note when Follow isn't switched on for their links yet.
   - Migration `20261021000000_organizer_fans.sql`: `organizer_fans` and
     `remove_fan`, for admins who manage the organizer.
-- Not yet: Home and Results gaining **Follows** next to ticket clicks (plus
-  the share of visitors who follow), and a Fans step in the guided tour.
+- **New followers** (built) on Home and Results, beside ticket clicks, against
+  the period before, with how many follow in all; on Results, those who
+  followed from that event's link. Shown once Follow is on for the organizer
+  or anyone follows, so nothing changes for Big Love before Oct 31. Home's
+  tile opens Fans. Numbers come from `/api/admin/fans/counts` (no emails).
+- **A Fans stop in the guided tour** (built), on the Leads | Fans switch.
 - Live page impact: none (admin only).
 
 ## Measures

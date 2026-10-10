@@ -6,6 +6,8 @@ type StatTileProps = {
   /** Whether an increase is good news. */
   upIsGood?: boolean;
   periodLabel: string;
+  /** A short line under the number, such as a running total. */
+  note?: string;
 };
 
 export default function StatTile({
@@ -14,6 +16,7 @@ export default function StatTile({
   delta,
   upIsGood = true,
   periodLabel,
+  note,
 }: StatTileProps) {
   const good = delta === undefined ? null : delta === 0 ? null : (delta > 0) === upIsGood;
   return (
@@ -40,6 +43,22 @@ export default function StatTile({
           <span>vs previous {periodLabel}</span>
         </p>
       )}
+      {note && <p className="mt-1 text-xs text-gray-600">{note}</p>}
+    </div>
+  );
+}
+
+/** Stat tiles in rows: up to five side by side on a wide screen; on a phone, an odd last one fills its row. */
+export function TileGrid({ children }: { children: React.ReactNode[] }) {
+  const n = children.length;
+  const cols = n >= 6 ? "lg:grid-cols-3" : n === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4";
+  return (
+    <div className={`grid grid-cols-2 gap-3 md:gap-4 ${cols}`}>
+      {children.map((tile, i) => (
+        <div key={i} className={`[&>*]:h-full ${n % 2 && i === n - 1 ? "col-span-2 lg:col-span-1" : ""}`}>
+          {tile}
+        </div>
+      ))}
     </div>
   );
 }
