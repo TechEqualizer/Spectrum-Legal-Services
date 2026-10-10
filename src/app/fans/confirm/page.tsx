@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Big_Shoulders } from "next/font/google";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import Unfollow from "@/app/fans/confirm/Unfollow";
 import { followConsent } from "@/lib/fans";
@@ -43,6 +43,7 @@ export default async function ConfirmFollowPage({ searchParams }: Props) {
           </Link>
           <Unfollow organizer={organizer.slug} name={organizer.name} />
         </div>
+        <CalendarLinks feed={await feedUrl(organizer.slug)} name={organizer.name} />
       </>
     ) : organizer ? (
       <Notice
@@ -106,6 +107,48 @@ export default async function ConfirmFollowPage({ searchParams }: Props) {
         <div className="max-w-[40rem]">{body}</div>
       </main>
     </div>
+  );
+}
+
+/** The organizer's calendar feed (/f/<organizer>/calendar.ics), on this site's own address. */
+async function feedUrl(organizer: string) {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "showlnk.com";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}/f/${organizer}/calendar.ics`;
+}
+
+/**
+ * Subscribe to every night in the fan's own calendar app: the organizer's
+ * feed, which updates itself as nights are added.
+ */
+function CalendarLinks({ feed, name }: { feed: string; name: string }) {
+  const webcal = feed.replace(/^https?:/, "webcal:");
+  const links = [
+    { label: "Apple Calendar", href: webcal },
+    { label: "Google Calendar", href: `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}` },
+    { label: "Outlook", href: `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(feed)}&name=${encodeURIComponent(name)}` },
+  ];
+  return (
+    <section aria-labelledby="calendar-title" className="mt-12 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5 sm:p-6">
+      <h2 id="calendar-title" className="text-lg font-bold text-[var(--sl-text)]">
+        Add every {name} night to your calendar
+      </h2>
+      <p className="mt-1.5 text-sm text-[var(--sl-muted)]">New nights appear on their own, so you never miss one.</p>
+      <ul className="mt-4 flex flex-wrap gap-2.5" role="list">
+        {links.map((l) => (
+          <li key={l.label}>
+            <a
+              href={l.href}
+              className="inline-flex min-h-11 items-center rounded-full border border-[var(--sl-line)] px-4 text-sm font-semibold text-[var(--sl-text)] hover:border-[var(--sl-gold)] hover:text-[var(--sl-gold)]"
+              {...(l.href.startsWith("https:") ? { target: "_blank", rel: "noopener" } : {})}
+            >
+              {l.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

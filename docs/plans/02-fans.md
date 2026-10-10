@@ -199,10 +199,19 @@ Each step is one PR.
 - Tests: the `presale` suite.
 - Live page impact: none until a date has a presale.
 
-### 5. Calendar feed
+### 5. Calendar feed (built)
 
-- `/f/<organizer>/calendar.ics` from the date rows, plus the subscribe
-  links.
+- `/f/<organizer>/calendar.ics`: every upcoming night of the organizer's
+  events, soonest first, each linking to its Showlnk link tagged
+  `?src=calendar` (so results credit the calendar), with a reminder 3
+  hours before. `/f/<event>/calendar.ics` is one event's. Calendar apps
+  check back every 6 hours; it's public and cached.
+  - Built from the dates as visitors see them (the published lists), like
+    every other reader today; it moves to the date rows with Plan 1 step 4.
+- The follow confirmation offers it: Apple Calendar (webcal), Google
+  Calendar and Outlook. The one-date "Add to calendar" file shares the
+  same builder (`src/lib/server/ics.ts`).
+- Tests: the `calendar-feed` suite.
 - Live page impact: one new link, on the confirmation page only.
 
 ### 6. Fans in the admin

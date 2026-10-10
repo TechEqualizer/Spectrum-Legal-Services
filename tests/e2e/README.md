@@ -73,6 +73,9 @@ still moves forward during a run.
     watch"; a follower's signed address that plays; a follower of another
     organizer refused; admins' private uploads and preview addresses; the
     editor's switch with the content rule.
+  - `calendar-feed`: the organizer's calendar feed (step 5): upcoming
+    nights only, soonest first, tagged links, an event's own feed, and the
+    confirmation's Apple, Google and Outlook links.
   - `presale`: a presale for followers (step 4): the link kept out of the
     published edits and the page; "Fans get tickets first" for a visitor,
     "Get presale tickets" for a follower, nothing after the window;
