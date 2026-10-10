@@ -111,8 +111,20 @@ Most conversion figures in these are vendors' own and unverified.
    stays in the browser, so coming back carries on. `/api/start/flyer`
    counts each read against the invite (5 at most) before reading. Continue
    leads to step 2 (next). Live page impact: none (invite-only).
-2. **Step 2, the reels.** The draft playing in the phone, words editable
-   in place, Core features shown with the trial. Live page impact: none.
+2. **Step 2, the reels (built).** The same `/api/start/flyer` answer that
+   reads the flyer goes on to draft the opening scene and the three reels
+   (`draftFunnel`), streamed one line at a time: step 1 shows what the flyer
+   said at once, and the reels arrive while the organizer picks what they
+   run, so drafting costs no extra read of the invite. Step 2 lists the
+   opening (title, line under it) and The Night, Your People and Last Call
+   (title, words), each with the question it answers and Play, which starts
+   the phone at that reel; typing changes the phone in place. Until their
+   videos come, each reel plays over the flyer. "Core · free for 14 days,
+   already on your link": Follow (beside every reel), a presale for fans
+   (open now on the next date) and a reel locked for followers, each with
+   See it; the phone runs them in preview mode (Follow sends nothing). If
+   drafting fails, the reels start from the flyer's basics and say so. Edits
+   stay in the browser with the rest of the draft. Live page impact: none.
 3. **Step 3, the claim.** Account, organizer, event and trial in one step;
    signed in on Home. Live page impact: none.
 4. **The trial's end.** Plan card and Home count the days; an email 3
