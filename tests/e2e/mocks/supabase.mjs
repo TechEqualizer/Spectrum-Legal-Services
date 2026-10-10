@@ -195,6 +195,14 @@ http.createServer((req, res) => {
       if (row) row.revoked_at = new Date().toISOString();
       return json(res, 200, Boolean(row));
     }
+    // Like use_signup_invite_read: the server counts a flyer read (secret key only).
+    if (p === '/rest/v1/rpc/use_signup_invite_read') {
+      if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: 'permission denied' });
+      const row = invites.get(body.p_code_hash);
+      const ok = Boolean(row && !row.revoked_at && !row.claimed_at && Date.parse(row.expires_at) > Date.now() && row.flyer_reads < 5);
+      if (ok) row.flyer_reads += 1;
+      return json(res, 200, ok);
+    }
     // The invites table itself: the secret key only (the wizard checks an invite).
     if (p === '/rest/v1/signup_invites') {
       if (req.headers.apikey !== 'test-secret' || req.headers.authorization !== 'Bearer test-secret') return json(res, 401, { code: '42501', message: 'permission denied for table signup_invites' });

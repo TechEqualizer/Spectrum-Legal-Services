@@ -414,3 +414,34 @@
 .sl-rule strong {
   color: var(--sl-gold);
 }
+
+/* ---- The sign-up wizard (/start) ------------------------------------- */
+
+/* Reading a flyer: a gold line sweeps down the flyer in the phone. */
+.start-scan {
+  top: -6rem;
+  background: linear-gradient(to bottom, transparent, rgb(232 190 90 / 0.28) 70%, rgb(232 190 90 / 0.9) 98%, transparent);
+  animation: start-scan 1800ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes start-scan {
+  to {
+    top: 100%;
+  }
+}
+.start-spinner {
+  animation: start-spin 900ms linear infinite;
+}
+@keyframes start-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-scan {
+    animation: none;
+    top: 40%;
+  }
+  .start-spinner {
+    animation-duration: 2400ms;
+  }
+}

@@ -83,6 +83,11 @@ still moves forward during a run.
     mock Stripe (`mocks/stripe.mjs`): checkout and back, paying, signed
     webhooks only, a declined card, canceling in the portal, starting again
     with the same customer, comped and other businesses refused.
+  - `start`: the sign-up wizard's first step (`/start`): invite-only
+    notices, what they run, dropping a flyer, what it said, the phone
+    becoming their link (their flyer, colors and dates), the draft kept
+    across a reload, no date found, the invite's 5-read limit, expired,
+    no visits counted, and fits on a phone.
   - `invites`: Settings → Invites (sign-up step 0): a link shown once,
     each invite's state, revoking, the wizard's check (valid, unknown,
     reads left, expired, revoked), and only Showlnk can see or make them.

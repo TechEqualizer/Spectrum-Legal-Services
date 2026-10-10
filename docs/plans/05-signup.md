@@ -99,9 +99,18 @@ Most conversion figures in these are vendors' own and unverified.
    used, joined, expired, revoked) and Revoke. `/api/start/invite?code=`
    tells the wizard whether an invite is usable, and nothing about whom
    it's for. Invites last 30 days. Live page impact: none.
-1. **Step 1, the flyer.** `/start` with a valid invite: upload, role, the
-   phone filling in as the flyer is read. Live page impact: none
-   (invite-only).
+1. **Step 1, the flyer (built).** `/start?invite=…` checks the invite
+   first and says plainly when it's expired, used or withdrawn, or when
+   there's none (invite-only). The wizard: a 3-part step bar, "What do you
+   run?", and a drop zone for a photo or PDF. While it's read, the flyer
+   shows in the phone with a gold line sweeping down it; then the card
+   shows what the flyer said (name, date, venue, price, other dates) and
+   the phone becomes their link: their flyer as the poster, its colors,
+   its dates. The phone is the real link player (`/start/preview`, in
+   preview mode: no visits counted), live from the first second. The draft
+   stays in the browser, so coming back carries on. `/api/start/flyer`
+   counts each read against the invite (5 at most) before reading. Continue
+   leads to step 2 (next). Live page impact: none (invite-only).
 2. **Step 2, the reels.** The draft playing in the phone, words editable
    in place, Core features shown with the trial. Live page impact: none.
 3. **Step 3, the claim.** Account, organizer, event and trial in one step;
