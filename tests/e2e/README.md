@@ -111,7 +111,9 @@ still moves forward during a run.
     second app on port 3003 without the settings shows "not turned on yet".
   - `link`: a call-first link that isn't live yet (`/f/velvet-room`, added
     to the mock for the suite: forms simulate, tracking is real), plus the
-    admin's link builder.
+    admin's link builder (a place named in any words, and what Results will
+    call it), and untagged visits credited to the app or site they came
+    from. `tests/unit/source-tag.test.ts` pins the names and merged aliases.
   - The rest: the admin (dates, flyer import, the "Draft my funnel" draft,
     look and style, opening screen, studio and path strip, publishing,
     saving, media).

@@ -26,7 +26,8 @@ export default function PrivacyPage() {
       <h2>What we keep</h2>
       <p>
         <strong>When you watch a link:</strong> a random id kept in your browser (not your name), which reels you watched or
-        skipped, which buttons you tapped, and the tag on the link you came from (Instagram, a text, a QR code). If your browser
+        skipped, which buttons you tapped, and where you came from: the tag on the link (Instagram, a text, a QR code) or, when
+        it has none, just the app or site that sent you (such as Instagram or Google), never the page. If your browser
         sends Global Privacy Control or Do Not Track, we keep none of this.
       </p>
       <p>

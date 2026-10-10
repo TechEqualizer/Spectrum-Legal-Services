@@ -51,12 +51,13 @@ export function getVisitorId(): string | null {
  * Where the visitor's link came from: the ?src= tag (or utm_source) on this
  * page, else the last one seen in this browser. The most recent link wins,
  * so a viewer who first came from Instagram and later from a text is
- * credited to the text.
+ * credited to the text. A link without a tag (the bio link) is credited
+ * to the app it was opened from, when that's plain.
  */
 export function getSourceTag(): string | undefined {
   if (typeof window === "undefined") return undefined;
   const params = new URLSearchParams(window.location.search);
-  const fromUrl = normalizeSourceTag(params.get("src") ?? params.get("utm_source"));
+  const fromUrl = normalizeSourceTag(params.get("src") ?? params.get("utm_source")) ?? arrivedFrom();
   // Without tracking consent, use the tag on this page only and remember nothing.
   if (!trackingAllowed()) return fromUrl;
   try {
@@ -106,5 +107,44 @@ export function trackReelEvent(funnel: Funnel, reelId: string, event: ReelEvent)
       body,
       keepalive: true,
     }).catch(() => {});
+  }
+}
+
+/** Sites and in-app browsers a visit can come from, and the place each one is. */
+const REFERRERS: [RegExp, string][] = [
+  [/(^|\.)instagram\.com$/, "instagram"],
+  [/(^|\.)tiktok\.com$/, "tiktok"],
+  [/(^|\.)facebook\.com$|^fb\.me$|(^|\.)messenger\.com$/, "facebook"],
+  [/^t\.co$|(^|\.)x\.com$|(^|\.)twitter\.com$/, "x"],
+  [/(^|\.)threads\.(net|com)$/, "threads"],
+  [/(^|\.)snapchat\.com$/, "snapchat"],
+  [/(^|\.)youtube\.com$|^youtu\.be$/, "youtube"],
+  [/^linktr\.ee$/, "linktree"],
+  [/(^|\.)eventbrite\.[a-z.]+$/, "eventbrite"],
+  [/(^|\.)google\.[a-z.]+$/, "google-search"],
+];
+const IN_APP: [RegExp, string][] = [
+  [/Instagram/, "instagram"],
+  [/musical_ly|BytedanceWebview|TikTok/i, "tiktok"],
+  [/FBAN|FBAV|FB_IAB/, "facebook"],
+  [/Snapchat/, "snapchat"],
+];
+
+/**
+ * Where an untagged visit came from: the site that sent it here, or the
+ * app whose browser it opened in (Instagram and TikTok often send no
+ * address). Only from outside this site, and only the place, never the page.
+ */
+function arrivedFrom(): string | undefined {
+  try {
+    const host = document.referrer ? new URL(document.referrer).hostname : "";
+    if (host && host !== window.location.hostname) {
+      const hit = REFERRERS.find(([re]) => re.test(host));
+      if (hit) return hit[1];
+    }
+    if (host === window.location.hostname) return undefined;
+    return IN_APP.find(([re]) => re.test(navigator.userAgent))?.[1];
+  } catch {
+    return undefined;
   }
 }

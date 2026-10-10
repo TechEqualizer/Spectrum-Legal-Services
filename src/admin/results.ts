@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useAdminEvents, useMaybeAdminBusiness, type AdminEvent } from "@/admin/AdminBusiness";
 import type { DailyReelStats, ReelTotals, SourceTotals } from "@/admin/stats";
 import type { Funnel } from "@/data/funnel-types";
+import { normalizeSourceTag } from "@/lib/source-tag";
 
 export type Results = {
   /** This period's totals, and the same length of time before it. */
@@ -71,18 +72,27 @@ export function realResults(raw: StatsResponse, funnel: Funnel, days: number, no
   for (const { reel, event, n } of raw.reels) byReel.set(reel, { ...byReel.get(reel), [event]: n });
   const reels = funnel.reels.map((reel) => ({ reel, ...totalsOf(byReel.get(reel.id) ?? {}) })).sort((a, b) => b.views - a.views);
 
-  const updates = new Map(raw.updates.map((u) => [u.tag ?? "", u.n]));
+  // Visits tagged before aliases were merged ("ig", "instagram") count as one place.
+  const key = (tag: string | null) => (tag ? normalizeSourceTag(tag) ?? tag : "");
+  const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
+  const updates = new Map<string, number>();
+  for (const u of raw.updates) add(updates, key(u.tag), u.n);
   // Tickets sold by source; orders without our code (tag null) are "other".
   const sold = new Map<string, number>();
   let other = 0;
   for (const s of raw.sales ?? []) {
     if (s.tag === null) other += s.n;
-    else sold.set(salesTag(s.tag), (sold.get(salesTag(s.tag)) ?? 0) + s.n);
+    else add(sold, key(salesTag(s.tag)), s.n);
   }
-  const tags = new Set([...raw.sources.map((s) => s.tag ?? ""), ...updates.keys(), ...sold.keys()]);
+  const visits = new Map<string, { visitors: number; tickets: number; calls: number }>();
+  for (const s of raw.sources) {
+    const was = visits.get(key(s.tag)) ?? { visitors: 0, tickets: 0, calls: 0 };
+    visits.set(key(s.tag), { visitors: was.visitors + s.visitors, tickets: was.tickets + s.tickets, calls: was.calls + s.calls });
+  }
+  const tags = new Set([...visits.keys(), ...updates.keys(), ...sold.keys()]);
   const sources = [...tags]
     .map((tag): SourceTotals => {
-      const s = raw.sources.find((r) => (r.tag ?? "") === tag);
+      const s = visits.get(tag);
       return { tag: tag || undefined, visitors: s?.visitors ?? 0, calls: s?.calls ?? 0, bookings: s?.tickets ?? 0, textLater: updates.get(tag) ?? 0, sold: sold.get(tag) ?? 0 };
     })
     .sort((a, b) => b.visitors - a.visitors);
