@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { FAN_COOKIE, fanIdFromCookie, following, playableFanMedia } from "@/lib/server/fans";
 import { organizerOf } from "@/lib/server/funnels";
+import { hasCore } from "@/lib/plans";
+import { planOf } from "@/lib/server/plans";
 import { getLiveFunnel } from "@/lib/server/publications";
 
 // A link's fans-only reels, for a follower of its organizer: { reels: { [reel id]: media } },
@@ -17,6 +19,9 @@ export async function GET(request: Request) {
   if (!funnel || !organizer) return NextResponse.json({ error: "No such link." }, { status: 404, headers: NO_STORE });
   const follows = await following(fanId);
   if (!follows?.includes(organizer)) return NextResponse.json({ error: "Follow to watch." }, { status: 403, headers: NO_STORE });
+  // Fans-only reels are part of Core; without it they stay locked (if the plan can't be read, they play).
+  const plan = await planOf(organizer);
+  if (plan && !hasCore(plan)) return NextResponse.json({ error: "This reel isn't available right now." }, { status: 403, headers: NO_STORE });
   const reels = await playableFanMedia(funnel);
   if (!reels) return NextResponse.json({ error: "Couldn't load the reel. Try again." }, { status: 502, headers: NO_STORE });
   return NextResponse.json({ reels }, { headers: NO_STORE });

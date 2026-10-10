@@ -133,14 +133,49 @@ competitors' pages; check prices on the vendors' own sites before quoting.
    (`src/lib/server/stripe.ts`); a mock Stripe in the tests. Until the two
    keys are set, the card shows Core without a button. Live page impact:
    none.
-3. **Gates, the trial and upgrade prompts.** The gates read the plan with
-   the secret key (`planOf()`); "Part of Core" where the features live; the
-   14-day trial starts at claim (Plan 5); lapsed plans turn Follow off for new fans as
-   described above. Live page
-   impact: only for organizers without Core.
-4. **Go live.** Switch to live keys; retire `FOLLOW_ORGANIZERS`; a receipt
-   and "card declined" email check. Live page impact: none for Big Love
-   (comped).
+3. **Gates, the trial and upgrade prompts (built).** `planOf()` reads an
+   organizer's plan with the secret key, kept a minute and cleared the
+   moment it changes (the webhook, a claim); if it can't be read, the gates
+   keep what fans already have.
+   - **Follow** was on for organizers who signed up themselves (a trial or
+     Stripe plan), and for those `FOLLOW_ORGANIZERS` listed, until step 4
+     made it on for everyone but `FOLLOW_HOLD`.
+   - **Presales for followers** need Core: on Free the link shows no
+     presale and `/api/fans/presale` gives no links.
+   - **Fans-only reels** need Core: on Free they stay locked for everyone,
+     followers too (`/api/fans/media` refuses); nothing leaks.
+   - **The fan list:** on Free, the Fans page and the export show the first
+     100 following (by when they confirmed) and say how many more are
+     waiting; following never fails for a fan.
+   - **Part of Core** in the editor: on Free, the Fans only switch and the
+     presale switch can't be turned on, with "Part of Core. … Start Core"
+     (Settings → Plan); one already on can be turned off.
+   - The calendar feed stays for everyone: it's what existing followers
+     already have (first principle 2).
+   - The 14-day trial starts at claim (Plan 5).
+
+   Live page impact: none today (Big Love is comped and keeps its
+   `FOLLOW_ORGANIZERS` state); organizers on Free lose presales and
+   fans-only reels.
+4. **Go live.**
+   - **Follow for everyone (built).** `FOLLOW_ORGANIZERS` is retired: every
+     organizer's links have Follow (Free includes it, up to 100 fans) once
+     the deployment has every fan setting, except those `FOLLOW_HOLD` lists.
+     `FOLLOW_HOLD=biglove` is set in Vercel (production and preview, Oct 10,
+     2026): Big Love's Follow waits until after its Oct 31 night and the
+     owner's go-ahead (then remove it from the list).
+   - **Waiting on the owner:**
+     - `RESEND_API_KEY` in Vercel. Without it Follow is off everywhere in
+       production: it sends the confirm emails.
+     - The Showlnk Stripe account (step 0), test keys first:
+       `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Vercel; a full
+       test-mode run (Start Core, the webhook, the portal, a declined card);
+       then the live keys and the live webhook's secret.
+     - Stripe → Settings → Customer emails: successful payments (receipts)
+       and failed payments on; check one of each arrives in test mode.
+
+   Live page impact: none for Big Love (held); other organizers' links
+   get Follow once `RESEND_API_KEY` is set.
 
 ## Measures
 

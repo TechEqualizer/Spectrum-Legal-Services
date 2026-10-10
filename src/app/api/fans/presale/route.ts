@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { presaleOpen } from "@/lib/events";
 import { FAN_COOKIE, fanIdFromCookie, following } from "@/lib/server/fans";
 import { organizerOf } from "@/lib/server/funnels";
+import { hasCore } from "@/lib/plans";
+import { planOf } from "@/lib/server/plans";
 import { presaleLinks } from "@/lib/server/presales";
 import { getLiveFunnel } from "@/lib/server/publications";
 
@@ -18,6 +20,9 @@ export async function GET(request: Request) {
   const [funnel, organizer] = await Promise.all([getLiveFunnel(slug), organizerOf(slug)]);
   if (!funnel || !organizer) return NextResponse.json({ error: "No such link." }, { status: 404, headers: NO_STORE });
   if (!(await following(fanId))?.includes(organizer)) return NextResponse.json({ error: "Follow for presale." }, { status: 403, headers: NO_STORE });
+  // Presales for followers are part of Core (if the plan can't be read, they stay open).
+  const plan = await planOf(organizer);
+  if (plan && !hasCore(plan)) return NextResponse.json({ dates: {} }, { headers: NO_STORE });
   const now = Date.now();
   const open = (funnel.events ?? []).filter((e) => presaleOpen(e, now));
   if (!open.length) return NextResponse.json({ dates: {} }, { headers: NO_STORE });

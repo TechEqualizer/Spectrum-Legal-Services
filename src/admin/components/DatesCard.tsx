@@ -4,7 +4,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import type { FunnelEvent } from "@/data/funnel-types";
 import { eventDate, eventDay, eventDayOfMonth, eventWhen, instantToZoned, isTimeZone, localTimeZone, zonedToInstant, zoneName } from "@/lib/event-time";
 import { isOver } from "@/lib/events";
+import CoreNote from "@/admin/components/CoreNote";
 import FlyerImportSheet, { type FlyerFound, type FunnelDraft, type ImportedDate } from "@/admin/components/FlyerImportSheet";
+import { useHasCore } from "@/admin/plan";
 import type { Look } from "@/lib/look";
 import { PlusIcon } from "@/admin/components/ui/icons";
 
@@ -68,6 +70,8 @@ export default function DatesCard({
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
   const [editing, setEditing] = useState<{ event: FunnelEvent; isNew: boolean; imported?: number } | null>(null);
+  // Presales for followers are part of Core.
+  const core = useHasCore(slug);
   // Flyer import: the sheet is open, what it found, and which of those are added.
   const [importing, setImporting] = useState(openImport);
   const [found, setFound] = useState<FlyerFound | null>(null);
@@ -177,6 +181,7 @@ export default function DatesCard({
           reels={reels}
           events={events}
           initialReel={editing.imported !== undefined ? "" : editing.isNew ? "new" : opener(editing.event)?.id ?? ""}
+          core={core}
           onSave={save}
           onDelete={editing.isNew ? undefined : () => remove(editing.event)}
           onClose={() => {
@@ -292,12 +297,15 @@ function DateSheet({
   reels,
   events,
   initialReel,
+  core,
   onSave,
   onDelete,
   onClose,
 }: {
   event: FunnelEvent;
   isNew: boolean;
+  /** The organizer has Core (undefined: not known yet). */
+  core: boolean | undefined;
   /** What the flyer said, when this date came from one. */
   imported?: ImportedDate;
   reels: DateReel[];
@@ -451,8 +459,10 @@ function DateSheet({
                 role="switch"
                 aria-checked={presaleOn}
                 aria-labelledby={`${id}-presale`}
+                aria-describedby={core === false ? `${id}-presale-core` : undefined}
+                disabled={core === false && !presaleOn}
                 onClick={() => setPresaleOn((on) => !on)}
-                className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${presaleOn ? "bg-teal-accent" : "bg-gray-300"}`}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${presaleOn ? "bg-teal-accent" : "bg-gray-300"}`}
               >
                 <span aria-hidden="true" className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${presaleOn ? "translate-x-6" : "translate-x-1"}`} />
               </button>
@@ -492,6 +502,9 @@ function DateSheet({
               </div>
             ) : (
               <p className="px-1 text-xs text-gray-500">Give followers tickets first, with a link only they get.</p>
+            )}
+            {core === false && (
+              <CoreNote id={`${id}-presale-core`} text={presaleOn ? "Without it, followers won't see this presale." : "Start Core to give your followers tickets first."} />
             )}
           </div>
 

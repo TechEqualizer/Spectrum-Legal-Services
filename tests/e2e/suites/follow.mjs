@@ -1,5 +1,6 @@
-// Fans, step 2: Follow on the link, for organizers with it on
-// (FOLLOW_ORGANIZERS: the test-only Golden Hour here, not Big Love). The
+// Fans, step 2: Follow on the link, for organizers with it on (every
+// organizer but those FOLLOW_HOLD lists: the test-only Golden Hour here,
+// not Big Love). The
 // rail's text-me button becomes Follow; the sheet takes an email and says
 // "Check your email"; after confirming, the link shows "Following ✓" and
 // can unfollow. The organizer's choose-a-night page has Follow too.

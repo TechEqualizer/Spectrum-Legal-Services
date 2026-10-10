@@ -43,14 +43,16 @@ export function missingFanSettings(): string[] {
 export const isFollowingConfigured = () => missingFanSettings().length === 0;
 
 /**
- * Whether an organizer's links show Follow: FOLLOW_ORGANIZERS lists the
- * organizers who have it on (comma-separated slugs, or * for all), and the
- * deployment must have every fan setting.
+ * Whether an organizer's links show Follow: on for every organizer (Free
+ * includes Follow, up to 100 fans; docs/plans/03-billing.md) once the
+ * deployment has every fan setting, except those FOLLOW_HOLD lists
+ * (comma-separated slugs), whose links keep Follow off until taken off it.
+ * Big Love is held until after its Oct 31 night.
  */
 export function followOn(organizer: string | undefined): boolean {
   if (!organizer || !isFollowingConfigured()) return false;
-  const list = (env("FOLLOW_ORGANIZERS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-  return list.includes("*") || list.includes(organizer);
+  const held = (env("FOLLOW_HOLD") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return !held.includes(organizer);
 }
 
 type Rpc<T> = { ok: true; data: T } | { ok: false; status: number };

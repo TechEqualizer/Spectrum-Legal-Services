@@ -55,6 +55,8 @@ export async function removeFan(admin: Admin, organizer: string, email: string):
 
 export { followOn };
 
+export { fansOnPlan } from "@/lib/fan-list";
+
 export type FanCounts = {
   /** Following now. */
   following: number;

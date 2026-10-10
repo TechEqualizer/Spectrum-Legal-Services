@@ -1,5 +1,6 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { savePlan } from "@/lib/server/plans";
+import { planTag, savePlan } from "@/lib/server/plans";
 import { currentSubscription, planFromSubscription, verifiedEvent } from "@/lib/server/stripe";
 
 // Stripe's webhook: when a subscription starts, changes, fails to renew or
@@ -28,5 +29,7 @@ export async function POST(request: Request) {
   const plan = planFromSubscription(sub, event.type === "customer.subscription.deleted");
   if (!plan) return NextResponse.json({ ok: true, ignored: sub.status });
   if (!(await savePlan(plan.organizer, plan.row))) return NextResponse.json({ error: "Couldn't save the plan." }, { status: 503 });
+  // The organizer's links follow at once.
+  revalidateTag(planTag(plan.organizer), { expire: 0 });
   return NextResponse.json({ ok: true });
 }

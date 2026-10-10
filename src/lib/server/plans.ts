@@ -76,3 +76,27 @@ export async function savePlan(organizer: string, row: Record<string, string | n
     return false;
   }
 }
+
+/** The cache tag for an organizer's plan, cleared when it changes (the webhook, a claim). */
+export const planTag = (organizer: string) => `organizer-plan:${organizer}`;
+
+/**
+ * The organizer's plan, for the gates on their links (secret key). Kept for
+ * a minute and cleared the moment it changes; Free when there's no row, and
+ * undefined if it couldn't be read (gates then keep what fans already have).
+ */
+export async function planOf(organizer: string): Promise<Plan | undefined> {
+  const s = service();
+  if (!s) return undefined;
+  try {
+    const res = await fetch(
+      `${s.url}/rest/v1/organizer_plans?organizer_slug=eq.${encodeURIComponent(organizer)}&select=status,billing_interval,trial_ends_at,current_period_end,comped_until`,
+      // PLAN_CACHE_SECONDS: the tests keep it a second, to switch plans mid-run.
+      { headers: s.headers, next: { revalidate: Number(env("PLAN_CACHE_SECONDS") ?? 60), tags: [planTag(organizer)] } }
+    );
+    if (!res.ok) return undefined;
+    return toPlan(((await res.json()) as Row[])[0]);
+  } catch {
+    return undefined;
+  }
+}

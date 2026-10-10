@@ -83,7 +83,7 @@ for (const [w,h] of [[1279,900],[390,844]]) {
   await settle(p, 300);
   check(w+': photo reel shows', await p.getByRole('dialog',{name:/Video:/}).locator('img[src^="blob:"]').evaluate(i=>i.complete && i.naturalWidth>0));
   // Only the admin's own reads (what's live, its results); no tracking or leads.
-  check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=') && !u.includes('/api/admin/stats?') && !u.includes('/api/admin/leads?') && !u.includes('/api/admin/fans/counts?') && !u.includes('/api/admin/source-names?')).length===0, api.join(','));
+  check(w+': preview sends nothing', api.filter(u=>!u.includes('/api/admin/publish?slug=') && !u.includes('/api/admin/stats?') && !u.includes('/api/admin/leads?') && !u.includes('/api/admin/fans/counts?') && !u.includes('/api/admin/source-names?') && !u.includes('/api/admin/plan?')).length===0, api.join(','));
   await p.keyboard.press('Escape');
 
   check(w+': still Big Love', (await p.locator('section[aria-labelledby="order-title"] ol > li').count())===5 && await p.getByLabel('Funnel name').inputValue()==='Masquerade on the Runway');

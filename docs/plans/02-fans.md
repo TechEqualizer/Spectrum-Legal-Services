@@ -156,8 +156,10 @@ Each step is one PR.
   (The calendar offer comes with step 5.)
 - A returning follower sees "Following" (the rail) or "Following ✓", and
   the sheet lets them unfollow.
-- The switch: `FOLLOW_ORGANIZERS` (organizer slugs, or `*`). Without it,
-  and without every fan setting, links are exactly as before. The admin's
+- The switch: every organizer has Follow once the deployment has every fan
+  setting, except those `FOLLOW_HOLD` lists (organizer slugs; Big Love until
+  after Oct 31). This replaced `FOLLOW_ORGANIZERS`, the list of who had it
+  on, with billing step 4 (docs/plans/03-billing.md). The admin's
   preview and demos never show Follow.
 - Live page impact: **yes, visible, once switched on.** The rail's Updates
   button becomes Follow. Big Love is switched on only when you say.

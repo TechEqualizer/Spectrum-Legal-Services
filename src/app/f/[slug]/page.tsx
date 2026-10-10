@@ -6,8 +6,10 @@ import { FollowProvider, type FollowTarget } from "@/components/follow/follow";
 import OrganizerEvents from "@/components/OrganizerEvents";
 import { isConcept } from "@/config/site";
 import { funnels } from "@/data/funnels";
+import { hasCore } from "@/lib/plans";
 import { followOn } from "@/lib/server/fans";
-import { getOrganizer, organizerOf } from "@/lib/server/funnels";
+import { planOf } from "@/lib/server/plans";
+import { getOrganizer, organizerOf, type Organizer } from "@/lib/server/funnels";
 import { resolveLink, shownFunnel } from "@/lib/server/links";
 import { shareMetadata } from "@/lib/server/share-card";
 
@@ -77,7 +79,7 @@ export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
   if (target.kind === "choose") {
     const { organizer } = target;
     return (
-      <FollowProvider value={followOn(organizer.slug) ? { organizer: organizer.slug, name: organizer.name } : undefined}>
+      <FollowProvider value={await followTarget(organizer)}>
         <OrganizerEvents organizer={target.organizer} events={target.events} />
       </FollowProvider>
     );
@@ -85,10 +87,10 @@ export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
   // The player applies the published edits itself (the admin's preview
   // re-applies them as they're typed); the page is rebuilt when they change.
   const { base, publication, nextNight } = target;
-  // Follow, where the event's organizer has it on (FOLLOW_ORGANIZERS).
+  // Follow, where the event's organizer has it on (and Core's parts of it with Core).
   const organizerSlug = await organizerOf(base.slug);
-  const organizer = followOn(organizerSlug) ? await getOrganizer(organizerSlug!) : undefined;
-  const follow: FollowTarget | undefined = organizer && { organizer: organizer.slug, name: organizer.name, funnelId: base.id };
+  const organizer = organizerSlug ? await getOrganizer(organizerSlug) : undefined;
+  const follow = organizer && (await followTarget(organizer, base.id));
   return (
     <FollowProvider value={follow}>
       {/* useSearchParams (for ?start=) needs a Suspense boundary on a static page. */}
@@ -97,4 +99,15 @@ export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
       </Suspense>
     </FollowProvider>
   );
+}
+
+/**
+ * Who visitors can follow on this page, if Follow is on for the organizer,
+ * and whether Core's parts of it (presales, fans-only reels) work here. If
+ * the plan can't be read, they keep working: nothing fans have breaks.
+ */
+async function followTarget(organizer: Organizer, funnelId?: string): Promise<FollowTarget | undefined> {
+  if (!followOn(organizer.slug)) return undefined;
+  const plan = await planOf(organizer.slug);
+  return { organizer: organizer.slug, name: organizer.name, ...(funnelId ? { funnelId } : {}), core: !plan || hasCore(plan) };
 }
