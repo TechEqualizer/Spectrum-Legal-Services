@@ -54,3 +54,28 @@ export async function removeFan(admin: Admin, organizer: string, email: string):
 }
 
 export { followOn };
+
+export type FanCounts = {
+  /** Following now. */
+  following: number;
+  /** New follows in the last `days` days, and the `days` before. */
+  current: number;
+  previous: number;
+  /** The same, only those who followed from the event `funnelId`'s link. */
+  fromLink?: { current: number; previous: number };
+};
+
+/** Counts for Home and Results: how many follow, and how many followed lately. */
+export function fanCounts(fans: OrganizerFan[], days: number, funnelId?: string, now = Date.now()): FanCounts {
+  const since = now - days * 864e5;
+  const before = since - days * 864e5;
+  const inWindow = (list: OrganizerFan[]) => {
+    const at = list.map((f) => Date.parse(f.confirmed_at));
+    return { current: at.filter((t) => t >= since).length, previous: at.filter((t) => t >= before && t < since).length };
+  };
+  return {
+    following: fans.filter((f) => !f.unfollowed_at).length,
+    ...inWindow(fans),
+    ...(funnelId ? { fromLink: inWindow(fans.filter((f) => f.funnel_id === funnelId)) } : {}),
+  };
+}

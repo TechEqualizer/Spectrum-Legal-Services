@@ -3,9 +3,10 @@
 import { useState } from "react";
 import OutcomeBars from "@/admin/components/OutcomeBars";
 import SalesHint from "@/admin/components/SalesHint";
-import StatTile from "@/admin/components/StatTile";
+import StatTile, { TileGrid } from "@/admin/components/StatTile";
+import { showsFans, useFanCounts, type FanCounts } from "@/admin/fan-counts";
 import ViewsChart from "@/admin/components/ViewsChart";
-import { useAdminBusiness } from "@/admin/AdminBusiness";
+import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { useResults } from "@/admin/results";
 import { formatNumber, formatPercent } from "@/admin/viz";
 
@@ -24,6 +25,8 @@ export default function Overview() {
   const [range, setRange] = useState(ranges[1]);
   const business = useAdminBusiness();
   const { results, error } = useResults(range.days);
+  const event = useAdminEvents().filter((e) => e.funnel.slug === business.funnel.slug);
+  const fanCounts = useFanCounts(event, range.days, true);
   // An event sells tickets: its "bookings" are ticket clicks.
   const tickets = business.funnel.primaryCta === "tickets";
   const won = tickets ? { many: "Ticket clicks", rate: "Ticket click rate", short: "Ticket clicks" } : { many: "Bookings from reels", rate: "Booking rate", short: "Booked" };
@@ -64,7 +67,7 @@ export default function Overview() {
           {error || "Loading results…"}
         </p>
       ) : (
-        <Figures results={results} won={won} periodLabel={range.short} topicLabel={business.terms.topic} />
+        <Figures results={results} won={won} periodLabel={range.short} topicLabel={business.terms.topic} fans={showsFans(fanCounts) ? fanCounts![0] : undefined} />
       )}
     </div>
   );
@@ -75,8 +78,10 @@ function Figures({
   won,
   periodLabel,
   topicLabel,
+  fans,
 }: {
   results: NonNullable<ReturnType<typeof useResults>["results"]>;
+  fans?: FanCounts;
   won: { many: string; rate: string; short: string };
   periodLabel: string;
   topicLabel: string;
@@ -90,16 +95,25 @@ function Figures({
           No views in this period yet. Results appear here as people open your link.
         </p>
       )}
-      <div className={`grid grid-cols-2 gap-3 md:gap-4 ${sales ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
-        <StatTile label="Reel views" value={formatNumber(current.views)} delta={change(current.views, previous.views)} periodLabel={periodLabel} />
-        <StatTile label="Watch-through rate" value={formatPercent(watchRate)} delta={change(watchRate, rate(previous.completed, previous.views))} periodLabel={periodLabel} />
-        <StatTile label={won.many} value={formatNumber(current.booked)} delta={change(current.booked, previous.booked)} periodLabel={periodLabel} />
-        {sales && <StatTile label="Tickets sold" value={formatNumber(sales.current)} delta={change(sales.current, sales.previous)} periodLabel={periodLabel} />}
-        {/* With five tiles, the last one fills the phone's last row. */}
-        <div className={sales ? "col-span-2 lg:col-span-1 [&>div]:h-full" : "contents"}>
-          <StatTile label={won.rate} value={`${(bookRate * 100).toFixed(1)}%`} delta={change(bookRate, rate(previous.booked, previous.views))} periodLabel={periodLabel} />
-        </div>
-      </div>
+      <TileGrid>
+        {[
+          <StatTile key="views" label="Reel views" value={formatNumber(current.views)} delta={change(current.views, previous.views)} periodLabel={periodLabel} />,
+          <StatTile key="watch" label="Watch-through rate" value={formatPercent(watchRate)} delta={change(watchRate, rate(previous.completed, previous.views))} periodLabel={periodLabel} />,
+          <StatTile key="won" label={won.many} value={formatNumber(current.booked)} delta={change(current.booked, previous.booked)} periodLabel={periodLabel} />,
+          sales && <StatTile key="sold" label="Tickets sold" value={formatNumber(sales.current)} delta={change(sales.current, sales.previous)} periodLabel={periodLabel} />,
+          <StatTile key="rate" label={won.rate} value={`${(bookRate * 100).toFixed(1)}%`} delta={change(bookRate, rate(previous.booked, previous.views))} periodLabel={periodLabel} />,
+          fans?.fromLink && (
+            <StatTile
+              key="fans"
+              label="New followers"
+              value={formatNumber(fans.fromLink.current)}
+              delta={change(fans.fromLink.current, fans.fromLink.previous)}
+              periodLabel={periodLabel}
+              note={`From this link · ${formatNumber(fans.following)} following in all`}
+            />
+          ),
+        ].filter(Boolean)}
+      </TileGrid>
       {!sales && <SalesHint className="-mt-3" />}
 
       <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="views-title">

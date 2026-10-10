@@ -49,6 +49,23 @@ check('a CSV download', csvRes.headers()['content-type']?.startsWith('text/csv')
 check('header and current fans only', csv.startsWith('"Email","Followed","Shared on","Followed from"') && csv.includes('"first@example.com"') && !csv.includes('leaving@example.com'), csv.slice(0, 200));
 check("a cell that looks like a formula can't run", csv.includes(`"'=cmd|evil@example.com"`));
 
+// The numbers on Home and Results: new followers (no one's email), against the period before.
+const counts = await (await p.request.get(B + '/api/admin/fans/counts?slug=masquerade&days=30&funnel=masquerade-v1')).json();
+check('counts: new follows, following now, and from this link', counts.current === 3 && counts.previous === 0 && counts.following === 2 && counts.fromLink?.current === 1, JSON.stringify(counts));
+check('counts carry no emails', !JSON.stringify(counts).includes('@'));
+check('counts: only 7, 30 or 90 days', (await p.request.get(B + '/api/admin/fans/counts?slug=masquerade&days=5')).status() === 400);
+await p.goto(B + '/admin/home'); await settle(p, 1500);
+const homeTile = p.getByRole('link', { name: /New followers/ });
+await homeTile.waitFor({ timeout: 8000 }).catch(() => {});
+check('Home: a New followers tile', /New followers\s*3/.test(await homeTile.innerText().catch(() => '')) && (await homeTile.innerText()).includes('2 following in all'), await homeTile.innerText().catch(() => 'missing'));
+check('it opens Fans', (await homeTile.getAttribute('href')) === '/admin/leads/fans');
+await p.screenshot({ path: 'fans-home-1279.png' });
+await p.goto(B + '/admin/overview'); await settle(p, 1500);
+await p.getByText('New followers').waitFor({ timeout: 8000 }).catch(() => {});
+const resultsText = await p.locator('main').innerText();
+check('Results: new followers from this link', /New followers\s*1/.test(resultsText) && resultsText.includes('From this link · 2 following in all'), resultsText.slice(0, 400));
+await p.goto(B + '/admin/leads/fans'); await settle(p, 800);
+
 // Removing a fan: asked first, then gone from this organizer only.
 await p.getByRole('button', { name: 'Remove first@example.com' }).click();
 check('asks before removing', await p.getByText('Remove from your list?').isVisible());
