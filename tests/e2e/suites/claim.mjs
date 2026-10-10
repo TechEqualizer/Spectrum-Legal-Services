@@ -80,6 +80,8 @@ const welcome = p.getByRole('region', { name: 'Your link is ready' });
 check('your link is ready', await welcome.isVisible() && await welcome.getByRole('link', { name: 'localhost:3002/f/golden-hour' }).isVisible());
 check('what to do next', await welcome.getByRole('button', { name: 'Open your reels' }).isVisible() && await welcome.getByRole('button', { name: 'Take the tour' }).isVisible());
 check('the tour waits', (await p.getByRole('dialog').count()) === 0);
+const four = (await p.getByText('The four things').locator('..').locator('..').innerText().catch(() => '')).replace(/\s+/g, ' ');
+check('Home: the opening scene from the flyer, the reels still need video', /Opening scene .*Ready/.test(four) && (four.match(/Needs video/g) ?? []).length === 3, four);
 await p.screenshot({ path: 'claim-home-1279.png', fullPage: true });
 
 // What the claim made.
@@ -88,7 +90,13 @@ check('the night, under their organizer', event[0]?.organizer_slug === 'golden-h
 const pub = (await (await fetch(`${DB}/rest/v1/funnel_publications?slug=eq.golden-hour-halloween`)).json())[0]?.data;
 check('published with their reels', JSON.stringify(pub?.reels?.map((r) => r.role)) === '["the_night","your_people","last_call"]' && pub?.screen?.title === 'Masks on, Motor City', JSON.stringify(pub?.screen));
 check('in their flyer\'s colors', Boolean(pub?.look?.colors), JSON.stringify(pub?.look));
-check('not the preview extras', !pub?.reels?.some((r) => r.visibility === 'fans') && !pub?.events?.some((e) => e.presale) && !pub?.backdrop && !String(JSON.stringify(pub)).includes('data:image'));
+check('not the preview extras', !pub?.reels?.some((r) => r.visibility === 'fans') && !pub?.events?.some((e) => e.presale) && !String(JSON.stringify(pub)).includes('data:image'));
+// Their flyer, kept: stored in the event's folder, the opening scene, behind each reel, and the look's flyer.
+const flyerUrl = pub?.backdrop?.src ?? '';
+check('their flyer, stored with the event', /^http:\/\/localhost:54321\/storage\/v1\/object\/public\/reel-media\/golden-hour-halloween\/[a-z0-9]+-flyer\.jpg$/.test(flyerUrl) && pub.backdrop.kind === 'image' && pub.backdrop.fit === 'poster', JSON.stringify(pub?.backdrop));
+check('behind each reel, and as the look\'s flyer', pub?.reels?.every((r) => r.media?.src === flyerUrl) && pub?.look?.flyer === flyerUrl);
+const stored = await fetch(flyerUrl);
+check('the stored flyer is the JPEG', stored.ok && stored.headers.get('content-type') === 'image/jpeg' && (await stored.arrayBuffer()).byteLength > 1000);
 check('their dates, on their clock', pub?.events?.length === 2 && pub.events[0].timeZone === 'America/New_York' && pub.events[0].startsAt.startsWith('2026-10-31T23:00'), JSON.stringify(pub?.events?.[0]));
 const plan = (await (await fetch(`${DB}/rest/v1/organizer_plans?organizer_slug=eq.golden-hour`, { headers: secret })).json())[0];
 const claimed = (await (await admin.request.get(B + '/api/admin/invites')).json()).invites.find((i) => i.note === 'Golden Hour crew');

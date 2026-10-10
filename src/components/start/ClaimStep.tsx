@@ -80,7 +80,7 @@ export default function ClaimStep({ invite, draft, onClaimed, onBack }: { invite
     const res = await fetch("/api/start/claim", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ invite, name: name.trim(), slug, ticketUrl: httpsLink(tickets) || undefined, email: email.trim(), password, agree, timeZone, draft: { dates: draft.dates, look: draft.look, reels: draft.reels } }),
+      body: JSON.stringify({ invite, name: name.trim(), slug, ticketUrl: httpsLink(tickets) || undefined, email: email.trim(), password, agree, timeZone, draft: { dates: draft.dates, look: draft.look, reels: draft.reels, flyer: draft.flyer } }),
     }).catch(() => null);
     const out = (await res?.json().catch(() => null)) as { eventSlug?: string; field?: Field; error?: string } | null;
     if (res?.ok && out?.eventSlug) return onClaimed(out.eventSlug);

@@ -5,6 +5,7 @@ import { EVENT_SLUG, newClientEvent, slugFromName } from "@/lib/new-event";
 import { applyPublication, parsePublication } from "@/lib/publication";
 import { ACCESS_COOKIE, cookieOptions, REFRESH_COOKIE, REFRESH_MAX_AGE, signInWithPassword } from "@/lib/server/admin-auth";
 import { createLogin, deleteLogin } from "@/lib/server/auth-admin";
+import { flyerBytes, removeFlyer, storeFlyer } from "@/lib/server/flyer-store";
 import { syncEventDates } from "@/lib/server/event-dates";
 import { EVENT_FUNNELS_TAG, ORGANIZERS_TAG, slugIsFree } from "@/lib/server/funnels";
 import { claimInvite, inviteStatus } from "@/lib/server/invites";
@@ -104,15 +105,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Couldn't make your link. Try again." }, { status: 500, headers: NO_STORE });
   }
   const ticketUrl = typeof body?.ticketUrl === "string" ? body.ticketUrl : undefined;
-  const publication = parsePublication(JSON.parse(JSON.stringify(claimPublication(draft, timeZone, ticketUrl))), event);
+  // Their flyer, kept with the event: the opening scene and behind each reel.
+  // If it can't be stored, the link still works without it.
+  const bytes = flyerBytes((body?.draft as { flyer?: unknown } | undefined)?.flyer);
+  const flyer = bytes ? await storeFlyer(eventSlug, bytes) : null;
+  const dropFlyer = () => (flyer ? removeFlyer(flyer.path) : Promise.resolve());
+  const publication = parsePublication(JSON.parse(JSON.stringify(claimPublication(draft, timeZone, ticketUrl, flyer?.url))), event);
   if (typeof publication === "string") {
     console.error("[claim] reels didn't check out:", publication);
+    await dropFlyer();
     return NextResponse.json({ error: "Something in your reels didn't check out. Go back a step and try again." }, { status: 400, headers: NO_STORE });
   }
 
   const login = await createLogin(email, password);
-  if (login === "exists") return bad("email", "This email already has a Showlnk sign-in. Sign in, or use another email.", 409);
-  if (!login) return NextResponse.json({ error: "Couldn't make your sign-in. Try again in a minute." }, { status: 502, headers: NO_STORE });
+  if (login === "exists") {
+    await dropFlyer();
+    return bad("email", "This email already has a Showlnk sign-in. Sign in, or use another email.", 409);
+  }
+  if (!login) {
+    await dropFlyer();
+    return NextResponse.json({ error: "Couldn't make your sign-in. Try again in a minute." }, { status: 502, headers: NO_STORE });
+  }
 
   const result = await claimInvite(invite, {
     email,
@@ -121,7 +134,7 @@ export async function POST(request: Request) {
     publication,
   });
   if (result !== "claimed") {
-    await deleteLogin(login.id);
+    await Promise.all([deleteLogin(login.id), dropFlyer()]);
     if (result === "slug_taken") return bad("slug", `showlnk.com/f/${slug} is taken. Try another.`, 409);
     if (result === "email_taken") return bad("email", "This email already runs a link on Showlnk. Sign in instead.", 409);
     if (result === "invite") return NextResponse.json({ error: STOPPED.claimed }, { status: 403, headers: NO_STORE });
