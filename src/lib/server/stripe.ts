@@ -74,7 +74,12 @@ export async function checkoutUrl(input: {
   const prices = await stripe<{ data: { id: string }[] }>("GET", "/v1/prices", { lookup_keys: [PRICE_LOOKUP[input.interval]], active: true });
   const price = prices?.data[0]?.id;
   if (!price) {
-    console.error(`[stripe] no active price with lookup key ${PRICE_LOOKUP[input.interval]}`);
+    // Which account and mode the key belongs to (never the key), so a key from the wrong place is plain to see.
+    const account = await stripe<{ id: string; settings?: { dashboard?: { display_name?: string } } }>("GET", "/v1/account");
+    const mode = config().key?.startsWith("sk_live_") || config().key?.startsWith("rk_live_") ? "live" : "test";
+    console.error(
+      `[stripe] no active price with lookup key ${PRICE_LOOKUP[input.interval]} in ${account?.settings?.dashboard?.display_name ?? "?"} (${account?.id ?? "unknown account"}, ${mode} key)`
+    );
     return null;
   }
   const session = await stripe<{ url: string }>("POST", "/v1/checkout/sessions", {
