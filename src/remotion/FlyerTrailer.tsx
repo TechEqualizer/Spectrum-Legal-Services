@@ -15,7 +15,8 @@ import { AbsoluteFill, Easing, Img, Solid, interpolate, useCurrentFrame, useVide
  * frame, not CSS, so it plays the same in the Player and in a rendered MP4.
  */
 /** "poster" shows the whole flyer, crisp, over a blurred copy of itself: the closing shot. */
-export type ShotMove = "push" | "pull" | "tilt-up" | "pan-left" | "pan-right" | "poster";
+export type ShotMove = "push" | "pull" | "tilt-up" | "pan-left" | "pan-right" | "breathe" | "poster";
+// "breathe" pushes in and back out, ending where it began, so it can loop.
 
 export type TrailerShot = {
   /** A box on the flyer, 0 to 1 from its top left. */
@@ -175,7 +176,7 @@ const WordCard: React.FC<{ src: string; text: string; color: string }> = ({ src,
 };
 
 /** One shot: its box fills the frame, and the camera moves across the shot's length. */
-const Shot: React.FC<{ src: string; width: number; height: number; shot: TrailerShot }> = ({ src, width, height, shot }) => {
+export const Shot: React.FC<{ src: string; width: number; height: number; shot: TrailerShot }> = ({ src, width, height, shot }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, width: W, height: H } = useVideoConfig();
   const { x, y, w, h } = shot.box;
@@ -198,6 +199,7 @@ const Shot: React.FC<{ src: string; width: number; height: number; shot: Trailer
     "tilt-up": { scale: 1.06, translate: `0px ${(t - 0.5) * span * 2}px` },
     "pan-left": { scale: 1.06, translate: `${(0.5 - t) * span * 2}px 0px` },
     "pan-right": { scale: 1.06, translate: `${(t - 0.5) * span * 2}px 0px` },
+    breathe: { scale: 1.02 + 0.06 * (0.5 - 0.5 * Math.cos((frame / durationInFrames) * Math.PI * 2)), translate: "0px 0px" },
   }[shot.move as Exclude<ShotMove, "poster">];
   return (
     <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#000" }}>
@@ -234,7 +236,7 @@ const Poster: React.FC<{ src: string; width: number; height: number; t: number }
   );
 };
 
-const LightLeak: React.FC<{ seed: number; hue: number }> = ({ seed, hue }) => {
+export const LightLeak: React.FC<{ seed: number; hue: number }> = ({ seed, hue }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, width, height } = useVideoConfig();
   return (
@@ -266,7 +268,7 @@ const EMBERS = Array.from({ length: 34 }, (_, i) => {
   return { x: r(1), y: r(2), speed: 0.04 + r(3) * 0.08, size: 2 + r(4) * 5, sway: r(5) * 0.04, phase: r(6), near: r(7) > 0.82 };
 });
 
-const Embers: React.FC<{ color: string }> = ({ color }) => {
+export const Embers: React.FC<{ color: string }> = ({ color }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const sec = frame / fps;
@@ -300,7 +302,7 @@ const Embers: React.FC<{ color: string }> = ({ color }) => {
 };
 
 /** Film grain, a new pattern every two frames. */
-const Grain: React.FC = () => {
+export const Grain: React.FC = () => {
   const frame = useCurrentFrame();
   const step = Math.floor(frame / 2) % 5;
   const offsets = ["0% 0%", "-6% 4%", "5% -7%", "-3% -4%", "7% 6%"];

@@ -2,7 +2,10 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Player } from "@remotion/player";
+import { Player, type PlayerRef } from "@remotion/player";
+import { useEffect, useRef, useState } from "react";
+import { titleFontClass } from "@/components/lookFonts";
+import { OpeningScene, openingFrames, type OpeningSceneProps } from "@/remotion/OpeningScene";
 import MotionScene, { type MotionRecipe } from "@/components/MotionScene";
 import { FlyerTrailer, trailerFrames, type FlyerTrailerProps } from "@/remotion/FlyerTrailer";
 
@@ -30,8 +33,70 @@ const RECIPES: Record<string, MotionRecipe> = {
   mask: { focus: { x: 0.69, y: 0.02, w: 0.31, h: 0.42 }, camera: "orbit", effects: ["glitter", "bokeh", "sweep", "rays"], glow: "#7B3FB0", spark: "#E8C36A", seconds: 5, light: { x: 0.7, y: 0.15 } },
 };
 
+// Big Love's opening, as Claude would direct it: the flyer's own lines, set where each shot has room.
+const OPENING: Omit<OpeningSceneProps, "fontClass"> = {
+  src: "/clients/masquerade/flyer.jpg",
+  width: 1054,
+  height: 1492,
+  caps: true,
+  accent: "#C8A2E7",
+  hue: 30,
+  beats: [
+    { shot: { box: { x: 0.69, y: 0.02, w: 0.31, h: 0.37 }, move: "pull", seconds: 2 }, text: { lines: ["Big Love Productions", "presents"], at: "bottom", size: "eyebrow" } },
+    { shot: { box: { x: 0.35, y: 0.53, w: 0.3, h: 0.34 }, move: "tilt-up", seconds: 1.7 }, text: { lines: ["Masks on."], at: "bottom", size: "big" } },
+    { shot: { box: { x: 0.66, y: 0.18, w: 0.34, h: 0.32 }, move: "pan-left", seconds: 1.7 }, text: { lines: ["Fashion", "forward."], at: "top", size: "big" } },
+    { shot: { box: { x: 0.36, y: 0.52, w: 0.28, h: 0.22 }, move: "push", seconds: 1.7 }, text: { lines: ["Secrets", "revealed."], at: "bottom", size: "big" } },
+    { shot: { box: { x: 0, y: 0, w: 1, h: 1 }, move: "poster", seconds: 2.4 } },
+  ],
+  hold: { box: { x: 0.3, y: 0.5, w: 0.4, h: 0.4 }, move: "breathe", seconds: 6 },
+};
+
+/** The opening plays once, then loops its hold; the link's title comes up as the hold begins. */
+function OpeningLab() {
+  const ref = useRef<PlayerRef>(null);
+  const props: OpeningSceneProps = { ...OPENING, fontClass: titleFontClass("regal") };
+  const { holdStart, loopFrom, total } = openingFrames(props, 30);
+  const [holding, setHolding] = useState(false);
+  useEffect(() => {
+    const player = ref.current;
+    if (!player) return;
+    const onFrame = (e: { detail: { frame: number } }) => {
+      if (e.detail.frame >= holdStart) setHolding(true);
+    };
+    player.addEventListener("frameupdate", onFrame);
+    return () => player.removeEventListener("frameupdate", onFrame);
+  }, [holdStart]);
+  return (
+    <main className="relative h-dvh w-full overflow-hidden bg-black text-white">
+      <Player
+        ref={ref}
+        component={OpeningScene}
+        inputProps={props}
+        durationInFrames={total}
+        compositionWidth={720}
+        compositionHeight={1280}
+        fps={30}
+        autoPlay
+        loop
+        // Once the intro has played, only the hold repeats.
+        inFrame={holding ? loopFrom : null}
+        initiallyMuted
+        controls={false}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      />
+      <div className={`absolute inset-x-0 bottom-0 px-6 pb-14 transition-all duration-700 ${holding ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#C8A2E7]">Big Love Productions presents</p>
+        <h1 className={`mt-2 text-4xl leading-tight text-white ${titleFontClass("regal")}`}>Masquerade on the Runway</h1>
+        <p className="mt-2 text-sm text-white/80">Sat, Oct 31 · 8 PM · Detroit</p>
+        <span className="mt-5 inline-flex min-h-12 items-center rounded-full bg-[#C8A2E7] px-6 text-sm font-bold text-black">Get tickets</span>
+      </div>
+    </main>
+  );
+}
+
 function Lab() {
   const q = useSearchParams();
+  if (q.get("r") === "opening") return <OpeningLab />;
   const recipe = RECIPES[q.get("r") ?? "runway"] ?? RECIPES.runway;
   // ?depth=1 uses the flyer's depth map (made with Depth Anything V2 Small).
   const depth = q.get("depth") ? "/clients/masquerade/flyer-depth.png" : undefined;
