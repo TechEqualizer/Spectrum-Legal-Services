@@ -13,6 +13,8 @@ const TRAILER: FlyerTrailerProps = {
   height: 1492,
   spark: "#F5B65A",
   hue: 30,
+  style: "luxe",
+  words: ["Masks on.", "Sat · Oct 31", "Detroit"],
   // Wide enough to stay sharp (at least a third of the flyer), close to the phone's shape, then the poster.
   shots: [
     { box: { x: 0.69, y: 0.02, w: 0.31, h: 0.37 }, move: "pull", seconds: 1.6 },
@@ -35,11 +37,15 @@ function Lab() {
   const depth = q.get("depth") ? "/clients/masquerade/flyer-depth.png" : undefined;
   return (
     <main className="relative h-dvh w-full overflow-hidden bg-black text-white">
-      {q.get("r") === "trailer" ? (
+      {q.get("r") === "trailer" ? (() => {
+        const props: FlyerTrailerProps = { ...TRAILER, style: (q.get("s") as FlyerTrailerProps["style"]) ?? "luxe" };
+        // Club cuts faster: the same shots, about half as long each.
+        if (props.style === "club") props.shots = [...props.shots.slice(0, 3), ...props.shots.slice(0, 3), props.shots[3]].map((s) => ({ ...s, seconds: s.move === "poster" ? 2 : 0.5 }));
+        return (
         <Player
           component={FlyerTrailer}
-          inputProps={TRAILER}
-          durationInFrames={trailerFrames(TRAILER.shots, 30)}
+          inputProps={props}
+          durationInFrames={trailerFrames(props, 30)}
           compositionWidth={720}
           compositionHeight={1280}
           fps={30}
@@ -49,7 +55,8 @@ function Lab() {
           controls={false}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         />
-      ) : (
+        );
+      })() : (
         <MotionScene src="/clients/masquerade/flyer.jpg" depth={depth} recipe={recipe} />
       )}
       <div className="cine-grain pointer-events-none absolute -inset-1/2 opacity-[0.14]" />

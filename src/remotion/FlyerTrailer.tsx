@@ -24,61 +24,152 @@ export type TrailerShot = {
   seconds: number;
 };
 
+/**
+ * How the trailer is cut, matched to the night:
+ * - luxe: slow moves, punch-ins and light leaks (galas, fashion, jazz);
+ * - club: fast cuts on the beat, colored strobe flashes, a shaking camera (club nights);
+ * - hype: shots cut with big words from the flyer, like a promo reel.
+ */
+export type TrailerStyle = "luxe" | "club" | "hype";
+
 export type FlyerTrailerProps = {
   src: string;
   /** The flyer's size in pixels, to frame each shot. */
   width: number;
   height: number;
   shots: TrailerShot[];
-  /** The color of the embers and the light leaks' tint, from the flyer. */
+  style: TrailerStyle;
+  /** Hype: short lines from the flyer (the date, the city, its tagline), one per card. */
+  words?: string[];
+  /** The color of the embers, strobes and words, from the flyer. */
   spark: string;
   /** Rotates the light leaks' hue toward the flyer's colors (0 to 360). */
   hue: number;
 };
 
-const CUT_FRAMES = 8;
-const LEAK_FRAMES = 18;
+const BEAT = 15; // frames: 120 beats a minute at 30 fps
+const WORD_FRAMES = 18;
+const cutFrames = (style: TrailerStyle) => (style === "club" ? 5 : style === "luxe" ? 8 : 0);
 
-export function trailerFrames(shots: TrailerShot[], fps: number) {
-  // Each punch-in cut overlaps its two shots by CUT_FRAMES.
-  const cuts = shots.length - 1 - Math.floor((shots.length - 1) / 2);
-  return Math.round(shots.reduce((sum, s) => sum + s.seconds * fps, 0)) - cuts * CUT_FRAMES;
+type Segment = { kind: "shot"; shot: TrailerShot; frames: number } | { kind: "word"; text: string; frames: number };
+
+/** The edit: shots in order, with a word card after each one but the last in hype. */
+function segments({ shots, style, words = [] }: Pick<FlyerTrailerProps, "shots" | "style" | "words">, fps: number): Segment[] {
+  const out: Segment[] = [];
+  shots.forEach((shot, i) => {
+    // Club cuts land on the beat.
+    const frames = style === "club" ? Math.max(1, Math.round((shot.seconds * fps) / BEAT)) * BEAT : Math.round(shot.seconds * fps);
+    out.push({ kind: "shot", shot, frames });
+    if (style === "hype" && i < shots.length - 1 && words[i]) out.push({ kind: "word", text: words[i], frames: WORD_FRAMES });
+  });
+  return out;
 }
 
-export const FlyerTrailer: React.FC<FlyerTrailerProps> = ({ src, width, height, shots, spark, hue }) => {
+/** Which joins get a punch-in transition (it overlaps the two segments it joins). */
+const punchesAt = (style: TrailerStyle, i: number) => style === "club" || (style === "luxe" && i % 2 === 0);
+
+export function trailerFrames(props: Pick<FlyerTrailerProps, "shots" | "style" | "words">, fps: number) {
+  const segs = segments(props, fps);
+  const total = segs.reduce((sum, s) => sum + s.frames, 0);
+  const punches = segs.slice(0, -1).filter((_, i) => punchesAt(props.style, i)).length;
+  return total - punches * cutFrames(props.style);
+}
+
+export const FlyerTrailer: React.FC<FlyerTrailerProps> = (props) => {
+  const { src, width, height, style, spark, hue } = props;
   const { fps } = useVideoConfig();
+  const segs = segments(props, fps);
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <TransitionSeries>
-        {shots.flatMap((shot, i) => {
-          const items = [
-            <TransitionSeries.Sequence key={`shot-${i}`} name={`Shot ${i + 1}`} durationInFrames={Math.round(shot.seconds * fps)} premountFor={fps}>
-              <Shot src={src} width={width} height={height} shot={shot} />
-            </TransitionSeries.Sequence>,
-          ];
-          if (i < shots.length - 1) {
-            // Alternate: a punch-in cut with a flash, then a light leak over a straight cut.
-            items.push(
-              i % 2 === 0 ? (
+      <Shake on={style === "club"}>
+        <TransitionSeries>
+          {segs.flatMap((seg, i) => {
+            const items = [
+              <TransitionSeries.Sequence key={`seg-${i}`} name={seg.kind === "shot" ? `Shot ${i + 1}` : `Word ${i + 1}`} durationInFrames={seg.frames} premountFor={fps}>
+                {seg.kind === "shot" ? <Shot src={src} width={width} height={height} shot={seg.shot} /> : <WordCard src={src} text={seg.text} color={spark} />}
+              </TransitionSeries.Sequence>,
+            ];
+            if (i < segs.length - 1 && punchesAt(style, i)) {
+              items.push(
                 <TransitionSeries.Transition
                   key={`cut-${i}`}
-                  presentation={pushCut({ flashColor: "#fff", flashOpacity: 0.55, flashFrames: 3, incomingStartScale: 1.18 })}
-                  timing={linearTiming({ durationInFrames: CUT_FRAMES })}
-                />
-              ) : (
-                <TransitionSeries.Overlay key={`leak-${i}`} durationInFrames={LEAK_FRAMES}>
+                  presentation={pushCut({
+                    flashColor: style === "club" ? spark : "#fff",
+                    flashOpacity: style === "club" ? 0.8 : 0.55,
+                    flashFrames: 3,
+                    incomingStartScale: style === "club" ? 1.3 : 1.18,
+                  })}
+                  timing={linearTiming({ durationInFrames: cutFrames(style) })}
+                />,
+              );
+            } else if (i < segs.length - 1 && style === "luxe") {
+              items.push(
+                <TransitionSeries.Overlay key={`leak-${i}`} durationInFrames={18}>
                   <LightLeak seed={i} hue={hue} />
-                </TransitionSeries.Overlay>
-              ),
-            );
-          }
-          return items;
-        })}
-      </TransitionSeries>
+                </TransitionSeries.Overlay>,
+              );
+            }
+            return items;
+          })}
+        </TransitionSeries>
+      </Shake>
+      {style === "club" && <Strobe color={spark} />}
       <Embers color={spark} />
       {/* Lens falloff and a touch of contrast, the same over every shot. */}
       <AbsoluteFill style={{ background: "radial-gradient(120% 85% at 50% 45%, transparent 50%, rgba(0,0,0,0.7))" }} />
       <Grain />
+    </AbsoluteFill>
+  );
+};
+
+/** Club: the camera shakes a little on every beat, then settles. */
+const Shake: React.FC<{ on: boolean; children: React.ReactNode }> = ({ on, children }) => {
+  const frame = useCurrentFrame();
+  if (!on) return <AbsoluteFill>{children}</AbsoluteFill>;
+  const k = Math.max(0, 1 - (frame % BEAT) / 6);
+  const jx = Math.sin(frame * 12.9898) * 7 * k;
+  const jy = Math.cos(frame * 78.233) * 7 * k;
+  return <AbsoluteFill style={{ translate: `${jx}px ${jy}px`, scale: String(1 + 0.03 * k) }}>{children}</AbsoluteFill>;
+};
+
+/** Club: a colored flash on every beat. */
+const Strobe: React.FC<{ color: string }> = ({ color }) => {
+  const frame = useCurrentFrame();
+  const k = Math.max(0, 1 - (frame % BEAT) / 3);
+  return <AbsoluteFill style={{ backgroundColor: color, opacity: 0.32 * k, mixBlendMode: "screen" }} />;
+};
+
+/** Hype: one line from the flyer, slammed in big over the flyer's colors. */
+const WordCard: React.FC<{ src: string; text: string; color: string }> = ({ src, text, color }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#000", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(30px) brightness(0.35) saturate(1.5)", scale: "1.3" }} />
+      <div
+        style={{
+          padding: "0 48px",
+          textAlign: "center",
+          fontFamily: "Montserrat, system-ui, sans-serif",
+          fontWeight: 900,
+          fontSize: 92,
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          textTransform: "uppercase",
+          color: "#fff",
+          textShadow: `0 0 40px ${color}`,
+          scale: String(
+            interpolate(frame, [0, 0.25 * fps], [1.6, 1], {
+              extrapolateLeft: "clamp",
+              extrapolateRight: "clamp",
+              easing: Easing.bezier(0.16, 1, 0.3, 1),
+            }),
+          ),
+          opacity: interpolate(frame, [0, 3], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
+        }}
+      >
+        {text}
+      </div>
     </AbsoluteFill>
   );
 };
