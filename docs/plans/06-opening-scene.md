@@ -168,3 +168,44 @@ its own lines set over the shots, then settles under the link's title.
 Set aside along the way: the flat and depth-map scenes (and the
 Transformers.js dependency they needed), the paid video models, and the
 club and hype trailer styles.
+
+## Update (Oct 11, 2026): moods, and a review loop
+
+**Moods.** Claude now reads what kind of event the flyer is before it cuts
+(what happens, the venue, the time of day, the crowd, the type and palette)
+and picks a mood (`OPENING_MOODS` in `src/lib/opening.ts`). The mood sets
+the pace, the cut (a punch-in with a flash, or a dissolve), the light leak,
+what floats in the air, and how the words should sound:
+
+| Mood | For | Pace | Cut | In the air |
+| --- | --- | --- | --- | --- |
+| electric | club nights, parties, concerts | 0.75× | punch, accent flash | embers |
+| glamour | galas, fashion shows, masquerades | 1× | punch, white flash, leak | glitter |
+| soulful | jazz, live music, comedy, lounges | 1.15× | dissolve, leak | haze |
+| editorial | book signings, talks, galleries | 1.25× | dissolve, no leak | dust |
+| sunlit | day parties, brunches, festivals | 0.9× | punch, white flash, leak | sun motes |
+
+A recipe without a mood (from before moods) plays as glamour. The same idea
+as trailer editors' genre grammar: a gala and a book signing can't share a
+cut.
+
+**Review loop.** Inspired by [claude-video](https://github.com/bradautomates/claude-video)
+(MIT; it lets Claude "watch" a video by pulling a frame at every scene
+change with ffmpeg and reading them). Its plugin wasn't installed: it runs a
+setup hook, a Python environment, a large speech model download and uploads
+to Gemini, none of which an opening needs. We took its idea instead:
+`scripts/review-opening.mjs` plays a recipe on a development-only page
+(`/dev/opening`, 404 in production) on a 390×844 phone, records it, and
+pulls a frame every half second plus every hard cut into a contact sheet,
+with the hold under the title. The `opening-scene` skill
+(`.claude/skills/opening-scene`) holds the directing rules and the checklist
+to review that sheet against.
+
+First run, Book Signing (editorial) and Big Love (glamour), found two
+things, both fixed for every event:
+
+- In a dissolve, the outgoing line and the incoming line overlapped. Now one
+  beat's words clear before the next one's come up.
+- A shot of lace texture alone read as nothing; Claude is now told every
+  shot must be something a fan recognizes (a face, a figure, the venue, a
+  prop).

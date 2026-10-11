@@ -19,6 +19,7 @@ const draft = {
   screen: { title: 'Masks on, Detroit', tagline: 'One night. Every mask hides a story. Detroit, Oct 31, 21+.', watchLabel: 'Step inside the night', heading: 'Which night are you in?' },
   // The opening, cut from the flyer: one shot with an unknown move (dropped) and one too small to stay sharp (widened).
   opening: {
+    mood: 'glamour',
     beats: [
       { box: { x: 0.69, y: 0.02, w: 0.31, h: 0.37 }, move: 'pull', seconds: 2, text: { lines: ['Golden Hour', 'presents'], at: 'bottom', size: 'eyebrow' } },
       { box: { x: 0.35, y: 0.53, w: 0.3, h: 0.34 }, move: 'tilt-up', seconds: 1.7, text: { lines: ['Masks on.'], at: 'bottom', size: 'big' } },

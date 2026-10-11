@@ -94,7 +94,7 @@ check('not the preview extras', !pub?.reels?.some((r) => r.visibility === 'fans'
 // Their flyer, kept: stored in the event's folder, the opening scene, behind each reel, and the look's flyer.
 const flyerUrl = pub?.backdrop?.src ?? '';
 const op = pub?.backdrop?.opening;
-check('the opening is stored with it, cleaned: 3 shots, none too small', op?.beats?.length === 3 && op.beats.every((b) => b.box.w >= 0.28) && !JSON.stringify(op).includes('Dropped') && op.hold?.w >= 0.35, JSON.stringify(op));
+check('the opening is stored with it, cleaned: its mood, 3 shots, none too small', op?.mood === 'glamour' && op?.beats?.length === 3 && op.beats.every((b) => b.box.w >= 0.28) && !JSON.stringify(op).includes('Dropped') && op.hold?.w >= 0.35, JSON.stringify(op));
 check('their flyer, stored with the event', /^http:\/\/localhost:54321\/storage\/v1\/object\/public\/reel-media\/golden-hour-halloween\/[a-z0-9]+-flyer\.jpg$/.test(flyerUrl) && pub.backdrop.kind === 'image' && pub.backdrop.fit === 'poster', JSON.stringify(pub?.backdrop));
 check('behind each reel, and as the look\'s flyer', pub?.reels?.every((r) => r.media?.src === flyerUrl) && pub?.look?.flyer === flyerUrl);
 const stored = await fetch(flyerUrl);

@@ -9,7 +9,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { flyerBlock, missingKeyProblem, type FlyerInput } from "@/lib/server/flyer-import";
 import { REEL_ORDER, REEL_ROLES, type DraftReel, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
-import { OPENING_MOVES, parseOpening } from "@/lib/opening";
+import { OPENING_MOODS, OPENING_MOOD_IDS, OPENING_MOVES, parseOpening } from "@/lib/opening";
 import { SCREEN_LIMITS } from "@/lib/publication";
 
 const str = (description: string) => ({ type: "string", description });
@@ -39,8 +39,9 @@ const SCHEMA = {
     opening: {
       type: "object",
       additionalProperties: false,
-      required: ["beats", "hold"],
+      required: ["mood", "beats", "hold"],
       properties: {
+        mood: { type: "string", enum: OPENING_MOOD_IDS, description: "The kind of event this is, which sets how the opening is cut" },
         beats: {
           type: "array",
           description: "3 or 4 shots on the flyer's own artwork, in the order they play",
@@ -105,7 +106,9 @@ const instructions = (ctx: DraftContext) => `You are a creative director for nig
 Today is ${ctx.today}. The organizer's brand is "${ctx.brand}". Dates already known: ${ctx.dates.length ? ctx.dates.map((d) => [d.date, d.name, d.price, d.status === "few_left" ? "few tickets left" : d.status === "sold_out" ? "sold out" : ""].filter(Boolean).join(", ")).join("; ") : "none yet"}.${ctx.photos ? " The organizer will also use their own event photos." : ""}
 
 Write five things:
-0. opening: the first seconds of the link, cut from the flyer itself like a film trailer. Pick 3 or 4 shots on the flyer's artwork (faces, figures, striking details), each a box clear of the flyer's printed words, at least a third of the flyer's width, and close to a tall phone shape; give each a camera move. Set short lines over them, copied from the flyer's own words (its presenter credit, taglines, the night's promise): the first shot's line is the presenter credit as an eyebrow when the flyer has one ("Big Love Productions", "presents"), then one or two big selling lines per shot (e.g. "Masks on." / "Fashion" "forward."). Put the words where the shot has room, never over a face. Never invent words, names, dates or claims the flyer doesn't print. The whole flyer follows these shots by itself. Then pick the hold: the calm shot the scene settles on under the page's title.
+0. opening: the first seconds of the link, cut from the flyer itself like a film trailer. First read what kind of event this is, from everything on the flyer (what happens there, the venue, the time of day, the crowd it speaks to, its typography and palette), and pick the mood that fits it; the mood sets the pace, the cuts and what floats in the air, and how the words should sound:
+${OPENING_MOOD_IDS.map((m) => `   - ${m}: ${OPENING_MOODS[m].for}. Words: ${OPENING_MOODS[m].words}.`).join("\n")}
+   A book signing is never electric; a club night is never editorial. Then pick 3 or 4 shots on the flyer's artwork, each one something a fan recognizes at a glance (a face, a figure, the venue, a prop), never a crop of texture or background alone, each a box clear of the flyer's printed words, at least a third of the flyer's width, and close to a tall phone shape; give each a camera move. Set short lines over them, copied from the flyer's own words (its presenter credit, taglines, the night's promise): the first shot's line is the presenter credit as an eyebrow when the flyer has one ("Big Love Productions", "presents"), then one or two big selling lines per shot (e.g. "Masks on." / "Fashion" "forward."). Put the words where the shot has room and the artwork behind them is dark enough for white type, never over a face. Never invent words, names, dates or claims the flyer doesn't print. The whole flyer follows these shots by itself. Then pick the hold: the calm shot the scene settles on under the page's title.
 1. screen and hero: the opening scene. A short, confident title (the event's own name works), a tagline that sells the feeling, a main-button label inviting people to watch (e.g. "Sneak peek inside"), a heading above the date circles (e.g. "Which night?"), and the looping background clip: pure atmosphere that sets the world of the night.
 2. reels: exactly three, in this order, each built on one proven reason people buy a ticket. Each answers one question the viewer has before buying:
    - the_night ("Will this be amazing?"): desire and self-image. Sell who the viewer gets to BE that night, not the venue: the arrival, the peak moment, the look, the feeling, in second person and present tense ("You, in gold."). Cinematic and aspirational.

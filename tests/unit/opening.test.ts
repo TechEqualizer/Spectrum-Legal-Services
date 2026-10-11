@@ -51,3 +51,12 @@ test("a stored recipe with anything changed or added is refused", () => {
   assert.equal(checkOpening({ ...r, extra: 1 }), "bad opening scene");
   assert.equal(checkOpening({ ...r, beats: [{ ...r.beats[0], box: { ...r.beats[0].box, w: 0.01 } }, r.beats[1]] }), "bad opening scene");
 });
+
+test("the mood is kept when it's one we know, and left out otherwise (played as glamour)", () => {
+  const r = parseOpening({ ...recipe([beat(), beat()]), mood: "editorial" });
+  assert.equal(r?.mood, "editorial");
+  assert.equal(checkOpening(r), null);
+  const unknown = parseOpening({ ...recipe([beat(), beat()]), mood: "spooky" });
+  assert.ok(unknown && !("mood" in unknown));
+  assert.equal(checkOpening({ ...r!, mood: "spooky" }), "bad opening scene");
+});
