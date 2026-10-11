@@ -5,6 +5,10 @@
 // reels' words), their login and access, and Core's 14-day trial, and uses
 // up the invite. They land signed in on Home, with their link to copy.
 import { chromium, settle } from '../browser.mjs';
+const goLive = (organizer) => fetch('http://localhost:54321/__plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organizer, status: 'comped' }) });
+// Plans are kept a second in the tests, and pages rebuild in the background: look until it shows.
+const until = async (fn, ms = 15000) => { const end = Date.now() + ms; let v; while (Date.now() < end) { v = await fn().catch(() => false); if (v) return v; await new Promise((r) => setTimeout(r, 700)); } return v; };
+
 const S = process.argv[2]; const B = 'http://localhost:3002'; const DB = 'http://localhost:54321'; const CLAUDE = 'http://localhost:54400';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const flyer = new URL('../fixtures/flyer-masquerade.jpg', import.meta.url).pathname;
@@ -43,7 +47,7 @@ await linkField.fill('biglove');
 await p.getByText('That link is taken. Try another.').waitFor({ timeout: 5000 }).catch(() => {});
 check('checked: taken', await p.getByText('That link is taken. Try another.').isVisible());
 await linkField.fill('golden-hour');
-check('the trial, and the price once', await p.getByText('Core · free for 14 days').isVisible() && await p.getByText(/\$29 a month or \$290 a year, or stay on Free/).isVisible() && await p.getByText('No card now.', { exact: false }).isVisible());
+check('free to build, and the price to go live once', await p.getByText('Free to build').isVisible() && await p.getByText(/Go live when you're ready: \$29 a month or \$290 a year\. No card now\./).isVisible());
 check("the flyer had a ticket link: not asked", (await p.getByLabel('Where fans buy tickets').count()) === 0);
 check('the content rule, beside the terms', await p.getByText('Suggestive yes, explicit no.').isVisible() && (await p.getByRole('link', { name: 'terms' }).getAttribute('href')) === '/terms');
 
@@ -109,19 +113,23 @@ check('their dates, on their clock', pub?.events?.length === 2 && pub.events[0].
 const plan = (await (await fetch(`${DB}/rest/v1/organizer_plans?organizer_slug=eq.golden-hour`, { headers: secret })).json())[0];
 const claimed = (await (await admin.request.get(B + '/api/admin/invites')).json()).invites.find((i) => i.note === 'Golden Hour crew');
 check('the invite: claimed for them', claimed?.claimed_organizer === 'golden-hour' && Boolean(claimed?.claimed_at));
-check('Core: trialing, 14 days from the claim', plan?.status === 'trialing' && Math.round((Date.parse(plan.trial_ends_at) - Date.parse(claimed?.claimed_at)) / 864e5) === 14, JSON.stringify(plan));
+check('no plan, no trial: built free, not live yet', plan === undefined, JSON.stringify(plan));
 const dates = (await (await fetch(`${DB}/__state`)).json()).eventDates['golden-hour-halloween-v1'] ?? [];
 check('the dates as rows', dates.length === 2, JSON.stringify(dates));
 
-// Their link, live.
+// Their link: Coming soon for the public until they go live (docs/plans/03-billing.md).
 const fan = await (await b.newContext()).newPage();
-await fan.goto(B + '/f/golden-hour-halloween'); await settle(fan, 1500);
+await fan.goto(B + '/f/golden-hour-halloween'); await settle(fan, 1000);
+check('not live yet: the public sees Coming soon', await fan.getByText('Coming soon', { exact: true }).isVisible() && await fan.getByRole('heading', { level: 1, name: 'Golden Hour' }).isVisible() && !(await fan.getByText('Masks on, Motor City').count()));
+// Live (as if paid): the night itself.
+await goLive('golden-hour');
+await until(async () => { await fan.goto(B + '/f/golden-hour-halloween'); await settle(fan, 1500); return !(await fan.getByText('Coming soon', { exact: true }).count()); });
 // The opening plays first; a tap skips it, and the title comes up.
 check('the link opens on the flyer\'s opening', await fan.getByText('Masks on.', { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true, () => false));
 await fan.mouse.click(200, 300);
 await fan.getByText('Masks on, Motor City').first().waitFor({ timeout: 5000 }).catch(() => {});
 check('the night is live, in their words (a tap skips the opening)', await fan.getByText('Masks on, Motor City').first().isVisible().catch(() => false));
-// They signed up themselves: Follow is on for them, and Core's presale and fans-only parts with the trial.
+// They signed up themselves: Follow is on for them, and Core's presale and fans-only parts once live.
 await fan.getByRole('button', { name: /Sneak peek inside|Step inside/ }).first().click().catch(() => {});
 const followShown = fan.getByText('Follow', { exact: true }).locator('visible=true').first();
 await followShown.waitFor({ timeout: 8000 }).catch(() => {});

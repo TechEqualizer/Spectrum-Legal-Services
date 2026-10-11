@@ -1,6 +1,10 @@
 // New client: Showlnk adds a client (their bio link and a first event),
 // builds it, then hands it off with the client's own login.
 import { chromium, settle } from '../browser.mjs';
+const goLive = (organizer) => fetch('http://localhost:54321/__plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organizer, status: 'comped' }) });
+// Plans are kept a second in the tests, and pages rebuild in the background: look until it shows.
+const until = async (fn, ms = 15000) => { const end = Date.now() + ms; let v; while (Date.now() < end) { v = await fn().catch(() => false); if (v) return v; await new Promise((r) => setTimeout(r, 700)); } return v; };
+
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
@@ -41,8 +45,12 @@ await p.keyboard.press('Escape'); await settle(p, 300);
 const groups = await p.locator('#admin-business optgroup').evaluateAll((gs) => gs.map((g) => g.label + ': ' + [...g.children].map((o) => o.textContent).join(', ')));
 check('dropdown: the client with its event, no demos', groups.includes('Velvet Nights: Velvet Halloween') && !groups.some((g) => g.startsWith('Demos:')), groups.join(' | '));
 
-// Their links work for visitors.
+// Their links: Coming soon until they go live, then the night.
 const v = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+const early = await v.goto(B + '/f/velvet-halloween'); await settle(v, 1000);
+check('a new client: Coming soon until they go live', early.status() === 200 && await v.getByText('Coming soon', { exact: true }).isVisible() && !/velvet halloween/i.test(await v.locator('h1').innerText()));
+await goLive('velvet-nights');
+await until(async () => { await v.goto(B + '/f/velvet-halloween'); await settle(v, 800); return !(await v.getByText('Coming soon', { exact: true }).count()); });
 const ev = await v.goto(B + '/f/velvet-halloween'); await settle(v, 1000);
 check('event link live', ev.status() === 200 && /velvet halloween/i.test(await v.locator('h1').innerText()), String(ev.status()));
 const bio = await v.goto(B + '/f/velvet-nights'); await settle(v, 1000);

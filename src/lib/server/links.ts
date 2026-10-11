@@ -9,6 +9,7 @@ import type { Funnel, FunnelEvent } from "@/data/funnel-types";
 import { lastStart, upcomingEvents, type NextNight } from "@/lib/events";
 import { publicationWithoutFanMedia, withoutFanMedia } from "@/lib/fan-reels";
 import { getOrganizer, organizerOf, type Organizer } from "@/lib/server/funnels";
+import { linkIsLive } from "@/lib/server/plans";
 import { getEventVersions, listOrganizerEventVersions, type EventVersions } from "@/lib/server/publications";
 
 /**
@@ -18,8 +19,28 @@ import { getEventVersions, listOrganizerEventVersions, type EventVersions } from
  * coming up: a choice between them, each as visitors see it.
  */
 export type LinkTarget =
-  | ({ kind: "event"; nextNight?: NextNight } & EventVersions)
+  | ({ kind: "event"; nextNight?: NextNight; organizer?: string } & EventVersions)
   | { kind: "choose"; organizer: Organizer; events: { funnel: Funnel; next: FunnelEvent }[] };
+
+/** The organizer a link belongs to (none for a built-in demo). */
+export const organizerOfLink = (target: LinkTarget): string | undefined => (target.kind === "choose" ? target.organizer.slug : target.organizer);
+
+/** A link whose organizer isn't live yet (or anymore): "Coming soon" under their name. */
+export type ComingSoon = { kind: "soon"; organizer: string; name: string };
+
+/**
+ * What the public sees at /f/<slug> and everything hanging off it (link
+ * previews, reel cards, calendars): the link, or Coming soon when its
+ * organizer hasn't paid to go live (docs/plans/03-billing.md). The organizer's
+ * own admins see the real link at /admin/link/<slug>.
+ */
+export async function publicLink(slug: string, now = Date.now()): Promise<LinkTarget | ComingSoon | undefined> {
+  const target = await resolveLink(slug, now);
+  if (!target) return undefined;
+  const organizer = organizerOfLink(target);
+  if (!organizer || (await linkIsLive(organizer))) return target;
+  return { kind: "soon", organizer, name: target.kind === "choose" ? target.organizer.name : target.live.brand.name };
+}
 
 /** The event a link shows, as visitors see it (the soonest one, for a choice). */
 export const shownFunnel = (target: LinkTarget): Funnel => (target.kind === "event" ? target.live : target.events[0].funnel);
@@ -68,7 +89,7 @@ async function resolve(slug: string, now: number): Promise<LinkTarget | undefine
     const organizer = await organizerOf(slug);
     const next = organizer ? (await organizerNights(organizer, now)).upcoming.find((e) => e.base.slug !== slug) : undefined;
     const nextNight = next && { slug: next.base.slug, name: next.live.cover.hero?.title ?? next.live.brand.seriesLabel, startsAt: next.next.startsAt, ...(next.next.timeZone ? { timeZone: next.next.timeZone } : {}) };
-    return { kind: "event", ...versions, ...(nextNight ? { nextNight } : {}) };
+    return { kind: "event", ...versions, ...(nextNight ? { nextNight } : {}), ...(organizer ? { organizer } : {}) };
   }
 
   const organizer = await getOrganizer(slug);
@@ -79,5 +100,5 @@ async function resolve(slug: string, now: number): Promise<LinkTarget | undefine
     return { kind: "choose", organizer, events: upcoming.map(({ live, next }) => ({ funnel: live, next })) };
   }
   const shown = upcoming[0] ?? [...events].sort((a, b) => lastStart(b.live) - lastStart(a.live))[0];
-  return { kind: "event", base: shown.base, publication: shown.publication, live: shown.live };
+  return { kind: "event", base: shown.base, publication: shown.publication, live: shown.live, organizer: organizer.slug };
 }

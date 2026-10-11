@@ -71,8 +71,9 @@ async function freeEventSlug(night: string, organizer: string): Promise<string |
 // Step 3 of the sign-up wizard (docs/plans/05-signup.md): claim the link.
 // Makes the login with the password they chose, then, in one step in the
 // database, their organizer (/f/<slug>), the night from their flyer as its
-// first event (published with the reels' words), their access to it and
-// Core's 14-day trial, and marks the invite used. If that step fails, the
+// first event (published with the reels' words) and their access to it, and
+// marks the invite used. No plan: their link shows Coming soon until they go
+// live (docs/plans/03-billing.md, "Pay to go live"). If that step fails, the
 // login goes too. Then they're signed in.
 // POST { invite, name, slug, ticketUrl?, email, password, agree, timeZone, draft } -> { slug, eventSlug }
 export async function POST(request: Request) {

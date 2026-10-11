@@ -269,11 +269,21 @@ test.
 
 **Steps:**
 1. The tour starts by itself after the wizard, so new organizers aren't
-   lost before they meet the paywall (PR #88).
-2. Go live: no trial at claim; Coming soon for links that aren't live, with
-   the preview for their admins; Go live on Home, Share, the sidebar and
-   Settings → Plan (Stripe Checkout for `core_*`). Fans stay inside Live
-   until step 3, so no paying organizer loses anything in between.
+   lost before they meet the paywall (done, PR #88).
+2. Go live (this change). The plan keeps its name, Core; the action is
+   "Go live".
+   - Claiming starts no trial (migration `20261026000000_pay_to_go_live`).
+   - `publicLink()` serves Coming soon for links that aren't live: the
+     page, reel pages and their link previews (a Coming soon card). The
+     calendars answer 404.
+   - The organizer's admins see the real link at `/admin/link/<slug>`,
+     with a "Only you can see this · Go live" bar. Coming soon links
+     there.
+   - Go live appears on the welcome card, the sidebar card and Settings →
+     Plan (Stripe Checkout for `core_*`).
+   - The webhook refreshes the link and its preview cards at once.
+   - Fans stay inside Core until step 3, so no paying organizer loses
+     anything in between.
 3. The fans add-on: a second item on the same Stripe subscription
    (`fans_*`), the webhook records it, and the fan gates read it.
 

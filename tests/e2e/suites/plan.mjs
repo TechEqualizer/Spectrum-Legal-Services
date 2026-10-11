@@ -15,7 +15,7 @@ const page = async (w, h, mobile = false) => {
   return p;
 };
 const card = (p) => p.getByRole('region', { name: 'Plan' });
-const text = async (p) => { await card(p).getByText(/Core|Free/).first().waitFor({ timeout: 8000 }).catch(() => {}); return (await card(p).innerText().catch(() => '')).replace(/\s+/g, ' '); };
+const text = async (p) => { await card(p).getByText(/Core|Free|Not live/).first().waitFor({ timeout: 8000 }).catch(() => {}); return (await card(p).innerText().catch(() => '')).replace(/\s+/g, ' '); };
 
 // Big Love is comped, as the migration seeds it.
 let p = await page(1279, 900);
@@ -29,11 +29,11 @@ await setPlan({ status: 'trialing', trial_ends_at: new Date(testNow() + 5 * 864e
 await p.reload(); t = await text(p);
 check('trial: days left', t.includes('Core trial') && /5 days left, until/.test(t), t);
 
-// Free: what Core adds, and the price.
+// Not live yet: what Core includes, and the price.
 await setPlan({});
 await p.reload(); t = await text(p);
-check('Free: says so', /^Plan Free/i.test(t) && t.includes('Follow for up to 100 fans.'), t);
-check('Free: Core and its price', t.includes('Core: $29/month, or $290/year') && t.includes('Unlimited fans following you') && t.includes('Fan-only reels'), t);
+check('not live: says so', /^Plan Not live yet/i.test(t) && t.includes('Fans see Coming soon until you go live.'), t);
+check('not live: Core and its price', t.includes('Go live with Core: $29/month, or $290/year') && t.includes('Your link live: the opening, your reels and tickets') && t.includes('Fan-only reels'), t);
 await p.screenshot({ path: 'plan-free-1279.png' });
 
 // Who can read it.

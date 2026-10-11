@@ -6,8 +6,9 @@ import { CORE_PRICE, hasCore, planSummary, type Plan } from "@/lib/plans";
 type Loaded = { plan: Plan; billing: boolean; manage: boolean };
 type State = { slug: string; data: Loaded | null; error: string };
 
-/** What Core adds, in the organizer's terms. */
+/** What Core includes, in the organizer's terms. */
 const CORE_FEATURES = [
+  "Your link live: the opening, your reels and tickets",
   "Unlimited fans following you",
   "Fan-only reels",
   "Presale links for your followers",
@@ -18,9 +19,10 @@ const CORE_FEATURES = [
 const returned = () => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("billing"));
 
 /**
- * Settings → Plan, for one organizer: which plan they're on, in words; on
- * Free, what Core adds and Start Core (Stripe Checkout, monthly or yearly);
- * once they pay, Manage billing (Stripe's portal: card, receipts, cancel).
+ * Settings → Plan, for one organizer: which plan they're on, in words; before
+ * they pay, what Core includes and Go live (Stripe Checkout, monthly or
+ * yearly); once they pay, Manage billing (Stripe's portal: card, receipts,
+ * cancel).
  */
 export default function PlanSettings({ organizer, eventSlug }: { organizer: { slug: string; name: string }; eventSlug: string }) {
   const id = useId();
@@ -115,7 +117,7 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
             {(offer || (!core && !data?.billing)) && (
               <div className="mt-4 border-t border-gray-100 pt-4">
                 <p className="text-sm font-semibold text-deep-navy">
-                  Core: ${CORE_PRICE.month}/month, or ${CORE_PRICE.year}/year
+                  {inTrial ? "Core" : "Go live with Core"}: ${CORE_PRICE.month}/month, or ${CORE_PRICE.year}/year
                 </p>
                 <ul role="list" className="mt-2 space-y-1.5 text-sm text-gray-600">
                   {CORE_FEATURES.map((f) => (
@@ -147,7 +149,7 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                       onClick={() => go("/api/admin/billing/checkout", { slug: eventSlug, interval: cadence })}
                       className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue disabled:opacity-40"
                     >
-                      {busy ? "Opening…" : inTrial ? "Keep Core" : "Start Core"}
+                      {busy ? "Opening…" : inTrial ? "Keep Core" : "Go live"}
                     </button>
                   </div>
                 )}

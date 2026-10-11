@@ -4,34 +4,35 @@ import { Suspense } from "react";
 import FunnelExperience, { FunnelSplash } from "@/components/FunnelExperience";
 import { FollowProvider, type FollowTarget } from "@/components/follow/follow";
 import OrganizerEvents from "@/components/OrganizerEvents";
+import ComingSoon from "@/components/showlnk/ComingSoon";
 import { isConcept } from "@/config/site";
 import { funnels } from "@/data/funnels";
 import { hasCore } from "@/lib/plans";
 import { followOn } from "@/lib/server/fans";
 import { planOf } from "@/lib/server/plans";
 import { getOrganizer, organizerOf, type Organizer } from "@/lib/server/funnels";
-import { resolveLink, shownFunnel } from "@/lib/server/links";
+import { publicLink, shownFunnel } from "@/lib/server/links";
 import { shareMetadata } from "@/lib/server/share-card";
 
 // The shareable link: a reel funnel on its own, with no website around it.
 // A slug is a built-in demo (src/data/funnels.ts), an organizer's event, or
 // an organizer's permanent link, which shows their next event (see
-// resolveLink); anything else is a 404. Demo pages are built ahead of time,
-// the rest on their first visit; all are rebuilt when the admin publishes,
-// and dynamicParams stays on for exactly that.
+// resolveLink); anything else is a 404. An organizer who hasn't paid to go
+// live gets "Coming soon" instead (publicLink). Demo pages are built ahead of
+// time, the rest on their first visit; all are rebuilt when the admin
+// publishes or the plan changes, and dynamicParams stays on for exactly that.
 
 export function generateStaticParams() {
   return funnels.map((funnel) => ({ slug: funnel.slug }));
 }
 
 export async function generateViewport({ params }: PageProps<"/f/[slug]">): Promise<Viewport> {
-  const target = await resolveLink((await params).slug);
+  const target = await publicLink((await params).slug);
   // A published look (e.g. matched to a flyer) recolors it too.
-  const shown =
-    target && shownFunnel(target);
+  const shown = target && target.kind !== "soon" ? shownFunnel(target) : undefined;
   // Colors the browser bar (and in-app browsers that honor it) to match.
   return {
-    themeColor: shown?.brand.theme?.["--deep-navy"] ?? "#0E1A2B",
+    themeColor: target?.kind === "soon" ? "#0A0710" : (shown?.brand.theme?.["--deep-navy"] ?? "#0E1A2B"),
     // Edge to edge on phones with a notch or home bar; the reels pad for the safe areas.
     viewportFit: "cover",
     // The page is already dark; this stops phone browsers' forced dark mode
@@ -41,8 +42,9 @@ export async function generateViewport({ params }: PageProps<"/f/[slug]">): Prom
 }
 
 export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Promise<Metadata> {
-  const target = await resolveLink((await params).slug);
+  const target = await publicLink((await params).slug);
   if (!target) return {};
+  if (target.kind === "soon") return { title: `${target.name} · Coming soon`, description: null, robots: { index: false, follow: false } };
   if (target.kind === "choose") {
     const title = `${target.organizer.name}: upcoming events`;
     const description = target.events.map((e) => e.funnel.brand.seriesLabel).join(" · ");
@@ -74,8 +76,10 @@ export async function generateMetadata({ params }: PageProps<"/f/[slug]">): Prom
 }
 
 export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
-  const target = await resolveLink((await params).slug);
+  const { slug } = await params;
+  const target = await publicLink(slug);
   if (!target) notFound();
+  if (target.kind === "soon") return <ComingSoon name={target.name} slug={slug} />;
   if (target.kind === "choose") {
     const { organizer } = target;
     return (

@@ -22,24 +22,24 @@ await ctx.addInitScript((slug) => localStorage.setItem('admin_business', slug), 
 const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
 const card = () => p.getByRole('region', { name: 'Plan' });
 const cardText = async () => (await card().innerText().catch(() => '')).replace(/\s+/g, ' ');
-const open = async (path = '/admin/settings') => { await p.goto(B + path); await settle(p, 800); await card().getByText(/^(Core|Free)/).first().waitFor({ timeout: 8000 }).catch(() => {}); };
+const open = async (path = '/admin/settings') => { await p.goto(B + path); await settle(p, 800); await card().getByText(/^(Core|Free|Not live)/).first().waitFor({ timeout: 8000 }).catch(() => {}); };
 
 // Free: Start Core, yearly picked.
 await open();
 let t = await cardText();
-check('Free offers Core', /Plan Free/i.test(t) && t.includes('Core: $29/month, or $290/year'), t);
+check('not live yet: Go live with Core', /Plan Not live yet/i.test(t) && t.includes('Go live with Core: $29/month, or $290/year'), t);
 const yearly = card().getByRole('radio', { name: '$290 yearly' });
 check('yearly is picked first, two months free', (await yearly.getAttribute('aria-checked')) === 'true' && t.includes('Two months free.'), t);
 
 // Monthly, then back out of checkout: nothing charged.
 await card().getByRole('radio', { name: '$29 monthly' }).click();
-await card().getByRole('button', { name: 'Start Core' }).click();
+await card().getByRole('button', { name: 'Go live' }).click();
 await p.waitForURL(/localhost:54800\/pay\//);
 check('checkout is Stripe\'s page, monthly', (await p.textContent('body')).includes('$29.00 per month'));
 await p.getByRole('button', { name: 'Back' }).click();
 await p.waitForURL(/\/admin\/settings\?billing=canceled/); await settle(p, 800);
 check('back from checkout: nothing charged', await p.getByText('Checkout was canceled. Nothing was charged.').isVisible());
-check('still Free', /Free Big Love Productions · Follow for up to 100 fans/.test(await cardText()), await cardText());
+check('still not live', /Not live yet Big Love Productions · Fans see Coming soon until you go live\./.test(await cardText()), await cardText());
 
 // On Free, Core's features say so where they're set up (billing step 3).
 await p.goto(B + '/admin', { waitUntil: 'networkidle' });
@@ -61,7 +61,7 @@ check('on Free: the fans list says it is Free', (await (await p.request.get(`${B
 await open();
 
 // Yearly, paid.
-await card().getByRole('button', { name: 'Start Core' }).click();
+await card().getByRole('button', { name: 'Go live' }).click();
 await p.waitForURL(/localhost:54800\/pay\//);
 check('yearly checkout', (await p.textContent('body')).includes('$290.00 per year'));
 await p.getByRole('button', { name: 'Pay' }).click();
@@ -69,7 +69,7 @@ await p.waitForURL(/\/admin\/settings\?billing=started/); await settle(p, 1500);
 await card().getByText(/^Core$/).waitFor({ timeout: 8000 }).catch(() => {});
 t = await cardText();
 check('paid: Core, renewing', /Plan Core Big Love Productions · Renews/i.test(t), t);
-check('paid: Manage billing, no Start Core', await card().getByRole('button', { name: 'Manage billing' }).isVisible() && await card().getByRole('button', { name: 'Start Core' }).count() === 0);
+check('paid: Manage billing, no Start Core', await card().getByRole('button', { name: 'Manage billing' }).isVisible() && await card().getByRole('button', { name: 'Go live' }).count() === 0);
 await p.screenshot({ path: 'billing-core-1279.png' });
 let st = await stripeState();
 check('the webhook was signed and taken', st.webhooks.some((w) => w.type === 'checkout.session.completed' && w.status === 200), JSON.stringify(st.webhooks));
@@ -101,11 +101,11 @@ await p.getByRole('button', { name: 'Cancel plan' }).click();
 await p.waitForURL(/\/admin\/settings/); await settle(p, 1000);
 await open();
 t = await cardText();
-check('canceled: Free, says why', /Plan Free/i.test(t) && t.includes('Core was canceled.'), t);
-check('canceled: can start again, and still see billing', await card().getByRole('button', { name: 'Start Core' }).isVisible() && await card().getByRole('button', { name: 'Manage billing' }).isVisible());
+check('canceled: not live, says why', /Plan Not live/i.test(t) && t.includes('Core was canceled. Fans see Coming soon.'), t);
+check('canceled: can start again, and still see billing', await card().getByRole('button', { name: 'Go live' }).isVisible() && await card().getByRole('button', { name: 'Manage billing' }).isVisible());
 
 // Starting again reuses the same Stripe customer.
-await card().getByRole('button', { name: 'Start Core' }).click();
+await card().getByRole('button', { name: 'Go live' }).click();
 await p.waitForURL(/localhost:54800\/pay\//);
 st = await stripeState();
 check('again: the same Stripe customer', st.sessions.at(-1).customer === sub.customer && !st.sessions.at(-1).customer_email, JSON.stringify(st.sessions.at(-1)));
@@ -118,7 +118,7 @@ await bl.addInitScript(() => localStorage.setItem('admin_business', 'masquerade'
 const bp = await bl.newPage();
 await bp.goto(B + '/admin/settings'); await settle(bp, 1200);
 await bp.getByRole('region', { name: 'Plan' }).getByText('Core, on Showlnk').waitFor({ timeout: 8000 }).catch(() => {});
-check('comped: no Start Core', await bp.getByRole('region', { name: 'Plan' }).getByText('Core, on Showlnk').isVisible() && await bp.getByRole('button', { name: 'Start Core' }).count() === 0);
+check('comped: no Go live', await bp.getByRole('region', { name: 'Plan' }).getByText('Core, on Showlnk').isVisible() && await bp.getByRole('button', { name: 'Go live' }).count() === 0);
 check('comped: checkout refused', (await bp.request.post(B + '/api/admin/billing/checkout', { data: { slug: 'masquerade', interval: 'month' } })).status() === 409);
 
 // Only the organizer's own admins.

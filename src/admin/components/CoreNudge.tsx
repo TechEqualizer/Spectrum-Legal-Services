@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import { START_CORE_HREF, usePlan } from "@/admin/plan";
-import { hasCore, TRIAL_DAYS, type Plan } from "@/lib/plans";
+import { CORE_PRICE, hasCore, TRIAL_DAYS, type Plan } from "@/lib/plans";
 
 const DAY = 864e5;
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -11,10 +11,10 @@ const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month
 type Nudge = { eyebrow: string; title: string; text: string; action: string; urgent: boolean; daysLeft?: number; used?: number };
 
 /**
- * What to say about Core, or nothing: on a trial without a card yet, the
- * days left and when it ends (keeping Core starts it at once); on Free,
- * what Core adds; with a declined card, update it. Nothing once they pay or
- * are comped. (docs/plans/03-billing.md, "Upgrade nudges".)
+ * What to say about Core, or nothing: before they pay, that their link is
+ * private and Go live; on a trial without a card yet (from before "Pay to go
+ * live"), the days left; with a declined card, update it. Nothing once they
+ * pay or are comped. (docs/plans/03-billing.md, "Upgrade nudges".)
  */
 export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null {
   if (!plan) return null;
@@ -25,7 +25,7 @@ export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null
     return {
       eyebrow: "Core trial",
       title: `${left === 1 ? "1 day" : `${left} days`} left`,
-      text: left > 2 ? `Your trial ends ${ends}. Keep Core to keep every fan.` : `Core ends ${ends}: Follow past 100 fans, presales and fans-only reels stop.`,
+      text: left > 2 ? `Your trial ends ${ends}. Keep Core to keep your link live.` : `On ${ends} your link goes back to Coming soon.`,
       action: "Keep Core",
       urgent: left <= 3,
       daysLeft: left,
@@ -33,10 +33,10 @@ export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null
     };
   }
   if (plan.status === "past_due" && core) {
-    return { eyebrow: "Core", title: "Card declined", text: "Update it to keep Core.", action: "Update card", urgent: true };
+    return { eyebrow: "Core", title: "Card declined", text: "Update it to keep your link live.", action: "Update card", urgent: true };
   }
   if (!core && plan.status !== "comped") {
-    return { eyebrow: "You're on Free", title: "Get Core", text: "Unlimited fans, presales and reels only your followers can watch.", action: "Get Core", urgent: false };
+    return { eyebrow: "Your link is private", title: "Go live", text: `Fans see Coming soon until you do. Core is $${CORE_PRICE.month} a month.`, action: "Go live", urgent: false };
   }
   return null;
 }

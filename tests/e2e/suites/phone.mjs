@@ -3,6 +3,10 @@
 // their labels. For a short and a long event name, at normal and large text
 // (Android and iOS text size settings).
 import { chromium, settle } from '../browser.mjs';
+const goLive = (organizer) => fetch('http://localhost:54321/__plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ organizer, status: 'comped' }) });
+// Plans are kept a second in the tests, and pages rebuild in the background: look until it shows.
+const until = async (fn, ms = 15000) => { const end = Date.now() + ms; let v; while (Date.now() < end) { v = await fn().catch(() => false); if (v) return v; await new Promise((r) => setTimeout(r, 700)); } return v; };
+
 const S = process.argv[2]; const B = 'http://localhost:3002';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const b = await chromium.launch();
@@ -64,9 +68,10 @@ for (const [event, label] of [['masquerade', 'short name'], ['book-signing-grand
     }
   }
 }
-// The public links fans open: the organizer's and the event's, with the long name.
+// The public links fans open, once live: the organizer's and the event's, with the long name.
+await goLive('book-signing-collective');
 for (const path of ['/f/book-signing-collective', '/f/book-signing-grand']) {
-  await p.goto(B + path); await settle(p, 1200);
+  await until(async () => { await p.goto(B + path); await settle(p, 1200); return !(await p.getByText('Coming soon', { exact: true }).count()); });
   const m = await measure();
   check(`public ${path} fits`, m.scroll <= m.w && m.out.length === 0, m.scroll + 'px; ' + m.out.join(', '));
   await p.screenshot({ path: S + `/phone-public-${path.split('/').pop()}.jpg` });

@@ -73,10 +73,15 @@ export async function listEventFunnels(): Promise<{ funnel: Funnel; organizer: s
   return withOrganizers(await query("order=slug&", []));
 }
 
-/** The organizer an event funnel belongs to (undefined for the built-in demos). */
+/**
+ * The organizer an event funnel belongs to (undefined for the built-in
+ * demos). Read with the event's own row, the same query getFunnel makes, so
+ * a just-made event always has its organizer: links that aren't live show
+ * Coming soon by it.
+ */
 export async function organizerOf(slug: string): Promise<string | undefined> {
-  if (builtInBySlug(slug)) return undefined;
-  return (await listEventFunnels()).find(({ funnel }) => funnel.slug === slug)?.organizer;
+  if (builtInBySlug(slug) || !/^[a-z0-9-]{1,64}$/.test(slug)) return undefined;
+  return (await query(`slug=eq.${slug}&`, [funnelTag(slug)]))[0]?.organizer_slug;
 }
 
 export type Organizer = { slug: string; name: string; avatarUrl?: string };

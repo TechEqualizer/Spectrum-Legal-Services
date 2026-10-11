@@ -1,6 +1,6 @@
 // Billing: the Core nudge beside the sidebar (docs/plans/03-billing.md,
 // "Upgrade nudges"). On a trial without a card, the days left and Keep Core
-// ("Your trial ends…"), more urgent in the last days; on Free, Get Core;
+// ("Your trial ends…"), more urgent in the last days; not live yet, Go live;
 // nothing once they pay or are comped. Keeping Core during the trial is
 // charged at once, like any checkout.
 import { chromium, settle, testNow } from '../browser.mjs';
@@ -19,7 +19,7 @@ const open = async (path = '/admin/home') => { await p.goto(B + path); await set
 
 // Comped (Big Love, as seeded): nothing to sell.
 await open();
-check('comped: no nudge', (await nav.getByRole('link', { name: /Keep Core|Get Core/ }).count()) === 0);
+check('comped: no nudge', (await nav.getByRole('link', { name: /Keep Core|Go live/ }).count()) === 0);
 
 // A trial, 10 days left: days, the bar, and Keep Core at no charge until it ends.
 await setPlan({ status: 'trialing', trial_ends_at: inDays(10) });
@@ -28,7 +28,7 @@ const trial = nav.getByRole('region', { name: 'Core trial' });
 await trial.waitFor({ timeout: 5000 }).catch(() => {});
 const t = (await trial.innerText().catch(() => '')).replace(/\s+/g, ' ');
 check('trial: the days left', /10 days left/.test(t), t);
-check('trial: when it ends', /Your trial ends .*Keep Core to keep every fan/.test(t), t);
+check('trial: when it ends', /Your trial ends .*Keep Core to keep your link live/.test(t), t);
 check('trial: Keep Core goes to the plan', (await trial.getByRole('link', { name: 'Keep Core' }).getAttribute('href')) === '/admin/settings#plan');
 await p.screenshot({ path: 'nudge-trial-1279.png' });
 
@@ -41,13 +41,13 @@ await nav.getByRole('button', { name: 'Expand sidebar' }).click();
 await setPlan({ status: 'trialing', trial_ends_at: inDays(2) });
 await open();
 const last = (await nav.getByRole('region', { name: 'Core trial' }).innerText().catch(() => '')).replace(/\s+/g, ' ');
-check('last days: says what stops', /2 days left/.test(last) && /Core ends .*presales and fans-only reels stop/.test(last), last);
+check('last days: says what happens', /2 days left/.test(last) && /your link goes back to Coming soon/.test(last), last);
 
-// Free: Get Core.
+// Not live yet: Go live.
 await setPlan({});
 await open();
-const free = nav.getByRole('region', { name: "You're on Free" });
-check('Free: Get Core', await free.isVisible() && await free.getByRole('link', { name: 'Get Core' }).isVisible());
+const free = nav.getByRole('region', { name: 'Your link is private' });
+check('not live: Go live', await free.isVisible() && await free.getByRole('link', { name: 'Go live' }).isVisible() && /Fans see Coming soon until you do/.test(await free.innerText()));
 
 // On a phone: a chip beside the account.
 const m = await b.newPage({ storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -73,7 +73,7 @@ await p.waitForURL(/\/admin\/settings\?billing=started/); await settle(p, 1500);
 await plan.getByText(/Renews/).waitFor({ timeout: 8000 }).catch(() => {});
 check('after paying: Core, renewing', /Core .*Renews/.test((await plan.innerText()).replace(/\s+/g, ' ')), (await plan.innerText()).replace(/\s+/g, ' '));
 await open();
-check('after paying: no nudge', (await nav.getByRole('link', { name: /Keep Core|Get Core/ }).count()) === 0);
+check('after paying: no nudge', (await nav.getByRole('link', { name: /Keep Core|Go live/ }).count()) === 0);
 check('and no second checkout', (await p.request.post(B + '/api/admin/billing/checkout', { data: { slug: 'masquerade', interval: 'month' } })).status() === 409);
 
 await setPlan({ status: 'comped', stripe_customer_id: null, stripe_subscription_id: null });

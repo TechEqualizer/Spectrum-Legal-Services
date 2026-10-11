@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { funnels } from "@/data/funnels";
-import { resolveLink, shownFunnel } from "@/lib/server/links";
-import { SHARE_CARD_SIZE, shareCard } from "@/lib/server/share-card";
+import { publicLink, shownFunnel } from "@/lib/server/links";
+import { comingSoonCard, SHARE_CARD_SIZE, shareCard } from "@/lib/server/share-card";
 
 // The preview card people see when a funnel link is pasted into a text, DM
 // or post (see share-card.tsx). One per funnel: built-in ones at build time,
@@ -18,8 +18,10 @@ export function generateStaticParams() {
 }
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
-  const target = await resolveLink((await params).slug);
+  const target = await publicLink((await params).slug);
   if (!target) notFound();
+  // A link that isn't live: Coming soon, nothing about the night (swapped for the real card when it goes live).
+  if (target.kind === "soon") return comingSoonCard(target.name);
   // An organizer's permanent link previews the night it shows (or the soonest one).
   const funnel = shownFunnel(target);
   return shareCard(funnel);

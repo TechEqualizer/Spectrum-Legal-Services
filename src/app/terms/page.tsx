@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage, { ContactLines } from "@/components/showlnk/LegalPage";
 import { CONTENT_RULE } from "@/lib/content-rule";
-import { CORE_PRICE, FREE_FAN_LIMIT, GRACE_DAYS, TRIAL_DAYS } from "@/lib/plans";
+import { CORE_PRICE, GRACE_DAYS } from "@/lib/plans";
 
 // The terms organizers agree to, including the content rule for reels.
 
@@ -15,7 +15,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Organizer terms"
-      updated="October 10, 2026"
+      updated="October 11, 2026"
       intro={
         <p>
           These terms are for event organizers and the people on their team who use Showlnk to build event links. Using Showlnk
@@ -78,14 +78,12 @@ export default function TermsPage() {
 
       <h2>6. Plans and price</h2>
       <p>
-        Each organizer has its own plan. <strong>Free</strong> includes your links, reels, results, leads, the Eventbrite
-        connection, and Follow for up to {FREE_FAN_LIMIT} fans. <strong>Core</strong> adds unlimited fans, reels only your
-        followers can watch, presales for followers and the fan calendar, for ${CORE_PRICE.month} a month or ${CORE_PRICE.year} a
-        year, plus any tax.
-      </p>
-      <p>
-        Core is free for the first {TRIAL_DAYS} days, starting when you claim your link. No card is needed for the trial. When it
-        ends, you&apos;re on Free unless you&apos;ve started paying; nothing is charged without you choosing a plan.
+        Building is free: you can make your link, its opening and reels, and preview it yourself, without a card. Your link
+        goes public on <strong>Core</strong>, for ${CORE_PRICE.month} a month or ${CORE_PRICE.year} a year, plus any tax: your
+        links, reels, results, leads, the Eventbrite connection, unlimited fans, reels only your followers can watch, presales
+        for followers and the fan calendar. Until you go live, and if Core ends, visitors to your link see a &ldquo;Coming
+        soon&rdquo; page; nothing you made is deleted, and going live again puts it back. Nothing is charged without you
+        choosing a plan.
       </p>
       <p>
         Payments are handled by Stripe; Showlnk never sees your card number. Core renews automatically each month or year until

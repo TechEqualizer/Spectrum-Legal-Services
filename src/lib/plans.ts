@@ -1,5 +1,6 @@
-// The plans (docs/plans/03-billing.md): Free, and Core per organizer.
-// Shared by the server's gates and the admin's Plan card.
+// The plans (docs/plans/03-billing.md): Core per organizer, which puts their
+// links live ("Pay to go live"); without it they show Coming soon. Shared by
+// the server's gates and the admin's Plan card.
 
 export const CORE_PRICE = { month: 29, year: 290 } as const;
 /** Fans an organizer can gain on Free; the list past it waits for Core. */
@@ -49,9 +50,9 @@ export function planSummary(plan: Plan, now = Date.now()): { title: string; deta
     case "comped":
       return core
         ? { title: "Core, on Showlnk", detail: plan.compedUntil ? `Free until ${day(plan.compedUntil)}.` : "Every Core feature, free." }
-        : { title: "Free", detail: `Your free Core ended ${day(plan.compedUntil!)}.` };
+        : { title: "Not live", detail: `Your free Core ended ${day(plan.compedUntil!)}. Fans see Coming soon.` };
     case "trialing": {
-      if (!core) return { title: "Free", detail: "Your Core trial ended." };
+      if (!core) return { title: "Not live", detail: "Your Core trial ended. Fans see Coming soon." };
       // Paid during the trial before checkout charged at once: the first charge waits for the trial's end.
       if (plan.interval) return { title: "Core", detail: `Your first charge is ${day(plan.trialEndsAt!)}.` };
       const n = daysLeft(plan.trialEndsAt!, now);
@@ -62,10 +63,10 @@ export function planSummary(plan: Plan, now = Date.now()): { title: string; deta
     case "past_due":
       return core
         ? { title: "Core", detail: `Your card was declined. Update it by ${day(new Date(Date.parse(plan.periodEnd!) + GRACE_DAYS * DAY).toISOString())} to keep Core.` }
-        : { title: "Free", detail: "Core ended after the card was declined." };
+        : { title: "Not live", detail: "Core ended after the card was declined. Fans see Coming soon." };
     case "canceled":
-      return { title: "Free", detail: "Core was canceled." };
+      return { title: "Not live", detail: "Core was canceled. Fans see Coming soon." };
     default:
-      return { title: "Free", detail: `Follow for up to ${FREE_FAN_LIMIT} fans.` };
+      return { title: "Not live yet", detail: "Fans see Coming soon until you go live." };
   }
 }

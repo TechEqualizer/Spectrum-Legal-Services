@@ -13,7 +13,7 @@ const STEPS = [
   ['/admin', 'Reels: what visitors see', 'nav-reels'],
   ['/admin', 'Your reels, in order', 'reels-order'],
   ['/admin', 'Add a reel', 'add-reel'],
-  ['/admin', 'Nothing goes live until you Publish', 'publish'],
+  ['/admin', 'Publish your edits', 'publish'],
   ['/admin/events', 'Events: each night and its link', 'events-list'],
   ['/admin/links', 'Your bio link', 'share-bio'],
   ['/admin/links', 'A link for every place you post', 'share-builder'],

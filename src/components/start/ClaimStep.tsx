@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { CONTENT_RULE } from "@/lib/content-rule";
 import { EVENT_SLUG, slugFromName } from "@/lib/new-event";
-import { CORE_PRICE, FREE_FAN_LIMIT, TRIAL_DAYS } from "@/lib/plans";
+import { CORE_PRICE } from "@/lib/plans";
 import { httpsLink, needsTicketLink, nightName, suggestedName, type StartDraft } from "@/lib/start-draft";
 
 type Field = "name" | "slug" | "tickets" | "email" | "password" | "agree";
@@ -196,9 +196,9 @@ export default function ClaimStep({ invite, draft, onClaimed, onBack }: { invite
         </div>
 
         <div className="rounded-2xl border border-[var(--sl-gold)]/45 bg-[var(--sl-gold)]/[0.06] p-5">
-          <p className="text-sm font-semibold text-[var(--sl-gold)]">Core · free for {TRIAL_DAYS} days</p>
+          <p className="text-sm font-semibold text-[var(--sl-gold)]">Free to build</p>
           <p className="mt-1 text-[var(--sl-text)]/85">
-            Starts when you claim. After that, ${CORE_PRICE.month} a month or ${CORE_PRICE.year} a year, or stay on Free: your link, with Follow up to {FREE_FAN_LIMIT} fans. No card now.
+            Make your link, opening and reels for free, and preview it as fans will. Go live when you&apos;re ready: ${CORE_PRICE.month} a month or ${CORE_PRICE.year} a year. No card now.
           </p>
         </div>
 
