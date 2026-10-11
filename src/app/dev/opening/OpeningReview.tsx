@@ -8,8 +8,8 @@ import type { LookFont } from "@/lib/look";
 import { parseOpening, type OpeningRecipe } from "@/lib/opening";
 import { OpeningScene, openingFrames } from "@/remotion/OpeningScene";
 
-type Review = { src: string; recipe: unknown; font?: LookFont; accent?: string; title?: string; tagline?: string; frames?: boolean };
-type Ready = { src: string; recipe: OpeningRecipe; font?: LookFont; accent: string; title: string; tagline: string; frames: boolean };
+type Review = { src: string; recipe: unknown; font?: LookFont; accent?: string; title?: string; tagline?: string; frames?: boolean; exporting?: boolean };
+type Ready = { src: string; recipe: OpeningRecipe; font?: LookFont; accent: string; title: string; tagline: string; frames: boolean; exporting: boolean };
 
 const FPS = 30;
 
@@ -29,7 +29,7 @@ export default function OpeningReview() {
       const recipe = r && parseOpening(r.recipe);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the browser on mount
       if (!r || !recipe) setProblem("No recipe, or not a valid one.");
-      else setReview({ src: r.src, recipe, font: r.font, accent: r.accent ?? "#ffffff", title: r.title ?? "", tagline: r.tagline ?? "", frames: Boolean(r.frames) });
+      else setReview({ src: r.src, recipe, font: r.font, accent: r.accent ?? "#ffffff", title: r.title ?? "", tagline: r.tagline ?? "", frames: Boolean(r.frames), exporting: Boolean(r.exporting) });
     } catch {
       setProblem("No recipe, or not a valid one.");
     }
@@ -38,6 +38,7 @@ export default function OpeningReview() {
   if (!review) return null;
   const font = titleFontClass(review.font);
   const caps = review.font === "regal" || review.font === "bold";
+  if (review.exporting) return <Exporting review={review} fontClass={font} caps={caps} />;
   return (
     <main className="relative h-dvh w-full overflow-hidden bg-black text-white" style={{ "--sky-accent": review.accent } as React.CSSProperties}>
       {review.frames ? (
@@ -95,4 +96,45 @@ function Frames({ review, fontClass, caps, onHold }: { review: Ready; fontClass:
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
     />
   );
+}
+
+/**
+ * Renders the opening to a Stories MP4 in this browser (Remotion's web
+ * renderer), for the review script to save: window.__exportOpening().
+ */
+function Exporting({ review, fontClass, caps }: { review: Ready; fontClass: string; caps: boolean }) {
+  const [state, setState] = useState("ready");
+  useEffect(() => {
+    const w = window as unknown as { __exportOpening?: unknown };
+    w.__exportOpening = async () => {
+      const { renderMediaOnWeb, getEncodableVideoCodecs } = await import("@remotion/web-renderer");
+      const size = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = reject;
+        img.src = review.src;
+      });
+      const codecs = await getEncodableVideoCodecs("mp4");
+      const story = { title: review.title, when: review.tagline, link: "showlnk.com/f/book-signing", holdSeconds: 3.5 };
+      const { total } = openingFrames(review.recipe, FPS, story.holdSeconds);
+      const started = Date.now();
+      const props = { src: review.src, width: size.w, height: size.h, recipe: review.recipe, fontClass, caps, accent: review.accent, story };
+      const result = await renderMediaOnWeb({
+        composition: { component: OpeningScene, id: "opening", width: 1080, height: 1920, fps: FPS, durationInFrames: total, defaultProps: props },
+        inputProps: props,
+        container: "mp4",
+        videoCodec: codecs.includes("h264") ? "h264" : codecs[0],
+        muted: true,
+        licenseKey: "free-license",
+        onProgress: (p) => setState(`rendering ${Math.round(p.progress * 100)}%`),
+      });
+      const blob = await result.getBlob();
+      setState("done");
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      return { codecs, seconds: (Date.now() - started) / 1000, type: blob.type, base64: btoa(bin) };
+    };
+  }, [review, fontClass, caps]);
+  return <main className="p-6 text-white" data-export-state={state}>{state}</main>;
 }

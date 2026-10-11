@@ -27,6 +27,8 @@ import {
 import { eventDate, eventDayOfMonth } from "@/lib/event-time";
 import { thumbnailOf } from "@/lib/media";
 import { upcomingEvents } from "@/lib/events";
+import { useLinkOrigin } from "@/admin/link-origin";
+import type { StoryInput } from "@/lib/story-export";
 import { shrink } from "@/lib/flyer-file";
 import { DEFAULT_MOOD, OPENING_MOOD_IDS, OPENING_MOODS, type OpeningRecipe } from "@/lib/opening";
 
@@ -155,6 +157,11 @@ export default function StyleSheet({
   const [shuffles, setShuffles] = useState(0);
 
   const shown = colors ?? original;
+  const host = useLinkOrigin();
+  // The next date, as the Stories video's end card says it: "Sat, Oct 31 · 8 PM".
+  const [today] = useState(() => Date.now());
+  const next = upcomingEvents(funnel, today)[0];
+  const nextWhen = next ? `${eventDate(next, { weekday: "short", month: "short", day: "numeric" })} · ${eventDate(next, { hour: "numeric", minute: "2-digit" }).replace(":00", "")}` : "";
   const isOriginal = !colors && font === "classic";
   const selected = isOriginal
     ? "original"
@@ -179,7 +186,13 @@ export default function StyleSheet({
   const controls = (
         <div className="min-w-0 flex-1 space-y-6">
           <Group label="Opening">
-            <OpeningCard slug={funnel.slug} flyer={flyer} opening={opening} onChange={(o) => commit({ opening: o })} />
+            <OpeningCard
+              slug={funnel.slug}
+              flyer={flyer}
+              opening={opening}
+              onChange={(o) => commit({ opening: o })}
+              story={{ title, when: nextWhen, link: `${host.replace(/^https?:\/\/(www\.)?/, "")}/f/${funnel.slug}`, fontClass: titleFontClass(font), caps: font === "regal" || font === "bold", accent: shown["--sky-accent"] }}
+            />
           </Group>
 
           {(suggestions.length > 0 || look) && (
@@ -426,7 +439,20 @@ const MOOD_LABEL = (m: string) => m[0].toUpperCase() + m.slice(1);
  * picks the mood, like an animate-my-design button), then the mood can be
  * changed at once, another cut asked for, or the opening turned off.
  */
-function OpeningCard({ slug, flyer, opening, onChange }: { slug: string; flyer: string | undefined; opening: OpeningRecipe | undefined; onChange: (o: OpeningRecipe | null) => void }) {
+function OpeningCard({
+  slug,
+  flyer,
+  opening,
+  onChange,
+  story,
+}: {
+  slug: string;
+  flyer: string | undefined;
+  opening: OpeningRecipe | undefined;
+  onChange: (o: OpeningRecipe | null) => void;
+  /** What the Stories video needs besides the opening (its end card and look). */
+  story: Omit<StoryInput, "src" | "recipe">;
+}) {
   const id = useId();
   const [busy, setBusy] = useState<"make" | "another" | null>(null);
   const [error, setError] = useState("");
@@ -532,6 +558,85 @@ function OpeningCard({ slug, flyer, opening, onChange }: { slug: string; flyer: 
           {busy === "another" ? "This takes about 20 seconds." : made ? "Your opening is ready: it plays in the phone." : "Plays when someone opens your link."}
         </p>
       </div>
+      {flyer && <StoryDownload input={{ ...story, src: flyer, recipe: opening }} name={`${slug}-story.mp4`} disabled={busy !== null} />}
+    </div>
+  );
+}
+
+/**
+ * The opening as a video for Stories and TikTok, made on this device. Making
+ * it is one tap; handing it over is a second (a phone only opens its share
+ * sheet straight after a tap, and the video takes a little while).
+ */
+function StoryDownload({ input, name, disabled }: { input: StoryInput; name: string; disabled: boolean }) {
+  const [state, setState] = useState<{ step: "idle" } | { step: "making"; progress: number } | { step: "ready"; video: Blob } | { step: "problem"; message: string }>({ step: "idle" });
+  const stop = useRef<AbortController | null>(null);
+  // Anything that changes the video (another cut, a mood, the look) makes the made one stale.
+  const key = JSON.stringify(input);
+  const [madeFor, setMadeFor] = useState(key);
+  if (madeFor !== key) {
+    setMadeFor(key);
+    if (state.step === "ready") setState({ step: "idle" });
+  }
+  const canShare = typeof navigator !== "undefined" && Boolean(navigator.canShare?.({ files: [new File([], name, { type: "video/mp4" })] }));
+
+  const make = async () => {
+    const controller = new AbortController();
+    stop.current = controller;
+    setState({ step: "making", progress: 0 });
+    try {
+      const { renderStory } = await import("@/lib/story-export");
+      const video = await renderStory(input, (progress) => setState({ step: "making", progress }), controller.signal);
+      setState({ step: "ready", video });
+    } catch (e) {
+      if (controller.signal.aborted) return setState({ step: "idle" });
+      setState({ step: "problem", message: e instanceof Error && e.message ? e.message : "Couldn't make the video. Try again." });
+    }
+  };
+  const hand = async (video: Blob) => {
+    const { shareOrSave } = await import("@/lib/story-export");
+    await shareOrSave(video, name);
+  };
+
+  return (
+    <div className="p-4">
+      <p className="text-[15px] font-semibold text-deep-navy">For Stories and TikTok</p>
+      <p className="mt-1 text-xs text-gray-500">Your opening as a video, ending on your title, date and link. Add music when you post it.</p>
+      {state.step === "making" ? (
+        <div className="mt-3">
+          <div className="h-2 overflow-hidden rounded-full bg-soft-gray" role="progressbar" aria-label="Making your video" aria-valuenow={Math.round(state.progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-full rounded-full bg-deep-navy transition-[width] duration-300" style={{ width: `${Math.max(3, state.progress * 100)}%` }} />
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p role="status" className="text-xs text-gray-600">Making your video… {Math.round(state.progress * 100)}%. Keep this page open.</p>
+            <button type="button" onClick={() => stop.current?.abort()} className="min-h-11 rounded-lg px-2 text-sm font-semibold text-gray-600 hover:text-deep-navy hover:underline">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : state.step === "ready" ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button type="button" onClick={() => hand(state.video)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              {canShare ? <path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 002 2h10a2 2 0 002-2v-5" /> : <path d="M12 3v12M7 10l5 5 5-5M5 19h14" />}
+            </svg>
+            {canShare ? "Share video" : "Save video"}
+          </button>
+          <p role="status" className="text-xs text-gray-600">Ready: {(state.video.size / 1_000_000).toFixed(1)} MB.</p>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={make}
+            disabled={disabled}
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Make the video
+          </button>
+          {state.step === "problem" && <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{state.message}</p>}
+        </>
+      )}
     </div>
   );
 }
