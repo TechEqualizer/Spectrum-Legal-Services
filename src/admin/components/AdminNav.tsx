@@ -11,6 +11,7 @@ import { startTour } from "@/admin/tour";
 import Avatar from "@/admin/components/ui/Avatar";
 import { closeMenu, useDismiss } from "@/admin/components/ui/use-dismiss";
 import BrandLogo from "@/components/BrandLogo";
+import ShowlnkLogo from "@/components/showlnk/ShowlnkLogo";
 
 // Five places at most, most used first, in a business owner's words
 // (see .claude/skills/simple-navigation).
@@ -78,7 +79,7 @@ export default function AdminNav() {
           Nothing in it may push the others off screen, however long the name. Desktop: the sidebar's head. */}
       <div className={`flex items-center gap-2 py-2 pl-4 pr-2 lg:block lg:py-6 low:py-4 ${folded("lg:px-3", "lg:px-5")}`}>
         <Link href="/" aria-label="Back to the site" className={`hidden ${folded("", "lg:inline-flex")}`}>
-          {funnel ? <BrandLogo brand={funnel.brand} size="sm" /> : <span className="text-lg font-black tracking-tight">Showlnk</span>}
+          {funnel ? <BrandLogo brand={funnel.brand} size="sm" /> : <ShowlnkLogo className="h-7 w-auto" />}
         </Link>
         {funnel && (
           <span

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Wizard from "@/components/start/Wizard";
 import { inviteStatus, type InviteStatus } from "@/lib/server/invites";
 import "@/components/showlnk/showlnk.css";
+import ShowlnkLogo from "@/components/showlnk/ShowlnkLogo";
 
 // The sign-up wizard (docs/plans/05-signup.md): an invited organizer turns
 // their flyer into their Showlnk link. Invite-only for now: without a
@@ -33,8 +34,8 @@ export default async function StartPage({ searchParams }: Props) {
   return (
     <div className={`sl ${show.variable} font-sans`}>
       <header className="mx-auto flex max-w-6xl items-center px-5 py-5 sm:px-8">
-        <Link href="/" aria-label="Showlnk home" className="sl-display text-[2rem] leading-none tracking-normal normal-case">
-          show<span className="text-[var(--sl-gold)]">lnk</span>
+        <Link href="/" aria-label="Showlnk home" className="flex min-h-11 items-center">
+          <ShowlnkLogo eager />
         </Link>
       </header>
       <main id="main-content">

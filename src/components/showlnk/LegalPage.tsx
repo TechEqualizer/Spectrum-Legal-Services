@@ -1,6 +1,7 @@
 import { Big_Shoulders } from "next/font/google";
 import Link from "next/link";
 import "@/components/showlnk/showlnk.css";
+import ShowlnkLogo from "@/components/showlnk/ShowlnkLogo";
 
 // Showlnk's terms and privacy pages: the home page's night palette, set for reading.
 
@@ -41,8 +42,8 @@ export default function LegalPage({
   return (
     <div className={`sl ${show.variable} font-sans`}>
       <header className="mx-auto flex max-w-3xl items-center justify-between px-5 py-5 sm:px-8">
-        <Link href="/" aria-label="Showlnk home" className="sl-display text-[2rem] leading-none tracking-normal normal-case">
-          show<span className="text-[var(--sl-gold)]">lnk</span>
+        <Link href="/" aria-label="Showlnk home" className="flex min-h-11 items-center">
+          <ShowlnkLogo eager />
         </Link>
         <nav aria-label="Legal" className="flex items-center gap-1 text-sm font-semibold text-[var(--sl-muted)]">
           <Link href="/terms" className="flex min-h-11 items-center rounded-full px-3 hover:text-[var(--sl-text)]">

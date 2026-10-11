@@ -7,6 +7,7 @@ import { followConsent } from "@/lib/fans";
 import { FAN_COOKIE, fanIdFromCookie, following, tokenInfo } from "@/lib/server/fans";
 import { getOrganizer } from "@/lib/server/funnels";
 import "@/components/showlnk/showlnk.css";
+import ShowlnkLogo from "@/components/showlnk/ShowlnkLogo";
 
 // Where the emailed link lands. Opening it only shows what it's for; the
 // button confirms (so mail scanners that open links don't follow anyone).
@@ -99,8 +100,8 @@ export default async function ConfirmFollowPage({ searchParams }: Props) {
   return (
     <div className={`sl ${show.variable} font-sans`}>
       <header className="mx-auto flex max-w-3xl items-center px-5 py-5 sm:px-8">
-        <Link href="/" aria-label="Showlnk home" className="sl-display text-[2rem] leading-none tracking-normal normal-case">
-          show<span className="text-[var(--sl-gold)]">lnk</span>
+        <Link href="/" aria-label="Showlnk home" className="flex min-h-11 items-center">
+          <ShowlnkLogo eager />
         </Link>
       </header>
       <main id="main-content" className="mx-auto max-w-3xl px-5 pb-24 pt-10 sm:px-8 sm:pt-16">

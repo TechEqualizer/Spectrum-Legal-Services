@@ -12,6 +12,13 @@ const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
 const visits = []; ctx.on('request', (r) => { if (r.url().includes('/api/reel-events')) visits.push(r.url()); });
 await p.goto(B + '/?src=instagram'); await settle(p, 1500);
 check('Showlnk title', /^Showlnk/.test(await p.title()), await p.title());
+// The logo: the gold S and the name, as an image, top and bottom; the S alone is the tab's and home screen's icon.
+const logos = await p.locator('img[alt="Showlnk"]').evaluateAll((imgs) => imgs.map((i) => ({ loaded: i.complete && i.naturalWidth > 0, h: Math.round(i.getBoundingClientRect().height), inHeader: Boolean(i.closest('header')), inFooter: Boolean(i.closest('footer')) })));
+check('the logo heads the page and signs off the footer', logos.length === 2 && logos.every((l) => l.loaded) && logos[0].inHeader && logos[0].h === 36 && logos[1].inFooter, JSON.stringify(logos));
+check('the header logo goes home', await p.getByRole('link', { name: 'Showlnk home' }).getAttribute('href') === '/');
+const icons = await p.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll((ls) => ls.map((l) => l.getAttribute('href')));
+const iconsOk = await Promise.all(icons.map(async (h) => (await fetch(new URL(h, B))).ok));
+check('the S is the tab icon and the home-screen icon', icons.some((h) => h.startsWith('/icon.png')) && icons.some((h) => h.startsWith('/apple-icon.png')) && iconsOk.every(Boolean), icons.join(', '));
 check('the promise in one line', (await p.getByRole('heading', { level: 1 }).innerText()).replace(/\s+/g, ' ').toLowerCase() === "don't just announce the night. invite them into it.");
 check('no law firm left', !/attorney|injury|law firm/i.test(await p.locator('body').innerText()));
 check('the form is on the first screen', (await p.locator('#join').boundingBox()).y < 900);
