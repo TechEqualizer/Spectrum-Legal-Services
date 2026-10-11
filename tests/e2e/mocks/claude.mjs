@@ -17,6 +17,16 @@ const replies = {
 const clip = (camera, seconds, prompt) => ({ camera, seconds, prompt });
 const draft = {
   screen: { title: 'Masks on, Detroit', tagline: 'One night. Every mask hides a story. Detroit, Oct 31, 21+.', watchLabel: 'Step inside the night', heading: 'Which night are you in?' },
+  // The opening, cut from the flyer: one shot with an unknown move (dropped) and one too small to stay sharp (widened).
+  opening: {
+    beats: [
+      { box: { x: 0.69, y: 0.02, w: 0.31, h: 0.37 }, move: 'pull', seconds: 2, text: { lines: ['Golden Hour', 'presents'], at: 'bottom', size: 'eyebrow' } },
+      { box: { x: 0.35, y: 0.53, w: 0.3, h: 0.34 }, move: 'tilt-up', seconds: 1.7, text: { lines: ['Masks on.'], at: 'bottom', size: 'big' } },
+      { box: { x: 0.5, y: 0.5, w: 0.1, h: 0.1 }, move: 'spin', seconds: 1.7, text: { lines: ['Dropped'], at: 'top', size: 'big' } },
+      { box: { x: 0.45, y: 0.2, w: 0.1, h: 0.1 }, move: 'pan-left', seconds: 1.7, text: { lines: ['Secrets', 'revealed.'], at: 'top', size: 'big' } },
+    ],
+    hold: { x: 0.3, y: 0.5, w: 0.4, h: 0.4 },
+  },
   styleLock: 'Anamorphic 35mm look, candlelit gold and deep plum, soft film grain, 24fps, vertical 9:16.',
   avoid: 'on-screen text, letters, logos, watermarks, warped hands, melting faces, flicker, sudden cuts',
   hero: clip('slow push in', 8, 'A woman in a gold filigree mask turns to camera as candlelight flickers; the bottom third falls into shadow.'),

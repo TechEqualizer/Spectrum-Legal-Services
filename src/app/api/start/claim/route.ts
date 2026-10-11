@@ -14,6 +14,7 @@ import { publicationTag } from "@/lib/server/publications";
 import { isTimeZone } from "@/lib/event-time";
 import { REEL_ROLES, type FunnelDraft } from "@/lib/funnel-draft";
 import { parseLook } from "@/lib/look";
+import { parseOpening } from "@/lib/opening";
 import { claimPublication, nightName, type StartDraft } from "@/lib/start-draft";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -40,6 +41,8 @@ function draftFrom(input: unknown): StartDraft {
     return [{ name: str(x.name, 80), date, time: /^\d{2}:\d{2}$/.test(time) ? time : "", venue: str(x.venue, 80), price: str(x.price, 30), ticketUrl: str(x.ticketUrl, 2000) }];
   });
   const r = raw.reels as FunnelDraft | undefined;
+  // The opening cut from the flyer, cleaned again like everything from the browser.
+  const opening = r && typeof r === "object" ? parseOpening(r.opening) : null;
   const reels =
     r && typeof r === "object" && r.screen && typeof r.screen === "object" && Array.isArray(r.reels)
       ? {
@@ -50,6 +53,7 @@ function draftFrom(input: unknown): StartDraft {
               ? [{ role: x.role, title: str(x.title, 80), summary: str(x.summary, 280), hook: "", captions: [], ...(typeof x.date === "string" ? { date: str(x.date, 10) } : {}), source: "text" as const, videoPrompt: "" }]
               : []
           ),
+          ...(opening ? { opening } : {}),
         }
       : undefined;
   const look = raw.look && typeof raw.look === "object" ? parseLook(raw.look) : undefined;

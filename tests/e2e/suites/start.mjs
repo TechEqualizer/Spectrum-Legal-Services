@@ -72,8 +72,12 @@ await reel('Opening').getByLabel('Title').waitFor({ timeout: 15000 }).catch(() =
 check('the reels, in order', (await cards.locator('p.uppercase').allTextContents()).join('|') === 'Opening|1 · The Night|2 · Your People|3 · Last Call', (await cards.locator('p.uppercase').allTextContents()).join('|'));
 check('drafted from the flyer', (await reel('Opening').getByLabel('Title').inputValue()) === 'Masks on, Detroit' && (await reel('The Night').getByLabel('Title').inputValue()) === 'Masks on');
 check('each says what it answers', await reel('Your People').getByText('Is this for someone like me?').isVisible());
-await p.waitForTimeout(800);
-check('the phone: the drafted opening', await phone.getByText('Masks on, Detroit').first().isVisible().catch(() => false));
+// The opening cut from the flyer plays first, with the flyer's own words; the title comes up as it settles.
+const playing = await phone.getByText('Masks on.', { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true, () => false);
+check('the phone: the opening plays, with the flyer\'s words', playing && !(await phone.getByText('Masks on, Detroit').first().isVisible().catch(() => false)));
+check('the phone: a shot too small to stay sharp was widened, an unknown move dropped', !(await phone.getByText('Dropped', { exact: true }).count()));
+await phone.getByText('Masks on, Detroit').first().waitFor({ timeout: 15000 }).catch(() => {});
+check('the phone: then the drafted opening\'s title', await phone.getByText('Masks on, Detroit').first().isVisible().catch(() => false));
 check('the drafting read counted once', (await (await admin.request.get(B + '/api/admin/invites')).json()).invites.find((i) => i.note === 'Velvet Room')?.flyer_reads === 1);
 
 // Words change in place.

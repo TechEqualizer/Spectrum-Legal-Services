@@ -7,6 +7,7 @@ import type { Funnel, FunnelCta, FunnelEvent, ReelEmphasis, ReelMedia } from "@/
 import { isTimeZone } from "@/lib/event-time";
 import { fanRefFolder, isFanRef } from "@/lib/fan-reels";
 import { parseLook, themeOf, type Look } from "@/lib/look";
+import { checkOpening } from "@/lib/opening";
 import { REEL_ROLES, type ReelRole } from "@/lib/funnel-draft";
 
 export type Publication = {
@@ -117,6 +118,8 @@ export function checkMedia(m: unknown, fansFolder?: string): string | null {
   if (m.kind === "youtube") return typeof m.id === "string" && YOUTUBE_ID.test(m.id) ? null : "bad YouTube id";
   if (m.kind === "image") {
     if (m.fit !== undefined && m.fit !== "poster" && m.fit !== "blur") return "unknown photo fit";
+    // Only a flyer shown whole behind the opening screen plays as an opening.
+    if (m.opening !== undefined && (m.fit !== "poster" || fansFolder !== undefined || checkOpening(m.opening))) return "bad opening scene";
     return ok(m.src) ? null : "photo needs an https link";
   }
   if (m.kind === "video") {

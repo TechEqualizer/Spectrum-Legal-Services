@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState } from "react";
 import BrandLogo from "@/components/BrandLogo";
 import { titleFontClass } from "@/components/lookFonts";
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
 import { sceneMediaOf, thumbnailOf, youtubeEmbedUrl } from "@/lib/media";
+import type { OpeningRecipe } from "@/lib/opening";
+
+// The opening's player loads only on links that have one.
+const OpeningBackdrop = dynamic(() => import("@/components/OpeningBackdrop"), { ssr: false });
 
 // Specks of light drifting up through the glow: left %, bottom %, size px, seconds, delay.
 const MOTES: [number, number, number, number, number][] = [
@@ -51,12 +56,21 @@ export default function CinematicHero({
   const title = hero?.title ?? cover.heading;
   const tagline = hero?.tagline ?? cover.intro;
   const touch = useRef<{ x: number; y: number } | null>(null);
+  // A flyer with an opening plays it first; the words come up as it settles (or on a tap).
+  const opening = media?.kind === "image" && media.fit === "poster" ? media.opening : undefined;
+  const [settled, setSettled] = useState(!opening);
+  const [skip, setSkip] = useState(false);
+  const onHold = useCallback(() => setSettled(true), []);
+  const shown = revealed && settled;
 
   return (
     <div
       className={`relative isolate flex flex-col overflow-hidden ${
         full ? "flex-1" : "cine-hero-short short:min-h-0"
       }`}
+      onPointerDown={() => {
+        if (!settled) setSkip(true);
+      }}
       onTouchStart={(e) => {
         touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }}
@@ -72,6 +86,19 @@ export default function CinematicHero({
       }}
     >
       <Scene media={media} paused={paused} live={revealed} zoom={hero?.zoom} />
+      {opening && media?.kind === "image" && revealed && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+          <OpeningBackdrop
+            src={media.src}
+            recipe={opening as OpeningRecipe}
+            fontClass={titleFontClass(cover.titleFont)}
+            caps={cover.titleFont === "regal" || cover.titleFont === "bold"}
+            paused={paused}
+            skip={skip}
+            onHold={onHold}
+          />
+        </div>
+      )}
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6">
         <div className="flex items-center justify-between gap-4">
@@ -87,7 +114,8 @@ export default function CinematicHero({
           )}
         </div>
 
-        <div className={`mt-auto ${full ? "pb-4 pt-10" : "pb-6 pt-12"} ${revealed ? "" : "invisible"}`}>
+        {/* Keyed, so its lines come up afresh once an opening settles. */}
+        <div key={shown ? "shown" : "waiting"} className={`mt-auto ${full ? "pb-4 pt-10" : "pb-6 pt-12"} ${shown ? "" : "invisible"}`}>
           {eyebrow && (
             <p className="cine-reveal mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-accent max-[400px]:tracking-[0.16em]" style={{ animationDelay: "0.55s" }}>
               {eyebrow}

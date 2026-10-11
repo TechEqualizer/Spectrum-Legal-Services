@@ -9,13 +9,21 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { flyerBlock, missingKeyProblem, type FlyerInput } from "@/lib/server/flyer-import";
 import { REEL_ORDER, REEL_ROLES, type DraftReel, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
+import { OPENING_MOVES, parseOpening } from "@/lib/opening";
 import { SCREEN_LIMITS } from "@/lib/publication";
 
 const str = (description: string) => ({ type: "string", description });
+const box = (description: string) => ({
+  type: "object",
+  additionalProperties: false,
+  required: ["x", "y", "w", "h"],
+  description: `${description}. Fractions of the flyer, 0 to 1 from its top left: x, y the box's top left corner, w, h its width and height.`,
+  properties: { x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" } },
+});
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["screen", "styleLock", "avoid", "hero", "reels"],
+  required: ["screen", "opening", "styleLock", "avoid", "hero", "reels"],
   properties: {
     screen: {
       type: "object",
@@ -26,6 +34,38 @@ const SCHEMA = {
         tagline: str(`One line under it, under ${SCREEN_LIMITS.tagline} characters`),
         watchLabel: str(`The main button into the reels, under ${SCREEN_LIMITS.watchLabel} characters`),
         heading: str(`Small heading above the date circles, under ${SCREEN_LIMITS.heading} characters`),
+      },
+    },
+    opening: {
+      type: "object",
+      additionalProperties: false,
+      required: ["beats", "hold"],
+      properties: {
+        beats: {
+          type: "array",
+          description: "3 or 4 shots on the flyer's own artwork, in the order they play",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["box", "move", "seconds", "text"],
+            properties: {
+              box: box("The part of the flyer this shot shows: a face, a figure, a striking detail, clear of the flyer's lettering, at least a third of the flyer's width, and close to a tall phone shape"),
+              move: { type: "string", enum: [...OPENING_MOVES], description: "The camera's move through the shot" },
+              seconds: { type: "number", description: "1.5 to 2.2" },
+              text: {
+                type: "object",
+                additionalProperties: false,
+                required: ["lines", "at", "size"],
+                properties: {
+                  lines: { type: "array", items: str("One short line, under 24 characters"), description: "0 to 3 lines; empty for a shot with no words" },
+                  at: { type: "string", enum: ["top", "middle", "bottom"], description: "Where the shot has room for words, away from faces" },
+                  size: { type: "string", enum: ["eyebrow", "big"], description: "eyebrow: a small presenter credit; big: a selling line" },
+                },
+              },
+            },
+          },
+        },
+        hold: box("The calm shot the scene settles on under the page's title: the flyer's strongest figure or image, with room below it"),
       },
     },
     styleLock: str("One paragraph of shared visual style for every clip"),
@@ -64,7 +104,8 @@ const instructions = (ctx: DraftContext) => `You are a creative director for nig
 
 Today is ${ctx.today}. The organizer's brand is "${ctx.brand}". Dates already known: ${ctx.dates.length ? ctx.dates.map((d) => [d.date, d.name, d.price, d.status === "few_left" ? "few tickets left" : d.status === "sold_out" ? "sold out" : ""].filter(Boolean).join(", ")).join("; ") : "none yet"}.${ctx.photos ? " The organizer will also use their own event photos." : ""}
 
-Write four things:
+Write five things:
+0. opening: the first seconds of the link, cut from the flyer itself like a film trailer. Pick 3 or 4 shots on the flyer's artwork (faces, figures, striking details), each a box clear of the flyer's printed words, at least a third of the flyer's width, and close to a tall phone shape; give each a camera move. Set short lines over them, copied from the flyer's own words (its presenter credit, taglines, the night's promise): the first shot's line is the presenter credit as an eyebrow when the flyer has one ("Big Love Productions", "presents"), then one or two big selling lines per shot (e.g. "Masks on." / "Fashion" "forward."). Put the words where the shot has room, never over a face. Never invent words, names, dates or claims the flyer doesn't print. The whole flyer follows these shots by itself. Then pick the hold: the calm shot the scene settles on under the page's title.
 1. screen and hero: the opening scene. A short, confident title (the event's own name works), a tagline that sells the feeling, a main-button label inviting people to watch (e.g. "Sneak peek inside"), a heading above the date circles (e.g. "Which night?"), and the looping background clip: pure atmosphere that sets the world of the night.
 2. reels: exactly three, in this order, each built on one proven reason people buy a ticket. Each answers one question the viewer has before buying:
    - the_night ("Will this be amazing?"): desire and self-image. Sell who the viewer gets to BE that night, not the venue: the arrival, the peak moment, the look, the feeling, in second person and present tense ("You, in gold."). Cinematic and aspirational.
@@ -168,9 +209,12 @@ export function cleanDraft(raw: Record<string, unknown>): FunnelDraft | { proble
   const reels = REEL_ORDER.flatMap((role) => byRole.get(role) ?? []);
   if (!reels.length) return { problem: "Couldn't draft reels from this flyer. Try a clearer photo." };
   const fit = (s: unknown, key: keyof typeof SCREEN_LIMITS) => clean(s, SCREEN_LIMITS[key]);
+  const opening = parseOpening(raw.opening);
   return {
     screen: { title: fit(screen.title, "title"), tagline: fit(screen.tagline, "tagline"), watchLabel: fit(screen.watchLabel, "watchLabel"), heading: fit(screen.heading, "heading") },
     heroPrompt: clipPrompt(hero.camera, hero.seconds, hero.prompt, styleLock, avoid, true),
     reels,
+    // Played from the flyer itself; a draft without a usable one keeps the still flyer.
+    ...(opening ? { opening } : {}),
   };
 }

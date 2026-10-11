@@ -9,6 +9,8 @@
 //   3. Last Call: fear of missing out. The true reason to buy now.
 // Each comes with a video prompt to paste into a video tool.
 
+import type { OpeningRecipe } from "@/lib/opening";
+
 export const REEL_ROLES = {
   the_night: "The Night",
   your_people: "Your People",
@@ -48,6 +50,8 @@ export type FunnelDraft = {
   heroPrompt: string;
   /** The three core reels, in REEL_ORDER (one may be missing if the flyer gave nothing for it). */
   reels: DraftReel[];
+  /** The opening scene cut from the flyer, with its own words (src/lib/opening.ts). */
+  opening?: OpeningRecipe;
 };
 
 /**

@@ -175,7 +175,8 @@ export function draftLink(d: StartDraft, { core = false, now = Date.now(), timeZ
     version: 1,
     reels,
     funnel: { order: reels.map((r) => r.id), topics: {}, paths: {}, primaryCta: "tickets" },
-    ...(flyer ? { backdrop: flyer } : {}),
+    // The flyer plays as the opening Claude cut from it (free for everyone), else stands still.
+    ...(flyer ? { backdrop: d.reels?.opening ? { ...flyer, opening: d.reels.opening } : flyer } : {}),
     ...(screen ? { screen } : {}),
     ...(d.look ? { look: { ...d.look, flyer: undefined } } : {}),
     ...(shown ? { events: shown } : {}),

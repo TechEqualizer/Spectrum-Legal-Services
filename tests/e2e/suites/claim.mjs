@@ -93,6 +93,8 @@ check('in their flyer\'s colors', Boolean(pub?.look?.colors), JSON.stringify(pub
 check('not the preview extras', !pub?.reels?.some((r) => r.visibility === 'fans') && !pub?.events?.some((e) => e.presale) && !String(JSON.stringify(pub)).includes('data:image'));
 // Their flyer, kept: stored in the event's folder, the opening scene, behind each reel, and the look's flyer.
 const flyerUrl = pub?.backdrop?.src ?? '';
+const op = pub?.backdrop?.opening;
+check('the opening is stored with it, cleaned: 3 shots, none too small', op?.beats?.length === 3 && op.beats.every((b) => b.box.w >= 0.28) && !JSON.stringify(op).includes('Dropped') && op.hold?.w >= 0.35, JSON.stringify(op));
 check('their flyer, stored with the event', /^http:\/\/localhost:54321\/storage\/v1\/object\/public\/reel-media\/golden-hour-halloween\/[a-z0-9]+-flyer\.jpg$/.test(flyerUrl) && pub.backdrop.kind === 'image' && pub.backdrop.fit === 'poster', JSON.stringify(pub?.backdrop));
 check('behind each reel, and as the look\'s flyer', pub?.reels?.every((r) => r.media?.src === flyerUrl) && pub?.look?.flyer === flyerUrl);
 const stored = await fetch(flyerUrl);
@@ -108,7 +110,11 @@ check('the dates as rows', dates.length === 2, JSON.stringify(dates));
 // Their link, live.
 const fan = await (await b.newContext()).newPage();
 await fan.goto(B + '/f/golden-hour-halloween'); await settle(fan, 1500);
-check('the night is live, in their words', await fan.getByText('Masks on, Motor City').first().isVisible().catch(() => false));
+// The opening plays first; a tap skips it, and the title comes up.
+check('the link opens on the flyer\'s opening', await fan.getByText('Masks on.', { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true, () => false));
+await fan.mouse.click(200, 300);
+await fan.getByText('Masks on, Motor City').first().waitFor({ timeout: 5000 }).catch(() => {});
+check('the night is live, in their words (a tap skips the opening)', await fan.getByText('Masks on, Motor City').first().isVisible().catch(() => false));
 // They signed up themselves: Follow is on for them, and Core's presale and fans-only parts with the trial.
 await fan.getByRole('button', { name: /Sneak peek inside|Step inside/ }).first().click().catch(() => {});
 const followShown = fan.getByText('Follow', { exact: true }).locator('visible=true').first();
