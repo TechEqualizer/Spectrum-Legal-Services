@@ -5,10 +5,25 @@ description: Direct and review a link's opening scene, the short trailer cut fro
 
 # The opening scene
 
-The first seconds of a link: a cut through the event's own flyer, with the
-flyer's own lines set over the shots, then the whole flyer, then a calm hold
-under the link's title. It's free for every event: no video model is involved.
-The browser draws it from a **recipe** (`src/lib/opening.ts`).
+The first seconds of a link, cut like a teaser from the event's own flyer.
+It's free for every event: no video model is involved. The browser draws it
+from a **recipe** (`src/lib/opening.ts`) that Claude writes when it reads the
+flyer. It plays like this (`src/remotion/OpeningScene.tsx`):
+
+1. **The hook.** The first shot's line (two to four words), huge on black,
+   one word a row, with the flyer drifting inside the letters and a sheen
+   crossing them. The cutting
+   moods then fly through the words into the first shot; in the dissolving
+   moods, the black falls away around the words instead.
+2. **One camera.** It moves across the flyer from shot to shot, resting on
+   each with a move (push, pull, tilt, pan). It travels between shots in the
+   dissolving moods, and cuts with a punch-in and flash in the others. Each
+   shot's line is set over it, in the mood's type style.
+3. **The reveal.** The camera pulls back from the last shot to the whole
+   flyer, with a light sweeping across the print. Every detail turns out to
+   be this poster.
+4. **The hold.** The poster fades into a calm, softened loop, and the link's
+   title and button come up over it, about six seconds in.
 
 For Remotion itself (frames, sequences, transitions), also follow
 `remotion-best-practices`.
@@ -20,13 +35,19 @@ the time of day, who it speaks to, its type and palette. Pick the **mood**
 from that, before anything else. The mood decides the cut; the shots and
 words follow from it.
 
-| Mood | For | Cut | In the air | Words |
-| --- | --- | --- | --- | --- |
-| electric | club nights, parties, hip-hop and R&B, concerts | fast (0.75×), punch-ins with an accent flash | embers | one or two loud words a line |
-| glamour | galas, fashion shows, masquerades, awards | 1×, punch-ins, white flash, light leak | glitter | confident, a promise |
-| soulful | jazz, live music, comedy, lounges, gospel | slow (1.15×), dissolves, light leak | haze | warm, an invitation |
-| editorial | book signings, talks, galleries, panels | slowest (1.25×), dissolves, no leak | dust | calm, let the flyer speak |
-| sunlit | day parties, brunches, festivals, cookouts | 0.9×, punch-ins, white flash | sun motes | bright and easy |
+| Mood | For | Pace | Cut | Type | In the air | Words |
+| --- | --- | --- | --- | --- | --- | --- |
+| electric | club nights, parties, hip-hop and R&B, concerts | 0.8× | punch-in, accent flash | slammed a word at a time | embers | one or two loud words a line |
+| glamour | galas, fashion shows, masquerades, awards | 0.95× | punch-in, white flash, light leak | tracks in from wide | glitter | confident, a promise |
+| soulful | jazz, live music, comedy, lounges, gospel | 1.05× | camera glides, light leak | surfaces softly | haze | warm, an invitation |
+| editorial | book signings, talks, galleries, panels | 1.1× | camera glides, no leak | rises from a mask, left-aligned | dust | calm, let the flyer speak |
+| sunlit | day parties, brunches, festivals, cookouts | 0.9× | punch-in, white flash, light leak | rises from a mask | sun motes | bright and easy |
+
+Each mood also sets the light and the camera: a color grade (glamour warm and
+gold, editorial cool and crisp, soulful warm and soft, electric hard and
+saturated, sunlit bright), a bloom (the glow film gives highlights), and how
+steady the camera is (electric and sunlit hand-held; the rest a gentle
+float).
 
 The moods live in `OPENING_MOODS`. When a new kind of event doesn't fit any
 of them, add a mood there (its direction is plain data) rather than bending
@@ -92,12 +113,16 @@ ffmpeg we already have; nothing gets installed.
    ```
 
    It plays the recipe on `/dev/opening` (a development-only page that 404s
-   in production) on a 390×844 phone and records it. It writes:
-   - `opening.mp4`;
+   in production) on a 390×844 phone. It steps the scene one frame at a time
+   at 2× resolution, so the video is smooth and sharp even on a slow machine
+   (a recording of it playing live drops most of its frames). It writes:
+   - `opening.mp4`, 30 frames a second;
    - a frame every half second plus every hard cut;
    - `held.png`, the hold under the title;
    - `sheet.png`, all the frames side by side.
 
+   A full render takes a few minutes. Add `--step 6` for a quick draft (every
+   sixth frame), and `--live` to record the real player playing instead.
    Times are printed from the opening's start.
 3. Look at `sheet.png` and `held.png` (Read them), and check:
    - [ ] Does the first image and line land inside the first second? Is it
@@ -107,13 +132,15 @@ ffmpeg we already have; nothing gets installed.
    - [ ] Does it feel like this kind of event? (Pace, cuts and particles fit
      the mood.)
    - [ ] Is every line readable, the eyebrow included, with nothing over a
-     face or the flyer's own type?
+     face, and none of the flyer's own lettering creeping into a shot?
    - [ ] Does one beat's words clear before the next beat's words come up?
    - [ ] Is every shot a recognizable subject, sharp, and no repeat of an
      earlier one unless it's closer?
    - [ ] Is each line on screen long enough to read (about a second or
      more)?
-   - [ ] Is the whole flyer shown crisp before the hold?
+   - [ ] Do the hook's letters read on black? Does the flyer show through
+     them?
+   - [ ] Does the pull-back land on the whole flyer, crisp, before the hold?
    - [ ] Do the title, tagline and button read clearly over the hold?
 4. Fix the recipe (or the scene, for a problem every recipe would have), and
    watch again. Stop when the checklist passes. Two rounds is usually enough.
@@ -121,6 +148,19 @@ ffmpeg we already have; nothing gets installed.
 When a fix belongs in how Claude writes openings for everyone, change the
 instructions in `src/lib/server/funnel-draft.ts` (or a mood in
 `OPENING_MOODS`), not just the one recipe.
+
+## Where openings come from
+
+- **Sign-up:** Claude cuts the opening while it drafts the funnel from the
+  flyer (`draftFunnel`).
+- **Existing events:** the Design tab's Opening section (`OpeningCard` in
+  `src/admin/components/StyleSheet.tsx`). Make my opening calls
+  `/api/admin/opening` (`draftOpening`). Feels like changes the mood with
+  no new call, Make another asks for a different cut in that mood, and Turn
+  off goes back to the still flyer.
+
+Both use the same brief and schema (`openingBrief` and `OPENING_SCHEMA`), so a
+rule changed there applies to both.
 
 ## Storing one by hand
 

@@ -48,11 +48,13 @@ http.createServer((req, res) => {
       last = { headers: req.headers, body: JSON.parse(body) };
       res.setHeader('content-type', 'application/json');
       const drafting = /creative director/.test(JSON.stringify(last.body.system));
+      // The Design tab's opening alone: the draft's opening.
+      const cutting = /you cut the opening of the link/.test(JSON.stringify(last.body.system));
       // nodraft: flyers read as multi, but drafting reels is declined.
       if (mode === 'refusal' || (mode === 'nodraft' && drafting)) return res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: 'refusal', usage: { input_tokens: 1, output_tokens: 0 } }));
       res.setHeader('content-type', 'application/json');
       setTimeout(() => res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5',
-        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(drafting ? draft : replies[mode === 'nodraft' ? 'multi' : mode]) }],
+        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? { opening: draft.opening } : drafting ? draft : replies[mode === 'nodraft' ? 'multi' : mode]) }],
         stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } })), 600);
       return;
     }

@@ -1,21 +1,20 @@
-import { TransitionSeries, linearTiming } from "@remotion/transitions";
-import { fade } from "@remotion/transitions/fade";
-import { pushCut } from "@remotion/transitions/push-cut";
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { useId } from "react";
+import { AbsoluteFill, Easing, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { DEFAULT_MOOD, OPENING_MOODS, type OpeningRecipe, type OpeningText } from "@/lib/opening";
-import { Grain, LightLeak, Shot, Sparks, type TrailerShot } from "@/remotion/shots";
+import { Flyer, Grain, LightLeak, Sparks, camOn, camOnPoster, drift, mix, place, type Cam } from "@/remotion/shots";
 
 /**
- * The opening scene of a link, made from its flyer: a short intro that cuts
- * through the flyer's artwork with the flyer's own lines set over it, then
- * settles into a calm hold that loops under the link's title and button.
+ * The opening scene of a link, made from its flyer, cut like a teaser: the
+ * hook (the flyer's best line, huge, filled with the flyer itself), then one
+ * camera travelling across the flyer from subject to subject with the
+ * flyer's own lines set over it, then pulling back to reveal the whole
+ * poster, which settles into a calm hold under the link's title and button.
  *
  * The words are typeset by us (crisp, in the look's title font and colors),
  * placed where Claude says the shot has room (never over a face), and every
- * motion is driven by the frame (see .claude/skills/remotion-best-practices).
+ * motion is driven by the frame (see .claude/skills/remotion-best-practices
+ * and .claude/skills/opening-scene).
  */
-type Beat = { shot: TrailerShot; text?: OpeningText };
-
 export type OpeningSceneProps = {
   src: string;
   /** The flyer's size in pixels, to frame each shot. */
@@ -26,50 +25,69 @@ export type OpeningSceneProps = {
   fontClass: string;
   /** Uppercase the big lines (engraved and condensed fonts read best that way). */
   caps: boolean;
-  /** The look's highlight, for the last line, the rule and the embers (any CSS color). */
+  /** The look's highlight, for the last line, the rules and what floats in the air (any CSS color). */
   accent: string;
 };
 
-const POSTER_SECONDS = 2.4;
-const HOLD_SECONDS = 6;
+type Frame = { W: number; H: number; fw: number; fh: number };
 
-// Frames each join takes: a punch-in is quick; a dissolve lingers. The join into the
-// whole flyer is a light leak (which overlaps nothing) or, without one, a dissolve.
-const CUT = { punch: 8, dissolve: 14 } as const;
-// The frame rate joins are counted at (OpeningBackdrop plays at 30).
-const FPS = 30;
+const POSTER_SECONDS = 1;
+const HOLD_SECONDS = 6;
+// Frames the whole flyer takes to fade into the hold, and a punch-in to settle.
+const INTO_HOLD = 20;
+const SNAP = 7;
+
 /** How this opening is directed (its mood), with recipes from before moods as glamour. */
 const directionOf = (recipe: OpeningRecipe) => OPENING_MOODS[recipe.mood ?? DEFAULT_MOOD];
+const wordsIn = (t?: OpeningText) => (t ? t.lines.join(" ").split(/\s+/).length : 0);
+const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+const glide = Easing.bezier(0.65, 0, 0.35, 1);
+const settle = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 /**
- * The recipe's shots at the mood's pace, each a little shorter than the one
- * before (a trailer's cuts quicken into the reveal), but always long enough
- * to read its words; then the whole flyer; and the hold.
+ * A camera operator's sway: a few slow, unrelated waves (in screen pixels, and
+ * degrees of roll), so even a resting shot never looks computed. A hand-held
+ * camera (shake 4 and up) also has a quicker tremor.
  */
-function cut(recipe: OpeningRecipe): { beats: Beat[]; hold: TrailerShot } {
-  const d = directionOf(recipe);
-  const last = recipe.beats.length - 1;
-  // The frames the joins either side of shot i take from it.
-  const join = (i: number) => (i < 0 ? 0 : i < last ? CUT[d.cut] : d.leak ? 0 : CUT.dissolve);
+const sway = (f: number, amp: number) => {
+  const tremor = amp >= 4 ? 0.35 * Math.sin(f * 0.53) + 0.25 * Math.sin(f * 0.91 + 2) : 0;
   return {
-    beats: [
-      ...recipe.beats.map((b, i) => {
-        const words = b.text ? b.text.lines.join(" ").split(/\s+/).length : 0;
-        // Up, held for a glance plus a moment a word, then away, clear of the joins.
-        const readable = words ? 1.1 + 0.15 * words + (join(i - 1) + join(i)) / FPS : 0;
-        return { shot: { box: b.box, move: b.move, seconds: Math.max(b.seconds * d.pace * (1 - d.build * i), readable) }, text: b.text };
-      }),
-      { shot: { box: { x: 0, y: 0, w: 1, h: 1 }, move: "poster" as const, seconds: POSTER_SECONDS } },
-    ],
-    hold: { box: recipe.hold, move: "breathe", seconds: HOLD_SECONDS },
+    x: amp * (Math.sin(f * 0.071) + 0.6 * Math.sin(f * 0.173 + 1.3) + tremor),
+    y: amp * (Math.sin(f * 0.083 + 2.1) + 0.5 * Math.sin(f * 0.151) + tremor * 0.7),
+    roll: amp * 0.05 * Math.sin(f * 0.059 + 0.7),
   };
-}
-
-const INTO_HOLD = 20;
-const joins = (recipe: OpeningRecipe, beats: number) => {
-  const d = directionOf(recipe);
-  return (beats - 2) * CUT[d.cut] + (d.leak ? 0 : CUT.dissolve);
 };
+
+/**
+ * When everything happens, in frames: the hook (a first big line of up to
+ * four words), each shot (at the mood's pace, a little shorter than the one
+ * before, but always long enough to read), the camera's travel between shots
+ * (when the mood dissolves rather than cuts), the pull-back to the whole
+ * flyer, the flyer itself, and the hold.
+ */
+function plan(recipe: OpeningRecipe, fps: number) {
+  const d = directionOf(recipe);
+  const sec = (s: number) => Math.round(s * fps);
+  const first = recipe.beats[0].text;
+  const hook = first?.size === "big" && wordsIn(first) <= 4 ? first : null;
+  const hookFor = hook ? sec((d.cut === "punch" ? 0.85 : 1.15) * d.pace) : 0;
+  const travel = d.cut === "dissolve" ? sec(0.5 * d.pace) : 0;
+  let at = hookFor;
+  const stops = recipe.beats.map((b, i) => {
+    // The hook's own shot is its payoff: a short look, its line already said.
+    const text = i === 0 && hook ? undefined : b.text;
+    const words = wordsIn(text);
+    const seconds = i === 0 && hook ? 0.7 * d.pace : Math.max(b.seconds * 0.62 * d.pace * (1 - d.build * i), words ? 0.8 + 0.12 * words : 0.7);
+    const stop = { from: at, dur: sec(seconds), text };
+    at += stop.dur + (i < recipe.beats.length - 1 ? travel : 0);
+    return stop;
+  });
+  const reveal = { from: at, dur: sec((d.cut === "punch" ? 0.9 : 1.2) * d.pace) };
+  const poster = { from: reveal.from + reveal.dur, dur: sec(POSTER_SECONDS) };
+  const loopFrom = poster.from + poster.dur;
+  const holdStart = loopFrom - INTO_HOLD;
+  return { d, hook: hook ? { dur: hookFor, text: hook } : null, stops, travel, reveal, poster, holdStart, loopFrom, total: holdStart + sec(HOLD_SECONDS) };
+}
 
 /**
  * When the hold starts (as the whole flyer begins fading into it: the title
@@ -77,80 +95,98 @@ const joins = (recipe: OpeningRecipe, beats: number) => {
  * shows the flyer again), and the frames in all.
  */
 export function openingFrames(recipe: OpeningRecipe, fps: number) {
-  const { beats, hold } = cut(recipe);
-  const intro = beats.reduce((sum, b) => sum + Math.round(b.shot.seconds * fps), 0) - joins(recipe, beats.length);
-  const holdStart = intro - INTO_HOLD;
-  return { holdStart, loopFrom: intro, total: holdStart + Math.round(hold.seconds * fps) };
+  const { holdStart, loopFrom, total } = plan(recipe, fps);
+  return { holdStart, loopFrom, total };
 }
 
 export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const { beats, hold } = cut(recipe);
-  const direction = directionOf(recipe);
-  // Frames the join after beat i overlaps the next beat (a light leak overlaps nothing).
-  const overlap = (i: number) => (i < 0 ? 0 : i < beats.length - 2 ? CUT[direction.cut] : i === beats.length - 2 && !direction.leak ? CUT.dissolve : 0);
+  const { fps, width: W, height: H } = useVideoConfig();
+  const p = plan(recipe, fps);
+  const { d } = p;
+  const fr: Frame = { W, H, fw: width, fh: height };
+  const shots = p.stops.map((s, i) => ({ ...s, cams: drift(camOn(recipe.beats[i].box, fr), recipe.beats[i].move, fr) }));
+  const poster = camOnPoster(fr);
+  const punch = d.cut === "punch";
+  // A punch-in lands on every shot after a cut (the first too, when the hook flies into it).
+  const punched = (i: number) => punch && (i > 0 || Boolean(p.hook));
+
+  /** Where the camera is at frame f, and whether a cut lands there. */
+  const camAt = (f: number): { cam: Cam; cut: boolean } => {
+    if (f < shots[0].from) return { cam: shots[0].cams[0], cut: false };
+    for (let i = 0; i < shots.length; i++) {
+      const s = shots[i];
+      if (f < s.from + s.dur) {
+        const c = mix(s.cams[0], s.cams[1], settle((f - s.from) / s.dur));
+        const k = f - s.from;
+        if (punched(i) && k < SNAP) c.z += Math.log(1 + 0.16 * (1 - Easing.out(Easing.cubic)(k / SNAP)));
+        return { cam: c, cut: punched(i) && k === 0 };
+      }
+      const next = shots[i + 1];
+      if (next && f < next.from) return { cam: mix(s.cams[1], next.cams[0], glide((f - s.from - s.dur) / p.travel)), cut: false };
+    }
+    const last = shots[shots.length - 1].cams[1];
+    if (f < p.poster.from) return { cam: mix(last, poster, glide((f - p.reveal.from) / p.reveal.dur)), cut: false };
+    return { cam: { ...poster, z: poster.z + Math.log(1 + 0.03 * Math.min(1, (f - p.poster.from) / p.poster.dur)) }, cut: false };
+  };
+  const now = camAt(frame);
+  const hand = sway(frame, d.shake);
+  const s = Math.exp(now.cam.z);
+  const held = { ...now.cam, x: now.cam.x - hand.x / (width * s), y: now.cam.y - hand.y / (height * s) };
+  // Motion blur from how far the picture moved since the last frame (none across a cut).
+  const a = place(now.cam, fr);
+  const b = place(camAt(Math.max(0, frame - 1)).cam, fr);
+  const speed = now.cut ? 0 : Math.abs(a.left - b.left) + Math.abs(a.top - b.top) + Math.abs(a.width - b.width) * 0.5;
+  // A light crosses the print as it lands (not for the quiet moods).
+  const shines = d.flash !== null || d.leak;
+  const sweep = shines ? (frame - (p.poster.from - 8)) / (0.9 * fps) : -1;
+
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <TransitionSeries>
-        {beats.flatMap((beat, i) => {
-          const items = [
-            <TransitionSeries.Sequence key={`beat-${i}`} name={`Beat ${i + 1}`} durationInFrames={Math.round(beat.shot.seconds * fps)} premountFor={fps}>
-              <Shot src={src} width={width} height={height} shot={beat.shot} />
-              {beat.text && <Words text={beat.text} fontClass={fontClass} caps={caps} accent={accent} enter={overlap(i - 1)} leave={overlap(i)} />}
-            </TransitionSeries.Sequence>,
-          ];
-          if (i < beats.length - 2) {
-            const loud = direction.flash === "accent";
-            items.push(
-              direction.cut === "punch" ? (
-                <TransitionSeries.Transition
-                  key={`cut-${i}`}
-                  presentation={pushCut({ flashColor: loud ? accent : "#fff", flashOpacity: loud ? 0.75 : 0.5, flashFrames: 3, incomingStartScale: loud ? 1.28 : 1.16 })}
-                  timing={linearTiming({ durationInFrames: CUT.punch })}
-                />
-              ) : (
-                <TransitionSeries.Transition key={`cut-${i}`} presentation={fade()} timing={linearTiming({ durationInFrames: CUT.dissolve })} />
-              ),
-            );
-          } else if (i === beats.length - 2 && !direction.leak) {
-            items.push(<TransitionSeries.Transition key={`cut-${i}`} presentation={fade()} timing={linearTiming({ durationInFrames: CUT.dissolve })} />);
-          } else if (i === beats.length - 2) {
-            // A light leak washes into the last beat.
-            items.push(
-              <TransitionSeries.Overlay key={`leak-${i}`} durationInFrames={18}>
-                <LightLeak seed={i} hue={0} />
-              </TransitionSeries.Overlay>,
-            );
-          }
-          return items;
-        })}
-        <TransitionSeries.Transition presentation={fade()} timing={linearTiming({ durationInFrames: INTO_HOLD })} />
-        <TransitionSeries.Sequence name="Hold" durationInFrames={Math.round(hold.seconds * fps)} premountFor={fps}>
-          {/* Softened, like a backdrop behind a title: whatever the flyer prints there never fights the link's own words. */}
-          <AbsoluteFill style={{ filter: "blur(5px) brightness(0.7)" }}>
-            <Shot src={src} width={width} height={height} shot={hold} />
+      <Flyer src={src} frame={fr} cam={held} blur={Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={d.bloom} tilt={hand.roll} />
+      {shots.map(
+        (s, i) =>
+          s.text && (
+            <Sequence key={i} from={s.from} durationInFrames={s.dur} name={`Words ${i + 1}`}>
+              <Words text={s.text} fontClass={fontClass} caps={caps} accent={accent} type={d.type} left={d.align === "left"} />
+            </Sequence>
+          ),
+      )}
+      {shots.map(
+        (s, i) =>
+          punched(i) && (
+            <Sequence key={`flash-${i}`} from={s.from} durationInFrames={4} name={`Flash ${i + 1}`}>
+              <Flash color={d.flash === "accent" ? accent : "#fff"} strength={d.flash === "accent" ? 0.75 : 0.5} />
+            </Sequence>
+          ),
+      )}
+      {d.leak && (
+        // As the camera starts to pull back, so the reveal itself stays clear.
+        <Sequence from={p.reveal.from - 6} durationInFrames={16} name="Light leak">
+          <AbsoluteFill style={{ opacity: 0.45 }}>
+            <LightLeak seed={shots.length} hue={0} />
           </AbsoluteFill>
-          {/* Darker below, where the link's title and button sit. */}
-          <AbsoluteFill style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.25) 62%, transparent 80%)" }} />
-        </TransitionSeries.Sequence>
-      </TransitionSeries>
-      <Sparks kind={direction.sparks} color={accent} />
+        </Sequence>
+      )}
+      <Sequence from={p.holdStart} durationInFrames={p.total - p.holdStart} name="Hold">
+        <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} grade={d.grade} />
+      </Sequence>
+      {p.hook && (
+        <Sequence from={0} durationInFrames={p.hook.dur} name="Hook">
+          <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} />
+        </Sequence>
+      )}
+      <Sparks kind={d.sparks} color={accent} />
       <AbsoluteFill style={{ background: "radial-gradient(120% 85% at 50% 45%, transparent 50%, rgba(0,0,0,0.7))" }} />
       <Grain />
-      {/* Letterbox bars open over the first second, like the first shot of a film. */}
-      <Bars frame={frame} fps={fps} />
+      {/* Without a hook, letterbox bars open quickly over the first shot, like the first shot of a film. */}
+      {!p.hook && <Bars frame={frame} fps={fps} />}
     </AbsoluteFill>
   );
 };
 
 const Bars: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
-  // Quick: the first image lands inside the first second (a hook, not a preamble).
-  const open = interpolate(frame, [0.05 * fps, 0.75 * fps], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.bezier(0.6, 0, 0.2, 1),
-  });
+  const open = interpolate(frame, [0.05 * fps, 0.75 * fps], [1, 0], { ...clamp, easing: Easing.bezier(0.6, 0, 0.2, 1) });
   if (open <= 0) return null;
   return (
     <>
@@ -160,19 +196,135 @@ const Bars: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
   );
 };
 
-/**
- * A beat's lines, set over its shot: each line rises out of a mask one after
- * another, holds, then blurs away just before the cut. `enter` and `leave` are
- * the frames the joins either side overlap this beat, so in a dissolve one
- * beat's words are gone before the next one's come up, never on top of them.
- */
-const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; accent: string; enter: number; leave: number }> = ({ text, fontClass, caps, accent, enter, leave }) => {
+const Flash: React.FC<{ color: string; strength: number }> = ({ color, strength }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  return <AbsoluteFill style={{ backgroundColor: color, opacity: interpolate(frame, [0, 3], [strength, 0], clamp), mixBlendMode: "screen" }} />;
+};
+
+/**
+ * The hook: the flyer's first line, huge, one word a row, each row filling
+ * the width, cut out of black with the flyer showing through the letters.
+ * Then the camera flies through the words into the first shot (the cutting
+ * moods), or the black falls away around them and they melt into it (the
+ * dissolving ones).
+ */
+const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; fontClass: string; caps: boolean; accent: string; through: boolean }> = ({
+  text,
+  src,
+  frame: fr,
+  cam,
+  fontClass,
+  caps,
+  accent,
+  through,
+}) => {
+  const f = useCurrentFrame();
+  const { fps, durationInFrames: dur, width: W, height: H } = useVideoConfig();
+  // An id fit for url(#...): React's own carries characters a CSS url can't.
+  const mask = `hook-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const rows = (text.lines.length === 1 ? text.lines[0].split(/\s+/).slice(0, 3) : text.lines).map((r) => (caps ? r.toUpperCase() : r));
+  // Each row as wide as the frame allows (a rough measure of the face's letters), never taller than a fifth of it.
+  const em = caps ? 0.74 : 0.58;
+  const sizes = rows.map((r) => Math.min(H * 0.2, (W * 0.86) / (r.length * em)));
+  const tall = sizes.reduce((sum, s) => sum + s * 0.92, 0);
+  const tops = sizes.map((_, i) => (H - tall) / 2 + sizes.slice(0, i).reduce((sum, s) => sum + s * 0.92, 0));
+  // The flyer drifts inside the letters, arriving exactly where the first shot starts.
+  const at = place(mix({ ...cam, x: cam.x + 0.03, z: cam.z - Math.log(1.12) }, cam, settle(f / dur)), fr);
+  // A sheen crosses the words while they hold.
+  const sheen = interpolate(f, [0.25 * dur, 0.85 * dur], [-0.45, 1.1], clamp);
+  const away = through ? interpolate(f, [dur - 10, dur], [0, 1], { ...clamp, easing: Easing.in(Easing.cubic) }) : 0;
+  const card = 1 - (through ? interpolate(f, [dur - 5, dur], [0, 1], clamp) : interpolate(f, [dur - 0.45 * fps, dur], [0, 1], clamp));
+  const zoom = (1 + 0.06 * (f / dur)) * (1 + 13 * away);
+  return (
+    <AbsoluteFill style={{ opacity: through ? card : 1 }}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0 }}>
+        <defs>
+          <linearGradient id={`${mask}-sheen`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#fff" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#fff" stopOpacity="0.75" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          </linearGradient>
+          <mask id={mask}>
+            <g transform={`translate(${W / 2} ${H / 2}) scale(${zoom}) translate(${-W / 2} ${-H / 2})`}>
+              {rows.map((r, i) => {
+                const size = sizes[i];
+                // The rows come up one after another.
+                const p = interpolate(f, [2 + i * 4, 2 + i * 4 + 0.35 * fps], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+                return (
+                  <text
+                    key={i}
+                    className={fontClass}
+                    x={W / 2}
+                    y={tops[i] + size * 0.78}
+                    fontSize={size}
+                    textAnchor="middle"
+                    fill="white"
+                    opacity={p}
+                    transform={`translate(0 ${(1 - p) * size * 0.25})`}
+                    textLength={Math.min(W * 0.86, r.length * em * size)}
+                    lengthAdjust="spacingAndGlyphs"
+                  >
+                    {r}
+                  </text>
+                );
+              })}
+            </g>
+          </mask>
+        </defs>
+        <rect width={W} height={H} fill="#000" opacity={card} />
+        {/* The flyer exactly where the first shot will be, brighter, so the letters read on black. */}
+        <image
+          href={src}
+          x={at.left}
+          y={at.top}
+          width={at.width}
+          height={at.height}
+          preserveAspectRatio="none"
+          mask={`url(#${mask})`}
+          style={{ filter: `brightness(${1 + 0.9 * card}) contrast(1.1) saturate(1.2)` }}
+        />
+        {/* A wash of the look's color through the letters, so even a dark part of the flyer reads. */}
+        <rect width={W} height={H} mask={`url(#${mask})`} opacity={0.4 * card} style={{ fill: accent, mixBlendMode: "screen" }} />
+        <g mask={`url(#${mask})`} opacity={card}>
+          <rect x={sheen * W} y={-H * 0.1} width={W * 0.22} height={H * 1.2} transform={`skewX(-18)`} style={{ fill: `url(#${mask}-sheen)`, mixBlendMode: "screen" }} />
+        </g>
+      </svg>
+      {/* A hairline in the look's color under the words. */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: (H + tall) / 2 + 18,
+          height: 2,
+          width: `${interpolate(f, [0.3 * fps, 0.8 * fps], [0, 22], clamp)}%`,
+          translate: "-50% 0",
+          backgroundColor: accent,
+          opacity: card * (1 - away),
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+/**
+ * A shot's lines over the moving flyer, in the mood's hand: slammed in a word
+ * at a time (electric), tracking in from wide (glamour), rising out of a mask
+ * (editorial, sunlit) or surfacing softly (soulful). Gone just before the
+ * shot ends, so the next line never lands on top of it.
+ */
+const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; accent: string; type: "slam" | "track" | "rise" | "soft"; left: boolean }> = ({ text, fontClass, caps, accent, type, left }) => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames: dur, width: W } = useVideoConfig();
   const eyebrow = text.size === "eyebrow";
-  const gone = durationInFrames - Math.max(2, leave);
-  const out = interpolate(frame, [gone - 0.3 * fps, gone], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const place = { top: { top: "13%" }, middle: { top: "40%" }, bottom: { bottom: "17%" } }[text.at];
+  const gone = dur - 3;
+  const out = interpolate(frame, [gone - 0.25 * fps, gone], [0, 1], clamp);
+  const where = { top: { top: "13%" }, middle: { top: "40%" }, bottom: { bottom: "16%" } }[text.at];
+  const lines = text.lines;
+  // One size for the lines, as big as the longest allows.
+  const room = W - 2 * 48;
+  const size = eyebrow ? 26 : Math.min(type === "slam" ? 112 : 96, ...lines.map((l) => room / (l.length * (caps ? 0.74 : 0.56))));
+  // Electric's words land one at a time, across the lines.
+  const firstWord = lines.map((_, i) => lines.slice(0, i).reduce((n, l) => n + l.split(/\s+/).length, 0));
   return (
     <>
       {/* A soft scrim where the words sit, so they read over any artwork. */}
@@ -182,57 +334,99 @@ const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; acc
             text.at === "top"
               ? "linear-gradient(to bottom, rgba(0,0,0,0.6), transparent 42%)"
               : text.at === "bottom"
-                ? "linear-gradient(to top, rgba(0,0,0,0.65), transparent 45%)"
+                ? "linear-gradient(to top, rgba(0,0,0,0.7), transparent 48%)"
                 : "radial-gradient(90% 30% at 50% 47%, rgba(0,0,0,0.5), transparent)",
         }}
       />
-      <div
-        style={{
-          position: "absolute",
-          left: 44,
-          right: 44,
-          ...place,
-          textAlign: "center",
-          opacity: 1 - out,
-          filter: `blur(${out * 10}px)`,
-        }}
-      >
-        {text.lines.map((line, i) => {
-          const start = enter + 0.15 * fps + i * 5;
-          const p = interpolate(frame, [start, start + 0.45 * fps], [0, 1], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-            easing: Easing.bezier(0.16, 1, 0.3, 1),
-          });
-          const last = i === text.lines.length - 1 && text.lines.length > 1;
-          return (
-            <div key={i} style={{ overflow: "hidden", paddingBottom: eyebrow ? 4 : 6 }}>
-              <div
-                className={eyebrow ? undefined : fontClass}
-                style={{
-                  translate: `0px ${(1 - p) * 110}%`,
-                  opacity: p,
-                  color: last ? accent : "#fff",
-                  fontFamily: eyebrow ? "Montserrat, system-ui, sans-serif" : undefined,
-                  fontWeight: eyebrow ? 700 : undefined,
-                  fontSize: eyebrow ? 26 : 74,
-                  lineHeight: eyebrow ? 1.5 : 1.02,
-                  textTransform: eyebrow || caps ? "uppercase" : "none",
-                  // The eyebrow's letters close in as it comes up, like a title credit.
-                  letterSpacing: eyebrow ? `${0.5 - 0.22 * p}em` : caps ? "0.02em" : "-0.01em",
-                  textShadow: "0 2px 24px rgba(0,0,0,0.55)",
-                }}
-              >
+      <div style={{ position: "absolute", left: 48, right: 48, ...where, textAlign: left ? "left" : "center", opacity: 1 - out, filter: `blur(${out * 10}px)` }}>
+        {left && !eyebrow && <div style={{ height: 2, marginBottom: 18, width: `${interpolate(frame, [0, 0.5 * fps], [0, 18], clamp)}%`, backgroundColor: accent }} />}
+        {lines.map((line, i) => {
+          const last = i === lines.length - 1 && lines.length > 1;
+          const base: React.CSSProperties = {
+            color: last ? accent : "#fff",
+            fontFamily: eyebrow ? "Montserrat, system-ui, sans-serif" : undefined,
+            fontWeight: eyebrow ? 700 : undefined,
+            fontSize: size,
+            lineHeight: eyebrow ? 1.5 : 1,
+            letterSpacing: eyebrow ? "0.28em" : caps ? "0.02em" : "-0.01em",
+            textTransform: eyebrow || caps ? "uppercase" : "none",
+            textShadow: "0 2px 24px rgba(0,0,0,0.55)",
+            whiteSpace: "nowrap",
+          };
+          if (eyebrow) {
+            const p = interpolate(frame, [0.1 * fps + i * 5, 0.6 * fps + i * 5], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+            return (
+              <div key={i} style={{ ...base, opacity: p, letterSpacing: `${0.5 - 0.22 * p}em` }}>
                 {line}
               </div>
+            );
+          }
+          if (type === "slam") {
+            // A word at a time, each punched in from big.
+            return (
+              <div key={i} className={fontClass} style={base}>
+                {line.split(/\s+/).map((w, j) => {
+                  const start = 2 + (firstWord[i] + j) * 4;
+                  const p = interpolate(frame, [start, start + 4], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+                  return (
+                    <span key={j}>
+                      {j > 0 && " "}
+                      <span style={{ display: "inline-block", opacity: p, scale: String(1.6 - 0.6 * p), filter: `blur(${(1 - p) * 6}px)` }}>{w}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            );
+          }
+          const start = 0.1 * fps + i * (type === "soft" ? 8 : 5);
+          const p = interpolate(frame, [start, start + (type === "soft" ? 0.7 : type === "track" ? 0.6 : 0.45) * fps], [0, 1], {
+            ...clamp,
+            easing: type === "rise" ? Easing.bezier(0.16, 1, 0.3, 1) : Easing.out(Easing.cubic),
+          });
+          if (type === "rise")
+            return (
+              <div key={i} style={{ overflow: "hidden", paddingBottom: 6 }}>
+                <div className={fontClass} style={{ ...base, translate: `0px ${(1 - p) * 110}%`, opacity: p }}>
+                  {line}
+                </div>
+              </div>
+            );
+          return (
+            <div
+              key={i}
+              className={fontClass}
+              style={{
+                ...base,
+                opacity: p,
+                filter: `blur(${(1 - p) * (type === "soft" ? 12 : 8)}px)`,
+                // Glamour's letters close in from wide, like a fashion title; soulful's drift up.
+                letterSpacing: type === "track" ? `${0.3 * (1 - p) + (caps ? 0.02 : -0.01)}em` : base.letterSpacing,
+                translate: type === "soft" ? `0px ${(1 - p) * 14}px` : undefined,
+              }}
+            >
+              {line}
             </div>
           );
         })}
-        {eyebrow && (
-          // A thin rule draws under the credit.
-          <div style={{ margin: "14px auto 0", height: 1, width: `${interpolate(frame, [enter + 0.4 * fps, enter + 1.1 * fps], [0, 38], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}%`, backgroundColor: accent }} />
-        )}
+        {eyebrow && <div style={{ margin: left ? "14px 0 0" : "14px auto 0", height: 1, width: `${interpolate(frame, [0.3 * fps, fps], [0, 38], clamp)}%`, backgroundColor: accent }} />}
       </div>
     </>
+  );
+};
+
+/** The calm loop under the title: the hold box breathing, softened and darkened below so the link's words read. */
+const Hold: React.FC<{ src: string; frame: Frame; base: Cam; grade: string }> = ({ src, frame: fr, base, grade }) => {
+  const f = useCurrentFrame();
+  const { durationInFrames: dur } = useVideoConfig();
+  // One breath from the end of the fade to the end, so the loop's two ends meet.
+  const t = (f - INTO_HOLD) / (dur - INTO_HOLD);
+  const breathe = 1.02 + 0.05 * (0.5 - 0.5 * Math.cos(t * Math.PI * 2));
+  return (
+    <AbsoluteFill style={{ opacity: interpolate(f, [0, INTO_HOLD], [0, 1], clamp) }}>
+      <AbsoluteFill style={{ filter: "blur(3.5px) brightness(0.72)" }}>
+        <Flyer src={src} frame={fr} cam={{ ...base, z: base.z + Math.log(breathe) }} grade={grade} />
+      </AbsoluteFill>
+      <AbsoluteFill style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.25) 62%, transparent 80%)" }} />
+    </AbsoluteFill>
   );
 };

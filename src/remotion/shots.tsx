@@ -1,74 +1,121 @@
 import { lightLeak } from "@remotion/effects/light-leak";
-import { AbsoluteFill, Easing, Img, Solid, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Img, Solid, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Box, OpeningMove } from "@/lib/opening";
 
-// The pieces the opening scene is cut from (src/remotion/OpeningScene.tsx):
-// a shot on the flyer with a camera move, the whole flyer as a poster, light
-// leaks, embers and grain. Every motion is driven by the frame, never CSS
-// animation, so it plays the same in the Player and in a render
-// (.claude/skills/remotion-best-practices).
+// The pieces the opening scene is made of (src/remotion/OpeningScene.tsx):
+// one camera over the flyer, light leaks, what floats in the air, and grain.
+// Every motion is driven by the frame, never CSS animation, so it plays the
+// same in the Player and in a render (.claude/skills/remotion-best-practices).
 
-/** The recipe's moves, plus "breathe" (in and back out, so it loops) and "poster" (the whole flyer). */
-export type ShotMove = OpeningMove | "breathe" | "poster";
-export type TrailerShot = { box: Box; move: ShotMove; seconds: number };
+/** Where the camera looks: the point on the flyer at the frame's center (fractions), and how far in (the log of its scale). */
+export type Cam = { x: number; y: number; z: number };
+type Frame = { W: number; H: number; fw: number; fh: number };
 
-/** One shot: its box fills the frame, and the camera moves across the shot's length. */
-export const Shot: React.FC<{ src: string; width: number; height: number; shot: TrailerShot }> = ({ src, width, height, shot }) => {
-  const frame = useCurrentFrame();
-  const { durationInFrames, width: W, height: H } = useVideoConfig();
-  const { x, y, w, h } = shot.box;
-  const t = interpolate(frame, [0, durationInFrames], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.bezier(0.33, 0, 0.2, 1),
-  });
-  if (shot.move === "poster") return <Poster src={src} width={width} height={height} t={t} />;
-  // Cover the frame with the box (a little extra so moves never show an edge).
-  const s = Math.max(W / (w * width), H / (h * height)) * 1.08;
-  const imgW = width * s;
-  const imgH = height * s;
-  const left = -x * imgW + (W - w * imgW) / 2;
-  const top = -y * imgH + (H - h * imgH) / 2;
-  const span = W * 0.035;
-  const move = {
-    push: { scale: 1 + 0.12 * t, translate: "0px 0px" },
-    pull: { scale: 1.12 - 0.12 * t, translate: "0px 0px" },
-    "tilt-up": { scale: 1.06, translate: `0px ${(t - 0.5) * span * 2}px` },
-    "pan-left": { scale: 1.06, translate: `${(0.5 - t) * span * 2}px 0px` },
-    "pan-right": { scale: 1.06, translate: `${(t - 0.5) * span * 2}px 0px` },
-    breathe: { scale: 1.02 + 0.06 * (0.5 - 0.5 * Math.cos((frame / durationInFrames) * Math.PI * 2)), translate: "0px 0px" },
-  }[shot.move as Exclude<ShotMove, "poster">];
-  return (
-    <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#000" }}>
-      <AbsoluteFill style={{ scale: String(move.scale), translate: move.translate }}>
-        <Img
-          src={src}
-          style={{
-            position: "absolute",
-            left,
-            top,
-            width: imgW,
-            height: imgH,
-            maxWidth: "none",
-            // The film grade: deeper shadows, a little more color.
-            filter: "contrast(1.12) saturate(1.15) brightness(1.03)",
-          }}
-        />
-      </AbsoluteFill>
-    </AbsoluteFill>
-  );
-};
+/**
+ * The camera on a box: the box covers the frame, so nothing outside it (the
+ * flyer's own lettering, which Claude keeps the boxes clear of) comes into
+ * view, and the frame is always filled.
+ */
+export const camOn = (b: Box, { W, H, fw, fh }: Frame): Cam => ({
+  x: b.x + b.w / 2,
+  y: b.y + b.h / 2,
+  z: Math.log(Math.max(W / (b.w * fw), H / (b.h * fh), W / fw, H / fh)),
+});
 
-/** The whole flyer, every word crisp, over a blurred, darker copy of itself that fills the frame. */
-const Poster: React.FC<{ src: string; width: number; height: number; t: number }> = ({ src, width, height, t }) => {
-  const { width: W, height: H } = useVideoConfig();
-  const fit = Math.min(W / width, H / height) * 0.94;
+/** The whole flyer, a little inside the frame. */
+export const camOnPoster = ({ W, H, fw, fh }: Frame): Cam => ({ x: 0.5, y: 0.5, z: Math.log(Math.min(W / fw, H / fh) * 0.94) });
+
+export const mix = (a: Cam, b: Cam, t: number): Cam => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t });
+
+/** Where the flyer sits on screen for a camera: kept covering the frame when it's big enough to, centered when it isn't. */
+export function place(c: Cam, { W, H, fw, fh }: Frame) {
+  const s = Math.exp(c.z);
+  const halfW = W / (2 * fw * s);
+  const halfH = H / (2 * fh * s);
+  const x = halfW >= 0.5 ? 0.5 : Math.min(1 - halfW, Math.max(halfW, c.x));
+  const y = halfH >= 0.5 ? 0.5 : Math.min(1 - halfH, Math.max(halfH, c.y));
+  return { left: W / 2 - x * fw * s, top: H / 2 - y * fh * s, width: fw * s, height: fh * s };
+}
+
+/**
+ * The camera's move while it rests on a shot: in, out, up or across. The
+ * sideways moves ride a little closer in, so they stay inside the box.
+ */
+export function drift(base: Cam, move: OpeningMove, f: Frame): [Cam, Cam] {
+  const s = Math.exp(base.z);
+  const seenW = f.W / (f.fw * s);
+  const seenH = f.H / (f.fh * s);
+  const z = (k: number) => base.z + Math.log(k);
+  switch (move) {
+    case "push":
+      return [base, { ...base, z: z(1.14) }];
+    case "pull":
+      return [{ ...base, z: z(1.14) }, base];
+    case "tilt-up":
+      return [{ ...base, y: base.y + 0.04 * seenH, z: z(1.08) }, { ...base, y: base.y - 0.04 * seenH, z: z(1.11) }];
+    case "pan-left":
+      return [{ ...base, x: base.x + 0.05 * seenW, z: z(1.08) }, { ...base, x: base.x - 0.05 * seenW, z: z(1.11) }];
+    case "pan-right":
+      return [{ ...base, x: base.x - 0.05 * seenW, z: z(1.08) }, { ...base, x: base.x + 0.05 * seenW, z: z(1.11) }];
+  }
+}
+
+/**
+ * The flyer as the camera sees it, over a blurred, darker copy of itself that
+ * fills anything the flyer doesn't (the whole poster on a tall screen). The
+ * camera only ever transforms the flyer (never lays it out again), so phones
+ * move it on the GPU. On top: the mood's grade, a glow around its highlights
+ * (bloom), and a light that can sweep across the print (0 to 1; outside that,
+ * none). `tilt` turns the frame a fraction of a degree, like a hand-held camera.
+ */
+export const Flyer: React.FC<{ src: string; frame: Frame; cam: Cam; blur?: number; sweep?: number; grade?: string; bloom?: number; tilt?: number }> = ({
+  src,
+  frame,
+  cam,
+  blur = 0,
+  sweep = -1,
+  grade = "contrast(1.12) saturate(1.15) brightness(1.03)",
+  bloom = 0,
+  tilt = 0,
+}) => {
+  const { W, H, fw, fh } = frame;
+  const at = place(cam, frame);
+  const k = at.width / fw;
+  const layer: React.CSSProperties = {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: fw,
+    height: fh,
+    transformOrigin: "0 0",
+    transform: `translate(${W / 2}px, ${H / 2}px) rotate(${tilt}deg) translate(${at.left - W / 2}px, ${at.top - H / 2}px) scale(${k})`,
+  };
+  const img: React.CSSProperties = { width: "100%", height: "100%", maxWidth: "none", display: "block" };
   return (
     <AbsoluteFill style={{ backgroundColor: "#000", overflow: "hidden" }}>
       <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.45) saturate(1.4)", scale: "1.2" }} />
-      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", scale: String(1 + 0.05 * t) }}>
-        <Img src={src} style={{ width: width * fit, height: height * fit, boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }} />
-      </AbsoluteFill>
+      {/* Blur is drawn before the scale, so it's divided by it to stay the same on screen. */}
+      <div style={{ ...layer, overflow: "hidden", filter: `${blur > 0.2 ? `blur(${(blur / k).toFixed(2)}px) ` : ""}${grade}` }}>
+        <Img src={src} style={img} />
+        {sweep >= 0 && sweep <= 1 && (
+          // A band of light across the print, like a glossy poster catching a spotlight.
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              mixBlendMode: "screen",
+              background: `linear-gradient(115deg, transparent ${sweep * 170 - 45}%, rgba(255,255,255,0.12) ${sweep * 170 - 32}%, rgba(255,255,255,0.42) ${sweep * 170 - 27}%, rgba(255,255,255,0.12) ${sweep * 170 - 22}%, transparent ${sweep * 170 - 10}%)`,
+            }}
+          />
+        )}
+      </div>
+      {bloom > 0 && (
+        // The highlights spill a little light around themselves, as on film. Its filter never
+        // changes, so the browser draws it once and only moves it.
+        <div style={{ ...layer, opacity: bloom, mixBlendMode: "screen", filter: "blur(7px) brightness(1.45) contrast(1.5)" }}>
+          <Img src={src} style={img} />
+        </div>
+      )}
     </AbsoluteFill>
   );
 };
@@ -141,8 +188,9 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
             key={i}
             style={{
               position: "absolute",
-              left: x * width,
-              top: (0.05 + y * 0.95) * height,
+              left: 0,
+              top: 0,
+              transform: `translate(${x * width}px, ${(0.05 + y * 0.95) * height}px)`,
               width: size,
               height: size,
               borderRadius: "50%",

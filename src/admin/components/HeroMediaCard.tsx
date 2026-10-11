@@ -96,7 +96,7 @@ export default function HeroMediaCard({
           <h2 id="hero-media-title" className={inStudio ? "sr-only" : "font-bold text-deep-navy"}>Opening screen</h2>
           <p className="truncate text-sm text-deep-navy">&ldquo;{title}&rdquo;</p>
           <p className="text-sm text-gray-600">
-            {shown ? KIND_LABELS[shown.kind] : "No background: your brand colors"}
+            {shown?.kind === "image" && shown.opening ? "Opening from your flyer" : shown ? KIND_LABELS[shown.kind] : "No background: your brand colors"}
             {edited && <span className="font-semibold text-amber-800"> &middot; not published</span>}
           </p>
           {look && (

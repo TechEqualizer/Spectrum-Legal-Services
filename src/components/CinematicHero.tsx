@@ -32,14 +32,7 @@ const MOTES: [number, number, number, number, number][] = [
  * `revealed` is false for the server-rendered splash, which holds the scene
  * before the words come up, so they animate once, when the page is ready.
  */
-export default function CinematicHero({
-  funnel,
-  revealed,
-  eyebrow,
-  actions,
-  paused = false,
-  onSwipeUp,
-}: {
+type HeroProps = {
   funnel: Funnel;
   revealed: boolean;
   eyebrow?: React.ReactNode;
@@ -48,7 +41,17 @@ export default function CinematicHero({
   paused?: boolean;
   /** A full scene: swiping up steps inside, like moving to the next reel. */
   onSwipeUp?: () => void;
-}) {
+};
+
+export default function CinematicHero(props: HeroProps) {
+  // A new cut of the opening (a change in the Design tab, playing in the
+  // studio's phone) plays from the start, its title waiting for it again.
+  const media = sceneMediaOf(props.funnel);
+  const opening = media?.kind === "image" && media.fit === "poster" ? media.opening : undefined;
+  return <Hero key={opening ? JSON.stringify(opening) : ""} {...props} />;
+}
+
+function Hero({ funnel, revealed, eyebrow, actions, paused = false, onSwipeUp }: HeroProps) {
   const { brand, cover } = funnel;
   const hero = cover.hero;
   const media = sceneMediaOf(funnel);

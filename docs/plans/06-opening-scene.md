@@ -244,3 +244,72 @@ retention numbers they quote are left out.
 Not taken yet: cutting to a beat (the opening is silent today; if a music
 bed is added, snap shot lengths to its tempo), and a "suck-back" (a breath
 of stillness right before the reveal).
+
+## Update (Oct 11, 2026): the rework
+
+The owner found the openings could be better. A frame-by-frame look found
+two kinds of problem.
+
+- **The previews undersold it.** They were recorded live in a software
+  browser, so they kept about 92 of 401 frames (around six a second) at
+  390×844. `scripts/review-opening.mjs` now steps the scene one frame at a
+  time at 2×, giving 30 fps at 780×1688.
+- **The scene itself:** every shot was a crop of the same flyer with a drift
+  too small to see (3.5% of the frame). The words were captions. The reveal
+  was a cut to a framed card. The title came about nine seconds in.
+
+What changed (`src/remotion/OpeningScene.tsx`, `src/remotion/shots.tsx`):
+
+1. **A hook in the flyer.** The first line, huge on black, one word a row,
+   with the flyer drifting inside the letters and a sheen across them. This
+   is the classic image-in-type title. The cutting moods fly through the
+   words into the first shot; the others let the black fall away.
+2. **One camera.** It moves across the flyer from subject to subject, with
+   visible moves, motion blur and a light hand-held sway (more for electric
+   and sunlit). It glides between shots or punches in with a flash. Shots
+   cover their box, so the flyer's own lettering stays out.
+3. **Type by mood:** slammed word by word (electric), tracking in (glamour),
+   rising, left-aligned (editorial), or surfacing (soulful).
+4. **A pull-back reveal.** The camera pulls back from the last detail to the
+   whole poster, and a light crosses the print.
+5. **Light:** a grade and a bloom per mood, and a softer light leak.
+6. **Shorter:** the title comes up about five seconds in (glamour), or seven
+   for the calm moods.
+7. **Smooth on phones:** the camera only transforms the flyer, so phones
+   move it on the GPU instead of laying it out every frame.
+
+Not done: sound. The link's opening plays muted, and fans rarely turn sound
+on for an intro. Sound design (hits on the cuts, a whoosh on the pull-back)
+belongs to a downloadable version of the opening for Instagram Stories and
+TikTok, a separate step.
+
+## Update (Oct 11, 2026): openings for existing events, from the Design tab
+
+Events made before the wizard cut openings (and any event after a new
+flyer) get one from the Design tab (the studio's Design tab, or the Design
+sheet on a phone).
+
+What works elsewhere: Canva's Magic Animate reads the design and applies
+one AI-chosen animation to the whole of it, offers alternative styles
+beside its recommendation, and has one Remove. Adobe Express's Animate All
+is one tap that animates the whole design, with named styles to switch
+between. So:
+
+- **Make my opening**: one tap. The browser sends the event's flyer (the
+  imported one, or the one already behind the title) as a photo to
+  `/api/admin/opening`, and Claude reads it and cuts the opening, choosing
+  its mood (`draftOpening` in `src/lib/server/funnel-draft.ts`, using the
+  same brief and schema as the sign-up draft). About 20 seconds.
+- **Feels like**: the five moods as the alternatives. Switching is instant
+  (the same cut, directed another way) and needs no new call.
+- **Make another**: a new cut in the chosen mood, unlike the current one.
+- **Turn off**: back to the still flyer. Choosing another background also
+  turns it off. Undo takes back any of these.
+
+The opening plays in the studio's phone, and in the sheet's preview on a
+phone, from the start each time it changes. It's live once published,
+and free.
+
+Sources: [Using Magic Animate (Canva)](https://www.canva.com/help/using-magic-animate/),
+[Magic Animate (Canva)](https://canva.com/pro/animator/),
+[Animate your designs (Adobe Express)](https://helpx.adobe.com/express/using/animation.html).

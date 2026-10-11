@@ -9,7 +9,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { flyerBlock, missingKeyProblem, type FlyerInput } from "@/lib/server/flyer-import";
 import { REEL_ORDER, REEL_ROLES, type DraftReel, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
-import { OPENING_MOODS, OPENING_MOOD_IDS, OPENING_MOVES, parseOpening } from "@/lib/opening";
+import { OPENING_MOODS, OPENING_MOOD_IDS, OPENING_MOVES, parseOpening, type OpeningMood, type OpeningRecipe } from "@/lib/opening";
 import { SCREEN_LIMITS } from "@/lib/publication";
 
 const str = (description: string) => ({ type: "string", description });
@@ -20,6 +20,41 @@ const box = (description: string) => ({
   description: `${description}. Fractions of the flyer, 0 to 1 from its top left: x, y the box's top left corner, w, h its width and height.`,
   properties: { x: { type: "number" }, y: { type: "number" }, w: { type: "number" }, h: { type: "number" } },
 });
+
+/** The opening scene: its mood, its shots on the flyer with their words, and the hold. */
+const OPENING_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["mood", "beats", "hold"],
+  properties: {
+    mood: { type: "string", enum: OPENING_MOOD_IDS, description: "The kind of event this is, which sets how the opening is cut" },
+    beats: {
+      type: "array",
+      description: "3 shots on the flyer's own artwork (4 only for four distinct striking subjects), in the order they play",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["box", "move", "seconds", "text"],
+        properties: {
+          box: box("The part of the flyer this shot shows: a face, a figure, a striking detail, clear of the flyer's lettering, at least a third of the flyer's width, and close to a tall phone shape"),
+          move: { type: "string", enum: [...OPENING_MOVES], description: "The camera's move through the shot" },
+          seconds: { type: "number", description: "1.5 to 2.2" },
+          text: {
+            type: "object",
+            additionalProperties: false,
+            required: ["lines", "at", "size"],
+            properties: {
+              lines: { type: "array", items: str("One short line, under 24 characters"), description: "0 to 3 lines, five words at most in all; empty for a shot with no words" },
+              at: { type: "string", enum: ["top", "middle", "bottom"], description: "Where the shot has room for words, away from faces" },
+              size: { type: "string", enum: ["eyebrow", "big"], description: "eyebrow: a small presenter credit; big: a selling line" },
+            },
+          },
+        },
+      },
+    },
+    hold: box("The calm shot the scene settles on under the page's title: the flyer's strongest figure or image, with room below it"),
+  },
+};
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -36,39 +71,7 @@ const SCHEMA = {
         heading: str(`Small heading above the date circles, under ${SCREEN_LIMITS.heading} characters`),
       },
     },
-    opening: {
-      type: "object",
-      additionalProperties: false,
-      required: ["mood", "beats", "hold"],
-      properties: {
-        mood: { type: "string", enum: OPENING_MOOD_IDS, description: "The kind of event this is, which sets how the opening is cut" },
-        beats: {
-          type: "array",
-          description: "3 or 4 shots on the flyer's own artwork, in the order they play",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["box", "move", "seconds", "text"],
-            properties: {
-              box: box("The part of the flyer this shot shows: a face, a figure, a striking detail, clear of the flyer's lettering, at least a third of the flyer's width, and close to a tall phone shape"),
-              move: { type: "string", enum: [...OPENING_MOVES], description: "The camera's move through the shot" },
-              seconds: { type: "number", description: "1.5 to 2.2" },
-              text: {
-                type: "object",
-                additionalProperties: false,
-                required: ["lines", "at", "size"],
-                properties: {
-                  lines: { type: "array", items: str("One short line, under 24 characters"), description: "0 to 3 lines, five words at most in all; empty for a shot with no words" },
-                  at: { type: "string", enum: ["top", "middle", "bottom"], description: "Where the shot has room for words, away from faces" },
-                  size: { type: "string", enum: ["eyebrow", "big"], description: "eyebrow: a small presenter credit; big: a selling line" },
-                },
-              },
-            },
-          },
-        },
-        hold: box("The calm shot the scene settles on under the page's title: the flyer's strongest figure or image, with room below it"),
-      },
-    },
+    opening: OPENING_SCHEMA,
     styleLock: str("One paragraph of shared visual style for every clip"),
     avoid: str("Comma-separated things every clip must avoid"),
     hero: {
@@ -101,20 +104,23 @@ const SCHEMA = {
   },
 };
 
+/** How to cut the opening scene from the flyer (in the funnel draft, and on its own from the Design tab). */
+const openingBrief = `the first seconds of the link, cut from the flyer itself like a film trailer. First read what kind of event this is, from everything on the flyer (what happens there, the venue, the time of day, the crowd it speaks to, its typography and palette), and pick the mood that fits it; the mood sets the pace, the cuts and what floats in the air, and how the words should sound:
+${OPENING_MOOD_IDS.map((m) => `   - ${m}: ${OPENING_MOODS[m].for}. Words: ${OPENING_MOODS[m].words}.`).join("\n")}
+   A book signing is never electric; a club night is never editorial. Then cut it like a teaser: a hook, a build, the reveal (the whole flyer, added for you), then the page's title and button.
+   - Shots: 3 on the flyer's artwork (4 only when it has four distinct striking subjects; never the same subject twice unless closer), each something a fan recognizes at a glance (a face, a figure, the venue, a prop), never a crop of texture or background alone. Each is a box clear of the flyer's printed words, at least a third of the flyer's width, and close to a tall phone shape.
+   - The hook is the first shot: the most striking image on the flyer (a face or a figure when it has one) with its most enticing line, two to four words, set big. That line opens the scene alone, huge on black with the first shot showing through its letters, so make it the words that most make someone want to be there. Never open on the presenter credit or the date; a credit, if you use one, is an eyebrow on the second shot.
+   - Build: each shot closer or more intense than the last; the lines go from the promise of the night toward when and where, so the date or place, if used, comes last, right before the reveal.
+   - Moves: end each shot framed on its subject. Push in on a face, tilt up a standing figure, pan across a crowd or skyline the way it faces; never the same move twice in a row.
+   - Words: one idea per shot, five words at most, copied from the flyer's own words (its taglines, the night's promise, the presenter credit); never invent words, names, dates or claims the flyer doesn't print. Put them where the shot is dark and empty enough for white type, never over a face.
+   - The hold: the calm shot the scene settles on under the page's title, with room at the bottom.`;
+
 const instructions = (ctx: DraftContext) => `You are a creative director for nightlife and live events. From an event flyer, you plan the short vertical video funnel an organizer shares in their Instagram bio: an opening scene with a looping background video, then three reels that play one after another, each ending on a Tickets button. Your job is to make people want to be there and buy a ticket.
 
 Today is ${ctx.today}. The organizer's brand is "${ctx.brand}". Dates already known: ${ctx.dates.length ? ctx.dates.map((d) => [d.date, d.name, d.price, d.status === "few_left" ? "few tickets left" : d.status === "sold_out" ? "sold out" : ""].filter(Boolean).join(", ")).join("; ") : "none yet"}.${ctx.photos ? " The organizer will also use their own event photos." : ""}
 
 Write five things:
-0. opening: the first seconds of the link, cut from the flyer itself like a film trailer. First read what kind of event this is, from everything on the flyer (what happens there, the venue, the time of day, the crowd it speaks to, its typography and palette), and pick the mood that fits it; the mood sets the pace, the cuts and what floats in the air, and how the words should sound:
-${OPENING_MOOD_IDS.map((m) => `   - ${m}: ${OPENING_MOODS[m].for}. Words: ${OPENING_MOODS[m].words}.`).join("\n")}
-   A book signing is never electric; a club night is never editorial. Then cut it like a teaser: a hook, a build, the reveal (the whole flyer, added for you), then the page's title and button.
-   - Shots: 3 or 4 on the flyer's artwork, each something a fan recognizes at a glance (a face, a figure, the venue, a prop), never a crop of texture or background alone. Each is a box clear of the flyer's printed words, at least a third of the flyer's width, and close to a tall phone shape.
-   - The hook is the first shot: the most striking image on the flyer (a face or a figure when it has one) with its most enticing line. Never open on the presenter credit or the date; a credit, if you use one, is an eyebrow on the second shot.
-   - Build: each shot closer or more intense than the last; the lines go from the promise of the night toward when and where, so the date or place, if used, comes last, right before the reveal.
-   - Moves: end each shot framed on its subject. Push in on a face, tilt up a standing figure, pan across a crowd or skyline the way it faces; never the same move twice in a row.
-   - Words: one idea per shot, five words at most, copied from the flyer's own words (its taglines, the night's promise, the presenter credit); never invent words, names, dates or claims the flyer doesn't print. Put them where the shot is dark and empty enough for white type, never over a face.
-   - The hold: the calm shot the scene settles on under the page's title, with room at the bottom.
+0. opening: ${openingBrief}
 1. screen and hero: the opening scene. A short, confident title (the event's own name works), a tagline that sells the feeling, a main-button label inviting people to watch (e.g. "Sneak peek inside"), a heading above the date circles (e.g. "Which night?"), and the looping background clip: pure atmosphere that sets the world of the night.
 2. reels: exactly three, in this order, each built on one proven reason people buy a ticket. Each answers one question the viewer has before buying:
    - the_night ("Will this be amazing?"): desire and self-image. Sell who the viewer gets to BE that night, not the venue: the arrival, the peak moment, the look, the feeling, in second person and present tense ("You, in gold."). Cinematic and aspirational.
@@ -181,6 +187,49 @@ export async function draftFunnel(input: FlyerInput, ctx: DraftContext): Promise
     return { problem: "Couldn't draft the funnel just now. Try again." };
   }
   return cleanDraft(raw);
+}
+
+/**
+ * Cuts just the opening scene from a flyer, for an event that already has its
+ * funnel (the Design tab). The organizer can fix the mood, and ask for a cut
+ * unlike the one they have. Checked like every other recipe.
+ */
+export async function draftOpening(input: FlyerInput, ask: { mood?: OpeningMood; unlike?: OpeningRecipe } = {}): Promise<{ opening: OpeningRecipe } | { problem: string }> {
+  if (!process.env.ANTHROPIC_API_KEY) return { problem: missingKeyProblem() };
+  const client = new Anthropic();
+  const asks = [
+    ask.mood && `The organizer chose the mood: ${ask.mood}. Cut it that way.`,
+    ask.unlike && `They want a different cut from the one they have, so choose other shots, another order or other lines where the flyer allows: ${JSON.stringify(ask.unlike)}`,
+  ].filter(Boolean);
+  let response: Anthropic.Beta.BetaMessage;
+  try {
+    response = await client.beta.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4000,
+      // If the request is declined, Anthropic retries it on its recommended fallback model.
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system: `You are a creative director for nightlife and live events. From an event flyer, you cut the opening of the link an organizer shares in their Instagram bio: ${openingBrief}${asks.length ? `\n\n${asks.join("\n")}` : ""}`,
+      messages: [{ role: "user", content: [flyerBlock(input), { type: "text", text: "Cut the opening for this event." }] }],
+      output_config: { format: { type: "json_schema", schema: { type: "object", additionalProperties: false, required: ["opening"], properties: { opening: OPENING_SCHEMA } } } },
+    });
+  } catch (e) {
+    console.error("[opening draft]", e);
+    if (e instanceof Anthropic.AuthenticationError) return { problem: "The Claude API key was refused. Check ANTHROPIC_API_KEY in Vercel." };
+    if (e instanceof Anthropic.RateLimitError) return { problem: "Too many requests at once. Wait a minute and try again." };
+    return { problem: "Couldn't make the opening just now. Try again." };
+  }
+  if (response.stop_reason === "refusal") return { problem: "This flyer couldn't be used for an opening." };
+  let raw: Record<string, unknown>;
+  try {
+    raw = JSON.parse(response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join(""));
+  } catch {
+    return { problem: "Couldn't make the opening just now. Try again." };
+  }
+  const opening = parseOpening(raw.opening);
+  if (!opening) return { problem: "Couldn't find shots on this flyer. Try another photo of it." };
+  // The organizer's mood stands, whatever came back.
+  return { opening: ask.mood ? { ...opening, mood: ask.mood } : opening };
 }
 
 /** Only well-formed, in-limit pieces get through to the editor. */

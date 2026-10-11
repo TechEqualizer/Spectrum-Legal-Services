@@ -112,6 +112,33 @@ check('visitor: blurred flyer only', await vp.locator('img[src*="reel-media"]').
 check('visitor: Cinzel title', /Cinzel/.test(await vp.locator('h1').evaluate(e => getComputedStyle(e).fontFamily)));
 await vp.screenshot({ path: S + '/style-visitor-390.jpg' });
 
+// The opening, made from the published flyer in the Design sheet: Claude picks the mood, the
+// organizer changes it, asks for another cut, and publishes it.
+await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 400);
+await dlg.getByRole('button', { name: 'Make my opening' }).click();
+const moods = dlg.getByRole('radiogroup', { name: 'Feels like' });
+await moods.waitFor({ timeout: 10000 }).catch(() => {});
+check('opening: made from the flyer, in the mood Claude picked', (await moods.getByRole('radio', { checked: true }).innerText().catch(() => '')) === 'Glamour', await dlg.getByRole('alert').allInnerTexts().then((t) => t.join(' ')));
+const cutAsk = (await (await fetch(C + '/__last')).json()).body;
+check('opening: the flyer photo went to Claude, for the opening alone', /you cut the opening of the link/.test(JSON.stringify(cutAsk.system)) && JSON.stringify(cutAsk.messages).includes('"type":"image"'));
+check('opening: the flyer goes behind the title', (await dlg.getByRole('radio', { name: 'Flyer', exact: true }).getAttribute('aria-checked')) === 'true');
+await moods.getByRole('radio', { name: 'Editorial' }).click();
+check('opening: the mood changes at once', (await moods.getByRole('radio', { checked: true }).innerText()) === 'Editorial' && await dlg.getByText(/^For book signings/).isVisible());
+await p.screenshot({ path: S + '/style-opening-390.jpg' });
+await dlg.getByRole('button', { name: 'Make another' }).click();
+await dlg.getByText('Your opening is ready').waitFor({ timeout: 10000 }).catch(() => {});
+const againAsk = JSON.stringify((await (await fetch(C + '/__last')).json()).body.system);
+check('opening: another cut asks for a different one, in the chosen mood', /a different cut/.test(againAsk) && /chose the mood: editorial/.test(againAsk));
+check('opening: keeps the chosen mood', (await moods.getByRole('radio', { checked: true }).innerText()) === 'Editorial');
+await dlg.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
+await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
+const withOpening = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
+check('stored: the opening on the flyer, in its mood', withOpening?.backdrop?.fit === 'poster' && withOpening.backdrop.opening?.mood === 'editorial' && withOpening.backdrop.opening.beats?.length === 3, JSON.stringify(withOpening?.backdrop)?.slice(0, 160));
+const vo = await v.newPage();
+await vo.goto(B + '/f/masquerade');
+check('visitor: the opening plays', await vo.getByText('Masks on.', { exact: true }).first().waitFor({ timeout: 10000 }).then(() => true, () => false));
+await vo.close();
+
 // Original
 await p.screenshot({ path: S + '/style-dbg.jpg' });
 await card.getByRole('button', { name: /^Design/ }).click(); await settle(p, 600);
