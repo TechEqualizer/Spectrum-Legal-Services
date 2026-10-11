@@ -7,8 +7,10 @@
 //     [--out dir] [--base http://localhost:3000]
 //
 // Needs `npm run dev` running (the page, /dev/opening, is never served in
-// production). Records the opening on a 390×844 phone, then writes:
-//   opening.mp4   the recording;
+// production). Renders the opening on a 390×844 phone, frame by frame at 2×
+// (so a slow machine never drops a frame; --live records it playing instead,
+// to check the player itself), then writes:
+//   opening.mp4   the video, 30 frames a second;
 //   frame-NN.png  the opening every half second, plus one at every hard cut
 //                 (ffmpeg scene detection, as in claude-video; dissolves are
 //                 gradual, so the steady samples catch those);
@@ -31,6 +33,9 @@ const { values: opt } = parseArgs({
     out: { type: 'string', default: 'opening-review' },
     base: { type: 'string', default: 'http://localhost:3000' },
     scene: { type: 'string', default: '0.25' },
+    live: { type: 'boolean', default: false },
+    // A quick draft: every Nth frame only (the video plays at N times speed).
+    step: { type: 'string', default: '1' },
   },
 });
 if (!opt.flyer || !opt.recipe) {
@@ -40,47 +45,81 @@ if (!opt.flyer || !opt.recipe) {
 const out = resolve(opt.out);
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
-const review = { src: opt.flyer, recipe: JSON.parse(readFileSync(opt.recipe, 'utf8')), font: opt.font, accent: opt.accent, title: opt.title, tagline: opt.tagline };
+const review = { src: opt.flyer, recipe: JSON.parse(readFileSync(opt.recipe, 'utf8')), font: opt.font, accent: opt.accent, title: opt.title, tagline: opt.tagline, frames: !opt.live };
 
 // Software GL, so the light leak draws on machines without a GPU.
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const size = { width: 390, height: 844 };
-const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 2, recordVideo: { dir: out, size } });
-const page = await ctx.newPage();
-// The recording starts with the page; times below are from here.
-const opened = Date.now();
+const ffmpeg = (...args) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...args], { stdio: 'pipe' });
+const mp4 = join(out, 'opening.mp4');
 const errors = [];
-page.on('pageerror', (e) => errors.push(e.message));
-await page.addInitScript((r) => sessionStorage.setItem('opening-review', JSON.stringify(r)), review);
-await page.goto(`${opt.base}/dev/opening`);
-// Next's dev badge isn't part of the opening.
-await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
-const problem = await page.locator('main').filter({ hasText: 'not a valid one' }).count();
-if (problem) {
-  console.error('The page refused the recipe: it is not a valid opening (see src/lib/opening.ts).');
-  process.exit(1);
+let start = 0;
+let held = 0;
+
+if (opt.live) {
+  const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 2, recordVideo: { dir: out, size } });
+  const page = await open(ctx);
+  // The recording starts with the page; times below are from here.
+  const opened = Date.now();
+  // The opening starts when the flyer is drawn; the cut plays once, then the title
+  // comes up over the hold. Watch a few seconds of the hold too.
+  await page.waitForFunction(() => [...document.querySelectorAll('main img')].some((i) => i.complete && i.naturalWidth), null, { timeout: 20_000 });
+  start = (Date.now() - opened) / 1000;
+  await page.locator('[data-held]').waitFor({ timeout: 40_000 });
+  held = (Date.now() - opened) / 1000;
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: join(out, 'held.png') });
+  await page.waitForTimeout(1500);
+  const video = await page.video().path();
+  await ctx.close();
+  renameSync(video, join(out, 'recording.webm'));
+  ffmpeg('-i', join(out, 'recording.webm'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4);
+  rmSync(join(out, 'recording.webm'));
+} else {
+  const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 2 });
+  const page = await open(ctx);
+  await page.waitForFunction(() => window.__opening, null, { timeout: 20_000 });
+  const { total, holdStart } = await page.evaluate(() => ({ total: window.__opening.total, holdStart: window.__opening.holdStart }));
+  // Through the cut and three seconds of the hold under the title.
+  const last = Math.min(total - 1, holdStart + 90);
+  const dir = join(out, 'frames');
+  mkdirSync(dir);
+  const step = Math.max(1, Number(opt.step) || 1);
+  for (let f = 0; f <= last; f += step) {
+    await page.evaluate(async (n) => {
+      window.__opening.seek(n);
+      // Two paints, and every image drawn, before the picture is taken.
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await Promise.all([...document.images].map((i) => (i.complete ? null : i.decode().catch(() => null))));
+    }, f);
+    await page.screenshot({ path: join(dir, `${String(f / step).padStart(4, '0')}.jpg`), type: 'jpeg', quality: 92 });
+  }
+  held = holdStart / 30 / step;
+  execFileSync('cp', [join(dir, `${String(Math.floor(Math.min(last, holdStart + 60) / step)).padStart(4, '0')}.jpg`), join(out, 'held.jpg')]);
+  ffmpeg('-i', join(out, 'held.jpg'), join(out, 'held.png'));
+  rmSync(join(out, 'held.jpg'));
+  ffmpeg('-framerate', '30', '-i', join(dir, '%04d.jpg'), '-c:v', 'libx264', '-crf', '17', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', mp4);
+  rmSync(dir, { recursive: true });
+  await ctx.close();
 }
-// The opening starts when the flyer is drawn; the cut plays once, then the title
-// comes up over the hold. Watch a few seconds of the hold too.
-await page.waitForFunction(() => [...document.querySelectorAll('main img')].some((i) => i.complete && i.naturalWidth), null, { timeout: 20_000 });
-const start = (Date.now() - opened) / 1000;
-await page.locator('[data-held]').waitFor({ timeout: 40_000 });
-const held = (Date.now() - opened) / 1000;
-await page.waitForTimeout(2500);
-await page.screenshot({ path: join(out, 'held.png') });
-await page.waitForTimeout(1500);
-const video = await page.video().path();
-await ctx.close();
 await browser.close();
 
-const ffmpeg = (...args) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...args], { stdio: 'pipe' });
-renameSync(video, join(out, 'recording.webm'));
-ffmpeg('-i', join(out, 'recording.webm'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', join(out, 'opening.mp4'));
-rmSync(join(out, 'recording.webm'));
+async function open(ctx) {
+  const page = await ctx.newPage();
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript((r) => sessionStorage.setItem('opening-review', JSON.stringify(r)), review);
+  await page.goto(`${opt.base}/dev/opening`);
+  // Next's dev badge isn't part of the opening.
+  await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+  if (await page.locator('main').filter({ hasText: 'not a valid one' }).count()) {
+    console.error('The page refused the recipe: it is not a valid opening (see src/lib/opening.ts).');
+    process.exit(1);
+  }
+  return page;
+}
 
 // Every half second from the start through the title coming up, plus each hard cut
 // (where the picture changes past the threshold), its time from showinfo.
-const mp4 = join(out, 'opening.mp4');
 const found = spawnSync('ffmpeg', ['-hide_banner', '-i', mp4, '-vf', `select='gt(scene\\,${opt.scene})',showinfo`, '-f', 'null', '-'], { encoding: 'utf8' });
 const cutTimes = [...found.stderr.matchAll(/pts_time:([\d.]+)/g)].map((m) => Number(m[1])).filter((t) => t > start && t < held + 1);
 const steady = Array.from({ length: Math.floor((held + 1 - start) / 0.5) + 1 }, (_, i) => start + i * 0.5);
