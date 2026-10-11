@@ -30,44 +30,45 @@ Sources: [Spotify Canvas specs (artist.tools)](https://www.artist.tools/post/spo
 [Video API pricing (TeamDay)](https://www.teamday.ai/blog/ai-api-pricing-comparison-2026),
 [Veo 3.1 Lite (The Decoder)](https://the-decoder.com/googles-veo-3-1-lite-cuts-video-generation-costs-by-more-than-half/).
 
+## Decision (Oct 11, 2026): Claude directs coded motion, no video model
+
+Video models were researched (above) and set aside: they cost per event,
+take up to minutes, and warp a flyer's lettering. Instead Claude, which
+already reads the flyer, writes a short **motion recipe**, and the browser
+draws the scene live from the flyer itself (`src/components/MotionScene.tsx`):
+
+- **focus:** the box on the flyer to feature, clear of lettering (the
+  runway model, the masked face), framed with heads kept in view;
+- **camera:** a slow push in and back, a drift, or a sway;
+- **effects**, from a fixed set: smoke, embers, glitter, bokeh, a light
+  sweep, a glow pulse, rain;
+- **two colors** from the flyer (the glow, and the light in the air);
+- **seconds:** one loop, 3 to 6.
+
+Layers, back to front: the whole flyer blurred into a field of its colors,
+the glow, the subject with the camera's move (edges feathered away), then
+light and particles. Every motion repeats a whole number of times per loop,
+so it never jumps. Free per event, instant, crisp at any size, still for
+visitors who ask for less motion. The organizer's words stay our own type.
+
 ## First principles
 
-1. **Never animate the words.** Video models warp printed text, and the
-   flyer's text is the event's facts. So the loop is made from the flyer's
-   artwork and mood, not its lettering; the title, date and button stay our
-   own crisp type on top, as they are now.
-2. **Motion that loops, not a clip that restarts.** 3 to 5 seconds, the
-   same frame at both ends: drifting smoke, light sweeping, a slow push,
-   glitter, a crowd's glow. Calm enough that the title reads.
-3. **Instant first, better shortly after.** The wizard never waits on a
-   model. The scene moves at once with what we have today (the flyer with
-   a slow push, haze and light in its colors); when the loop is ready it
-   fades in, with a small "Your opening scene is ready" moment.
-4. **Cheap enough to give away.** About $0.25 to $0.75 per event. A few
-   tries per event, then it's theirs to keep or replace with their own
-   video.
+1. **Never animate the words.** Only the artwork moves; the title, date and
+   button stay our type on top.
+2. **Motion that loops**, 3 to 6 seconds, calm enough that the title reads.
+3. **Instant.** The scene is ready the moment the flyer is read.
+4. **Free for everyone** (decided Oct 11): every new link gets its scene.
 
 ## The flow
 
-1. **Flyer step (exists).** Claude reads the flyer. New: it also writes a
-   one-line motion brief from the artwork, e.g. "slow push through violet
-   smoke, gold glitter falling, masks catching light", and says where the
-   artwork is (a crop box that avoids the lettering).
-2. **Reels step (exists).** The phone preview plays the instant scene. In
-   the background the server sends the cropped artwork and the brief to the
-   video model with looping on, at 9:16, 5 seconds, no sound.
-3. **When it's ready** (usually within a minute or two), the preview swaps
-   to the loop. If the organizer leaves first, it's waiting on their link
-   after they claim.
-4. **Claim (exists).** The loop is stored with the flyer in `reel-media`
-   and set as the opening scene's backdrop (`kind: "video"`, which the
-   scene already plays muted, looping, and still for reduced motion).
-5. **Later, in Reels → Design:** "Make another" (a new take, same flyer,
-   up to 3 per event), "Use the flyer, still" and "Upload my own video".
-
-Guard rails: one generation per flyer upload and at most 3 per event, tied
-to the invite (the wizard is invite-only), so a draft can't run up a bill.
-If the model fails or times out, the instant scene simply stays.
+1. **Flyer step (exists).** Claude reads the flyer and, in the same call,
+   writes the motion recipe.
+2. **Reels step (exists).** The phone preview opens on the moving scene.
+3. **Claim (exists).** The flyer is stored as now; the opening scene's
+   backdrop becomes `{ kind: "motion", src, recipe }`.
+4. **Reels → Design:** "Shuffle the scene" (another recipe from the same
+   flyer), pick the featured part, "Use the flyer, still", "Upload my own
+   video".
 
 ## The reels: the organizer's footage, made easy
 
@@ -91,21 +92,18 @@ Showlnk can't film their night, and fans can tell. What we can do:
 
 ## Steps
 
-1. Pick the model and get its API key into Vercel (`VIDEO_API_KEY`).
-   Generate a few loops by hand from real flyers (Big Love's, Book
-   Signing's) to pick the model and the prompt.
-2. Server: `/api/start/scene` starts a generation, then polls for it and
-   stores the result. A mock video server for tests, like the Claude and
-   Stripe mocks.
-3. Wizard: the background generation, the swap-in, and "ready" moment.
-4. Claim: carry the loop into the link (as the flyer is carried now).
-5. Editor: "Make another", "Use the flyer, still", "Upload my own video".
-6. Reels help: the shot lists, link import for Instagram and TikTok,
+1. Prototype the renderer from Big Love's flyer (done: two recordings
+   shared Oct 11).
+2. The recipe: Claude writes it while reading the flyer; checked on the
+   server like every other field (boxes inside the flyer, known effects,
+   hex colors, 3 to 6 seconds).
+3. The backdrop: a `motion` scene kind in the link's data and the opening
+   scene, the wizard's phone, the claim and the editor's preview.
+4. Editor: shuffle, featured part, still, own video.
+5. Reels help: the shot lists, link import for Instagram and TikTok,
    in-browser recording (each its own small step after the scene ships).
 
 ## Open questions
 
-- Which model: Veo 3.1 Lite (cheapest), Luma Ray 2 (built-in loop) or
-  Kling (best motion)? Decide after step 1's test loops.
-- Is the generated loop part of Free, or a Core feature (Free keeps the
-  instant scene)?
+- Which effects read best per kind of night (a fixed mapping, or Claude's
+  call each time)? Tune with a handful of real flyers.
