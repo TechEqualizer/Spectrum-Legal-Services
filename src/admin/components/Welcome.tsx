@@ -66,7 +66,7 @@ export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent;
     <section aria-labelledby="welcome-title" className="rounded-xl border border-gray-200 bg-white p-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-teal-accent">{live ? "Live" : "Private until you go live"}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-accent-ink">{live ? "Live" : "Private until you go live"}</p>
           <h2 id="welcome-title" className="mt-1 text-2xl font-black tracking-tight text-deep-navy">
             Your link is ready
           </h2>

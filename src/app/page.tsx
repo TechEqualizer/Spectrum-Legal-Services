@@ -169,7 +169,7 @@ export default function ShowlnkHome() {
           <ShowlnkLogo className="h-6 w-auto" />
           <span>© 2026 Showlnk. Reels that sell the night.</span>
           <nav aria-label="Showlnk footer" className="flex flex-wrap items-center gap-x-5">
-            <Link href="/terms" className="flex min-h-11 items-center hover:text-[var(--sl-text)]">
+            <Link href="/terms" className="flex min-h-11 min-w-11 items-center justify-center hover:text-[var(--sl-text)]">
               Terms
             </Link>
             <Link href="/privacy" className="flex min-h-11 items-center hover:text-[var(--sl-text)]">

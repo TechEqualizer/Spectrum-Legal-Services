@@ -213,6 +213,13 @@ export function shuffleColors(palette: string[], base: LookColors, seed: number)
 export const onAccent = (colors: LookColors) =>
   contrast(colors["--teal-accent"], "#FFFFFF") >= 4.5 ? "#FFFFFF" : colors["--deep-navy"];
 
+/**
+ * The accent as words on white (the admin's cards): the button color,
+ * darkened until it reads at 4.5:1. A light accent (gold, neon) is fine as a
+ * button but not as text on paper.
+ */
+export const accentInk = (accent: string) => nudge(accent, BLACK, (h) => contrast(h, "#FFFFFF") >= 4.5);
+
 /** The theme a look gives a funnel. */
 export const themeOf = (look: Look): FunnelTheme => ({ ...look.colors, "--on-accent": onAccent(look.colors), "--fx-color": effectColor(look.colors) });
 

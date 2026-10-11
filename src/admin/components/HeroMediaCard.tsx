@@ -109,7 +109,7 @@ export default function HeroMediaCard({
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="min-h-10 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+              className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
             >
               Edit
             </button>
@@ -117,7 +117,7 @@ export default function HeroMediaCard({
               <button
                 type="button"
                 onClick={() => onChange({ media: null, screen }, "Background removed", () => onChange({ media: value, screen }, "Background restored"))}
-                className="min-h-10 text-sm font-semibold text-red-700 hover:underline"
+                className="min-h-11 text-sm font-semibold text-red-700 hover:underline"
               >
                 Remove background
               </button>

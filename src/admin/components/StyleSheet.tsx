@@ -355,7 +355,7 @@ export default function StyleSheet({
                   role="radio"
                   aria-checked={effect.strength === strength}
                   onClick={() => commit({ effect: { ...effect, strength } })}
-                  className={`min-h-10 rounded-lg text-sm font-semibold transition ${effect.strength === strength ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+                  className={`min-h-11 rounded-lg text-sm font-semibold transition ${effect.strength === strength ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
                 >
                   {strength === "subtle" ? "Subtle" : "Bold"}
                 </button>
@@ -377,7 +377,7 @@ export default function StyleSheet({
                   aria-checked={backdrop === b.id}
                   disabled={b.disabled}
                   onClick={() => commit({ backdrop: b.id })}
-                  className={`min-h-10 rounded-lg text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${backdrop === b.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+                  className={`min-h-11 rounded-lg text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${backdrop === b.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
                 >
                   {b.label}
                 </button>

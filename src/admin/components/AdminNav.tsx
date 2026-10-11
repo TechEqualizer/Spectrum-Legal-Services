@@ -115,7 +115,7 @@ export default function AdminNav() {
             id="admin-business"
             value={funnel?.slug}
             onChange={(e) => selectAdminBusiness(e.target.value)}
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 lg:static lg:mt-1 lg:h-auto lg:rounded-md lg:border lg:border-white/20 lg:bg-white/10 lg:px-2 lg:py-1.5 lg:text-sm lg:font-semibold lg:text-white lg:opacity-100 lg:focus:outline-none lg:focus:ring-2 lg:focus:ring-sky-accent [&>option]:text-charcoal"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 lg:static lg:mt-1 lg:h-auto lg:rounded-md lg:border lg:border-white/20 lg:bg-white/10 lg:px-2 lg:py-1.5 lg:text-sm lg:font-semibold lg:text-white lg:opacity-100 lg:focus:outline-none lg:focus:ring-2 lg:focus:ring-sky-accent [&_optgroup]:bg-white [&_optgroup]:text-charcoal [&_option]:bg-white [&_option]:text-charcoal"
           >
             {/* Each client's events by name. */}
             {groups.map((g) => (

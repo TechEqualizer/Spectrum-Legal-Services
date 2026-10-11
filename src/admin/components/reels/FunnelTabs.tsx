@@ -41,7 +41,7 @@ export default function FunnelTabs({
                 </span>
                 <span className="mt-2 block text-xs font-semibold text-gray-700">
                   {f.order.length} {f.order.length === 1 ? "reel" : "reels"} &middot; {CTA_LABELS[f.primaryCta]} first
-                  {f.id === liveId && <span className="ml-1 font-normal text-teal-accent">&middot; live</span>}
+                  {f.id === liveId && <span className="ml-1 font-normal text-accent-ink">&middot; live</span>}
                 </span>
               </button>
             </li>

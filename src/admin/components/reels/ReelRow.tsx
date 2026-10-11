@@ -151,7 +151,7 @@ function Thumb({ reel }: { reel: EditorReel }) {
 
 const chipTones = {
   gray: "border border-gray-200 bg-white text-gray-800",
-  teal: "bg-teal-accent/10 text-teal-accent",
+  teal: "bg-teal-accent/10 text-accent-ink",
   navy: "bg-deep-navy text-white",
   amber: "bg-amber-50 text-amber-900",
   red: "bg-red-50 text-red-800",

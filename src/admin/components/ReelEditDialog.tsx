@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useAdminBusiness } from "@/admin/AdminBusiness";
 import CoreNote from "@/admin/components/CoreNote";
+import Switch from "@/admin/components/ui/Switch";
 import { useHasFans } from "@/admin/plan";
 import MediaPicker from "@/admin/components/MediaPicker";
 import VideoPrompt from "@/admin/components/VideoPrompt";
@@ -288,23 +289,14 @@ function FansOnly({ id, on, media, core, onChange }: { id: string; on: boolean; 
             Only people who follow you can watch it. Everyone else sees a locked card that asks them to follow.
           </span>
         </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
-          aria-labelledby={`${id}-fans-label`}
-          aria-describedby={`${id}-fans-help${on ? ` ${id}-fans-rule` : ""}${locked ? ` ${id}-fans-core` : ""}`}
+        <Switch
+          checked={on}
+          onChange={onChange}
+          labelledBy={`${id}-fans-label`}
+          describedBy={`${id}-fans-help${on ? ` ${id}-fans-rule` : ""}${locked ? ` ${id}-fans-core` : ""}`}
           disabled={locked && !on}
-          onClick={() => onChange(!on)}
-          className={`relative mt-0.5 inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${
-            on ? "bg-teal-accent" : "bg-gray-300"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${on ? "translate-x-6" : "translate-x-1"}`}
-          />
-        </button>
+          className="mt-0.5"
+        />
       </div>
       {locked && (
         <CoreNote

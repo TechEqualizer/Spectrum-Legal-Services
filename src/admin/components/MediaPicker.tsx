@@ -85,16 +85,16 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <span className="text-sm font-semibold text-deep-navy">Video or photo</span>
-        <div className="flex rounded-md border border-gray-300 bg-white p-0.5 text-xs" role="group" aria-label="Add media by">
+        <div className="flex shrink-0 rounded-md border border-gray-300 bg-white p-0.5 text-sm" role="group" aria-label="Add media by">
           {(["upload", "link"] as const).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => { setMode(m); setError(""); }}
               aria-pressed={mode === m}
-              className={`min-h-8 rounded px-3 font-semibold ${mode === m ? "bg-deep-navy text-white" : "text-gray-700 hover:bg-soft-gray"}`}
+              className={`min-h-11 whitespace-nowrap rounded px-3 font-semibold ${mode === m ? "bg-deep-navy text-white" : "text-gray-700 hover:bg-soft-gray"}`}
             >
               {m === "upload" ? "Upload" : "Paste a link"}
             </button>
@@ -132,7 +132,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
               className={`flex min-h-28 flex-col items-center justify-center rounded-lg border-2 border-dashed px-3 py-4 text-center text-sm ${dragging ? "border-teal-accent bg-teal-accent/5" : "border-gray-300"}`}
             >
               <p className="text-gray-700">Drag a video or photo here, or</p>
-              <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 min-h-10 rounded-md bg-deep-navy px-4 text-sm font-semibold text-white hover:bg-royal-blue">
+              <button type="button" onClick={() => fileRef.current?.click()} className="mt-2 min-h-11 rounded-md bg-deep-navy px-4 text-sm font-semibold text-white hover:bg-royal-blue">
                 Choose a file
               </button>
               <input
@@ -177,7 +177,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
                   }}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); takeLink(); } }}
                 />
-                <button type="button" onClick={takeLink} className="min-h-10 flex-shrink-0 rounded-md bg-deep-navy px-3 text-sm font-semibold text-white hover:bg-royal-blue">
+                <button type="button" onClick={takeLink} className="min-h-11 flex-shrink-0 rounded-md bg-deep-navy px-3 text-sm font-semibold text-white hover:bg-royal-blue">
                   Use link
                 </button>
               </div>
@@ -196,7 +196,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
             <p className="text-xs text-gray-500">Uploads are saved in this browser until the admin has a login.</p>
           )}
           {value && (
-            <button type="button" onClick={() => { onChange(undefined); setFileName(""); setBroken(false); }} className="text-xs font-semibold text-red-700 hover:underline">
+            <button type="button" onClick={() => { onChange(undefined); setFileName(""); setBroken(false); }} className="inline-flex min-h-11 items-center text-sm font-semibold text-red-700 hover:underline">
               Remove media
             </button>
           )}
@@ -258,7 +258,7 @@ function ExtraFile({
           readOnly={value?.startsWith("blob:") || value?.startsWith("fans:")}
           onChange={(e) => onChange(e.target.value.trim() || undefined)}
         />
-        <label className="flex min-h-10 flex-shrink-0 cursor-pointer items-center rounded-md border border-gray-300 px-3 text-xs font-semibold text-deep-navy hover:bg-soft-gray">
+        <label className="flex min-h-11 flex-shrink-0 cursor-pointer items-center rounded-md border border-gray-300 px-3 text-xs font-semibold text-deep-navy hover:bg-soft-gray">
           Upload
           <input
             type="file"
@@ -275,7 +275,7 @@ function ExtraFile({
           />
         </label>
         {value && (
-          <button type="button" onClick={() => onChange(undefined)} className="min-h-10 px-1 text-xs font-semibold text-red-700 hover:underline">
+          <button type="button" onClick={() => onChange(undefined)} className="min-h-11 px-1 text-xs font-semibold text-red-700 hover:underline">
             Clear
           </button>
         )}

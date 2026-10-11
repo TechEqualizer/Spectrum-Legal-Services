@@ -7,7 +7,8 @@ import { eventBusiness, type AdminBusiness } from "@/admin/business";
 import Tour from "@/admin/components/Tour";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
-import type { Funnel } from "@/data/funnel-types";
+import type { Funnel, FunnelTheme } from "@/data/funnel-types";
+import { accentInk } from "@/lib/look";
 
 // Which event the admin shows. Remembered in this browser only, as a
 // convenience; it falls back to the first event.
@@ -31,6 +32,10 @@ function subscribe(onChange: () => void) {
     window.removeEventListener("storage", onChange);
   };
 }
+
+/** The event's colors for the admin, plus the accent darkened for words on white cards (`text-accent-ink`). */
+const themeWithInk = (theme: FunnelTheme | undefined) =>
+  (theme ? { ...theme, ...(theme["--teal-accent"] ? { "--accent-ink": accentInk(theme["--teal-accent"]) } : {}) } : undefined) as React.CSSProperties | undefined;
 
 /**
  * An organizer's event, loaded on the server (see src/app/admin/(app)/layout.tsx):
@@ -113,7 +118,7 @@ export function AdminFrame({
   return (
     <div
       className="min-h-screen bg-soft-gray text-charcoal lg:flex"
-      style={business?.funnel.brand.theme as React.CSSProperties | undefined}
+      style={themeWithInk(business?.funnel.brand.theme)}
     >
       {nav}
       {/* Clip sideways: one long word or link must never slide the whole admin on a phone. */}
