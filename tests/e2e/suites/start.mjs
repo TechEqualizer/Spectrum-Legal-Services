@@ -89,17 +89,10 @@ await p.getByRole('button', { name: 'Play The Night in the phone' }).click();
 await p.waitForTimeout(1200);
 check('Play: the reel, in the phone', await phone.getByText('You, in gold', { exact: true }).first().isVisible().catch(() => false));
 
-// Core, working, with the trial.
-check('Core: free for 14 days', await p.getByText('Core · free for 14 days').isVisible() && await p.getByText('No card needed.', { exact: false }).isVisible());
-await p.getByRole('button', { name: 'See Follow in the phone' }).click();
-await phone.getByText('Follow', { exact: true }).first().waitFor({ timeout: 8000 }).catch(() => {});
-check('the phone: Follow, beside the reel', await phone.getByText('Follow', { exact: true }).first().isVisible().catch(() => false));
-await p.getByRole('button', { name: 'See Presale for fans in the phone' }).click();
-await phone.getByText(/Presale for fans/).first().waitFor({ timeout: 8000 }).catch(() => {});
-check('the phone: the presale for fans', await phone.getByText(/Presale for fans/).first().isVisible().catch(() => false));
-await p.getByRole('button', { name: 'See Just for followers in the phone' }).click();
-await p.waitForTimeout(1200);
-check('the phone: a reel locked for followers', await phone.getByText('Follow to watch').first().isVisible().catch(() => false));
+// Building is free and there is no trial: no Core card here, and the phone shows
+// only what going live gives (no Follow, presale or fans-only reel; those are the Fans add-on).
+check('no trial card', !(await p.getByText(/free for 14 days|Already on your link/).count()));
+check('the phone: no Follow, presale or locked reel', !(await phone.getByText('Follow', { exact: true }).count()) && !(await phone.getByText(/Presale for fans|Follow to watch/).count()));
 check('still no visits', reelEvents.length === 0, reelEvents.join(' '));
 
 // Edits survive coming back.

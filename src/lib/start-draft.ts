@@ -103,23 +103,18 @@ export function basicReels(d: StartDraft): FunnelDraft {
 /** The draft's reels: as drafted (and changed), else from the flyer's basics. */
 export const reelsOf = (d: StartDraft): FunnelDraft => d.reels ?? basicReels(d);
 
-/** The fans-only reel the preview shows locked, as a taste of Core. */
-export const FANS_REEL_ID = "for-followers";
-
 /** A reel's id on the draft link: its role, so edits keep their place. */
 export const reelId = (role: string) => role.replace(/_/g, "-");
 
 export type LinkOptions = {
-  /** Show Core's features working: Follow, a fans-only reel and an open presale. */
+  /** From step 2: the drafted reels and the opening's words. (Only what going live gives: no Fans add-on extras.) */
   core?: boolean;
-  /** The moment "now", for the presale's window (tests pass their own). */
-  now?: number;
   /** The clock the flyer's dates are on: the organizer's browser's (the server is told it). */
   timeZone?: string;
 };
 
 /** The link the draft makes so far: the funnel, and what's "published" on it. */
-export function draftLink(d: StartDraft, { core = false, now = Date.now(), timeZone = browserZone() }: LinkOptions = {}): { funnel: Funnel; publication: Publication } {
+export function draftLink(d: StartDraft, { core = false, timeZone = browserZone() }: LinkOptions = {}): { funnel: Funnel; publication: Publication } {
   const name = nightName(d);
   const funnel = newClientEvent(name, { slug: "your-night", name });
   const events = d.dates?.length ? draftEvents(d.dates, timeZone) : undefined;
@@ -146,14 +141,6 @@ export function draftLink(d: StartDraft, { core = false, now = Date.now(), timeZ
         ...(flyer ? { media: flyer } : {}),
       };
     });
-    reels.push({
-      id: FANS_REEL_ID,
-      title: "Just for followers",
-      summary: "Behind the scenes, before anyone else.",
-      practiceArea,
-      cta: "funnel",
-      visibility: "fans",
-    });
     const s = drafted.screen;
     screen = {
       ...(s.title ? { title: s.title } : {}),
@@ -163,13 +150,7 @@ export function draftLink(d: StartDraft, { core = false, now = Date.now(), timeZ
     };
   }
 
-  // Core's presale, open now on the next date, ending a day before it.
-  const shown = core && events?.length
-    ? events.map((e, i) => {
-        const ends = Math.min(now + 7 * 864e5, Date.parse(e.startsAt) - 864e5);
-        return i === 0 && ends > now ? { ...e, presale: { opensAt: new Date(now - 36e5).toISOString(), endsAt: new Date(ends).toISOString() } } : e;
-      })
-    : events;
+  const shown = events;
 
   const publication: Publication = {
     version: 1,
@@ -208,8 +189,7 @@ export const suggestedName = (d: StartDraft) => {
 /**
  * What the claim publishes on the new event: the reels' words, the opening's
  * words, the dates and the look, and the flyer (once stored at `flyerUrl`)
- * as the opening scene and behind each reel. Not the preview's extras (the
- * locked reel, the made-up presale).
+ * as the opening scene and behind each reel.
  */
 export function claimPublication(d: StartDraft, timeZone?: string, ticketUrl?: string, flyerUrl?: string): Publication {
   // A date needs a ticket link to go live: the flyer's, else the one they gave, else another date's.
@@ -217,11 +197,10 @@ export function claimPublication(d: StartDraft, timeZone?: string, ticketUrl?: s
   const dates = d.dates?.map((x) => ({ ...x, ticketUrl: httpsLink(x.ticketUrl) || fallback })).filter((x) => x.ticketUrl);
   // The flyer, once stored at its own address: the opening scene and, until their videos come, behind each reel.
   const { publication } = draftLink({ ...d, dates, flyer: flyerUrl }, { core: true, timeZone });
-  const reels = publication.reels.filter((r) => r.id !== FANS_REEL_ID);
+  const reels = publication.reels;
   const claimed: Publication = { ...publication, reels, funnel: { ...publication.funnel, order: reels.map((r) => r.id) } };
   if (!flyerUrl) delete claimed.backdrop;
   // Kept as the event's flyer too, for the Style sheet's background choices.
   if (flyerUrl && claimed.look) claimed.look = { ...claimed.look, flyer: flyerUrl };
-  if (claimed.events) claimed.events = claimed.events.map((e) => ({ ...e, presale: undefined }));
   return claimed;
 }

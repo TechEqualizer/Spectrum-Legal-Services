@@ -7,7 +7,7 @@ import ClaimStep from "@/components/start/ClaimStep";
 import ReelsStep from "@/components/start/ReelsStep";
 import type { StartState } from "@/components/start/StartPreview";
 import type { FunnelDraft } from "@/lib/funnel-draft";
-import { draftLink, nightName, ROLES, type StartDraft } from "@/lib/start-draft";
+import { draftLink, ROLES, type StartDraft } from "@/lib/start-draft";
 import type { ImportedDate } from "@/lib/server/flyer-import";
 import type { Look } from "@/lib/look";
 
@@ -413,7 +413,6 @@ function Phone({
     const message: StartState = {
       type: "start:state",
       ...draftLink(draft, { core }),
-      ...(core ? { follow: { organizer: "your-night", name: nightName(draft) } } : {}),
       replay: again,
       ...(startReelId ? { startReelId } : {}),
     };

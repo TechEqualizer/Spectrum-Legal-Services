@@ -3,23 +3,15 @@
 import { useId } from "react";
 import { REEL_DRIVERS, REEL_ROLES, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
 import { SCREEN_LIMITS } from "@/lib/publication";
-import { FANS_REEL_ID, nightName, reelId, reelsOf, type StartDraft } from "@/lib/start-draft";
+import { nightName, reelId, reelsOf, type StartDraft } from "@/lib/start-draft";
 
 const GOLD_LINK = "min-h-11 text-sm font-semibold text-[var(--sl-gold)] underline underline-offset-4";
 const SHOW = "min-h-11 shrink-0 rounded-full border border-[var(--sl-line)] px-4 text-sm font-semibold text-[var(--sl-text)] hover:border-[var(--sl-gold)]";
 
-/** What Core adds, shown working in the phone during the trial. */
-const CORE: { title: string; text: string; reel?: string }[] = [
-  // Follow sits beside every reel.
-  { title: "Follow", text: "Fans follow you in one tap and hear about every night you put on.", reel: reelId("the_night") },
-  { title: "Presale for fans", text: "Your followers get tickets first, before everyone else." },
-  { title: "Just for followers", text: "A reel only your followers can watch. Everyone else sees it locked.", reel: FANS_REEL_ID },
-];
-
 /**
  * Step 2 of the sign-up wizard: the opening scene and three reels drafted
  * from the flyer, playing in the phone. Every word can be changed here and
- * the phone keeps up; Core's features show working, with the trial.
+ * the phone keeps up. Building is free; going live comes after the claim.
  */
 export default function ReelsStep({
   draft,
@@ -88,27 +80,6 @@ export default function ReelsStep({
           </p>
         </>
       )}
-
-      <section aria-labelledby={`${id}-core`} className="mt-10 rounded-2xl border border-[var(--sl-gold)]/45 bg-[var(--sl-gold)]/[0.06] p-5 sm:p-6">
-        <p className="text-sm font-semibold text-[var(--sl-gold)]">Core · free for 14 days</p>
-        <h2 id={`${id}-core`} className="mt-1 text-xl font-bold text-[var(--sl-text)]">
-          Already on your link
-        </h2>
-        <ul className="mt-4 grid gap-4">
-          {CORE.map((c) => (
-            <li key={c.title} className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-semibold text-[var(--sl-text)]">{c.title}</p>
-                <p className="text-sm text-[var(--sl-text)]/75">{c.text}</p>
-              </div>
-              <button type="button" className={SHOW} aria-label={`See ${c.title} in the phone`} onClick={() => onShow(c.reel)}>
-                See it
-              </button>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-5 text-sm text-[var(--sl-muted)]">Free for 14 days from when you claim your link. No card needed.</p>
-      </section>
 
       <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
         <button
