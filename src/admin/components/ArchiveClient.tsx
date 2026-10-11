@@ -14,8 +14,11 @@ const patch = (slug: string, archived: boolean) =>
     body: JSON.stringify({ archived }),
   }).catch(() => null);
 
-/** Archive, beside a client's name: asks first, saying what happens. */
-export function ArchiveClient({ organizer }: { organizer: { slug: string; name: string } }) {
+/**
+ * Archive, beside a client's name: asks first, saying what happens. Settings →
+ * Organizers calls it Remove (`verb`); it's the same archive, restorable.
+ */
+export function ArchiveClient({ organizer, verb = "Archive" }: { organizer: { slug: string; name: string }; verb?: "Archive" | "Remove" }) {
   const router = useRouter();
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -26,8 +29,8 @@ export function ArchiveClient({ organizer }: { organizer: { slug: string; name: 
     const res = await patch(organizer.slug, true);
     const out = (await res?.json().catch(() => null)) as { error?: string; canceled?: boolean } | null;
     setBusy(false);
-    if (!res?.ok) return setProblem(out?.error ?? "Couldn't archive them. Try again.");
-    if (out?.canceled === false) window.alert(`${organizer.name} is archived, but their plan couldn't be canceled in Stripe. Cancel it there.`);
+    if (!res?.ok) return setProblem(out?.error ?? `Couldn't ${verb.toLowerCase()} them. Try again.`);
+    if (out?.canceled === false) window.alert(`${organizer.name} is ${verb === "Remove" ? "removed" : "archived"}, but their plan couldn't be canceled in Stripe. Cancel it there.`);
     setAsking(false);
     router.refresh();
   };
@@ -36,18 +39,18 @@ export function ArchiveClient({ organizer }: { organizer: { slug: string; name: 
       <button
         type="button"
         onClick={() => setAsking(true)}
-        aria-label={`Archive ${organizer.name}`}
+        aria-label={`${verb} ${organizer.name}`}
         className="inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-red-700 hover:bg-red-50"
       >
-        Archive
+        {verb}
       </button>
     );
   }
   return (
-    <div role="group" aria-label={`Archive ${organizer.name}?`} className="basis-full rounded-lg border border-red-200 bg-red-50/60 px-3 py-2.5">
+    <div role="group" aria-label={`${verb} ${organizer.name}?`} className="basis-full rounded-lg border border-red-200 bg-red-50/60 px-3 py-2.5">
       <p className="text-sm text-gray-800">
-        Archive <strong>{organizer.name}</strong>? Their links stop working, their logins can&apos;t sign in, and a paid plan stops
-        charging now. Nothing is deleted: you can restore them below.
+        {verb} <strong>{organizer.name}</strong>? Their links stop working, their logins can&apos;t sign in, and a paid plan stops
+        charging now. Nothing is deleted: you can restore them below, under Archived.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-1">
         <button
@@ -56,7 +59,7 @@ export function ArchiveClient({ organizer }: { organizer: { slug: string; name: 
           onClick={archive}
           className="min-h-11 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-40"
         >
-          {busy ? "Archiving…" : "Archive"}
+          {busy ? (verb === "Remove" ? "Removing…" : "Archiving…") : verb}
         </button>
         <button type="button" disabled={busy} onClick={() => setAsking(false)} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-white">
           Keep

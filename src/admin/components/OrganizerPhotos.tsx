@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
+import { ArchiveClient } from "@/admin/components/ArchiveClient";
 import { squareJpeg } from "@/admin/square-photo";
 
 export type OrganizerPhoto = { slug: string; name: string; avatarUrl?: string };
@@ -9,9 +10,10 @@ export type OrganizerPhoto = { slug: string; name: string; avatarUrl?: string };
 /**
  * Settings → Organizers: each organizer this admin runs, with the photo
  * shown beside their name on every reel of every event (their initial
- * until one is added).
+ * until one is added). Full admins can also remove an organizer (it asks
+ * first; an archive, restorable under Archived).
  */
-export default function OrganizerPhotos({ organizers }: { organizers: OrganizerPhoto[] }) {
+export default function OrganizerPhotos({ organizers, canRemove = false }: { organizers: OrganizerPhoto[]; canRemove?: boolean }) {
   const id = useId();
   if (!organizers.length) return null;
   return (
@@ -19,7 +21,7 @@ export default function OrganizerPhotos({ organizers }: { organizers: OrganizerP
       <h2 id={`${id}-title`} className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-gray-600">Organizers</h2>
       <ul role="list" className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
         {organizers.map((o) => (
-          <OrganizerRow key={o.slug} organizer={o} />
+          <OrganizerRow key={o.slug} organizer={o} canRemove={canRemove} />
         ))}
       </ul>
       <p className="mt-1.5 px-1 text-xs text-gray-600">Their photo shows beside their name on every reel, for every event. Square photos look best.</p>
@@ -27,7 +29,7 @@ export default function OrganizerPhotos({ organizers }: { organizers: OrganizerP
   );
 }
 
-function OrganizerRow({ organizer }: { organizer: OrganizerPhoto }) {
+function OrganizerRow({ organizer, canRemove }: { organizer: OrganizerPhoto; canRemove: boolean }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -100,10 +102,11 @@ function OrganizerRow({ organizer }: { organizer: OrganizerPhoto }) {
         </button>
         {organizer.avatarUrl && !busy && (
           <button type="button" onClick={remove} aria-label={`Remove photo for ${organizer.name}`} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-red-700 hover:bg-red-50">
-            Remove
+            Remove photo
           </button>
         )}
       </div>
+      {canRemove && <ArchiveClient organizer={organizer} verb="Remove" />}
       {error && <p role="alert" className="basis-full text-sm font-semibold text-red-700">{error}</p>}
     </li>
   );
