@@ -107,3 +107,35 @@ Showlnk can't film their night, and fans can tell. What we can do:
 
 - Which effects read best per kind of night (a fixed mapping, or Claude's
   call each time)? Tune with a handful of real flyers.
+
+## Update (Oct 11, 2026): the flyer trailer, built with Remotion
+
+Two findings set the direction:
+
+- What sells Big Love's opening is **the edit, not the motion**: a 10-second
+  multi-shot short (wide, close-up, detail, walk). A Kling multi-shot test
+  from the flyer had the right feel but costs per event; flat and depth
+  loops of one still image don't.
+- One flyer already holds several shots. Cut into them like an editor
+  (a face, the figure, a detail), with a camera move per shot, punch-in cuts
+  with a flash, light leaks, embers, grain and grade, ending on the whole
+  flyer crisp, and it reads as a trailer at no cost per event.
+
+Built with Remotion 4.0.526 (pinned) and its official agent skill
+(`.claude/skills/remotion-best-practices`, read before adding):
+`src/remotion/FlyerTrailer.tsx`, played on the link with `@remotion/player`.
+
+- **License:** Remotion's free license covers individuals and companies of
+  up to 3 people; above that, embedding the Player counts as an automation
+  ($0.01 per render, $100 a month minimum). Showlnk uses the free license
+  (decided Oct 11, 2026); revisit when the team grows past 3.
+- **Sharpness rule:** a shot's box is at least a third of the flyer's width
+  and close to 9:16, and the composition is 720×1280, so no shot is
+  enlarged past the flyer's own detail.
+- **Compatibility:** only CSS-based cuts (push-cut) and the light-leak
+  effect; the HTML-in-canvas transitions (film burn, zoom blur) aren't
+  supported on many phones yet.
+- **Next:** Claude picks the shots and moves when it reads the flyer (boxes
+  checked on the server); the trailer becomes the opening scene's backdrop;
+  the link's title waits for the poster shot to pass; an MP4 export for
+  Instagram Stories and TikTok.

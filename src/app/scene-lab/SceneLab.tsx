@@ -2,7 +2,25 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { Player } from "@remotion/player";
 import MotionScene, { type MotionRecipe } from "@/components/MotionScene";
+import { FlyerTrailer, trailerFrames, type FlyerTrailerProps } from "@/remotion/FlyerTrailer";
+
+// Shots as Claude would pick them on Big Love's flyer, clear of its lettering.
+const TRAILER: FlyerTrailerProps = {
+  src: "/clients/masquerade/flyer.jpg",
+  width: 1054,
+  height: 1492,
+  spark: "#F5B65A",
+  hue: 30,
+  // Wide enough to stay sharp (at least a third of the flyer), close to the phone's shape, then the poster.
+  shots: [
+    { box: { x: 0.69, y: 0.02, w: 0.31, h: 0.37 }, move: "pull", seconds: 1.6 },
+    { box: { x: 0.35, y: 0.53, w: 0.3, h: 0.34 }, move: "tilt-up", seconds: 1.8 },
+    { box: { x: 0.66, y: 0.18, w: 0.34, h: 0.32 }, move: "pan-left", seconds: 1.4 },
+    { box: { x: 0, y: 0, w: 1, h: 1 }, move: "poster", seconds: 2.6 },
+  ],
+};
 
 // Recipes as Claude would write them for Big Love's flyer (1054×1492).
 const RECIPES: Record<string, MotionRecipe> = {
@@ -17,7 +35,23 @@ function Lab() {
   const depth = q.get("depth") ? "/clients/masquerade/flyer-depth.png" : undefined;
   return (
     <main className="relative h-dvh w-full overflow-hidden bg-black text-white">
-      <MotionScene src="/clients/masquerade/flyer.jpg" depth={depth} recipe={recipe} />
+      {q.get("r") === "trailer" ? (
+        <Player
+          component={FlyerTrailer}
+          inputProps={TRAILER}
+          durationInFrames={trailerFrames(TRAILER.shots, 30)}
+          compositionWidth={720}
+          compositionHeight={1280}
+          fps={30}
+          autoPlay
+          loop
+          initiallyMuted
+          controls={false}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        />
+      ) : (
+        <MotionScene src="/clients/masquerade/flyer.jpg" depth={depth} recipe={recipe} />
+      )}
       <div className="cine-grain pointer-events-none absolute -inset-1/2 opacity-[0.14]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_40%,transparent_55%,rgba(0,0,0,0.65))]" />
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent px-6 pb-14 pt-40">
