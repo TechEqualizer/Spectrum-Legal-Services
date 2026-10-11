@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import DepthScene, { type DepthCamera } from "@/components/DepthScene";
 
 /**
  * A moving opening scene made from a still flyer, directed by Claude and
@@ -13,28 +14,47 @@ import { useEffect, useRef, useState } from "react";
  * particles. Every motion repeats exactly once per `seconds`, so the scene
  * loops without a seam. Still for visitors who ask for less motion.
  */
-export type MotionEffect = "smoke" | "embers" | "glitter" | "bokeh" | "sweep" | "pulse" | "rain";
+export type MotionEffect = "smoke" | "embers" | "glitter" | "bokeh" | "sweep" | "pulse" | "rain" | "rays" | "flare";
 
 export type MotionRecipe = {
   /** The subject: a box on the flyer, 0 to 1 from its top left, clear of lettering. */
   focus: { x: number; y: number; w: number; h: number };
-  /** How the camera moves: a slow push in and back, a drift, or a sway. */
-  camera: "push" | "drift" | "sway";
+  /**
+   * How the camera moves. With a depth map: an orbit (near and far separate),
+   * a dolly in and back, or a rise. Without one, the flat moves: push, drift, sway.
+   */
+  camera: "push" | "drift" | "sway" | DepthCamera;
   effects: MotionEffect[];
   /** Two colors from the flyer: the glow behind the subject, and the light in the air. */
   glow: string;
   spark: string;
   /** One loop, 3 to 6 seconds. */
   seconds: number;
+  /** Where the light comes from on screen, 0 to 1 (the glow and the flare sit there). */
+  light?: { x: number; y: number };
 };
 
-export default function MotionScene({ src, recipe, paused = false }: { src: string; recipe: MotionRecipe; paused?: boolean }) {
+export default function MotionScene({
+  src,
+  depth,
+  recipe,
+  paused = false,
+}: {
+  src: string;
+  /** The flyer's depth map (near is bright), made once when the flyer is read. Without it, the flat scene. */
+  depth?: string;
+  recipe: MotionRecipe;
+  paused?: boolean;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [art, setArt] = useState<{ w: number; h: number } | null>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [still, setStill] = useState(false);
   const L = Math.min(6, Math.max(3, recipe.seconds));
+  const [flat, setFlat] = useState(false);
+  const deep = Boolean(depth) && !flat;
+  const flatCamera = recipe.camera === "orbit" ? "drift" : recipe.camera === "dolly" ? "push" : recipe.camera === "rise" ? "sway" : recipe.camera;
   const has = (e: MotionEffect) => recipe.effects.includes(e);
 
   // The flyer's own size, to place the subject. (Loaded here: a cached image can finish before React listens.)
@@ -106,25 +126,40 @@ export default function MotionScene({ src, recipe, paused = false }: { src: stri
     "--ms-loop": `${L}s`,
     "--ms-glow": recipe.glow,
     "--ms-spark": recipe.spark,
+    "--ms-lx": `${(recipe.light?.x ?? 0.5) * 100}%`,
+    "--ms-ly": `${(recipe.light?.y ?? 0.42) * 100}%`,
   } as React.CSSProperties;
   const playState = still || paused ? "paused" : "running";
 
   return (
     <div ref={box} aria-hidden="true" className="absolute inset-0 overflow-hidden bg-black" style={vars}>
-      {/* The flyer's colors, far back and out of focus. */}
-      {/* eslint-disable-next-line @next/next/no-img-element -- the organizer's flyer */}
-      <img src={src} alt="" className="ms-field absolute inset-0 h-full w-full object-cover" style={{ animationPlayState: playState }} />
+      {deep && depth ? (
+        // The artwork in 3D: the camera moves through it.
+        <DepthScene src={src} depth={depth} focus={recipe.focus} camera={recipe.camera as DepthCamera} seconds={L} haze={recipe.glow} still={still || paused} onFail={() => setFlat(true)} />
+      ) : (
+        <>
+          {/* The flyer's colors, far back and out of focus. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- the organizer's flyer */}
+          <img src={src} alt="" className="ms-field absolute inset-0 h-full w-full object-cover" style={{ animationPlayState: playState }} />
+          {/* The subject, with the camera's move. Edges feathered into the field. */}
+          <div className={`ms-cam ms-cam-${flatCamera} absolute inset-0`} style={{ animationPlayState: playState }}>
+            {subject && (
+              // eslint-disable-next-line @next/next/no-img-element -- the organizer's flyer, cropped by CSS
+              <img src={src} alt="" className="ms-subject absolute max-w-none" style={subject} />
+            )}
+          </div>
+        </>
+      )}
       {/* The light the subject stands in. */}
-      <div className="ms-glow absolute inset-0" style={{ animationPlayState: has("pulse") ? playState : "paused" }} />
-      {/* The subject, with the camera's move. Edges feathered into the field. */}
-      <div className={`ms-cam ms-cam-${recipe.camera} absolute inset-0`} style={{ animationPlayState: playState }}>
-        {subject && (
-          // eslint-disable-next-line @next/next/no-img-element -- the organizer's flyer, cropped by CSS
-          <img src={src} alt="" className="ms-subject absolute max-w-none" style={subject} />
-        )}
-      </div>
+      <div className="ms-glow absolute inset-0" style={{ animationPlayState: has("pulse") ? playState : "paused", opacity: deep ? 0.55 : undefined }} />
+      {/* Shafts of light falling from above, turning slowly. */}
+      {has("rays") && <div className="ms-rays absolute inset-0" style={{ animationPlayState: playState }} />}
       {has("sweep") && <div className="ms-sweep absolute inset-0" style={{ animationPlayState: playState }} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
+      {/* An anamorphic streak across the light source. */}
+      {has("flare") && <div className="ms-flare absolute inset-x-0 h-24 -translate-y-1/2" style={{ top: "var(--ms-ly)", animationPlayState: playState }} />}
+      {/* Letterbox bars that open as the scene starts, like the first shot of a film. */}
+      <div className="ms-bars pointer-events-none absolute inset-0" />
     </div>
   );
 }

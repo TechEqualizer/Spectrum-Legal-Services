@@ -346,7 +346,7 @@
   animation: ms-field var(--ms-loop) ease-in-out infinite;
 }
 .ms-glow {
-  background: radial-gradient(60% 45% at 50% 42%, color-mix(in srgb, var(--ms-glow) 55%, transparent), transparent 70%);
+  background: radial-gradient(60% 45% at var(--ms-lx) var(--ms-ly), color-mix(in srgb, var(--ms-glow) 55%, transparent), transparent 70%);
   mix-blend-mode: screen;
   animation: ms-pulse var(--ms-loop) ease-in-out infinite;
 }
@@ -389,6 +389,48 @@
   0% { background-position: 100% 0; }
   55%, 100% { background-position: 0% 0; }
 }
+/* Film grade: deeper shadows, warm highlights. */
+.ms-grade { filter: contrast(1.12) saturate(1.12) brightness(1.04); }
+.ms-rays {
+  background: repeating-conic-gradient(from 180deg at var(--ms-lx) -12%, transparent 0deg 7deg, color-mix(in srgb, var(--ms-glow) 22%, transparent) 9deg 11deg, transparent 13deg 20deg);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+  filter: blur(10px);
+  mix-blend-mode: screen;
+  transform-origin: 50% -12%;
+  animation: ms-rays var(--ms-loop) ease-in-out infinite;
+}
+.ms-flare {
+  background: radial-gradient(50% 6% at var(--ms-lx) 50%, rgba(255, 255, 255, 0.85), color-mix(in srgb, var(--ms-spark) 60%, transparent) 30%, transparent 70%),
+    radial-gradient(4% 30% at var(--ms-lx) 50%, rgba(255, 255, 255, 0.6), transparent 70%);
+  mix-blend-mode: screen;
+  animation: ms-flare var(--ms-loop) ease-in-out infinite;
+}
+.ms-bars::before, .ms-bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 12%;
+  background: #000;
+  animation: ms-bars 2.4s cubic-bezier(0.6, 0, 0.2, 1) 0.4s both;
+}
+.ms-bars::before { top: 0; }
+.ms-bars::after { bottom: 0; }
+@keyframes ms-rays {
+  0%, 100% { transform: rotate(-3deg); opacity: 0.7; }
+  50% { transform: rotate(3deg); opacity: 1; }
+}
+@keyframes ms-flare {
+  0%, 100% { opacity: 0.45; transform: scaleX(0.9); }
+  50% { opacity: 0.9; transform: scaleX(1.1); }
+}
+@keyframes ms-bars {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0); }
+}
 @media (prefers-reduced-motion: reduce) {
+  .ms-rays, .ms-flare, .ms-bars::before, .ms-bars::after { animation: none !important; }
+  .ms-bars { display: none; }
   .ms-field, .ms-glow, .ms-cam-push, .ms-cam-drift, .ms-cam-sway, .ms-sweep { animation: none !important; }
 }

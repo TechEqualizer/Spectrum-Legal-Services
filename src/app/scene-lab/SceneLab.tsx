@@ -6,16 +6,18 @@ import MotionScene, { type MotionRecipe } from "@/components/MotionScene";
 
 // Recipes as Claude would write them for Big Love's flyer (1054×1492).
 const RECIPES: Record<string, MotionRecipe> = {
-  runway: { focus: { x: 0.33, y: 0.53, w: 0.34, h: 0.33 }, camera: "push", effects: ["smoke", "embers", "sweep", "pulse"], glow: "#E07A1F", spark: "#F5B65A", seconds: 5 },
-  mask: { focus: { x: 0.69, y: 0.02, w: 0.31, h: 0.42 }, camera: "drift", effects: ["glitter", "bokeh", "sweep"], glow: "#7B3FB0", spark: "#E8C36A", seconds: 4 },
+  runway: { focus: { x: 0.33, y: 0.51, w: 0.34, h: 0.35 }, camera: "dolly", effects: ["smoke", "embers", "rays", "flare", "pulse"], glow: "#E07A1F", spark: "#F5B65A", seconds: 5, light: { x: 0.42, y: 0.1 } },
+  mask: { focus: { x: 0.69, y: 0.02, w: 0.31, h: 0.42 }, camera: "orbit", effects: ["glitter", "bokeh", "sweep", "rays"], glow: "#7B3FB0", spark: "#E8C36A", seconds: 5, light: { x: 0.7, y: 0.15 } },
 };
 
 function Lab() {
   const q = useSearchParams();
   const recipe = RECIPES[q.get("r") ?? "runway"] ?? RECIPES.runway;
+  // ?depth=1 uses the flyer's depth map (made with Depth Anything V2 Small).
+  const depth = q.get("depth") ? "/clients/masquerade/flyer-depth.png" : undefined;
   return (
     <main className="relative h-dvh w-full overflow-hidden bg-black text-white">
-      <MotionScene src="/clients/masquerade/flyer.jpg" recipe={recipe} />
+      <MotionScene src="/clients/masquerade/flyer.jpg" depth={depth} recipe={recipe} />
       <div className="cine-grain pointer-events-none absolute -inset-1/2 opacity-[0.14]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_40%,transparent_55%,rgba(0,0,0,0.65))]" />
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent px-6 pb-14 pt-40">
