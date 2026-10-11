@@ -78,8 +78,14 @@ check('lands on Home, signed in', /\/admin\/home\?welcome=golden-hour-halloween$
 check('welcomed by name', await p.getByRole('heading', { name: 'Welcome to Showlnk, Golden Hour' }).isVisible());
 const welcome = p.getByRole('region', { name: 'Your link is ready' });
 check('your link is ready', await welcome.isVisible() && await welcome.getByRole('link', { name: 'localhost:3002/f/golden-hour' }).isVisible());
-check('what to do next', await welcome.getByRole('button', { name: 'Open your reels' }).isVisible() && await welcome.getByRole('button', { name: 'Take the tour' }).isVisible());
-check('the tour waits', (await p.getByRole('dialog').count()) === 0);
+check('what to do next', await welcome.getByRole('button', { name: 'Open your reels' }).isVisible() && await welcome.getByRole('button', { name: 'Take the tour again' }).isVisible());
+// The guided tour starts by itself, over the welcome; skipping it leaves the welcome in place.
+const tour = p.locator('[data-testid=tour]');
+check('the tour starts by itself', await tour.isVisible() && await tour.getByText('Welcome to Showlnk').isVisible());
+await p.keyboard.press('Escape'); await settle(p, 400);
+check('skipping it leaves the welcome', (await tour.count()) === 0 && await welcome.isVisible() && /\/admin\/home\?welcome=/.test(p.url()));
+await p.reload(); await settle(p, 1500);
+check('a reload doesn\'t start it again', (await tour.count()) === 0 && await welcome.isVisible());
 const four = (await p.getByText('The four things').locator('..').locator('..').innerText().catch(() => '')).replace(/\s+/g, ' ');
 check('Home: the opening scene from the flyer, the reels still need video', /Opening scene .*Ready/.test(four) && (four.match(/Needs video/g) ?? []).length === 3, four);
 await p.screenshot({ path: 'claim-home-1279.png', fullPage: true });

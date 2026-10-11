@@ -57,7 +57,7 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/admin/events",
     target: "events-list",
     title: "Events: each night and its link",
-    body: "Upcoming, tonight or ended at a glance. Tap an event to edit it. For a new night, send Showlnk the flyer.",
+    body: "Upcoming, tonight or ended at a glance. Tap an event to edit it, or New event for your next night.",
   },
   {
     path: "/admin/links",
@@ -93,7 +93,7 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/admin/settings",
     target: "eventbrite",
     title: "Eventbrite",
-    body: "Connected, so every ticket sold shows up in Results and Share on its own.",
+    body: "Connect it once and every ticket sold shows up in Results and Share on its own.",
   },
   {
     path: "/admin/settings",

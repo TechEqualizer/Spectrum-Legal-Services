@@ -52,6 +52,17 @@ function place(r: Box | null, card: { width: number; height: number }) {
  * as it goes. Starts by itself the first time a client lands on Home, and
  * again from the account menu ("Take the tour") or a link with ?tour=1.
  */
+/** Whether this is the first look at the welcome for this new link (a reload doesn't start the tour again). */
+function firstWelcome(event: string | null): boolean {
+  if (!event) return false;
+  try {
+    const key = `welcome_tour:${event}`;
+    if (sessionStorage.getItem(key)) return false;
+    sessionStorage.setItem(key, "1");
+  } catch {}
+  return true;
+}
+
 export default function Tour({ canStart }: { canStart: boolean }) {
   const n = useTourStep();
   const pathname = usePathname();
@@ -64,8 +75,9 @@ export default function Tour({ canStart }: { canStart: boolean }) {
   const next = useRef<HTMLButtonElement>(null);
   const step = n === null ? null : TOUR_STEPS[n];
 
-  // First visit to Home (or a link with ?tour=1): start. Not just after
-  // claiming a link (?welcome=): the welcome comes first, and offers the tour.
+  // Right after claiming a link in the sign-up wizard (?welcome=), on a first
+  // visit to Home, or from a link with ?tour=1: start. The welcome card waits
+  // underneath, with their link and what to do next.
   useEffect(() => {
     if (!canStart) return;
     const url = new URL(window.location.href);
@@ -73,7 +85,7 @@ export default function Tour({ canStart }: { canStart: boolean }) {
       url.searchParams.delete("tour");
       window.history.replaceState(window.history.state, "", url);
       startTour();
-    } else if (pathname === "/admin/home" && !tourSeen() && !url.searchParams.has("welcome")) {
+    } else if (pathname === "/admin/home" && (firstWelcome(url.searchParams.get("welcome")) || !tourSeen())) {
       startTour();
     }
     // Once per page load.

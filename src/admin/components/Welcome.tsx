@@ -9,7 +9,7 @@ import { TRIAL_DAYS } from "@/lib/plans";
 /**
  * Home, right after an organizer claims their link in the sign-up wizard
  * (/admin/home?welcome=<event>): their link to copy, Core's trial, and what
- * to do next. The tour waits until this is closed.
+ * to do next. The tour starts over it first; it's here when the tour ends.
  */
 export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent; onOpen: (slug: string) => void; onClose: () => void }) {
   const origin = useLinkOrigin();
@@ -31,7 +31,7 @@ export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent;
     },
     {
       title: "Find your way around",
-      text: "A minute's tour of Home, your reels, your links and your fans.",
+      text: "A minute's tour of Home, your reels, your links and your fans, any time.",
       action: (
         <button
           type="button"
@@ -41,7 +41,7 @@ export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent;
           }}
           className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:border-deep-navy"
         >
-          Take the tour
+          Take the tour again
         </button>
       ),
     },
