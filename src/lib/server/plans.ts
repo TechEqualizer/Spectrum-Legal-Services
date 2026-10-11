@@ -3,7 +3,7 @@
 // webhook writes it, and billing reads its Stripe ids, with the secret key.
 
 import { asAdmin, type Admin } from "@/lib/server/admin-auth";
-import { FREE, hasCore, type Plan, type PlanStatus } from "@/lib/plans";
+import { FREE, hasCore, hasFans, type Plan, type PlanStatus } from "@/lib/plans";
 
 type Row = {
   status: Exclude<PlanStatus, "free">;
@@ -11,6 +11,8 @@ type Row = {
   trial_ends_at: string | null;
   current_period_end: string | null;
   comped_until: string | null;
+  /** Older databases (before the fans add-on) don't have it. */
+  fans?: boolean | null;
 };
 
 const toPlan = (r: Row | undefined): Plan =>
@@ -21,6 +23,7 @@ const toPlan = (r: Row | undefined): Plan =>
         ...(r.trial_ends_at ? { trialEndsAt: r.trial_ends_at } : {}),
         ...(r.current_period_end ? { periodEnd: r.current_period_end } : {}),
         ...(r.comped_until ? { compedUntil: r.comped_until } : {}),
+        ...(r.fans ? { fans: true } : {}),
       }
     : FREE;
 
@@ -75,7 +78,7 @@ export async function chargingSubscriptionOf(organizer: string): Promise<string 
 }
 
 /** Writes the organizer's plan row (the Stripe webhook). Whether it saved. */
-export async function savePlan(organizer: string, row: Record<string, string | null>): Promise<boolean> {
+export async function savePlan(organizer: string, row: Record<string, string | boolean | null>): Promise<boolean> {
   const s = service();
   if (!s) return false;
   try {
@@ -104,7 +107,7 @@ export async function planOf(organizer: string): Promise<Plan | undefined> {
   if (!s) return undefined;
   try {
     const res = await fetch(
-      `${s.url}/rest/v1/organizer_plans?organizer_slug=eq.${encodeURIComponent(organizer)}&select=status,billing_interval,trial_ends_at,current_period_end,comped_until`,
+      `${s.url}/rest/v1/organizer_plans?organizer_slug=eq.${encodeURIComponent(organizer)}&select=*`,
       // PLAN_CACHE_SECONDS: the tests keep it a second, to switch plans mid-run.
       { headers: s.headers, next: { revalidate: Number(env("PLAN_CACHE_SECONDS") ?? 60), tags: [planTag(organizer)] } }
     );
@@ -125,4 +128,16 @@ export async function linkIsLive(organizer: string | undefined): Promise<boolean
   if (!organizer) return true;
   const plan = await planOf(organizer);
   return !plan || hasCore(plan);
+}
+
+/**
+ * Whether an organizer has the fans add-on (or Core comped): Follow,
+ * presales, fans-only reels and the fan calendar. Follow's own switch
+ * (fans.ts, followOn) is checked by its callers. If the plan can't be read,
+ * what fans already have keeps working.
+ */
+export async function fansFeaturesOn(organizer: string | undefined): Promise<boolean> {
+  if (!organizer) return false;
+  const plan = await planOf(organizer);
+  return !plan || hasFans(plan);
 }

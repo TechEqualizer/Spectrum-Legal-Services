@@ -7,9 +7,8 @@ import OrganizerEvents from "@/components/OrganizerEvents";
 import ComingSoon from "@/components/showlnk/ComingSoon";
 import { isConcept } from "@/config/site";
 import { funnels } from "@/data/funnels";
-import { hasCore } from "@/lib/plans";
 import { followOn } from "@/lib/server/fans";
-import { planOf } from "@/lib/server/plans";
+import { fansFeaturesOn } from "@/lib/server/plans";
 import { getOrganizer, organizerOf, type Organizer } from "@/lib/server/funnels";
 import { publicLink, shownFunnel } from "@/lib/server/links";
 import { shareMetadata } from "@/lib/server/share-card";
@@ -106,12 +105,12 @@ export default async function FunnelPage({ params }: PageProps<"/f/[slug]">) {
 }
 
 /**
- * Who visitors can follow on this page, if Follow is on for the organizer,
- * and whether Core's parts of it (presales, fans-only reels) work here. If
- * the plan can't be read, they keep working: nothing fans have breaks.
+ * Who visitors can follow on this page: where Follow is on for the
+ * organizer and they have the fans add-on (with it, presales and fans-only
+ * reels too). If the plan can't be read, they keep working: nothing fans have
+ * breaks.
  */
 async function followTarget(organizer: Organizer, funnelId?: string): Promise<FollowTarget | undefined> {
-  if (!followOn(organizer.slug)) return undefined;
-  const plan = await planOf(organizer.slug);
-  return { organizer: organizer.slug, name: organizer.name, ...(funnelId ? { funnelId } : {}), core: !plan || hasCore(plan) };
+  if (!followOn(organizer.slug) || !(await fansFeaturesOn(organizer.slug))) return undefined;
+  return { organizer: organizer.slug, name: organizer.name, ...(funnelId ? { funnelId } : {}), core: true };
 }

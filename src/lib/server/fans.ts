@@ -10,6 +10,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import type { Funnel, ReelMedia } from "@/data/funnel-types";
 import { FAN_BUCKET, FAN_REF_PREFIX, fanRefPath, fanRefsOf, isFanRef, isFansReel, swapFanRefs } from "@/lib/fan-reels";
 import { getOrganizer } from "@/lib/server/funnels";
+import { fansFeaturesOn } from "@/lib/server/plans";
 import { followConsent } from "@/lib/fans";
 import { normalizeSourceTag } from "@/lib/source-tag";
 
@@ -139,7 +140,8 @@ export async function startFollow(
 ): Promise<StartResult> {
   if (!isFollowingConfigured()) return "not_configured";
   const organizer = await getOrganizer(input.organizer);
-  if (!organizer) return "unknown_organizer";
+  // Only for organizers with the fans add-on (the link shows Follow only where it's switched on, too).
+  if (!organizer || !(await fansFeaturesOn(organizer.slug))) return "unknown_organizer";
   const email = input.email.trim().toLowerCase();
   const token = randomBytes(32).toString("base64url");
   const started = await rpc<string>("fan_start", {

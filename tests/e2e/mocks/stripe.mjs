@@ -3,9 +3,11 @@
 // the billing portal, as plain pages with buttons. Paying or canceling sends
 // the app a webhook signed with STRIPE_WEBHOOK_SECRET, like Stripe does.
 //
-//   GET  /v1/prices?lookup_keys[0]=core_month|core_year
-//   POST /v1/checkout/sessions          -> { id, url: /pay/:id }
-//   GET  /v1/subscriptions/:id
+//   GET  /v1/prices?lookup_keys[0]=core_month|core_year|fans_month|fans_year
+//   POST /v1/checkout/sessions          -> { id, url: /pay/:id } (Core, and the fans add-on as a second line)
+//   GET  /v1/subscriptions/:id          DELETE it (ends it now)
+//   POST /v1/subscription_items         add the fans add-on (customer.subscription.updated)
+//   DELETE /v1/subscription_items/:id   take it off (customer.subscription.updated)
 //   POST /v1/billing_portal/sessions    -> { url: /portal/:customer }
 //   GET/POST /pay/:id                   Checkout: Pay (webhook, then success_url) or Cancel (cancel_url)
 //   GET/POST /portal/:customer          the portal: Cancel plan (webhook, then return_url)
@@ -26,6 +28,9 @@ let sessions, subscriptions, customers, webhooks, n;
 const reset = () => { sessions = new Map(); subscriptions = new Map(); customers = new Map(); webhooks = []; n = 0; };
 reset();
 const id = (prefix) => `${prefix}_${++n}`;
+const PRICES = ['core_month', 'core_year', 'fans_month', 'fans_year'];
+/** A subscription item for a price id (price_<lookup key>), as Stripe returns it. */
+const itemFor = (price, periodEnd) => ({ id: id('si'), current_period_end: periodEnd, price: { id: price, lookup_key: price.replace(/^price_/, ''), recurring: { interval: price.endsWith('year') ? 'year' : 'month' } } });
 
 /** Stripe's form encoding, read back into nested objects (a[b][0][c]=v). */
 function parseForm(text) {
@@ -85,13 +90,14 @@ http.createServer((req, res) => {
       const s = sessions.get(m[1]);
       if (!s) return json(404, { error: 'no session' });
       if (req.method === 'GET') {
-        return page(res, 'Stripe test checkout', `<p>${s.interval === 'year' ? '$290.00 per year' : '$29.00 per month'} · Showlnk Core</p>${s.trial_end ? `<p>Free until ${new Date(s.trial_end * 1000).toISOString().slice(0, 10)}</p>` : ''}<p>${s.customer_email ?? s.customer ?? ''}</p><form method="post"><button name="do" value="pay">Pay</button> <button name="do" value="cancel">Back</button></form>`);
+        return page(res, 'Stripe test checkout', `<p>${s.interval === 'year' ? '$290.00 per year' : '$29.00 per month'} · Showlnk Core</p>${s.fans ? `<p>${s.interval === 'year' ? '$150.00 per year' : '$15.00 per month'} · Fans add-on</p>` : ''}${s.trial_end ? `<p>Free until ${new Date(s.trial_end * 1000).toISOString().slice(0, 10)}</p>` : ''}<p>${s.customer_email ?? s.customer ?? ''}</p><form method="post"><button name="do" value="pay">Pay</button> <button name="do" value="cancel">Back</button></form>`);
       }
       if (parseForm(text).do === 'cancel') return redirect(res, s.cancel_url);
       const customer = s.customer ?? id('cus');
       customers.set(customer, { id: customer, email: s.customer_email });
       const now = Math.floor(Date.now() / 1000);
-      const sub = { id: id('sub'), object: 'subscription', customer, status: s.trial_end ? 'trialing' : 'active', metadata: { organizer: s.organizer }, trial_end: s.trial_end, items: { data: [{ current_period_end: now + (s.interval === 'year' ? 365 : 30) * DAY, price: { id: s.price, recurring: { interval: s.interval } } }] } };
+      const end = now + (s.interval === 'year' ? 365 : 30) * DAY;
+      const sub = { id: id('sub'), object: 'subscription', customer, status: s.trial_end ? 'trialing' : 'active', metadata: { organizer: s.organizer }, trial_end: s.trial_end, items: { data: [itemFor(s.price, end), ...(s.fans ? [itemFor(s.fans, end)] : [])] } };
       subscriptions.set(sub.id, sub);
       s.status = 'complete';
       await send('checkout.session.completed', { id: s.id, object: 'checkout.session', customer, subscription: sub.id, client_reference_id: s.organizer, metadata: { organizer: s.organizer } });
@@ -109,14 +115,34 @@ http.createServer((req, res) => {
     if (req.headers.authorization !== 'Bearer test-stripe') return json(401, { error: { message: 'Invalid API Key provided' } });
     if (p === '/v1/prices' && req.method === 'GET') {
       const key = url.searchParams.get('lookup_keys[0]');
-      return json(200, { data: key === 'core_month' || key === 'core_year' ? [{ id: `price_${key}`, lookup_key: key }] : [] });
+      return json(200, { data: PRICES.includes(key) ? [{ id: `price_${key}`, lookup_key: key }] : [] });
     }
     if (p === '/v1/checkout/sessions' && req.method === 'POST') {
       const b = parseForm(text);
       if (b.mode !== 'subscription' || !b.line_items?.[0]?.price || !b.success_url || !b.cancel_url) return json(400, { error: { message: 'bad checkout session' } });
-      const s = { id: id('cs'), price: b.line_items[0].price, interval: b.line_items[0].price.endsWith('year') ? 'year' : 'month', organizer: b.subscription_data?.metadata?.organizer, customer: b.customer, customer_email: b.customer_email, trial_end: b.subscription_data?.trial_end ? Number(b.subscription_data.trial_end) : null, success_url: b.success_url, cancel_url: b.cancel_url, status: 'open' };
+      const s = { id: id('cs'), price: b.line_items[0].price, fans: b.line_items[1]?.price ?? null, interval: b.line_items[0].price.endsWith('year') ? 'year' : 'month', organizer: b.subscription_data?.metadata?.organizer, customer: b.customer, customer_email: b.customer_email, trial_end: b.subscription_data?.trial_end ? Number(b.subscription_data.trial_end) : null, success_url: b.success_url, cancel_url: b.cancel_url, status: 'open' };
       sessions.set(s.id, s);
       return json(200, { id: s.id, url: `${HERE}/pay/${s.id}` });
+    }
+    // The fans add-on: added to a subscription, or taken off it; Stripe then sends customer.subscription.updated.
+    if (p === '/v1/subscription_items' && req.method === 'POST') {
+      const b = parseForm(text);
+      const sub = subscriptions.get(b.subscription);
+      if (!sub || !b.price) return json(400, { error: { message: 'No such subscription' } });
+      if (sub.declineAddOn) return json(402, { error: { message: 'Your card was declined.' } });
+      const item = itemFor(b.price, sub.items.data[0].current_period_end);
+      sub.items.data.push(item);
+      sub.prorations = [...(sub.prorations ?? []), b.proration_behavior];
+      setTimeout(() => send('customer.subscription.updated', sub), 50);
+      return json(200, item);
+    }
+    if ((m = p.match(/^\/v1\/subscription_items\/([\w]+)$/)) && req.method === 'DELETE') {
+      const sub = [...subscriptions.values()].find((x) => x.items.data.some((i) => i.id === m[1]));
+      if (!sub) return json(404, { error: { message: 'No such subscription item' } });
+      sub.items.data = sub.items.data.filter((i) => i.id !== m[1]);
+      sub.prorations = [...(sub.prorations ?? []), url.searchParams.get('proration_behavior')];
+      setTimeout(() => send('customer.subscription.updated', sub), 50);
+      return json(200, { id: m[1], deleted: true });
     }
     // Ending a subscription now (archiving its organizer): Stripe then sends customer.subscription.deleted.
     if ((m = p.match(/^\/v1\/subscriptions\/([\w]+)$/)) && req.method === 'DELETE') {

@@ -266,7 +266,7 @@ http.createServer((req, res) => {
       const email = emailOf(req);
       if (!email || !managesOrganizer(email, body.p_organizer)) return json(res, 403, { code: '42501', message: 'not allowed' });
       const row = organizerPlans.get(body.p_organizer);
-      return json(res, 200, row ? [{ status: row.status, billing_interval: row.billing_interval ?? null, trial_ends_at: row.trial_ends_at ?? null, current_period_end: row.current_period_end ?? null, comped_until: row.comped_until ?? null }] : []);
+      return json(res, 200, row ? [{ status: row.status, billing_interval: row.billing_interval ?? null, trial_ends_at: row.trial_ends_at ?? null, current_period_end: row.current_period_end ?? null, comped_until: row.comped_until ?? null, fans: Boolean(row.fans) }] : []);
     }
     // Test control: set (or, with no status, clear) an organizer's plan row.
     if (p === '/__plan' && req.method === 'POST') {

@@ -2,8 +2,7 @@
 // hasCore and planSummary, so their edges are pinned here.
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { fansOnPlan } from "@/lib/fan-list";
-import { FREE, hasCore, planSummary } from "@/lib/plans";
+import { FREE, hasCore, hasFans, planSummary } from "@/lib/plans";
 
 const DAY = 864e5;
 const now = Date.parse("2026-11-10T12:00:00Z");
@@ -41,25 +40,15 @@ test("active is Core; canceled isn't", () => {
   assert.equal(planSummary({ status: "canceled" }, now).title, "Not live");
 });
 
-// The fan list on each plan (src/lib/fan-list.ts).
+// The fans add-on (Follow, presales, fans-only reels, the fan calendar): on Core, when added; comped has it.
 
-const fan = (n: number, left = false) => ({
-  email: `fan${n}@example.com`,
-  confirmed_at: new Date(now - (200 - n) * 60_000).toISOString(),
-  unfollowed_at: left ? at(-1) : null,
-});
-const crowd = [...Array.from({ length: 105 }, (_, i) => fan(i)), fan(500, true)];
-
-test("Free: the first 100 following, everyone who left, and how many more wait", () => {
-  const { fans, waiting } = fansOnPlan(crowd, FREE, now);
-  assert.equal(waiting, 5);
-  assert.equal(fans.filter((f) => !f.unfollowed_at).length, 100);
-  assert.ok(fans.some((f) => f.email === "fan0@example.com") && !fans.some((f) => f.email === "fan104@example.com"));
-  assert.ok(fans.some((f) => f.unfollowed_at));
-});
-
-test("Core, or a plan that couldn't be read: everyone", () => {
-  assert.equal(fansOnPlan(crowd, { status: "active" }, now).waiting, 0);
-  assert.equal(fansOnPlan(crowd, undefined, now).fans.length, crowd.length);
-  assert.equal(fansOnPlan(crowd, { status: "trialing", trialEndsAt: at(-1) }, now).waiting, 5);
+test("the fans add-on: only on Core, when added (comped and trials have it)", () => {
+  assert.equal(hasFans({ status: "active", periodEnd: at(20) }, now), false);
+  assert.equal(hasFans({ status: "active", periodEnd: at(20), fans: true }, now), true);
+  assert.equal(hasFans({ status: "canceled", fans: true }, now), false);
+  assert.equal(hasFans({ status: "past_due", periodEnd: at(-3), fans: true }, now), true);
+  assert.equal(hasFans({ status: "past_due", periodEnd: at(-8), fans: true }, now), false);
+  assert.equal(hasFans({ status: "comped" }, now), true);
+  assert.equal(hasFans({ status: "trialing", trialEndsAt: at(5) }, now), true);
+  assert.equal(hasFans(FREE, now), false);
 });

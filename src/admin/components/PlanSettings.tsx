@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { CORE_PRICE, hasCore, planSummary, type Plan } from "@/lib/plans";
+import { CORE_PRICE, FANS_PRICE, hasCore, planSummary, type Plan } from "@/lib/plans";
 
 type Loaded = { plan: Plan; billing: boolean; manage: boolean };
 type State = { slug: string; data: Loaded | null; error: string };
@@ -9,9 +9,15 @@ type State = { slug: string; data: Loaded | null; error: string };
 /** What Core includes, in the organizer's terms. */
 const CORE_FEATURES = [
   "Your link live: the opening, your reels and tickets",
-  "Unlimited fans following you",
-  "Fan-only reels",
+  "Results, leads and a link for every place you post",
+  "Ticket sales from Eventbrite",
+];
+
+/** What the fans add-on adds. */
+const FANS_FEATURES = [
+  "Follow: fans join your list from your link",
   "Presale links for your followers",
+  "Reels only your followers can watch",
   "Every night in your fans' calendars",
 ];
 
@@ -30,6 +36,11 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
   const [cadence, setCadence] = useState<"month" | "year">("year");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  // Going live: with the fans add-on too.
+  const [withFans, setWithFans] = useState(false);
+  // Taking the add-on off asks first.
+  const [removing, setRemoving] = useState(false);
+  const [loads, setLoads] = useState(0);
   const [back] = useState(returned);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -56,7 +67,7 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
     return () => {
       current = false;
     };
-  }, [eventSlug, back]);
+  }, [eventSlug, back, loads]);
 
   const go = async (path: string, body: object) => {
     setBusy(true);
@@ -71,6 +82,18 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
     setProblem(out?.error ?? "Couldn't reach the server. Try again.");
   };
 
+  // The fans add-on on or off, on the subscription they have.
+  const fans = async (on: boolean) => {
+    setBusy(true);
+    setProblem("");
+    const res = await fetch("/api/admin/billing/fans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: eventSlug, on }) }).catch(() => null);
+    const out = await res?.json().catch(() => null);
+    setBusy(false);
+    setRemoving(false);
+    if (!res?.ok) return setProblem(out?.error ?? "Couldn't reach the server. Try again.");
+    setLoads((n) => n + 1);
+  };
+
   const { data, error } = state.slug === eventSlug ? state : { data: null, error: "" };
   const plan = data?.plan;
   const summary = plan ? planSummary(plan) : null;
@@ -79,6 +102,8 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
   // A trial (no card yet) can keep Core before it ends, at no charge until then.
   const inTrial = Boolean(plan?.status === "trialing" && core && !plan.interval);
   const offer = canStart || Boolean(data?.billing && inTrial);
+  // On a paid Core subscription (not comped, not a trial without a card): the fans add-on can be added or removed.
+  const addOn = Boolean(data?.billing && data.manage && plan && core && (plan.status === "active" || (plan.status === "trialing" && plan.interval)));
 
   return (
     <section id="plan" ref={sectionRef} aria-labelledby={`${id}-title`} className="scroll-mt-6">
@@ -127,6 +152,14 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                     </li>
                   ))}
                 </ul>
+                {offer && !inTrial && (
+                  <label className="mt-4 flex items-start gap-3 rounded-lg border border-gray-200 px-3 py-2.5">
+                    <input type="checkbox" checked={withFans} onChange={(e) => setWithFans(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[#0E1A2B]" />
+                    <span className="text-sm text-gray-700">
+                      <span className="font-semibold text-deep-navy">Add the Fans add-on: +${FANS_PRICE[cadence]}/{cadence}.</span> Follow, presales for followers, fans-only reels and the fan calendar.
+                    </span>
+                  </label>
+                )}
                 {offer && (
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <div role="radiogroup" aria-label="Billing" className="inline-grid grid-cols-2 gap-1 rounded-xl bg-gray-200/70 p-1">
@@ -146,7 +179,7 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => go("/api/admin/billing/checkout", { slug: eventSlug, interval: cadence })}
+                      onClick={() => go("/api/admin/billing/checkout", { slug: eventSlug, interval: cadence, fans: withFans && !inTrial })}
                       className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue disabled:opacity-40"
                     >
                       {busy ? "Opening…" : inTrial ? "Keep Core" : "Go live"}
@@ -155,8 +188,58 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                 )}
                 {offer && (
                   <p className="mt-2 text-xs text-gray-600">
-                    {cadence === "year" ? "Two months free. " : ""}Charged today, then every {cadence}. You pay on Stripe&apos;s secure page; cancel any time from here.
+                    {cadence === "year" ? "Two months free. " : ""}Charged today (${CORE_PRICE[cadence] + (withFans && !inTrial ? FANS_PRICE[cadence] : 0)}), then every {cadence}. You pay on Stripe&apos;s secure page; cancel any time from here.
                   </p>
+                )}
+              </div>
+            )}
+            {addOn && plan.interval && (
+              <div className="mt-4 border-t border-gray-100 pt-4" role="group" aria-label="Fans add-on">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-deep-navy">
+                      Fans add-on{plan.fans ? " · On" : `: $${FANS_PRICE[plan.interval]}/${plan.interval}`}
+                    </p>
+                    <ul role="list" className="mt-2 space-y-1.5 text-sm text-gray-600">
+                      {FANS_FEATURES.map((f) => (
+                        <li key={f} className="flex gap-2">
+                          <span aria-hidden="true" className="text-deep-navy">•</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {plan.fans ? (
+                    !removing && (
+                      <button type="button" disabled={busy} onClick={() => setRemoving(true)} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-40">
+                        Remove
+                      </button>
+                    )
+                  ) : (
+                    <button type="button" disabled={busy} onClick={() => fans(true)} className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue disabled:opacity-40">
+                      {busy ? "Adding…" : "Add Fans"}
+                    </button>
+                  )}
+                </div>
+                {!plan.fans && (
+                  <p className="mt-2 text-xs text-gray-600">
+                    Charged today for the rest of this {plan.interval}, then ${FANS_PRICE[plan.interval]} with Core every {plan.interval}.
+                  </p>
+                )}
+                {plan.fans && removing && (
+                  <div role="group" aria-label="Remove the Fans add-on?" className="mt-3 rounded-lg border border-red-200 bg-red-50/60 px-3 py-2.5">
+                    <p className="text-sm text-gray-800">
+                      Remove the Fans add-on? Follow, presales, fans-only reels and the fan calendar stop now; the unused time is credited to your next bill. Your fan list stays yours.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <button type="button" disabled={busy} onClick={() => fans(false)} className="min-h-11 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-40">
+                        {busy ? "Removing…" : "Remove"}
+                      </button>
+                      <button type="button" disabled={busy} onClick={() => setRemoving(false)} className="min-h-11 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-white">
+                        Keep
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

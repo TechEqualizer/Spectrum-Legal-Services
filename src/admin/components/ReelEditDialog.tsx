@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useAdminBusiness } from "@/admin/AdminBusiness";
 import CoreNote from "@/admin/components/CoreNote";
-import { useHasCore } from "@/admin/plan";
+import { useHasFans } from "@/admin/plan";
 import MediaPicker from "@/admin/components/MediaPicker";
 import VideoPrompt from "@/admin/components/VideoPrompt";
 import {
@@ -71,7 +71,8 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
   const [topic, setTopic] = useState(funnel.topics[reel.id] ?? reel.practiceArea);
   const [error, setError] = useState("");
   // Fans-only reels are part of Core.
-  const core = useHasCore(useAdminBusiness().funnel.slug);
+  // Fans-only reels are part of the fans add-on.
+  const core = useHasFans(useAdminBusiness().funnel.slug);
 
   // Opened as a modal dialog: the browser traps focus and closes it on Escape.
   useEffect(() => {
@@ -308,7 +309,7 @@ function FansOnly({ id, on, media, core, onChange }: { id: string; on: boolean; 
       {locked && (
         <CoreNote
           id={`${id}-fans-core`}
-          text={on ? "Without it, this reel stays locked for everyone, followers too." : "Start Core to make reels only your followers can watch."}
+          text={on ? "Without it, this reel stays locked for everyone, followers too." : "Add Fans to make reels only your followers can watch."}
         />
       )}
       {on && (
