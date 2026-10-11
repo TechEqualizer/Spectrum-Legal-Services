@@ -67,10 +67,21 @@ check('opening screen marked not published', await card.getByText('not published
 await p.screenshot({ path: S + '/publish-bar-390.jpg' });
 const bb = await bar.boundingBox();
 check('publish bar above the tab bar', bb.y + bb.height <= 844 - 56, JSON.stringify(bb));
-// 6. Publish
-await bar.getByRole('button', { name: 'Publish' }).click();
-await settle(p, 1500);
-check('published toast', await p.getByRole('status').filter({ hasText: 'Published' }).isVisible());
+// 6. Publish: it asks first, listing what changes; then the link, to share.
+await bar.getByRole('button', { name: 'Publish', exact: true }).click();
+const ask = p.getByRole('dialog', { name: 'Publish your edits?' });
+const changeList = (await ask.getByRole('list', { name: 'What changes' }).innerText().catch(() => '')).replace(/\s+/g, ' ');
+check('Publish asks first, saying what changes', await ask.isVisible() && /1 reel edited/.test(changeList) && /opening's background/.test(changeList), changeList);
+await p.screenshot({ path: S + '/publish-ask-390.jpg' });
+await ask.getByRole('button', { name: 'Not yet' }).click(); await settle(p, 300);
+check('Not yet: nothing published', !(await (await fetch(M + '/__state')).json()).publications.some(x => x.slug === 'masquerade') && await bar.isVisible());
+await bar.getByRole('button', { name: 'Publish', exact: true }).click();
+await ask.getByRole('button', { name: 'Publish now' }).click();
+const doneSheet = p.getByRole('dialog').filter({ has: p.getByRole('button', { name: 'Done' }) });
+await doneSheet.waitFor({ timeout: 20000 }).catch(() => {});
+check('then the link, to share', /Your link is updated|Saved to your link/.test(await doneSheet.innerText().catch(() => '')) && await doneSheet.getByRole('button', { name: 'Copy link' }).isVisible() && await doneSheet.getByRole('link', { name: /View/ }).isVisible() && /\/f\/masquerade/.test(await doneSheet.innerText()));
+await p.screenshot({ path: S + '/publish-done-390.jpg' });
+await doneSheet.getByRole('button', { name: 'Done' }).click(); await settle(p, 500);
 check('bar gone after publish', await p.getByRole('region', { name: 'Publish' }).count() === 0);
 check('live: published time', await p.getByText(/Live\s*·\s*published/).isVisible());
 const state = await (await fetch(M + '/__state')).json();
@@ -93,13 +104,25 @@ await vp.screenshot({ path: S + '/live-after-publish.jpg' });
 // 8. Reload admin: in sync, nothing to publish
 await p.reload(); await settle(p, 1500);
 check('after reload: nothing unpublished', await p.getByRole('region', { name: 'Publish' }).count() === 0);
-// 9. Discard an edit
+// 9. Discard an edit, with Undo; and Undo on the phone's bar.
+await p.getByRole('button', { name: "Move Haute couture Halloween looks up" }).click(); await settle(p, 300);
+const firstRow = () => p.locator('section[aria-labelledby="order-title"] ol > li').first().textContent();
+await bar.getByRole('button', { name: 'Undo the last change' }).click(); await settle(p, 300);
+check("the phone's bar has Undo", (await firstRow()).includes('Masks on') && await p.getByRole('region', { name: 'Publish' }).count() === 0);
 await p.getByRole('button', { name: "Move Haute couture Halloween looks up" }).click(); await settle(p, 300);
 await bar.getByRole('button', { name: 'Discard' }).click(); await settle(p, 400);
-check('discard goes back to live', await p.getByRole('region', { name: 'Publish' }).count() === 0 && (await p.locator('section[aria-labelledby="order-title"] ol > li').first().textContent()).includes('Masks on'));
-// 10. Take down
-await p.getByText('Funnel settings').click();
-await p.getByRole('button', { name: 'Take down published edits' }).click(); await settle(p, 800);
+check('discard goes back to live', await p.getByRole('region', { name: 'Publish' }).count() === 0 && (await firstRow()).includes('Masks on'));
+const discarded = p.getByRole('status').filter({ hasText: 'Edits discarded' });
+await discarded.getByRole('button', { name: 'Undo' }).click(); await settle(p, 400);
+check('Undo puts the edits back', (await firstRow()).includes('Haute couture') && await bar.isVisible());
+await bar.getByRole('button', { name: 'Discard' }).click(); await settle(p, 400);
+// 10. Take down: one link, one story; it asks first.
+await p.getByText('Link settings').click();
+check('Settings: the link, no funnel rules', await p.getByRole('button', { name: 'Copy link' }).isVisible() && await p.getByText('Shown to').count() === 0 && await p.getByLabel('Main button').count() === 0);
+await p.getByRole('button', { name: 'Take down published edits' }).click();
+const takeAsk = p.getByRole('group', { name: 'Take down your published edits?' });
+check('Take down asks first', await takeAsk.isVisible() && (await (await fetch(M + '/__state')).json()).publications.some(x => x.slug === 'masquerade'));
+await takeAsk.getByRole('button', { name: 'Take down' }).click(); await settle(p, 800);
 check('taken down', !(await (await fetch(M + '/__state')).json()).publications.some(x => x.slug === 'masquerade'));
 await vp.goto(B + '/f/masquerade'); await settle(vp, 1500);
 check('live link back to original', await vp.evaluate(() => !document.querySelector('video')));

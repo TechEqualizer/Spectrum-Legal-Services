@@ -6,7 +6,9 @@ import HeroMediaCard from "@/admin/components/HeroMediaCard";
 import ReelEditDialog, { type ReelEditResult } from "@/admin/components/ReelEditDialog";
 import FunnelSettings from "@/admin/components/reels/FunnelSettings";
 import FunnelTabs from "@/admin/components/reels/FunnelTabs";
+import LinkSettings from "@/admin/components/reels/LinkSettings";
 import PublishBar from "@/admin/components/reels/PublishBar";
+import PublishSheet from "@/admin/components/reels/PublishSheet";
 import ReelOrder from "@/admin/components/reels/ReelOrder";
 import Toast from "@/admin/components/reels/Toast";
 import StyleSheet from "@/admin/components/StyleSheet";
@@ -29,6 +31,8 @@ import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { clearImportRequest, importRequested } from "@/admin/import-request";
 import { useAdminSession } from "@/admin/session";
 import { useEditor } from "@/admin/use-editor";
+import { usePlan } from "@/admin/plan";
+import { hasCore } from "@/lib/plans";
 import type { Look } from "@/lib/look";
 import { REEL_ORDER, coreReels, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
 import { HERO_PROMPT, keepPrompts, usePrompts } from "@/admin/prompts";
@@ -46,7 +50,7 @@ const blankReel: EditorReel = {
   id: "",
   title: "",
   summary: "",
-  practiceArea: "Car Accident",
+  practiceArea: "",
   cta: "funnel",
 };
 
@@ -72,6 +76,17 @@ export default function ReelsEditor() {
   const builtFunnel = business.funnel;
   const slug = builtFunnel.slug;
   const editor = useEditor();
+  // An event's link is one story: one set of reels, no audience rules. (The
+  // in-code demos keep their several funnels.)
+  const isEvent = Boolean(builtFunnel.events);
+  // Publishing asks first, then shows the link to share (PublishSheet).
+  const [publishStep, setPublishStep] = useState<"confirm" | "done" | null>(null);
+  const plan = usePlan(slug);
+  // Not knowing the plan, say it's live (the link's own gate decides).
+  const linkLive = plan ? hasCore(plan) : true;
+  const confirmPublish = async () => {
+    if (await editor.runPublish()) setPublishStep("done");
+  };
   const { library, setLibrary, funnels, setFunnels, heroMedia, setHeroMedia, screen, setScreen, events, setEvents, look, setLook, activeId, setActiveId, live, setToast } = editor;
   // Results for the last 30 days, keyed by reel.
   const { results } = useResults(30);
@@ -170,7 +185,12 @@ export default function ReelsEditor() {
     });
   };
 
-  const funnel = funnels.find((f) => f.id === activeId)!;
+  // Events edit the one story the link shows.
+  const storyId = publishedFunnel(funnels).id;
+  useEffect(() => {
+    if (isEvent && activeId !== storyId) setActiveId(storyId);
+  }, [isEvent, activeId, storyId, setActiveId]);
+  const funnel = (isEvent ? funnels.find((f) => f.id === storyId) : funnels.find((f) => f.id === activeId)) ?? funnels[0];
   const byId = new Map(library.map((r) => [r.id, r]));
   // Each date's circle opens a reel: its chosen one, else the first that sells it.
   const dateOpener = (f: EditorFunnel, e: FunnelEvent) =>
@@ -362,7 +382,7 @@ export default function ReelsEditor() {
     </>
   );
 
-  const funnelsEl = <FunnelTabs funnels={funnels} activeId={activeId} liveId={builtFunnel.id} onSelect={setActiveId} onNew={newFunnel} />;
+  const funnelsEl = isEvent ? null : <FunnelTabs funnels={funnels} activeId={activeId} liveId={builtFunnel.id} onSelect={setActiveId} onNew={newFunnel} />;
 
   const orderEl = (
     <ReelOrder
@@ -382,18 +402,29 @@ export default function ReelsEditor() {
       onAdd={(id) => updateFunnel((f) => ({ ...f, order: [...f.order, id] }))}
       onEdit={setEditing}
       onPlay={play}
-      onRemove={(id) => updateFunnel((f) => removeFromFunnel(f, id))}
+      onRemove={(id) => {
+        const before = funnel;
+        updateFunnel((f) => removeFromFunnel(f, id));
+        setToast("Reel removed", () => {
+          setFunnels((all) => all.map((f) => (f.id === before.id ? before : f)));
+          setToast("Reel put back");
+        });
+      }}
     />
   );
 
-  const settingsInner = <FunnelSettings funnel={funnel} live={live} updateFunnel={updateFunnel} onTakeDown={editor.restoreOriginal} />;
+  const settingsInner = isEvent ? (
+    <LinkSettings link={`/f/${slug}`} live={live} onTakeDown={editor.restoreOriginal} />
+  ) : (
+    <FunnelSettings funnel={funnel} live={live} updateFunnel={updateFunnel} onTakeDown={editor.restoreOriginal} />
+  );
 
   const settingsEl = (
     <>
       {/* Settings for the selected funnel */}
       <details className="group rounded-xl border border-gray-200 bg-white">
         <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-5 text-base font-bold text-deep-navy">
-          Funnel settings
+          {isEvent ? "Link settings" : "Funnel settings"}
           <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path d="M19 9l-7 7-7-7" /></svg>
         </summary>
         {settingsInner}
@@ -417,8 +448,13 @@ export default function ReelsEditor() {
       publishing={editor.publishing}
       publishError={editor.publishError}
       unpublished={editor.unpublished}
+      canUndo={editor.history.canUndo}
+      onUndo={editor.history.undo}
       onDiscard={editor.resetToLive}
-      onPublish={editor.runPublish}
+      onPublish={() => {
+        editor.dismissToast();
+        setPublishStep("confirm");
+      }}
     />
   );
 
@@ -433,6 +469,19 @@ export default function ReelsEditor() {
         />
       )}
       <Toast toast={editor.toast} raised={showBar} onDismiss={editor.dismissToast} />
+      {publishStep && (
+        <PublishSheet
+          key={publishStep}
+          step={publishStep}
+          changes={editor.changes}
+          link={`/f/${slug}`}
+          live={linkLive}
+          publishing={editor.publishing}
+          error={editor.publishError}
+          onConfirm={confirmPublish}
+          onClose={() => setPublishStep(null)}
+        />
+      )}
       {editing && (
         <ReelEditDialog
           key={editing.id || "new"}
@@ -540,9 +589,13 @@ export default function ReelsEditor() {
         unpublished={editor.unpublished}
         publishing={editor.publishing}
         publishError={editor.publishError}
-        onPublish={editor.runPublish}
+        onPublish={() => {
+        editor.dismissToast();
+        setPublishStep("confirm");
+      }}
         onDiscard={editor.resetToLive}
         liveHref={`/f/${builtFunnel.slug}`}
+        publishedAt={live?.publishedAt}
         story={
           <>
             <StoryStep n={1} title="Opening scene" hint="What people see first" onShow={() => setGo((g) => ({ key: g.key + 1 }))}>

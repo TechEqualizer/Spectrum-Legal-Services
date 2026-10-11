@@ -1,7 +1,7 @@
 // The main button's effect: Shimmer (the default), Glow or Edge light,
 // Subtle or Bold, chosen in Design, shown live in the phone and published
 // with the look. Still for people who ask for less motion.
-import { chromium, pickEvent, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle, publishEdits } from '../browser.mjs';
 import { addGoldenHour } from '../fixtures/golden-hour.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
@@ -49,7 +49,7 @@ fx = await fxOf(phone.locator('main .cine-cta').first());
 check('Edge light shows in the phone, still bold', fx.fx === 'edge' && fx.strength === 'bold' && fx.before === 'cine-edge', JSON.stringify(fx));
 
 // Published with the look.
-await p.getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
+await publishEdits(p); await settle(p, 2500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find((x) => x.slug === 'masquerade')?.data;
 check('published with the look', pub?.look?.effect?.style === 'edge' && pub?.look?.effect?.strength === 'bold', JSON.stringify(pub?.look?.effect));
 await v.reload(); await settle(v, 1500);

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAdminBusiness } from "@/admin/AdminBusiness";
 import { clearDraft, loadDraft, saveDraft, useDraftSavedAt, type HeroMediaEdit } from "@/admin/drafts";
 import { initialEditorState } from "@/admin/editor-model";
-import { fetchLive, publicationKey, publish, takeDown, type EditorState, type LiveState } from "@/admin/publish";
+import { fetchLive, publicationKey, publish, publishedFunnel, takeDown, type EditorState, type LiveState } from "@/admin/publish";
 import { useAdminSession } from "@/admin/session";
 import type { FunnelEvent } from "@/data/funnel-types";
 import type { Look } from "@/lib/look";
@@ -23,6 +23,9 @@ function snapshotOf({ reels, funnels, heroMedia, screen, events, look }: EditorS
 
 // Same dates in any order count as unchanged.
 const byStart = (list?: FunnelEvent[]) => (list ? [...list].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)) : "live");
+
+/** A publish error, with the reassurance that nothing is lost (publish's own messages say how to recover). */
+const friendly = (message: string) => `${message.replace(/\.?$/, ".")} Your edits are safe here.`;
 
 export function useEditor() {
   const business = useAdminBusiness();
@@ -149,14 +152,45 @@ export function useEditor() {
     look: Boolean(live) && JSON.stringify(look ?? null) !== JSON.stringify(live!.look ?? null),
   };
 
+  // What a publish would change, in plain words (the Publish sheet lists it).
+  const changes = (() => {
+    if (!live || !unpublished) return [];
+    const out: string[] = [];
+    const now = publishedFunnel(funnels);
+    const was = publishedFunnel(live.funnels);
+    const reelNow = new Map(library.map((r) => [r.id, JSON.stringify(r)]));
+    const reelWas = new Map(live.reels.map((r) => [r.id, JSON.stringify(r)]));
+    const added = now.order.filter((id) => !was.order.includes(id)).length;
+    const removed = was.order.filter((id) => !now.order.includes(id)).length;
+    const changed = now.order.filter((id) => was.order.includes(id) && reelNow.get(id) !== reelWas.get(id)).length;
+    const reels = (n: number) => (n === 1 ? "1 reel" : `${n} reels`);
+    if (added) out.push(`${reels(added)} added`);
+    if (changed) out.push(`${reels(changed)} edited`);
+    if (removed) out.push(`${reels(removed)} removed`);
+    const kept = now.order.filter((id) => was.order.includes(id)).join();
+    if (kept !== was.order.filter((id) => now.order.includes(id)).join()) out.push("The reels' order");
+    if (JSON.stringify([now.paths, now.topics]) !== JSON.stringify([was.paths, was.topics])) out.push("Where reels lead");
+    if (edited.screen) out.push("The opening's words");
+    if (edited.hero) out.push("The opening's background");
+    if (edited.look) out.push("Your look: colors, title and buttons");
+    if (edited.events) out.push("Your dates");
+    return out.length ? out : ["Small changes to your link"];
+  })();
+
+  /** Back to what's live; Undo puts the edits back (and they save again). */
   const resetToLive = () => {
     if (!live) return;
+    const before = current;
     clearDraft(slug);
     show(live);
     lastSaved.current = snapshotOf(live);
-    setToast("Back to what's live");
+    setToast("Edits discarded", () => {
+      show(before);
+      setToast("Edits put back");
+    });
   };
 
+  /** Publishes; true when it worked (the Publish sheet then shows the link). */
   const runPublish = async () => {
     setPublishError("");
     try {
@@ -164,9 +198,10 @@ export function useEditor() {
       // Uploads now point at their public links.
       show(result.state);
       setLive({ ...result.state, publishedAt: result.publishedAt, publishedBy: session.email });
-      setToast("Published. Your link is updated");
+      return true;
     } catch (e) {
-      setPublishError((e as Error).message);
+      setPublishError(friendly((e as Error).message));
+      return false;
     } finally {
       setPublishing("");
     }
@@ -207,6 +242,7 @@ export function useEditor() {
     live,
     liveError,
     unpublished,
+    changes,
     edited,
     history: {
       undo: () => stepTo(past, future),

@@ -1,4 +1,4 @@
-import { chromium, pickEvent, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle, publishEdits } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -73,7 +73,7 @@ await p.reload(); await settle(p, 1500);
 check('after reload: words and dates kept', await card.getByText('“Masks on, Detroit.”').isVisible() && await dates.locator(':scope > ul > li').count() === 2);
 
 // 6. Publish
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click();
+await publishEdits(p, p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish', exact: true }));
 await settle(p, 1500);
 check('published', await p.getByRole('region', { name: 'Publish' }).count() === 0);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;

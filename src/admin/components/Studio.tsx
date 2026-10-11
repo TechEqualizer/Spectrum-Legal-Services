@@ -269,6 +269,7 @@ export function Studio({
   onPublish,
   onDiscard,
   liveHref,
+  publishedAt,
   story,
   design,
   results,
@@ -288,6 +289,8 @@ export function Studio({
   onUndo: () => void;
   onRedo: () => void;
   unpublished: boolean;
+  /** When the live link was last published (null: the original reels). */
+  publishedAt?: string | null;
   publishing: string;
   publishError: string;
   onPublish: () => void;
@@ -327,9 +330,11 @@ export function Studio({
             ) : publishing ? (
               publishing
             ) : unpublished ? (
-              <span className="font-semibold text-amber-800">Unpublished edits · saved in this browser</span>
+              <span className="font-semibold text-amber-800">Unpublished edits · saved on this device</span>
+            ) : publishedAt ? (
+              `Everything is published · ${new Date(publishedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
             ) : (
-              "Everything is live"
+              "Everything is published"
             )}
           </p>
         </div>
@@ -351,15 +356,25 @@ export function Studio({
             Discard
           </button>
         )}
-        <button
-          type="button"
-          data-tour="publish"
-          onClick={onPublish}
-          disabled={Boolean(publishing) || !unpublished}
-          className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white shadow-sm hover:bg-royal-blue disabled:opacity-50"
-        >
-          {publishing ? "Publishing…" : "Publish"}
-        </button>
+        {unpublished || publishing ? (
+          <button
+            type="button"
+            data-tour="publish"
+            onClick={onPublish}
+            disabled={Boolean(publishing)}
+            className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white shadow-sm hover:bg-royal-blue disabled:opacity-60"
+          >
+            {publishing ? "Publishing…" : "Publish"}
+          </button>
+        ) : (
+          // Nothing to publish: a calm, settled state, not a broken-looking button.
+          <button type="button" data-tour="publish" disabled className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-gray-600">
+            <svg className="h-4 w-4 text-deep-navy" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+            Published
+          </button>
+        )}
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(18rem,25rem)_minmax(18rem,1fr)_minmax(17rem,23rem)] gap-5 pt-4">

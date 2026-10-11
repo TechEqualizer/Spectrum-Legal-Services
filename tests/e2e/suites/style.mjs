@@ -1,4 +1,4 @@
-import { chromium, pickEvent, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle, publishEdits } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -90,7 +90,7 @@ check('done: card updated', await card.getByText('Engraved capitals').isVisible(
 check('toast with undo', await p.getByRole('status').filter({ hasText: 'Style saved' }).getByRole('button', { name: 'Undo' }).isVisible());
 
 // Publish
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
+await publishEdits(p, p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish', exact: true })); await settle(p, 2500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
 check('stored: palette + suggestions', pub?.look?.palette?.length === 7 && pub?.look?.suggestions?.length === 3, JSON.stringify(pub?.look)?.slice(0, 200));
 check('stored: flyer as public link', /^http:\/\/localhost:54321\/storage/.test(pub?.look?.flyer ?? ''), pub?.look?.flyer);
@@ -136,7 +136,7 @@ await dlg.getByRole('button', { name: 'Make the video' }).click();
 await dlg.getByRole('alert').filter({ hasText: /Instagram-ready|can't make videos/ }).waitFor({ timeout: 10000 }).catch(() => {});
 check("stories video: says why it can't be made here", await dlg.getByRole('alert').filter({ hasText: /Try the latest Chrome or Safari/ }).isVisible(), await dlg.getByRole('alert').allInnerTexts().then((t) => t.join(' ')));
 await dlg.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
+await publishEdits(p, p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish', exact: true })); await settle(p, 2500);
 const withOpening = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
 check('stored: the opening on the flyer, in its mood', withOpening?.backdrop?.fit === 'poster' && withOpening.backdrop.opening?.mood === 'editorial' && withOpening.backdrop.opening.beats?.length === 3, JSON.stringify(withOpening?.backdrop)?.slice(0, 160));
 const vo = await v.newPage();

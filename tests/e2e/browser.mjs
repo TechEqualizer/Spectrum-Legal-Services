@@ -184,3 +184,15 @@ export async function pickEvent(page, slug) {
   if (await picker.count()) await picker.selectOption(slug);
   else await page.evaluate((s) => localStorage.setItem('admin_business', s), slug);
 }
+
+/**
+ * Publish the studio's edits: the trigger (the header's Publish, or the
+ * phone bar's), then Publish now in the sheet, then Done on the link it shows.
+ */
+export async function publishEdits(page, trigger) {
+  await (trigger ?? page.getByRole('button', { name: 'Publish', exact: true })).click();
+  await page.getByRole('dialog', { name: 'Publish your edits?' }).getByRole('button', { name: 'Publish now' }).click();
+  const done = page.getByRole('dialog').getByRole('button', { name: 'Done' });
+  await done.waitFor({ timeout: 20000 });
+  await done.click();
+}

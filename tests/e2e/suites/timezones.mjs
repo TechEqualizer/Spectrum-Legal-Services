@@ -1,7 +1,7 @@
 // Event times are on the event's own clock: Big Love's night is Sat Oct 31,
 // 8 PM in Detroit, and reads that way to a visitor in Los Angeles or London,
 // on the admin's Dates card in another zone, and in the calendar file.
-import { chromium, pickEvent, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle, publishEdits } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -75,7 +75,7 @@ const rd = p.locator('dialog[open]');
 await rd.getByLabel('Title').fill('The after party, upstairs');
 await rd.getByRole('button', { name: 'Add reel' }).click(); await settle(p, 400);
 check('new date row: Sat, Nov 7 · 9:30 PM', (await row('After Party').textContent().catch(() => '')).includes('Sat, Nov 7 · 9:30 PM'), await row('After Party').textContent().catch(() => 'none'));
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 1500);
+await publishEdits(p, p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish', exact: true })); await settle(p, 1500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
 const party = pub?.events?.find(e => e.name.endsWith('After Party'));
 const night = pub?.events?.find(e => e.id === 'mr-2026');

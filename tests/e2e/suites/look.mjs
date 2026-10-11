@@ -1,4 +1,4 @@
-import { chromium, pickEvent, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle, publishEdits } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const C = 'http://localhost:54400'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -67,7 +67,7 @@ await p.screenshot({ path: S + '/look-sheet-390.jpg' });
 await p.keyboard.press('Escape'); await settle(p, 200);
 
 // 6. Publish
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
+await publishEdits(p, p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish', exact: true })); await settle(p, 2500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
 check('stored look', pub?.look?.font === 'regal' && /^#[0-9A-F]{6}$/.test(pub?.look?.colors?.['--deep-navy']), JSON.stringify(pub?.look));
 check('stored poster backdrop with public link', pub?.backdrop?.kind === 'image' && pub.backdrop.fit === 'poster' && /^https?:\/\//.test(pub.backdrop.src), JSON.stringify(pub?.backdrop));
