@@ -10,8 +10,9 @@ const env = (name: string) => process.env[name]?.trim() || undefined;
 
 export const ENV_VARS = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] as const;
 
-/** The two prices, found by lookup key (set them on the prices in Stripe). */
+/** The prices, found by lookup key (set them on the prices in Stripe): Core, and the fans add-on. */
 export const PRICE_LOOKUP = { month: "core_month", year: "core_year" } as const;
+export const FANS_PRICE_LOOKUP = { month: "fans_month", year: "fans_year" } as const;
 
 /** The API version these calls and the webhook handler are written for. */
 const API_VERSION = "2025-03-31.basil";
@@ -42,7 +43,7 @@ async function stripe<T>(method: "GET" | "POST" | "DELETE", path: string, params
   const c = config();
   if (!c.key) return null;
   const body = form(params);
-  const url = `${c.apiBase}${path}${method === "GET" && body.size ? `?${body}` : ""}`;
+  const url = `${c.apiBase}${path}${method !== "POST" && body.size ? `?${body}` : ""}`;
   try {
     const res = await fetch(url, {
       method,
@@ -61,28 +62,34 @@ async function stripe<T>(method: "GET" | "POST" | "DELETE", path: string, params
   }
 }
 
-/** A Checkout page for Core, monthly or yearly. Its URL, or null. */
+/** The active price with this lookup key, or null (logged with the account it looked in). */
+async function priceId(lookupKey: string): Promise<string | null> {
+  const prices = await stripe<{ data: { id: string }[] }>("GET", "/v1/prices", { lookup_keys: [lookupKey], active: true });
+  const price = prices?.data[0]?.id;
+  if (price) return price;
+  // Which account and mode the key belongs to (never the key), so a key from the wrong place is plain to see.
+  const account = await stripe<{ id: string; settings?: { dashboard?: { display_name?: string } } }>("GET", "/v1/account");
+  const mode = config().key?.startsWith("sk_live_") || config().key?.startsWith("rk_live_") ? "live" : "test";
+  console.error(`[stripe] no active price with lookup key ${lookupKey} in ${account?.settings?.dashboard?.display_name ?? "?"} (${account?.id ?? "unknown account"}, ${mode} key)`);
+  return null;
+}
+
+/** A Checkout page for Core, monthly or yearly, with the fans add-on if asked. Its URL, or null. */
 export async function checkoutUrl(input: {
   organizer: string;
   interval: "month" | "year";
+  fans?: boolean;
   customerId?: string;
   email?: string;
   returnTo: string;
 }): Promise<string | null> {
-  const prices = await stripe<{ data: { id: string }[] }>("GET", "/v1/prices", { lookup_keys: [PRICE_LOOKUP[input.interval]], active: true });
-  const price = prices?.data[0]?.id;
-  if (!price) {
-    // Which account and mode the key belongs to (never the key), so a key from the wrong place is plain to see.
-    const account = await stripe<{ id: string; settings?: { dashboard?: { display_name?: string } } }>("GET", "/v1/account");
-    const mode = config().key?.startsWith("sk_live_") || config().key?.startsWith("rk_live_") ? "live" : "test";
-    console.error(
-      `[stripe] no active price with lookup key ${PRICE_LOOKUP[input.interval]} in ${account?.settings?.dashboard?.display_name ?? "?"} (${account?.id ?? "unknown account"}, ${mode} key)`
-    );
-    return null;
-  }
+  const price = await priceId(PRICE_LOOKUP[input.interval]);
+  if (!price) return null;
+  const fans = input.fans ? await priceId(FANS_PRICE_LOOKUP[input.interval]) : null;
+  if (input.fans && !fans) return null;
   const session = await stripe<{ url: string }>("POST", "/v1/checkout/sessions", {
     mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
+    line_items: [{ price, quantity: 1 }, ...(fans ? [{ price: fans, quantity: 1 }] : [])],
     client_reference_id: input.organizer,
     metadata: { organizer: input.organizer },
     // Charged at checkout: no Stripe trial, even when they pay during Showlnk's.
@@ -134,8 +141,10 @@ export type StripeSubscription = {
   trial_end?: number | null;
   /** Before API version 2025-03-31 only; since then it's on the items. */
   current_period_end?: number;
-  items?: { data: { current_period_end?: number; price?: { recurring?: { interval?: string } } }[] };
+  items?: { data: { id?: string; current_period_end?: number; price?: { lookup_key?: string | null; recurring?: { interval?: string } } }[] };
 };
+
+const isFansItem = (item: NonNullable<StripeSubscription["items"]>["data"][number]) => Boolean(item.price?.lookup_key?.startsWith("fans_"));
 
 export type StripeEvent = {
   id: string;
@@ -165,7 +174,9 @@ export function planFromSubscription(sub: StripeSubscription, deleted = false) {
   const status = deleted ? "canceled" : planStatusOf(sub.status);
   const organizer = sub.metadata?.organizer;
   if (!status || !organizer) return null;
-  const item = sub.items?.data[0];
+  // Core's item (the fans add-on can be a second one).
+  const items = sub.items?.data ?? [];
+  const item = items.find((i) => !isFansItem(i)) ?? items[0];
   const periodEnd = item?.current_period_end ?? sub.current_period_end;
   const interval = item?.price?.recurring?.interval;
   const iso = (s?: number | null) => (s ? new Date(s * 1000).toISOString() : null);
@@ -177,6 +188,7 @@ export function planFromSubscription(sub: StripeSubscription, deleted = false) {
       trial_ends_at: iso(sub.trial_end),
       current_period_end: iso(periodEnd),
       comped_until: null,
+      fans: status !== "canceled" && items.some(isFansItem),
       stripe_customer_id: sub.customer,
       stripe_subscription_id: sub.id,
     },
@@ -185,6 +197,26 @@ export function planFromSubscription(sub: StripeSubscription, deleted = false) {
 
 /** The subscription as Stripe has it now (events can arrive out of order, so never trust an old copy). */
 export const currentSubscription = (id: string) => stripe<StripeSubscription>("GET", `/v1/subscriptions/${encodeURIComponent(id)}`);
+
+/**
+ * Adds the fans add-on to a Core subscription, at Core's cadence, charging
+ * for the rest of this period now. Whether it worked.
+ */
+export async function addFans(subscriptionId: string, interval: "month" | "year"): Promise<boolean> {
+  const price = await priceId(FANS_PRICE_LOOKUP[interval]);
+  if (!price) return false;
+  const item = await stripe<{ id: string }>("POST", "/v1/subscription_items", { subscription: subscriptionId, price, quantity: 1, proration_behavior: "always_invoice" });
+  return Boolean(item);
+}
+
+/** Takes the fans add-on off a subscription now; its unused time is credited to the next bill. Whether it worked. */
+export async function removeFans(subscriptionId: string): Promise<boolean> {
+  const sub = await currentSubscription(subscriptionId);
+  const item = sub?.items?.data.find(isFansItem);
+  if (!sub) return false;
+  if (!item?.id) return true;
+  return Boolean(await stripe<{ id: string }>("DELETE", `/v1/subscription_items/${encodeURIComponent(item.id)}`, { proration_behavior: "create_prorations" }));
+}
 
 /** Ends a subscription now (archiving its organizer): no more charges. The ended subscription, or null. */
 export const cancelSubscription = (id: string) => stripe<StripeSubscription>("DELETE", `/v1/subscriptions/${encodeURIComponent(id)}`);

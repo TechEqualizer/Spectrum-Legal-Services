@@ -284,8 +284,20 @@ test.
    - The webhook refreshes the link and its preview cards at once.
    - Fans stay inside Core until step 3, so no paying organizer loses
      anything in between.
-3. The fans add-on: a second item on the same Stripe subscription
-   (`fans_*`), the webhook records it, and the fan gates read it.
+3. The fans add-on (this change), a second item on the same Stripe
+   subscription (prices `fans_month` $15 and `fans_year` $150), at Core's
+   cadence.
+   - **Where it's bought:** a checkbox when they go live, or later Add Fans
+     on Settings → Plan, charged now for the rest of the period. Remove
+     (it asks first) takes it off now and credits the unused time to the
+     next bill.
+   - **Recording it:** the webhook writes `organizer_plans.fans` from the
+     subscription's items (migration `20261028000000_fans_addon`).
+   - **What it gates:** `hasFans()` covers starting a follow, Follow on the
+     link, presales, fans-only reels and the fan calendar. Comped
+     organizers and trials from before have it.
+   - **The fan list:** always shown in full, on any plan. The 100-fan cap
+     of the old Free plan is gone.
 
 ## Measures
 

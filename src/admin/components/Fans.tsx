@@ -5,14 +5,13 @@ import { useEffect, useState } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import PeopleTabs from "@/admin/components/PeopleTabs";
 import { START_CORE_HREF } from "@/admin/plan";
-import { FREE_FAN_LIMIT } from "@/lib/plans";
 import LocalDate from "@/components/LocalDate";
 import { useSourceLabel } from "@/admin/source-names";
 
 /** One follow, as /api/admin/fans returns it (the database's organizer_fans). */
 type Fan = { email: string; source_tag: string | null; funnel_id: string | null; confirmed_at: string; unfollowed_at: string | null };
-/** On Free, `fans` holds the first 100 following, and `waiting` counts the rest. */
-type Loaded = { organizer: { slug: string; name: string }; followOn: boolean; core?: boolean; fans: Fan[]; waiting?: number };
+/** `addOn`: whether they have the fans add-on (Follow works on their links). */
+type Loaded = { organizer: { slug: string; name: string }; followOn: boolean; addOn?: boolean; fans: Fan[] };
 type State = { slug: string; data: Loaded | null; error: string };
 
 /**
@@ -47,7 +46,6 @@ export default function Fans() {
   const { data, error } = state.slug === slug ? state : { data: null, error: "" };
   const following = data?.fans.filter((f) => !f.unfollowed_at) ?? [];
   const unfollowed = (data?.fans.length ?? 0) - following.length;
-  const waiting = data?.waiting ?? 0;
   const eventName = (funnelId: string | null) => {
     const e = funnelId ? events.find((x) => x.funnel.id === funnelId) : undefined;
     return e ? (e.live.cover.hero?.title ?? e.live.brand.seriesLabel) : undefined;
@@ -91,14 +89,11 @@ export default function Fans() {
         </p>
       )}
 
-      {waiting > 0 && (
+      {data && data.followOn && data.addOn === false && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-          <span className="font-semibold">
-            {waiting} more {waiting === 1 ? "fan is" : "fans are"} following you.
-          </span>{" "}
-          On Free you see your first {FREE_FAN_LIMIT}; Core shows everyone, and they&apos;re all in your export.{" "}
+          <span className="font-semibold">Follow is part of the Fans add-on.</span> Without it, new fans can&apos;t follow you; everyone already here stays on your list.{" "}
           <Link href={START_CORE_HREF} className="font-semibold underline underline-offset-2">
-            Start Core
+            Add Fans
           </Link>
         </p>
       )}
@@ -122,7 +117,7 @@ export default function Fans() {
           <dl className="grid grid-cols-2 gap-3 sm:max-w-md">
             <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
               <dt className="text-xs font-bold uppercase tracking-wider text-gray-600">Following</dt>
-              <dd className="mt-1 text-2xl font-black text-deep-navy">{following.length + waiting}</dd>
+              <dd className="mt-1 text-2xl font-black text-deep-navy">{following.length}</dd>
             </div>
             <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
               <dt className="text-xs font-bold uppercase tracking-wider text-gray-600">Unfollowed</dt>

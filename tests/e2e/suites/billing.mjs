@@ -47,17 +47,17 @@ const firstTitle = await p.locator('section[aria-labelledby="order-title"] ol > 
 await p.getByRole('button', { name: `Edit ${firstTitle}` }).click();
 const dlg = p.getByRole('dialog');
 const fansSwitch = dlg.getByRole('switch', { name: /Fans only/ });
-await dlg.getByText('Part of Core.').waitFor({ timeout: 5000 }).catch(() => {});
-check('on Free: Fans only is part of Core', await fansSwitch.isDisabled() && await dlg.getByText('Start Core to make reels only your followers can watch.').isVisible() && (await dlg.getByRole('link', { name: 'Start Core' }).getAttribute('href')) === '/admin/settings#plan');
+await dlg.getByText('Part of the Fans add-on.').waitFor({ timeout: 5000 }).catch(() => {});
+check('not live: Fans only is part of the Fans add-on', await fansSwitch.isDisabled() && await dlg.getByText('Add Fans to make reels only your followers can watch.').isVisible() && (await dlg.getByRole('link', { name: 'Add Fans' }).getAttribute('href')) === '/admin/settings#plan');
 await p.keyboard.press('Escape');
 await p.locator('section[aria-labelledby="dates-title"]').locator(':scope > ul > li').first().getByRole('button').click();
 const ds = p.locator('dialog[open]');
-await ds.getByText('Part of Core.').waitFor({ timeout: 5000 }).catch(() => {});
-check('on Free: presales are part of Core', await ds.getByRole('switch', { name: 'Presale for followers' }).isDisabled() && await ds.getByText('Start Core to give your followers tickets first.').isVisible());
+await ds.getByText('Part of the Fans add-on.').waitFor({ timeout: 5000 }).catch(() => {});
+check('not live: presales are part of the Fans add-on', await ds.getByRole('switch', { name: 'Presale for followers' }).isDisabled() && await ds.getByText('Add Fans to give your followers tickets first.').isVisible());
 await p.keyboard.press('Escape');
 // The plan is kept a second in the tests: ask once, then look.
 await p.request.get(`${B}/api/admin/fans?slug=${gh.slug}`); await p.waitForTimeout(600);
-check('on Free: the fans list says it is Free', (await (await p.request.get(`${B}/api/admin/fans?slug=${gh.slug}`)).json()).core === false);
+check('not live: the fans list says the add-on is off', (await (await p.request.get(`${B}/api/admin/fans?slug=${gh.slug}`)).json()).addOn === false);
 await open();
 
 // Yearly, paid.

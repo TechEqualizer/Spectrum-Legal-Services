@@ -82,7 +82,7 @@ const l = await live.newPage();
 const shows = async () => { await l.goto(B + '/f/masquerade'); await settle(l, 800); return TITLE.test(await l.locator('body').innerText()) && !(await l.getByText('Coming soon', { exact: true }).isVisible()); };
 check('live: the public sees the night', await until(shows));
 check('live: the night\'s own preview card', Boolean(await until(async () => { const c = await cardBytes(); return c && c !== soonCard; })));
-check('live: its calendar is back', Boolean(await until(async () => (await status('/f/biglove/calendar.ics')) === 200)));
+check('live without the Fans add-on: no fan calendar (it is part of the add-on)', (await status('/f/biglove/calendar.ics')) === 404);
 await p.goto(B + '/admin/link/masquerade'); await p.waitForURL(/\/f\/masquerade$/, { timeout: 8000 }).catch(() => {});
 check('live: their preview address now opens the public link', /\/f\/masquerade$/.test(p.url()), p.url());
 

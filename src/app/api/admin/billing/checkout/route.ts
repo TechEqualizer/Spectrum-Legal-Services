@@ -4,8 +4,9 @@ import { adminOrganizer, NO_STORE } from "@/lib/server/organizer-fans";
 import { billingOf, planForAdmin } from "@/lib/server/plans";
 import { checkoutUrl, isBillingConfigured } from "@/lib/server/stripe";
 
-// Start Core: a Stripe Checkout page for the organizer of the event `slug`.
-// POST { slug, interval: "month" | "year" } -> { url }
+// Start Core (go live): a Stripe Checkout page for the organizer of the
+// event `slug`, with the fans add-on when `fans` is true.
+// POST { slug, interval: "month" | "year", fans?: boolean } -> { url }
 
 export async function POST(request: Request) {
   if (!isBillingConfigured()) return NextResponse.json({ error: "Billing isn't turned on yet." }, { status: 503, headers: NO_STORE });
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
   // Paying starts Core at once, trial or not: the first charge is today.
   const billing = await billingOf(t.organizer.slug);
   const returnTo = `${new URL(request.url).origin}/admin/settings`;
-  const url = await checkoutUrl({ organizer: t.organizer.slug, interval, customerId: billing?.customerId, email: t.admin.email, returnTo });
+  const url = await checkoutUrl({ organizer: t.organizer.slug, interval, fans: body?.fans === true, customerId: billing?.customerId, email: t.admin.email, returnTo });
   if (!url) return NextResponse.json({ error: "Couldn't open checkout. Try again in a minute." }, { status: 502, headers: NO_STORE });
   return NextResponse.json({ url }, { headers: NO_STORE });
 }

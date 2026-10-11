@@ -6,7 +6,7 @@ import { eventDate, eventDay, eventDayOfMonth, eventWhen, instantToZoned, isTime
 import { isOver } from "@/lib/events";
 import CoreNote from "@/admin/components/CoreNote";
 import FlyerImportSheet, { type FlyerFound, type FunnelDraft, type ImportedDate } from "@/admin/components/FlyerImportSheet";
-import { useHasCore } from "@/admin/plan";
+import { useHasFans } from "@/admin/plan";
 import type { Look } from "@/lib/look";
 import { PlusIcon } from "@/admin/components/ui/icons";
 
@@ -70,8 +70,8 @@ export default function DatesCard({
   // The editor's clock: read once, so rows don't jump between upcoming and past while open.
   const [now] = useState(() => Date.now());
   const [editing, setEditing] = useState<{ event: FunnelEvent; isNew: boolean; imported?: number } | null>(null);
-  // Presales for followers are part of Core.
-  const core = useHasCore(slug);
+  // Presales for followers are part of the fans add-on.
+  const core = useHasFans(slug);
   // Flyer import: the sheet is open, what it found, and which of those are added.
   const [importing, setImporting] = useState(openImport);
   const [found, setFound] = useState<FlyerFound | null>(null);
@@ -504,7 +504,7 @@ function DateSheet({
               <p className="px-1 text-xs text-gray-500">Give followers tickets first, with a link only they get.</p>
             )}
             {core === false && (
-              <CoreNote id={`${id}-presale-core`} text={presaleOn ? "Without it, followers won't see this presale." : "Start Core to give your followers tickets first."} />
+              <CoreNote id={`${id}-presale-core`} text={presaleOn ? "Without it, followers won't see this presale." : "Add Fans to give your followers tickets first."} />
             )}
           </div>
 

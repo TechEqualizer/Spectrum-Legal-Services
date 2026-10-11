@@ -1,7 +1,7 @@
 import { upcomingEvents } from "@/lib/events";
 import { calendarFile } from "@/lib/server/ics";
 import { getOrganizer, organizerOf } from "@/lib/server/funnels";
-import { linkIsLive } from "@/lib/server/plans";
+import { fansFeaturesOn, linkIsLive } from "@/lib/server/plans";
 import { getEventVersions, listOrganizerEventVersions } from "@/lib/server/publications";
 
 // The calendar fans subscribe to (docs/plans/02-fans.md, step 5):
@@ -17,8 +17,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const organizer = await getOrganizer(slug);
   const versions = organizer ? await listOrganizerEventVersions(organizer.slug) : [await getEventVersions(slug)].filter((v) => v !== undefined);
   if (!organizer && !versions.length) return new Response("Not found", { status: 404 });
-  // Nothing to subscribe to until the organizer is live.
-  if (!(await linkIsLive(organizer?.slug ?? (await organizerOf(slug))))) return new Response("Not found", { status: 404 });
+  // Nothing to subscribe to until the organizer is live, with the fans add-on (the fan calendar is part of it).
+  const owner = organizer?.slug ?? (await organizerOf(slug));
+  if (!(await linkIsLive(owner)) || !(await fansFeaturesOn(owner))) return new Response("Not found", { status: 404 });
 
   const origin = new URL(request.url).origin;
   const dates = versions

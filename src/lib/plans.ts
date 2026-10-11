@@ -3,8 +3,8 @@
 // the server's gates and the admin's Plan card.
 
 export const CORE_PRICE = { month: 29, year: 290 } as const;
-/** Fans an organizer can gain on Free; the list past it waits for Core. */
-export const FREE_FAN_LIMIT = 100;
+/** The fans add-on, on top of Core (same cadence as the organizer's Core). */
+export const FANS_PRICE = { month: 15, year: 150 } as const;
 export const TRIAL_DAYS = 14;
 /** Days Core stays on while Stripe retries a declined card. */
 export const GRACE_DAYS = 7;
@@ -17,6 +17,8 @@ export type Plan = {
   trialEndsAt?: string;
   periodEnd?: string;
   compedUntil?: string;
+  /** The fans add-on is on the subscription. */
+  fans?: boolean;
 };
 
 export const FREE: Plan = { status: "free" };
@@ -38,6 +40,15 @@ export function hasCore(plan: Plan, now = Date.now()): boolean {
     default:
       return false;
   }
+}
+
+/**
+ * Whether the organizer has the fans add-on's features right now: Follow,
+ * presales for followers, fans-only reels and the fan calendar. It needs
+ * Core; comped organizers (and trials from before "Pay to go live") have it.
+ */
+export function hasFans(plan: Plan, now = Date.now()): boolean {
+  return hasCore(plan, now) && (plan.status === "comped" || plan.status === "trialing" || Boolean(plan.fans));
 }
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });

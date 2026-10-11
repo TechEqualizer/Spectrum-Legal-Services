@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { hasCore, type Plan } from "@/lib/plans";
+import { hasFans, type Plan } from "@/lib/plans";
 
 // The organizer's plan for the screens that set up Core's features (the
 // fans-only switch, presales): asked once per event per page load and
@@ -36,14 +36,15 @@ export function usePlan(eventSlug: string | undefined): Plan | undefined {
 }
 
 /**
- * Whether this event's organizer has Core: true or false once known, and
- * undefined while loading or if it couldn't be read (screens then don't
- * stand in the way; the live link's own gates decide).
+ * Whether this event's organizer has the fans add-on (presales, fans-only
+ * reels): true or false once known, and undefined while loading or if it
+ * couldn't be read (screens then don't stand in the way; the live link's own
+ * gates decide).
  */
-export function useHasCore(eventSlug: string | undefined): boolean | undefined {
+export function useHasFans(eventSlug: string | undefined): boolean | undefined {
   const plan = usePlan(eventSlug);
-  return plan ? hasCore(plan) : undefined;
+  return plan ? hasFans(plan) : undefined;
 }
 
-/** Where Start Core is: Settings → Plan. */
+/** Where Go live and the fans add-on are: Settings → Plan. */
 export const START_CORE_HREF = "/admin/settings#plan";

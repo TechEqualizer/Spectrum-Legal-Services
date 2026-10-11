@@ -64,7 +64,7 @@ await m.screenshot({ path: 'nudge-390.png' });
 await open('/admin/settings');
 const plan = p.getByRole('region', { name: 'Plan' });
 await plan.getByRole('button', { name: 'Keep Core' }).waitFor({ timeout: 8000 }).catch(() => {});
-check('the plan card: Keep Core, charged today', await plan.getByRole('button', { name: 'Keep Core' }).isVisible() && /Charged today, then every (month|year)/.test(await plan.innerText()));
+check('the plan card: Keep Core, charged today', await plan.getByRole('button', { name: 'Keep Core' }).isVisible() && /Charged today \(\$\d+\), then every (month|year)/.test(await plan.innerText()));
 await plan.getByRole('button', { name: 'Keep Core' }).click();
 await p.waitForURL(/localhost:54800\/pay\//);
 check("Stripe's page: paid now, no free days", !/Free until/.test(await p.textContent('body')));
