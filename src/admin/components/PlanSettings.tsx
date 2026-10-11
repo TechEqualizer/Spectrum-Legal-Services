@@ -153,8 +153,7 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                 )}
                 {offer && (
                   <p className="mt-2 text-xs text-gray-600">
-                    {inTrial && plan?.trialEndsAt ? `No charge until your trial ends, ${new Date(plan.trialEndsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}. ` : ""}
-                    {cadence === "year" ? "Two months free. " : ""}You pay on Stripe&apos;s secure page; cancel any time from here.
+                    {cadence === "year" ? "Two months free. " : ""}Charged today, then every {cadence}. You pay on Stripe&apos;s secure page; cancel any time from here.
                   </p>
                 )}
               </div>

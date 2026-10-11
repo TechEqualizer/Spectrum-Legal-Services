@@ -198,18 +198,19 @@ organizer always looks: the sidebar.
 
 **What we do:**
 - **Sidebar card**, on a trial without a card: "Core trial · N days left",
-  a bar of the trial used, "Keep Core now. You won't be charged until
-  <date>." and Keep Core. In the last 3 days it turns gold and says what
+  a bar of the trial used, "Your trial ends <date>. Keep Core to keep
+  every fan." and Keep Core. In the last 3 days it turns gold and says what
   stops (Follow past 100 fans, presales, fans-only reels). On Free: "Get
   Core". With a declined card: "Update card". Nothing once they pay or are
   comped. Folded sidebar: a gold badge with the days. Phones: a chip beside
   the account.
-- **No reason to wait:** Keep Core during the trial carries the trial's
-  free days into Stripe (`trial_end`), so the first charge is the day the
-  trial would have ended. The Plan card says so ("No charge until your
-  trial ends"); afterwards it reads "Core · Your first charge is <date>".
-  (Stripe needs that date two days out; in the last two days, paying starts
-  at once.)
+- **Charged at checkout** (decided Oct 11, 2026): paying for Core, during
+  the trial or after it, takes the first payment at once; the trial's
+  remaining days don't carry into Stripe. The Plan card says "Charged
+  today, then every month/year", and afterwards reads "Core · Renews
+  <date>". (Before this, Keep Core during the trial set Stripe's
+  `trial_end`, and the first charge waited for the trial's end; anyone who
+  paid that way keeps that schedule.)
 
 Sources: [GitLab: trial days remaining in the sidebar](https://gitlab.com/gitlab-org/gitlab/-/issues/334936),
 [Trial-ending reminders (Knock)](https://knock.app/template-library/workflows/trial-ending),

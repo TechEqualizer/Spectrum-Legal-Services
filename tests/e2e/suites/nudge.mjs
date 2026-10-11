@@ -1,8 +1,8 @@
 // Billing: the Core nudge beside the sidebar (docs/plans/03-billing.md,
 // "Upgrade nudges"). On a trial without a card, the days left and Keep Core
-// ("You won't be charged until…"), more urgent in the last days; on Free,
-// Get Core; nothing once they pay or are comped. Keeping Core during the
-// trial carries the trial's free days into Stripe: the first charge waits.
+// ("Your trial ends…"), more urgent in the last days; on Free, Get Core;
+// nothing once they pay or are comped. Keeping Core during the trial is
+// charged at once, like any checkout.
 import { chromium, settle, testNow } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const DB = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
@@ -28,7 +28,7 @@ const trial = nav.getByRole('region', { name: 'Core trial' });
 await trial.waitFor({ timeout: 5000 }).catch(() => {});
 const t = (await trial.innerText().catch(() => '')).replace(/\s+/g, ' ');
 check('trial: the days left', /10 days left/.test(t), t);
-check("trial: no charge until it ends", /Keep Core now\. You won't be charged until/.test(t), t);
+check('trial: when it ends', /Your trial ends .*Keep Core to keep every fan/.test(t), t);
 check('trial: Keep Core goes to the plan', (await trial.getByRole('link', { name: 'Keep Core' }).getAttribute('href')) === '/admin/settings#plan');
 await p.screenshot({ path: 'nudge-trial-1279.png' });
 
@@ -60,18 +60,18 @@ check('phone: a chip with the days', await chip.isVisible() && (await chip.textC
 check('phone: fits', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 await m.screenshot({ path: 'nudge-390.png' });
 
-// Keep Core during the trial: Stripe's page says free until the trial ends; after paying, Core with the first charge then, and no nudge.
+// Keep Core during the trial: charged today (no free days on Stripe's page); after paying, Core renewing, and no nudge.
 await open('/admin/settings');
 const plan = p.getByRole('region', { name: 'Plan' });
 await plan.getByRole('button', { name: 'Keep Core' }).waitFor({ timeout: 8000 }).catch(() => {});
-check('the plan card: Keep Core, no charge until the trial ends', await plan.getByRole('button', { name: 'Keep Core' }).isVisible() && /No charge until your trial ends/.test(await plan.innerText()));
+check('the plan card: Keep Core, charged today', await plan.getByRole('button', { name: 'Keep Core' }).isVisible() && /Charged today, then every (month|year)/.test(await plan.innerText()));
 await plan.getByRole('button', { name: 'Keep Core' }).click();
 await p.waitForURL(/localhost:54800\/pay\//);
-check("Stripe's page: free until the trial ends", /Free until \d{4}-\d{2}-\d{2}/.test(await p.textContent('body')));
+check("Stripe's page: paid now, no free days", !/Free until/.test(await p.textContent('body')));
 await p.getByRole('button', { name: 'Pay' }).click();
 await p.waitForURL(/\/admin\/settings\?billing=started/); await settle(p, 1500);
-await plan.getByText(/Your first charge is/).waitFor({ timeout: 8000 }).catch(() => {});
-check('after paying: Core, first charge when the trial ends', /Core .*Your first charge is/.test((await plan.innerText()).replace(/\s+/g, ' ')), (await plan.innerText()).replace(/\s+/g, ' '));
+await plan.getByText(/Renews/).waitFor({ timeout: 8000 }).catch(() => {});
+check('after paying: Core, renewing', /Core .*Renews/.test((await plan.innerText()).replace(/\s+/g, ' ')), (await plan.innerText()).replace(/\s+/g, ' '));
 await open();
 check('after paying: no nudge', (await nav.getByRole('link', { name: /Keep Core|Get Core/ }).count()) === 0);
 check('and no second checkout', (await p.request.post(B + '/api/admin/billing/checkout', { data: { slug: 'masquerade', interval: 'month' } })).status() === 409);
