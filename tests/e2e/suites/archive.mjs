@@ -81,6 +81,26 @@ check('restored: their link is back, on Coming soon until they go live again', a
 }));
 check('restored: their admin can sign in again', (await login(await b.newContext())).ok());
 
+// Settings → Organizers: Remove, the same archive, and it always asks first.
+await p.goto(B + '/admin/settings'); await settle(p, 1200);
+const orgs = p.getByRole('region', { name: 'Organizers' });
+check('Settings: the photo button says Remove photo', !(await orgs.getByRole('button', { name: 'Remove photo for Big Love Productions' }).count()) || (await orgs.getByRole('button', { name: 'Remove photo for Big Love Productions' }).innerText()).trim() === 'Remove photo');
+await orgs.getByRole('button', { name: 'Remove Big Love Productions' }).click();
+const askRemove = orgs.getByRole('group', { name: 'Remove Big Love Productions?' });
+check('Settings: Remove asks first, and says what happens', await askRemove.isVisible() && /links stop working.*can.t sign in.*Nothing is deleted.*Archived/s.test(await askRemove.innerText()), await askRemove.innerText().catch(() => ''));
+await p.screenshot({ path: 'remove-organizer-ask-1279.png' });
+await askRemove.getByRole('button', { name: 'Keep' }).click();
+check('Settings: Keep leaves them be', !(await askRemove.count()) && (await status('/f/masquerade')) === 200);
+await orgs.getByRole('button', { name: 'Remove Big Love Productions' }).click();
+await askRemove.getByRole('button', { name: 'Remove' }).click();
+check('Settings: removed, gone from Organizers', await until(async () => !(await orgs.getByText('/f/biglove', { exact: true }).count())));
+const archivedHere = p.getByRole('region', { name: 'Archived' });
+check('Settings: listed under Archived, with Restore', await until(() => archivedHere.getByRole('button', { name: 'Restore Big Love Productions' }).isVisible()));
+check('Settings: their links answer Not found', await until(async () => (await status('/f/masquerade')) === 404));
+await p.screenshot({ path: 'remove-organizer-archived-1279.png', fullPage: true });
+await archivedHere.getByRole('button', { name: 'Restore Big Love Productions' }).click();
+check('Settings: Restore brings them back', await until(async () => { await p.goto(B + '/admin/settings'); await settle(p, 800); return orgs.getByText('/f/biglove', { exact: true }).isVisible(); }));
+
 check('no errors', !errs.length, errs.join(' | '));
 // Big Love as the other suites expect it: comped, live.
 await setPlan({ status: 'comped' });

@@ -6,6 +6,7 @@ import { useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import Accounts from "@/admin/components/Accounts";
 import EventbriteSettings from "@/admin/components/EventbriteSettings";
 import Invites from "@/admin/components/Invites";
+import { ArchivedClients } from "@/admin/components/ArchiveClient";
 import OrganizerPhotos from "@/admin/components/OrganizerPhotos";
 import PlanSettings from "@/admin/components/PlanSettings";
 import Waitlist from "@/admin/components/Waitlist";
@@ -227,7 +228,8 @@ export default function Settings() {
         <PlanSettings key={eventOrganizer.slug} organizer={eventOrganizer} eventSlug={business.funnel.slug} />
       )}
 
-      <OrganizerPhotos organizers={organizers} />
+      <OrganizerPhotos organizers={organizers} canRemove={fullAccess} />
+      {fullAccess && <ArchivedClients />}
 
       {/* Superadmin: full admins manage everyone's access. */}
       {fullAccess && <Accounts />}
