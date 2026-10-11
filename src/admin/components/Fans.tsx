@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import PeopleTabs from "@/admin/components/PeopleTabs";
-import { START_CORE_HREF } from "@/admin/plan";
+import { ADD_FANS_HREF } from "@/admin/plan";
 import LocalDate from "@/components/LocalDate";
 import { useSourceLabel } from "@/admin/source-names";
 
@@ -92,7 +92,7 @@ export default function Fans() {
       {data && data.followOn && data.addOn === false && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
           <span className="font-semibold">Follow is part of the Fans add-on.</span> Without it, new fans can&apos;t follow you; everyone already here stays on your list.{" "}
-          <Link href={START_CORE_HREF} className="font-semibold underline underline-offset-2">
+          <Link href={ADD_FANS_HREF} className="font-semibold underline underline-offset-2">
             Add Fans
           </Link>
         </p>

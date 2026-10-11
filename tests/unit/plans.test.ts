@@ -2,7 +2,7 @@
 // hasCore and planSummary, so their edges are pinned here.
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { FREE, hasCore, hasFans, planSummary } from "@/lib/plans";
+import { FREE, hasCore, hasFans, planSummary, wantsFans } from "@/lib/plans";
 
 const DAY = 864e5;
 const now = Date.parse("2026-11-10T12:00:00Z");
@@ -51,4 +51,15 @@ test("the fans add-on: only on Core, when added (comped and trials have it)", ()
   assert.equal(hasFans({ status: "comped" }, now), true);
   assert.equal(hasFans({ status: "trialing", trialEndsAt: at(5) }, now), true);
   assert.equal(hasFans(FREE, now), false);
+});
+
+test("the add-on is offered only to paying Core without it", () => {
+  assert.equal(wantsFans({ status: "active", periodEnd: at(20) }, now), true);
+  assert.equal(wantsFans({ status: "active", periodEnd: at(20), fans: true }, now), false);
+  // A declined card comes first; before going live, Go live offers it; comped and trials have it.
+  assert.equal(wantsFans({ status: "past_due", periodEnd: at(-3) }, now), false);
+  assert.equal(wantsFans(FREE, now), false);
+  assert.equal(wantsFans({ status: "canceled" }, now), false);
+  assert.equal(wantsFans({ status: "comped" }, now), false);
+  assert.equal(wantsFans({ status: "trialing", trialEndsAt: at(5) }, now), false);
 });

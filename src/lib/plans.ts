@@ -51,6 +51,15 @@ export function hasFans(plan: Plan, now = Date.now()): boolean {
   return hasCore(plan, now) && (plan.status === "comped" || plan.status === "trialing" || Boolean(plan.fans));
 }
 
+/**
+ * Whether to offer the fans add-on: live on Core, paying, without it. Not
+ * while a card is declined (that comes first) and not before going live (Go
+ * live offers it).
+ */
+export function wantsFans(plan: Plan, now = Date.now()): boolean {
+  return plan.status === "active" && hasCore(plan, now) && !hasFans(plan, now);
+}
+
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const daysLeft = (iso: string, now: number) => Math.max(0, Math.ceil((Date.parse(iso) - now) / DAY));
 

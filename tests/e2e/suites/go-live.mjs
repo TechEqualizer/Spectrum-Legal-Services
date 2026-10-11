@@ -76,7 +76,7 @@ await card.getByRole('button', { name: 'Go live' }).click();
 await p.waitForURL(/localhost:54800\/pay\//);
 await p.getByRole('button', { name: 'Pay' }).click();
 await p.waitForURL(/\/admin\/settings\?billing=started/); await settle(p, 1500);
-check('paid: Core', await until(async () => /Plan Core Big Love Productions · Renews/i.test((await card.innerText()).replace(/\s+/g, ' '))));
+check('paid: Core', await until(async () => /Core Big Love Productions · Renews/i.test((await card.innerText()).replace(/\s+/g, ' '))));
 const live = await b.newContext({ viewport: { width: 390, height: 844 } });
 const l = await live.newPage();
 const shows = async () => { await l.goto(B + '/f/masquerade'); await settle(l, 800); return TITLE.test(await l.locator('body').innerText()) && !(await l.getByText('Coming soon', { exact: true }).isVisible()); };
