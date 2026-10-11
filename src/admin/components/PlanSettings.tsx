@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { CORE_PRICE, FANS_PRICE, hasCore, planSummary, type Plan } from "@/lib/plans";
+import { CORE_PRICE, FANS_PRICE, hasCore, hasFans, planSummary, wantsFans, type Plan } from "@/lib/plans";
 
 type Loaded = { plan: Plan; billing: boolean; manage: boolean };
 type State = { slug: string; data: Loaded | null; error: string };
@@ -27,8 +27,9 @@ const returned = () => (typeof window === "undefined" ? null : new URLSearchPara
 /**
  * Settings → Plan, for one organizer: which plan they're on, in words; before
  * they pay, what Core includes and Go live (Stripe Checkout, monthly or
- * yearly); once they pay, Manage billing (Stripe's portal: card, receipts,
- * cancel).
+ * yearly), with the fans add-on as a box beside it; once they pay, Manage
+ * billing (Stripe's portal: card, receipts, cancel) and the add-on, to add or
+ * remove ("#fans" links here). Comped: the add-on, included.
  */
 export default function PlanSettings({ organizer, eventSlug }: { organizer: { slug: string; name: string }; eventSlug: string }) {
   const id = useId();
@@ -43,6 +44,8 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
   const [loads, setLoads] = useState(0);
   const [back] = useState(returned);
   const sectionRef = useRef<HTMLElement>(null);
+  // Came from a fans nudge ("#fans"): the add-on, brought into view and marked a moment.
+  const [spot, setSpot] = useState(false);
 
   // Back from Stripe (or a "#plan" link): bring this section into view.
   useEffect(() => {
@@ -95,6 +98,32 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
   };
 
   const { data, error } = state.slug === eventSlug ? state : { data: null, error: "" };
+
+  // Once, when the plan first shows (not again as it reloads).
+  const loaded = Boolean(data);
+  useEffect(() => {
+    const el = loaded && window.location.hash === "#fans" ? document.getElementById(`${id}-fans`) : null;
+    if (!el) return;
+    // Settings above (Eventbrite) may still be loading: keep the add-on in view
+    // while it's marked, until they scroll themselves.
+    const center = () => el.scrollIntoView({ block: "center" });
+    const grows = new ResizeObserver(center);
+    grows.observe(sectionRef.current?.parentElement ?? document.body);
+    const stop = () => grows.disconnect();
+    const events = ["wheel", "touchstart", "keydown"] as const;
+    events.forEach((e) => window.addEventListener(e, stop, { once: true, passive: true }));
+    center();
+    setSpot(true);
+    const t = setTimeout(() => {
+      setSpot(false);
+      stop();
+    }, 2400);
+    return () => {
+      clearTimeout(t);
+      stop();
+      events.forEach((e) => window.removeEventListener(e, stop));
+    };
+  }, [loaded, id]);
   const plan = data?.plan;
   const summary = plan ? planSummary(plan) : null;
   const core = plan ? hasCore(plan) : false;
@@ -104,6 +133,10 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
   const offer = canStart || Boolean(data?.billing && inTrial);
   // On a paid Core subscription (not comped, not a trial without a card): the fans add-on can be added or removed.
   const addOn = Boolean(data?.billing && data.manage && plan && core && (plan.status === "active" || (plan.status === "trialing" && plan.interval)));
+  // Live without it: the add-on stands out.
+  const offerFans = Boolean(addOn && plan && wantsFans(plan));
+  const included = Boolean(plan?.status === "comped" && hasFans(plan));
+  const marked = spot ? " ring-2 ring-[#e8be5a] ring-offset-2" : "";
 
   return (
     <section id="plan" ref={sectionRef} aria-labelledby={`${id}-title`} className="scroll-mt-6">
@@ -111,6 +144,9 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
       <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 sm:px-5">
         {back === "started" && !core && data && (
           <p role="status" className="mb-3 rounded-lg bg-soft-gray px-3 py-2 text-sm text-deep-navy">Thanks. Core starts as soon as Stripe confirms the payment.</p>
+        )}
+        {back === "started" && core && plan && wantsFans(plan) && (
+          <p role="status" className="mb-3 rounded-lg bg-soft-gray px-3 py-2 text-sm text-deep-navy">You&apos;re live. Next: let the people watching follow you, with the Fans add-on below.</p>
         )}
         {back === "canceled" && (
           <p role="status" className="mb-3 rounded-lg bg-soft-gray px-3 py-2 text-sm text-deep-navy">Checkout was canceled. Nothing was charged.</p>
@@ -152,11 +188,16 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                     </li>
                   ))}
                 </ul>
-                {offer && !inTrial && (
-                  <label className="mt-4 flex items-start gap-3 rounded-lg border border-gray-200 px-3 py-2.5">
+                {offer && (
+                  <label id={`${id}-fans`} className={`mt-4 flex scroll-mt-24 items-start gap-3 rounded-lg border border-[#e8be5a] bg-amber-50/40 px-3 py-3 transition-shadow${marked}`}>
                     <input type="checkbox" checked={withFans} onChange={(e) => setWithFans(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[#0E1A2B]" />
                     <span className="text-sm text-gray-700">
-                      <span className="font-semibold text-deep-navy">Add the Fans add-on: +${FANS_PRICE[cadence]}/{cadence}.</span> Follow, presales for followers, fans-only reels and the fan calendar.
+                      <span className="block font-semibold text-deep-navy">
+                        {inTrial ? "Keep" : "Add"} the Fans add-on: +${FANS_PRICE[cadence]}/{cadence}
+                      </span>
+                      {inTrial
+                        ? "Follow, presales, fans-only reels and the fan calendar are on in your trial. Without the add-on they stop when you keep Core."
+                        : "Let the people watching follow you: Follow on your link, presales for followers, fans-only reels and the fan calendar."}
                     </span>
                   </label>
                 )}
@@ -179,7 +220,7 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => go("/api/admin/billing/checkout", { slug: eventSlug, interval: cadence, fans: withFans && !inTrial })}
+                      onClick={() => go("/api/admin/billing/checkout", { slug: eventSlug, interval: cadence, fans: withFans })}
                       className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue disabled:opacity-40"
                     >
                       {busy ? "Opening…" : inTrial ? "Keep Core" : "Go live"}
@@ -188,18 +229,24 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                 )}
                 {offer && (
                   <p className="mt-2 text-xs text-gray-600">
-                    {cadence === "year" ? "Two months free. " : ""}Charged today (${CORE_PRICE[cadence] + (withFans && !inTrial ? FANS_PRICE[cadence] : 0)}), then every {cadence}. You pay on Stripe&apos;s secure page; cancel any time from here.
+                    {cadence === "year" ? "Two months free. " : ""}Charged today (${CORE_PRICE[cadence] + (withFans ? FANS_PRICE[cadence] : 0)}), then every {cadence}. You pay on Stripe&apos;s secure page; cancel any time from here.
                   </p>
                 )}
               </div>
             )}
             {addOn && plan.interval && (
-              <div className="mt-4 border-t border-gray-100 pt-4" role="group" aria-label="Fans add-on">
+              <div
+                id={`${id}-fans`}
+                role="group"
+                aria-label="Fans add-on"
+                className={`mt-4 scroll-mt-24 transition-shadow ${offerFans ? "rounded-lg border border-[#e8be5a] bg-amber-50/40 px-3 py-3" : "border-t border-gray-100 pt-4"}${marked}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-deep-navy">
                       Fans add-on{plan.fans ? " · On" : `: $${FANS_PRICE[plan.interval]}/${plan.interval}`}
                     </p>
+                    {offerFans && <p className="mt-1 text-sm text-gray-700">Your link is live. Let the people watching follow you, and sell your next night to them first.</p>}
                     <ul role="list" className="mt-2 space-y-1.5 text-sm text-gray-600">
                       {FANS_FEATURES.map((f) => (
                         <li key={f} className="flex gap-2">
@@ -241,6 +288,20 @@ export default function PlanSettings({ organizer, eventSlug }: { organizer: { sl
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+            {included && (
+              <div id={`${id}-fans`} role="group" aria-label="Fans add-on" className={`mt-4 scroll-mt-24 border-t border-gray-100 pt-4 transition-shadow${marked}`}>
+                <p className="text-sm font-semibold text-deep-navy">Fans add-on · Included</p>
+                <ul role="list" className="mt-2 space-y-1.5 text-sm text-gray-600">
+                  {FANS_FEATURES.map((f) => (
+                    <li key={f} className="flex gap-2">
+                      <span aria-hidden="true" className="text-deep-navy">•</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-gray-600">Part of your plan, at no extra charge.</p>
               </div>
             )}
             {problem && <p role="alert" className="mt-3 text-sm font-semibold text-red-700">{problem}</p>}

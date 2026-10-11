@@ -1,20 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useMaybeAdminBusiness } from "@/admin/AdminBusiness";
-import { START_CORE_HREF, usePlan } from "@/admin/plan";
-import { CORE_PRICE, hasCore, TRIAL_DAYS, type Plan } from "@/lib/plans";
+import { useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
+import { ADD_FANS_HREF, START_CORE_HREF, useFansSnooze, usePlan } from "@/admin/plan";
+import { CORE_PRICE, FANS_PRICE, hasCore, TRIAL_DAYS, wantsFans, type Plan } from "@/lib/plans";
 
 const DAY = 864e5;
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
-type Nudge = { eyebrow: string; title: string; text: string; action: string; urgent: boolean; daysLeft?: number; used?: number };
+type Nudge = {
+  eyebrow: string;
+  title: string;
+  text: string;
+  action: string;
+  href: string;
+  urgent: boolean;
+  daysLeft?: number;
+  used?: number;
+  /** An offer, not something they must do: it has Not now, and no chip on phones. */
+  offer?: boolean;
+};
 
 /**
  * What to say about Core, or nothing: before they pay, that their link is
  * private and Go live; on a trial without a card yet (from before "Pay to go
- * live"), the days left; with a declined card, update it. Nothing once they
- * pay or are comped. (docs/plans/03-billing.md, "Upgrade nudges".)
+ * live"), the days left; with a declined card, update it. Once live without
+ * the fans add-on, the add-on (an offer they can put off). Nothing when comped
+ * or with everything. (docs/plans/03-billing.md, "Upgrade nudges".)
  */
 export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null {
   if (!plan) return null;
@@ -27,29 +39,50 @@ export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null
       title: `${left === 1 ? "1 day" : `${left} days`} left`,
       text: left > 2 ? `Your trial ends ${ends}. Keep Core to keep your link live.` : `On ${ends} your link goes back to Coming soon.`,
       action: "Keep Core",
+      href: START_CORE_HREF,
       urgent: left <= 3,
       daysLeft: left,
       used: Math.min(1, Math.max(0, 1 - left / TRIAL_DAYS)),
     };
   }
   if (plan.status === "past_due" && core) {
-    return { eyebrow: "Core", title: "Card declined", text: "Update it to keep your link live.", action: "Update card", urgent: true };
+    return { eyebrow: "Core", title: "Card declined", text: "Update it to keep your link live.", action: "Update card", href: START_CORE_HREF, urgent: true };
   }
   if (!core && plan.status !== "comped") {
-    return { eyebrow: "Your link is private", title: "Go live", text: `Fans see Coming soon until you do. Core is $${CORE_PRICE.month} a month.`, action: "Go live", urgent: false };
+    return { eyebrow: "Your link is private", title: "Go live", text: `Fans see Coming soon until you do. Core is $${CORE_PRICE.month} a month.`, action: "Go live", href: START_CORE_HREF, urgent: false };
+  }
+  if (wantsFans(plan, now)) {
+    const per = plan.interval ?? "month";
+    return {
+      eyebrow: "Fans add-on",
+      title: "Let fans follow you",
+      text: `Follow, presales and fans-only reels, so your next night sells to people who asked. $${FANS_PRICE[per]} a ${per}.`,
+      action: "Add Fans",
+      href: ADD_FANS_HREF,
+      urgent: false,
+      offer: true,
+    };
   }
   return null;
 }
 
+/** The selected event's organizer's nudge, unless it's an offer they put off; and Not now. */
+function useNudge(): [Nudge | null, () => void] {
+  const slug = useMaybeAdminBusiness()?.funnel.slug;
+  const organizer = useAdminEvents().find((e) => e.funnel.slug === slug)?.organizer.slug ?? slug;
+  const nudge = nudgeFor(usePlan(slug));
+  const [snoozed, snooze] = useFansSnooze(organizer);
+  return [nudge?.offer && snoozed ? null : nudge, snooze];
+}
+
 /** The nudge in the sidebar (desktop), or folded to a badge when the sidebar is. */
 export default function CoreNudge({ collapsed }: { collapsed: boolean }) {
-  const slug = useMaybeAdminBusiness()?.funnel.slug;
-  const nudge = nudgeFor(usePlan(slug));
+  const [nudge, snooze] = useNudge();
   if (!nudge) return null;
   if (collapsed) {
     return (
       <Link
-        href={START_CORE_HREF}
+        href={nudge.href}
         title={`${nudge.eyebrow}: ${nudge.title}. ${nudge.action}`}
         aria-label={`${nudge.eyebrow}: ${nudge.title}. ${nudge.action}`}
         className="relative mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-md bg-[#e8be5a] text-xs font-black text-deep-navy hover:brightness-110"
@@ -70,23 +103,27 @@ export default function CoreNudge({ collapsed }: { collapsed: boolean }) {
       {/* On a short window the days left say enough. */}
       <p className={`mt-2 text-xs leading-snug low:hidden ${nudge.urgent ? "text-deep-navy/85" : "text-white/80"}`}>{nudge.text}</p>
       <Link
-        href={START_CORE_HREF}
+        href={nudge.href}
         className={`mt-3 flex min-h-11 items-center justify-center rounded-lg text-sm font-bold ${nudge.urgent ? "bg-deep-navy text-white hover:bg-royal-blue" : "bg-[#e8be5a] text-deep-navy hover:brightness-110"}`}
       >
         {nudge.action}
       </Link>
+      {nudge.offer && (
+        <button type="button" onClick={snooze} className="mt-1 flex min-h-11 w-full items-center justify-center rounded-lg text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-white">
+          Not now
+        </button>
+      )}
     </section>
   );
 }
 
-/** Phones (no sidebar): the same nudge as a chip beside the account button. */
+/** Phones (no sidebar): the same nudge as a chip beside the account button; offers stay on Home. */
 export function CoreNudgeChip() {
-  const slug = useMaybeAdminBusiness()?.funnel.slug;
-  const nudge = nudgeFor(usePlan(slug));
-  if (!nudge) return null;
+  const [nudge] = useNudge();
+  if (!nudge || nudge.offer) return null;
   return (
     <Link
-      href={START_CORE_HREF}
+      href={nudge.href}
       aria-label={`${nudge.eyebrow}: ${nudge.title}. ${nudge.action}`}
       className="group inline-flex min-h-11 items-center px-0.5"
     >

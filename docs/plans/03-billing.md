@@ -299,6 +299,67 @@ test.
    - **The fan list:** always shown in full, on any plan. The 100-fan cap
      of the old Free plan is gone.
 
+## Fans add-on nudges (Oct 11, 2026)
+
+Before this, the add-on could only be found on Settings → Plan, and not
+even there in two cases. Comped organizers (Big Love) saw nothing, because
+the add-on part was hidden. Trials from before "Pay to go live" got Keep
+Core with no way to keep Fans. Once an organizer went live, the sidebar
+card went quiet.
+
+**What works elsewhere:**
+- **Canva** marks Pro items with a crown wherever they appear. Picking one
+  on the free plan brings up the upgrade, at the moment it's wanted.
+- **Linktree** marks premium features in its admin and prompts to upgrade
+  when one is opened (a third-party review; Linktree's help doesn't
+  describe the prompts).
+- **Laylo** sells its fan list and drops on a paid Pro plan ($25/month
+  plus messaging, per its Shopify listing). The fan list is the upsell, as
+  it is here.
+- Upgrade-prompt advice agrees on three things:
+  - ask after value is shown (here, the link's reel views);
+  - say what they gain rather than "locked";
+  - let people put it off, and don't show a dismissed prompt again soon.
+  Over-prompting has cost products support load and NPS.
+
+**What we do:**
+- **The sidebar card**, once live on Core without the add-on: "Fans add-on
+  · Let fans follow you", what it adds and its price at their cadence,
+  with **Add Fans** and **Not now**. What must be done (Go live, a
+  declined card, a trial's last days) still comes first. On phones the
+  chip stays for those only; offers are on Home.
+- **Home:** a card above the numbers.
+  - The heading uses the link's reel views over 30 days: "1,240 reel views
+    in 30 days. Let them follow you." With no views yet: "Let the people
+    watching follow you."
+  - **Add Fans · $15/month** and **Not now**.
+- **Not now** hides both for 14 days, for that organizer, in that browser.
+  Settings → Plan always shows the add-on.
+- **Settings → Plan:**
+  - **Live without the add-on:** it stands out (a gold border), with "Your
+    link is live. Let the people watching follow you…".
+  - **Back from going live without it:** "You're live. Next: let the
+    people watching follow you".
+  - **Going live:** the add-on box sits beside Go live, with what it does.
+  - **Trials from before:** "Keep the Fans add-on" beside Keep Core, saying
+    the fan features stop without it.
+  - **Comped:** "Fans add-on · Included".
+- **Where Add Fans leads:** every Add Fans link goes to `#fans`, meaning
+  the nudges and the notes beside presales, Fans only and the Fans page.
+  Settings → Plan brings that part into view and outlines it for a moment.
+- **Not built:** email nudges (Plan 4), and prompts that start from what
+  fans do, like taps on a Follow that isn't there, which we don't record.
+
+Sources: [Gated feature upsell templates (Chameleon)](https://www.chameleon.io/templates/upsell-modal),
+[Designing in-app upgrade prompts (Genesys Growth)](https://genesysgrowth.com/blog/designing-in-app-upgrade-prompts),
+[In-app upsell guide (Kompassify)](https://kompassify.com/blog/in-app-upsell-guide),
+[Upsell screen examples (ScreensDesign)](https://screensdesign.com/articles/mobile-app-upsell-screen-examples/),
+[Linktree in-app screens (ScreensDesign)](https://screensdesign.com/showcase/linktree-link-in-bio-creator),
+[Laylo on the Shopify App Store](https://apps.shopify.com/laylo),
+[Free vs Pro Canva templates (Brenda Cadman)](https://brendacadman.com/free-vs-pro-canva-templates-whats-the-difference/).
+These are vendors' and third parties' accounts. Their figures are
+unverified.
+
 ## Measures
 
 - Organizers on Core, trial to paid, churn per month.

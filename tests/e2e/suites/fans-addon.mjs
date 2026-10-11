@@ -78,7 +78,8 @@ await setPlan({ status: 'comped' });
 await p.waitForTimeout(1200);
 check('comped: included, nothing to buy', (await p.request.post(B + '/api/admin/billing/fans', { data: { slug: 'masquerade', on: true } })).status() === 409);
 await openPlan();
-check('comped: no add-on section on the Plan card', !(await card.getByRole('group', { name: 'Fans add-on' }).count()));
+const comped = card.getByRole('group', { name: 'Fans add-on' });
+check('comped: the add-on shows as included, with nothing to buy', await until(async () => /Fans add-on · Included/.test(await comped.innerText())) && !(await comped.getByRole('button').count()));
 
 check('no errors', !errs.length, errs.join(' | '));
 // Big Love as the other suites expect it: comped, live.

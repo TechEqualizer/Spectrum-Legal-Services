@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 import { selectAdminBusiness, useAdminEvents, type AdminEvent } from "@/admin/AdminBusiness";
+import FansOffer from "@/admin/components/FansOffer";
 import StatTile, { TileGrid } from "@/admin/components/StatTile";
 import ViewsChart from "@/admin/components/ViewsChart";
 import Welcome from "@/admin/components/Welcome";
@@ -87,6 +88,8 @@ export default function Home() {
               <Totals results={results} fans={showsFans(fanCounts) ? fanCounts! : undefined} />
             </>
           )}
+
+          {!welcome && <FansOffer results={results} days={DAYS} />}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 [&>*]:min-w-0">
             <NextUp events={events} onOpen={open} />

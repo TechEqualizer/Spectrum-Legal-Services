@@ -33,7 +33,7 @@ check('trial: days left', t.includes('Core trial') && /5 days left, until/.test(
 await setPlan({});
 await p.reload(); t = await text(p);
 check('not live: says so', /^Plan Not live yet/i.test(t) && t.includes('Fans see Coming soon until you go live.'), t);
-check('not live: Core and its price, and the Fans add-on beside it', t.includes('Go live with Core: $29/month, or $290/year') && t.includes('Your link live: the opening, your reels and tickets') && t.includes('Add the Fans add-on: +$150/year.'), t);
+check('not live: Core and its price, and the Fans add-on beside it', t.includes('Go live with Core: $29/month, or $290/year') && t.includes('Your link live: the opening, your reels and tickets') && t.includes('Add the Fans add-on: +$150/year'), t);
 await p.screenshot({ path: 'plan-free-1279.png' });
 
 // Who can read it.
