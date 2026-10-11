@@ -99,7 +99,9 @@ await live.close();
 
 check('no errors', !errs.length, errs.join(' | '));
 await ctx.close();
-// Big Love back to comped, and the link live again before the next suite (plans are cached a second).
+// Big Love back to comped, and its pages live again before the next suite (plans are cached a
+// second, and a page rebuilds on the visit after it goes stale, so ask until the night shows).
 await setPlan({ status: 'comped' });
 await until(async () => (await status('/f/biglove/calendar.ics')) === 200);
+for (const path of ['/f/masquerade', '/f/biglove']) await until(async () => { const r = await fetch(B + path); return r.status === 200 && !(await r.text()).includes('Coming soon'); });
 await b.close(); console.log(res.join('\n'));
