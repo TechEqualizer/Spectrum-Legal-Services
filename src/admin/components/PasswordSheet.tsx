@@ -87,7 +87,7 @@ export default function PasswordSheet({ firstTime = false, onClose }: { firstTim
               <button
                 type="button"
                 onClick={() => setShow((s) => !s)}
-                className="absolute inset-y-0 right-0 min-w-14 px-3 text-sm font-semibold text-teal-accent"
+                className="absolute inset-y-0 right-0 min-w-14 px-3 text-sm font-semibold text-accent-ink"
               >
                 {show ? "Hide" : "Show"}
               </button>

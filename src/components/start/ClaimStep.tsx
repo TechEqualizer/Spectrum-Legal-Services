@@ -17,8 +17,8 @@ const ERROR = "mt-1.5 text-sm font-semibold text-[#ff9b8a]";
 /**
  * Step 3 of the sign-up wizard: claim the link. Their name and link (checked
  * as they type), an email and password, the terms and the content rule.
- * Claiming makes everything at once and signs them in; the price shows
- * here, once, with the trial.
+ * Claiming makes everything at once and signs them in; the price of going
+ * live shows here, once (building is free).
  */
 export default function ClaimStep({ invite, draft, onClaimed, onBack }: { invite: string; draft: StartDraft; onClaimed: (eventSlug: string) => void; onBack: () => void }) {
   const id = useId();

@@ -2,8 +2,23 @@
 
 An organizer goes from a flyer to a live Showlnk link in three steps, and
 is sold on it before they're asked for anything: they watch their own night
-become reels, with Core's features already working in the preview, and only
-then claim the link. Claiming starts Core's 14-day trial.
+become reels, and only then claim the link.
+
+**Update (Oct 11, 2026), "Pay to go live" (Plan 3):** claiming starts no trial.
+Building is free and going live is $29/month. The wizard no longer shows the
+"Core · free for 14 days" card. Its preview no longer shows Follow, a
+presale or a fans-only reel, because those are the Fans add-on now. The
+preview shows only what going live gives. The trial notes below are
+history.
+
+**Step 2 is now "Watch your night" (Oct 11, 2026).** A form of word boxes
+felt like homework, not the "wow". Step 2 now leads with the phone playing
+the story, first on a phone. Beside it are the four parts (Opening, The
+Night, Your People, Last Call), each naming its drafted title and saying in
+a line why it sells; a tap plays that part. The word boxes fold away under
+"Change the words". The main button is "Claim this link", and on a phone it
+stays in reach at the bottom. This follows the paywall advice in Plan 3:
+ask once the value has been seen.
 
 Invite-only for now (decided Oct 10, 2026): Showlnk sends invite links; the
 waitlist on showlnk.com stays as it is.
@@ -169,8 +184,8 @@ Most conversion figures in these are vendors' own and unverified.
 
 ## Decided
 
-- Core's 14-day trial starts at claim (Oct 10, 2026), replacing "when they
-  reach 100 fans".
+- ~~Core's 14-day trial starts at claim (Oct 10, 2026)~~. Superseded on
+  Oct 11, 2026: build free, pay to go live, no trial (Plan 3).
 - Invite-only for now.
 - Roles: Promoter, Venue, Artist or DJ, Organizer.
 - Claim with email and password (the admin's own sign-in): no detour to an

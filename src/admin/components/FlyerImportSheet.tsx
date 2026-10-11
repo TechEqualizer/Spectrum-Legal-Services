@@ -123,7 +123,7 @@ export default function FlyerImportSheet({
   };
 
   const ready = Boolean(file) || text.trim().length > 0;
-  const field = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-charcoal focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-accent";
+  const field = "min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-charcoal focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-accent";
 
   return (
     <dialog
@@ -197,7 +197,7 @@ export default function FlyerImportSheet({
                         <button
                           type="button"
                           onClick={() => onReview(i)}
-                          className={`min-h-10 flex-shrink-0 rounded-lg px-3 text-sm font-semibold ${exists ? "border border-gray-300 text-deep-navy hover:bg-soft-gray" : "bg-deep-navy text-white hover:bg-royal-blue"}`}
+                          className={`min-h-11 flex-shrink-0 rounded-lg px-3 text-sm font-semibold ${exists ? "border border-gray-300 text-deep-navy hover:bg-soft-gray" : "bg-deep-navy text-white hover:bg-royal-blue"}`}
                           aria-label={`Review ${d.name || "date"}, ${importedWhen(d)}`}
                         >
                           {exists ? "Add anyway" : "Review"}
@@ -252,7 +252,7 @@ export default function FlyerImportSheet({
                     if (fileRef.current) fileRef.current.value = "";
                   }}
                   disabled={busy}
-                  className="min-h-10 px-2 text-sm font-semibold text-gray-600 hover:text-deep-navy"
+                  className="min-h-11 px-2 text-sm font-semibold text-gray-600 hover:text-deep-navy"
                 >
                   Remove
                 </button>
@@ -354,7 +354,7 @@ function LookOffer({
               role="radio"
               aria-checked={i === chosen}
               onClick={() => setChosen(i)}
-              className={`min-h-10 rounded-lg px-1 text-sm font-semibold transition ${i === chosen ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+              className={`min-h-11 rounded-lg px-1 text-sm font-semibold transition ${i === chosen ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
             >
               {o.label}
             </button>

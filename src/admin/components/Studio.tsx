@@ -133,7 +133,7 @@ export function StudioTabs<T extends string>({
               if (e.key === "ArrowLeft") onChange(tabs[(i - 1 + tabs.length) % tabs.length].id);
             }}
             tabIndex={value === t.id ? 0 : -1}
-            className={`min-h-10 rounded-lg text-sm font-semibold transition ${value === t.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+            className={`min-h-11 rounded-lg text-sm font-semibold transition ${value === t.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
           >
             {t.label}
           </button>
@@ -314,7 +314,7 @@ export function Studio({
     return () => window.removeEventListener("keydown", onKey);
   }, [onUndo, onRedo]);
 
-  const quiet = "inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-white disabled:opacity-40 disabled:hover:bg-transparent";
+  const quiet = "inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-deep-navy hover:bg-white disabled:opacity-40 disabled:hover:bg-transparent";
   return (
     // Each column scrolls on its own; the page itself never does.
     <div className="relative flex h-[calc(100dvh-5.5rem)] flex-col overflow-clip">
@@ -356,7 +356,7 @@ export function Studio({
           data-tour="publish"
           onClick={onPublish}
           disabled={Boolean(publishing) || !unpublished}
-          className="min-h-10 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white shadow-sm hover:bg-royal-blue disabled:opacity-50"
+          className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white shadow-sm hover:bg-royal-blue disabled:opacity-50"
         >
           {publishing ? "Publishing…" : "Publish"}
         </button>

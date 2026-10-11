@@ -5,6 +5,7 @@ import type { FunnelEvent } from "@/data/funnel-types";
 import { eventDate, eventDay, eventDayOfMonth, eventWhen, instantToZoned, isTimeZone, localTimeZone, zonedToInstant, zoneName } from "@/lib/event-time";
 import { isOver } from "@/lib/events";
 import CoreNote from "@/admin/components/CoreNote";
+import Switch from "@/admin/components/ui/Switch";
 import FlyerImportSheet, { type FlyerFound, type FunnelDraft, type ImportedDate } from "@/admin/components/FlyerImportSheet";
 import { useHasFans } from "@/admin/plan";
 import type { Look } from "@/lib/look";
@@ -133,7 +134,7 @@ export default function DatesCard({
           <button
             type="button"
             onClick={() => setImporting(true)}
-            className="min-h-10 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
+            className="min-h-11 rounded-md border border-gray-300 px-3 text-sm font-semibold text-deep-navy hover:bg-soft-gray"
           >
             Import flyer
           </button>
@@ -279,7 +280,7 @@ function DateRow({ event, reel, past = false, onClick }: { event: FunnelEvent; r
         </span>
         <span
           className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-            past ? "bg-gray-100 text-gray-600" : event.status === "sold_out" ? "bg-gray-100 text-gray-700" : event.status === "few_left" ? "bg-amber-100 text-amber-900" : "bg-teal-accent/10 text-teal-accent"
+            past ? "bg-gray-100 text-gray-600" : event.status === "sold_out" ? "bg-gray-100 text-gray-700" : event.status === "few_left" ? "bg-amber-100 text-amber-900" : "bg-teal-accent/10 text-accent-ink"
           }`}
         >
           {status}
@@ -379,7 +380,7 @@ function DateSheet({
     }, reel);
   };
 
-  const field = "mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-charcoal focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-accent";
+  const field = "mt-1 min-h-11 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-charcoal focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-accent";
   const err = (k: string) =>
     errors[k] ? <p id={`${id}-${k}-error`} role="alert" className="mt-1 text-xs font-semibold text-red-700">{errors[k]}</p> : null;
 
@@ -454,18 +455,13 @@ function DateSheet({
           <div>
             <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
               <p id={`${id}-presale`} className="text-xs font-semibold uppercase tracking-wider text-gray-500">Presale for followers</p>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={presaleOn}
-                aria-labelledby={`${id}-presale`}
-                aria-describedby={core === false ? `${id}-presale-core` : undefined}
+              <Switch
+                checked={presaleOn}
+                onChange={setPresaleOn}
+                labelledBy={`${id}-presale`}
+                describedBy={core === false ? `${id}-presale-core` : undefined}
                 disabled={core === false && !presaleOn}
-                onClick={() => setPresaleOn((on) => !on)}
-                className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-accent motion-reduce:transition-none ${presaleOn ? "bg-teal-accent" : "bg-gray-300"}`}
-              >
-                <span aria-hidden="true" className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${presaleOn ? "translate-x-6" : "translate-x-1"}`} />
-              </button>
+              />
             </div>
             {presaleOn ? (
               <div className="divide-y divide-gray-100 rounded-xl bg-white">
@@ -548,7 +544,7 @@ function DateSheet({
                   role="radio"
                   aria-checked={status === s.id}
                   onClick={() => setStatus(s.id)}
-                  className={`min-h-10 rounded-lg text-sm font-semibold transition ${status === s.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
+                  className={`min-h-11 rounded-lg text-sm font-semibold transition ${status === s.id ? "bg-white text-deep-navy shadow-sm" : "text-gray-600 hover:text-deep-navy"}`}
                 >
                   {s.label}
                 </button>
