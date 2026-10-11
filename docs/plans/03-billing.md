@@ -219,6 +219,64 @@ Sources: [GitLab: trial days remaining in the sidebar](https://gitlab.com/gitlab
 [Reverse trials (Userpilot)](https://userpilot.com/blog/?p=13042).
 Figures in these are vendors' own and unverified.
 
+## Pay to go live (decided Oct 11, 2026)
+
+This replaces the Free plan and the 14-day trial below. Organizers build
+everything free (the wizard, the opening scene, reels, dates, the Stories
+video) and pay when they want the link public.
+
+**What works elsewhere:**
+- **Squarespace:** you build on a free trial, but the site isn't public
+  until you subscribe. Visitors meet a password or trial notice, and a
+  domain you connect won't resolve until you pay.
+- **Webflow:** every site starts free on a staging address. Publishing to
+  your own domain needs a paid site plan.
+- **Linktree and Carrd** publish free and charge for extras. That works
+  for a list of links, but Showlnk's link is the finished product (the
+  opening, the reels, the tickets), so going public is the moment of value.
+- Paywall advice agrees: ask after people have seen the value (here, their
+  built link playing in the phone), never before it, and always with a
+  clear way back.
+
+Sources: [Squarespace free trial (Style Factory)](https://www.stylefactoryproductions.com/squarespace-free-trial),
+[Can I share a trial Squarespace site (Website Builder Insider)](https://www.websitebuilderinsider.com/can-i-share-a-trial-squarespace-site/),
+[Webflow plans and pricing (Webflow help)](https://help.webflow.com/lesson/webflow-plans-and-pricing),
+[Workspace and Site plans (Webflow help)](https://help.webflow.com/hc/en-us/articles/33961379128723),
+[Paywall and upgrade design (Corey Haines' marketing skills)](https://skillselion.com/skills/coreyhaines31/marketingskills/paywalls).
+The Squarespace pages are third-party write-ups and disagree on details;
+check Squarespace's own help before quoting.
+
+**The model:**
+- **Build: free.** Sign up, claim the link, make the opening and reels,
+  preview the link signed in. Nobody else sees it.
+- **Live: $29/month or $290/year** (Stripe's `core_month` and `core_year`
+  prices). The public link: the opening scene, reels, dates, Results,
+  Leads, Share, Eventbrite and the Stories video. No Follow.
+- **Fans add-on: $15/month or $150/year** (new prices, `fans_month` and
+  `fans_year`) on top of Live: Follow (unlimited), presales for followers,
+  fans-only reels and the calendar feed.
+- **Not live** (never paid, canceled, or a declined card past the 7-day
+  grace): the link shows a "Coming soon" page with the organizer's name,
+  not an error, and isn't indexed. Their admins still see the real link
+  when signed in, with a bar saying only they can see it. Nothing is
+  deleted: paying again puts it straight back.
+- **Comped** organizers (Big Love) have Live and Fans.
+
+This reverses first principle 2 ("we never take the link down"). It's the
+owner's call: live means paid. It also changes the reverse trial in
+Decided: claiming no longer starts a trial. Book Signing's trial was a
+test.
+
+**Steps:**
+1. The tour starts by itself after the wizard, so new organizers aren't
+   lost before they meet the paywall (PR #88).
+2. Go live: no trial at claim; Coming soon for links that aren't live, with
+   the preview for their admins; Go live on Home, Share, the sidebar and
+   Settings → Plan (Stripe Checkout for `core_*`). Fans stay inside Live
+   until step 3, so no paying organizer loses anything in between.
+3. The fans add-on: a second item on the same Stripe subscription
+   (`fans_*`), the webhook records it, and the fan gates read it.
+
 ## Measures
 
 - Organizers on Core, trial to paid, churn per month.
@@ -235,6 +293,9 @@ Figures in these are vendors' own and unverified.
 - **Free vs Core:** Follow is free up to 100 fans; Core is $29/month or
   $290/year for unlimited fans, fan-only reels, presale and the calendar
   feed.
+- **Superseded Oct 11, 2026** by "Pay to go live" above: no Free plan and
+  no trial; Live is $29/month or $290/year, and the fans add-on is
+  $15/month or $150/year. Before that:
 - **Trial:** 14 days of Core, no card to start. It begins when an
   organizer claims their link in the sign-up wizard (Plan 5), a reverse
   trial: everything on from day one, then Free unless they pay. (Changed
