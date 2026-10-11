@@ -40,6 +40,15 @@ for (const [w,h,mobile] of [[393,852,true],[1440,900,false]]) {
   await p.clock.runFor(2500); await settle(p, 800);
   check(w+': on bold reel', await p.getByRole('region',{name:/How pricing works/}).isVisible());
   check(w+': bold highlighted from start', (await pill().evaluate(e=>getComputedStyle(e).backgroundColor))==='rgb(164, 64, 92)' && (await bg(railBook()))==='rgb(164, 64, 92)');
+  // The icon on the filled circle takes the color that reads on the button color, as on every filled button.
+  const icon = await region.locator('button:visible:has(svg)',{hasText:/^Book$/}).first().evaluate(e=>{
+    // A light button color (gold, say) takes dark words: pretend this one does, and the icon must follow.
+    e.parentElement.style.setProperty('--on-accent', '#14100A');
+    const icon = getComputedStyle(e.querySelector('svg')).color;
+    e.parentElement.style.removeProperty('--on-accent');
+    return { icon, want: 'rgb(20, 16, 10)' };
+  });
+  check(w+': filled rail icon reads on the button color', icon.icon === icon.want, JSON.stringify(icon));
   await p.screenshot({path:`emphasis-bold-${w}.jpg`, quality:65});
   await p.close();
 }
