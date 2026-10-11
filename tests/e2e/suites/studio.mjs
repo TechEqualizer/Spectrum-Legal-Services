@@ -43,6 +43,19 @@ await p.locator('body').click({ position: { x: 700, y: 20 } });
 await p.keyboard.press('Control+z'); await settle(p, 700);
 check('Ctrl+Z undoes', (await fontOf()) === before);
 
+// The opening: made in the Design tab from the event's flyer, playing in the phone, and undone
+// from the top bar like any other change.
+const make = p.getByRole('button', { name: 'Make my opening' });
+check('opening: offered from the flyer', await make.isEnabled());
+await make.click();
+const feels = p.getByRole('radiogroup', { name: 'Feels like' });
+await feels.waitFor({ timeout: 10000 }).catch(() => {});
+check('opening: made, its mood shown', await feels.isVisible(), await p.getByRole('alert').allInnerTexts().then((t) => t.join(' ')));
+check('opening: plays in the phone', await phone.getByText('Masks on.', { exact: true }).first().waitFor({ timeout: 10000 }).then(() => true, () => false));
+await animationsDone(p, 500); await p.screenshot({ path: S + '/studio-opening-1440.jpg' });
+await p.getByRole('button', { name: 'Undo', exact: true }).first().click(); await settle(p, 600);
+check('opening: undo takes it back', await make.isVisible() && !(await feels.isVisible()));
+
 // Reels play inside the phone, not full screen
 await p.getByRole('button', { name: 'Show reels in the preview' }).click(); await settle(p, 1500);
 check('Show reels: phone plays the first reel', await phone.getByRole('region', { name: /^Video:/ }).first().isVisible());

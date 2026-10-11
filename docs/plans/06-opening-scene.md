@@ -282,3 +282,34 @@ Not done: sound. The link's opening plays muted, and fans rarely turn sound
 on for an intro. Sound design (hits on the cuts, a whoosh on the pull-back)
 belongs to a downloadable version of the opening for Instagram Stories and
 TikTok, a separate step.
+
+## Update (Oct 11, 2026): openings for existing events, from the Design tab
+
+Events made before the wizard cut openings (and any event after a new
+flyer) get one from the Design tab (the studio's Design tab, or the Design
+sheet on a phone).
+
+What works elsewhere: Canva's Magic Animate reads the design and applies
+one AI-chosen animation to the whole of it, offers alternative styles
+beside its recommendation, and has one Remove. Adobe Express's Animate All
+is one tap that animates the whole design, with named styles to switch
+between. So:
+
+- **Make my opening**: one tap. The browser sends the event's flyer (the
+  imported one, or the one already behind the title) as a photo to
+  `/api/admin/opening`, and Claude reads it and cuts the opening, choosing
+  its mood (`draftOpening` in `src/lib/server/funnel-draft.ts`, using the
+  same brief and schema as the sign-up draft). About 20 seconds.
+- **Feels like**: the five moods as the alternatives. Switching is instant
+  (the same cut, directed another way) and needs no new call.
+- **Make another**: a new cut in the chosen mood, unlike the current one.
+- **Turn off**: back to the still flyer. Choosing another background also
+  turns it off. Undo takes back any of these.
+
+The opening plays in the studio's phone, and in the sheet's preview on a
+phone, from the start each time it changes. It's live once published,
+and free.
+
+Sources: [Using Magic Animate (Canva)](https://www.canva.com/help/using-magic-animate/),
+[Magic Animate (Canva)](https://canva.com/pro/animator/),
+[Animate your designs (Adobe Express)](https://helpx.adobe.com/express/using/animation.html).

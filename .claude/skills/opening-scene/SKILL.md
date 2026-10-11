@@ -149,6 +149,19 @@ When a fix belongs in how Claude writes openings for everyone, change the
 instructions in `src/lib/server/funnel-draft.ts` (or a mood in
 `OPENING_MOODS`), not just the one recipe.
 
+## Where openings come from
+
+- **Sign-up:** Claude cuts the opening while it drafts the funnel from the
+  flyer (`draftFunnel`).
+- **Existing events:** the Design tab's Opening section (`OpeningCard` in
+  `src/admin/components/StyleSheet.tsx`). Make my opening calls
+  `/api/admin/opening` (`draftOpening`). Feels like changes the mood with
+  no new call, Make another asks for a different cut in that mood, and Turn
+  off goes back to the still flyer.
+
+Both use the same brief and schema (`openingBrief` and `OPENING_SCHEMA`), so a
+rule changed there applies to both.
+
 ## Storing one by hand
 
 An opening sits on the flyer backdrop:

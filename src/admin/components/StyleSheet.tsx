@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { HeroMediaEdit } from "@/admin/drafts";
 import { wordmarkFont } from "@/components/BrandLogo";
@@ -26,9 +27,17 @@ import {
 import { eventDate, eventDayOfMonth } from "@/lib/event-time";
 import { thumbnailOf } from "@/lib/media";
 import { upcomingEvents } from "@/lib/events";
+import { shrink } from "@/lib/flyer-file";
+import { DEFAULT_MOOD, OPENING_MOOD_IDS, OPENING_MOODS, type OpeningRecipe } from "@/lib/opening";
+
+// The opening's player loads only when there's an opening to show.
+const OpeningBackdrop = dynamic(() => import("@/components/OpeningBackdrop"), { ssr: false });
 
 /** What goes behind the opening screen's words. */
 type Backdrop = "keep" | "poster" | "blur" | "glow";
+
+/** The opening scene, when the flyer is behind the title and has one. */
+const openingOf = (m: ReelMedia | undefined) => (m?.kind === "image" && m.fit === "poster" ? m.opening : undefined);
 
 const ROLE_ROWS = [
   { role: "--deep-navy", label: "Background", pick: "background" },
@@ -97,10 +106,13 @@ export default function StyleSheet({
   const [localFont, setLocalFont] = useState<LookFont>(look?.font ?? "classic");
   const [localBackdrop, setLocalBackdrop] = useState<Backdrop>(() => backdropOf(media));
   const [localEffect, setLocalEffect] = useState<ButtonEffect>(look?.effect ?? DEFAULT_EFFECT);
+  const [localOpening, setLocalOpening] = useState<OpeningRecipe | undefined>(() => openingOf(media));
   const colors = panel ? look?.colors : localColors;
   const font = panel ? (look?.font ?? "classic") : localFont;
   const backdrop = panel ? backdropOf(media) : localBackdrop;
   const effect = panel ? (look?.effect ?? DEFAULT_EFFECT) : localEffect;
+  // The opening plays only over the flyer (in the sheet, it waits while another background is tried).
+  const opening = backdrop === "poster" ? (panel ? openingOf(media) : localOpening) : undefined;
 
   const lookFor = (c: LookColors | undefined, f: LookFont, e: ButtonEffect): Look | undefined => {
     const plainEffect = e.style === DEFAULT_EFFECT.style && e.strength === DEFAULT_EFFECT.strength;
@@ -110,19 +122,32 @@ export default function StyleSheet({
     else next.effect = e;
     return next;
   };
-  const mediaFor = (b: Backdrop): HeroMediaEdit =>
-    b === "keep" ? (media ?? null) : b === "glow" || !flyer ? null : { kind: "image", src: flyer, fit: b };
-  /** A change: kept in the sheet until Done, or applied at once in a panel. null colors: the original. */
-  const commit = (next: { colors?: LookColors | null; font?: LookFont; backdrop?: Backdrop; effect?: ButtonEffect }) => {
+  const mediaFor = (b: Backdrop, op?: OpeningRecipe): HeroMediaEdit =>
+    b === "keep"
+      ? (media ?? null)
+      : b === "glow" || !flyer
+        ? null
+        : b === "poster" && op
+          ? { kind: "image", src: flyer, fit: b, opening: op }
+          : { kind: "image", src: flyer, fit: b };
+  /**
+   * A change: kept in the sheet until Done, or applied at once in a panel.
+   * null colors: the original. An opening puts the flyer behind the title;
+   * null turns the opening off and leaves the flyer.
+   */
+  const commit = (next: { colors?: LookColors | null; font?: LookFont; backdrop?: Backdrop; effect?: ButtonEffect; opening?: OpeningRecipe | null }) => {
+    const nextBackdrop = next.opening !== undefined ? "poster" : next.backdrop;
     if (!panel) {
       if (next.colors !== undefined) setLocalColors(next.colors ?? undefined);
       if (next.font) setLocalFont(next.font);
-      if (next.backdrop) setLocalBackdrop(next.backdrop);
+      if (nextBackdrop) setLocalBackdrop(nextBackdrop);
       if (next.effect) setLocalEffect(next.effect);
+      if (next.opening !== undefined) setLocalOpening(next.opening ?? undefined);
       return;
     }
     const c = next.colors === undefined ? colors : (next.colors ?? undefined);
-    onDone(lookFor(c, next.font ?? font, next.effect ?? effect), next.backdrop ? mediaFor(next.backdrop) : media ?? null);
+    const op = next.opening === undefined ? openingOf(media) : (next.opening ?? undefined);
+    onDone(lookFor(c, next.font ?? font, next.effect ?? effect), nextBackdrop ? mediaFor(nextBackdrop, op) : media ?? null);
   };
   const [open, setOpen] = useState<(typeof ROLE_ROWS)[number]["pick"] | null>(null);
   // What the admin picked for each role, to say when it was adjusted for readability.
@@ -141,7 +166,7 @@ export default function StyleSheet({
     setPicked((p) => ({ ...p, [role.role]: hex }));
   };
 
-  const done = () => onDone(lookFor(colors, font, effect), mediaFor(backdrop));
+  const done = () => onDone(lookFor(colors, font, effect), mediaFor(backdrop, opening));
 
   const backdrops: { id: Backdrop; label: string; disabled?: boolean }[] = [
     ...(media && !(media.kind === "image" && media.fit) ? [{ id: "keep" as const, label: media.kind === "image" ? "Photo" : "Video" }] : []),
@@ -149,11 +174,14 @@ export default function StyleSheet({
     { id: "blur", label: "Blurred", disabled: !flyer },
     { id: "glow", label: "Glow" },
   ];
-  const previewMedia: ReelMedia | undefined =
-    backdrop === "keep" ? media : backdrop === "glow" || !flyer ? undefined : { kind: "image", src: flyer, fit: backdrop };
+  const previewMedia: ReelMedia | undefined = mediaFor(backdrop, opening) ?? undefined;
 
   const controls = (
         <div className="min-w-0 flex-1 space-y-6">
+          <Group label="Opening">
+            <OpeningCard slug={funnel.slug} flyer={flyer} opening={opening} onChange={(o) => commit({ opening: o })} />
+          </Group>
+
           {(suggestions.length > 0 || look) && (
             <Group label="Suggested">
               <div role="radiogroup" aria-label="Suggested styles" className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
@@ -346,7 +374,9 @@ export default function StyleSheet({
               {!flyer
                 ? "Import a flyer to put it behind your title."
                 : backdrop === "poster"
-                  ? "Your flyer above the title, over a soft blur of itself."
+                  ? opening
+                    ? "Your opening plays, then settles behind the title. Another background turns it off."
+                    : "Your flyer above the title, over a soft blur of itself."
                   : backdrop === "blur"
                     ? "Just your flyer’s colors, blurred, so the title stands alone."
                     : backdrop === "glow"
@@ -386,6 +416,123 @@ export default function StyleSheet({
         {controls}
       </div>
     </dialog>
+  );
+}
+
+const MOOD_LABEL = (m: string) => m[0].toUpperCase() + m.slice(1);
+
+/**
+ * The opening scene: made from the flyer with one tap (Claude reads it and
+ * picks the mood, like an animate-my-design button), then the mood can be
+ * changed at once, another cut asked for, or the opening turned off.
+ */
+function OpeningCard({ slug, flyer, opening, onChange }: { slug: string; flyer: string | undefined; opening: OpeningRecipe | undefined; onChange: (o: OpeningRecipe | null) => void }) {
+  const id = useId();
+  const [busy, setBusy] = useState<"make" | "another" | null>(null);
+  const [error, setError] = useState("");
+  const [made, setMade] = useState(false);
+  // The flyer, read once and kept for another cut.
+  const photo = useRef<{ src: string; type: string; data: string } | null>(null);
+  const mood = opening?.mood ?? DEFAULT_MOOD;
+
+  const cut = async (another: boolean) => {
+    if (!flyer || busy) return;
+    setBusy(another ? "another" : "make");
+    setError("");
+    setMade(false);
+    try {
+      if (photo.current?.src !== flyer) {
+        const file = await fetch(flyer)
+          .then((r) => (r.ok ? r.blob() : null))
+          .catch(() => null);
+        if (!file) throw new Error("Couldn't open your flyer. Import it again, then try.");
+        const { type, data } = await shrink(new File([file], "flyer.jpg", { type: file.type || "image/jpeg" }));
+        photo.current = { src: flyer, type, data };
+      }
+      const res = await fetch("/api/admin/opening", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Another cut keeps the mood they have, and asks for something unlike this one.
+        body: JSON.stringify({ slug, type: photo.current.type, data: photo.current.data, ...(another && opening ? { unlike: opening, mood } : {}) }),
+      }).catch(() => null);
+      if (!res) throw new Error("Couldn't reach the server. Check your connection and try again.");
+      const body = (await res.json().catch(() => ({}))) as { opening?: OpeningRecipe; error?: string };
+      if (res.status === 401) throw new Error("Your sign-in expired. Sign in again, then try.");
+      if (!res.ok || !body.opening) throw new Error(body.error ?? "Couldn't make the opening. Try again.");
+      onChange(body.opening);
+      setMade(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't make the opening. Try again.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const spinner = <span className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current motion-reduce:animate-none" aria-hidden="true" />;
+
+  if (!opening) {
+    return (
+      <div aria-busy={busy !== null} className="rounded-xl bg-white p-4">
+        <p className="font-bold text-deep-navy">A trailer from your flyer</p>
+        <p className="mt-1 text-sm text-gray-600">It cuts through your flyer with its own words, then your title comes up. Free.</p>
+        {error && <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{error}</p>}
+        <button
+          type="button"
+          onClick={() => cut(false)}
+          disabled={!flyer || busy !== null}
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue disabled:cursor-not-allowed disabled:opacity-40 aria-busy:cursor-wait"
+          aria-busy={busy === "make"}
+        >
+          {busy === "make" && spinner}
+          {busy === "make" ? "Reading your flyer…" : "Make my opening"}
+        </button>
+        <p role="status" className="mt-2 text-xs text-gray-500">
+          {!flyer ? "Import your flyer first, from Reels." : busy === "make" ? "This takes about 20 seconds." : ""}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div aria-busy={busy !== null} className="divide-y divide-gray-100 rounded-xl bg-white">
+      <div className="p-4">
+        <p id={`${id}-mood`} className="text-[15px] font-semibold text-deep-navy">Feels like</p>
+        <div role="radiogroup" aria-labelledby={`${id}-mood`} className="mt-2 flex flex-wrap gap-2">
+          {OPENING_MOOD_IDS.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mood === m}
+              onClick={() => onChange({ ...opening, mood: m })}
+              className={`min-h-11 rounded-full px-4 text-sm font-semibold transition ${mood === m ? "bg-deep-navy text-white" : "bg-soft-gray text-deep-navy ring-1 ring-black/10 hover:bg-gray-200"}`}
+            >
+              {MOOD_LABEL(m)}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-gray-500">For {OPENING_MOODS[mood].for}.</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
+        <button
+          type="button"
+          onClick={() => cut(true)}
+          disabled={busy !== null}
+          aria-busy={busy === "another"}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray disabled:cursor-wait disabled:opacity-60"
+        >
+          {busy === "another" && spinner}
+          {busy === "another" ? "Cutting another…" : "Make another"}
+        </button>
+        <button type="button" onClick={() => onChange(null)} disabled={busy !== null} className="min-h-11 rounded-lg px-2 text-sm font-semibold text-gray-600 hover:text-deep-navy hover:underline disabled:opacity-60">
+          Turn off
+        </button>
+        {error && <p role="alert" className="w-full text-sm font-semibold text-red-700">{error}</p>}
+        <p role="status" className="w-full text-xs text-gray-500">
+          {busy === "another" ? "This takes about 20 seconds." : made ? "Your opening is ready: it plays in the phone." : "Plays when someone opens your link."}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -433,6 +580,8 @@ function SuggestionCard({ label, colors, font, selected, onSelect }: { label: st
   );
 }
 
+const holdNothing = () => {};
+
 /** The opening screen, small: logo, background, eyebrow, title, date circles and both buttons, in these colors. */
 export function StylePreview({
   funnel,
@@ -461,7 +610,19 @@ export function StylePreview({
       style={theme}
       className="relative aspect-[9/16] w-40 overflow-hidden rounded-[1.4rem] bg-deep-navy shadow-xl ring-4 ring-black/80 transition-colors duration-300 sm:w-60"
     >
-      {media?.kind === "image" && media.fit ? (
+      {media?.kind === "image" && media.fit === "poster" && media.opening ? (
+        // The opening itself, playing (a new cut or mood plays from the start).
+        <OpeningBackdrop
+          key={JSON.stringify(media.opening)}
+          src={media.src}
+          recipe={media.opening}
+          fontClass={titleFontClass(font)}
+          caps={font === "regal" || font === "bold"}
+          paused={false}
+          skip={false}
+          onHold={holdNothing}
+        />
+      ) : media?.kind === "image" && media.fit ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer */}
           <img src={media.src} alt="" className={`absolute inset-0 h-full w-full scale-125 object-cover ${media.fit === "blur" ? "blur-xl brightness-[0.6]" : "blur-md brightness-[0.55]"} saturate-150`} />
