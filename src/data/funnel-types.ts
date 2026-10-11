@@ -2,6 +2,7 @@
 // (/f/<slug>): its reels, the paths between them, and its brand.
 
 import type { ReelRole } from "@/lib/funnel-draft";
+import type { OpeningRecipe } from "@/lib/opening";
 import type { ButtonEffect, LookFont } from "@/lib/look";
 
 export type Reel = {
@@ -82,7 +83,17 @@ export type ReelMedia =
    * picture, sharp, over a blurred copy of itself; "blur" only the blurred
    * copy, for its colors without its words.
    */
-  | { kind: "image"; src: string; fit?: "poster" | "blur" };
+  | {
+      kind: "image";
+      src: string;
+      fit?: "poster" | "blur";
+      /**
+       * A flyer behind the opening screen (fit "poster") can play as an
+       * opening: shots on its artwork with its own words, then a calm hold
+       * (src/lib/opening.ts). Without one, or where it can't play, the still flyer.
+       */
+      opening?: OpeningRecipe;
+    };
 
 export type FunnelTrigger = "completed" | "skipped";
 

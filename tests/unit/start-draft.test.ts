@@ -2,7 +2,8 @@
 // shows at each step, and Core's features in it.
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { applyPublication } from "@/lib/publication";
+import { parseOpening } from "@/lib/opening";
+import { applyPublication, checkMedia } from "@/lib/publication";
 import { basicReels, claimPublication, draftLink, FANS_REEL_ID, httpsLink, needsTicketLink, suggestedName, type StartDraft } from "@/lib/start-draft";
 
 const now = Date.parse("2026-10-07T12:00:00Z");
@@ -107,4 +108,22 @@ test("the claim, with the flyer stored: the opening scene, behind each reel, and
   assert.ok(pub.reels.every((r) => r.media?.kind === "image" && r.media.src === flyer));
   assert.equal(pub.look?.flyer, flyer);
   assert.equal(claimPublication(draft, undefined, "https://posh.vip/e/gh").backdrop, undefined);
+});
+
+test("the opening Claude cut from the flyer plays on the link, and only there: reels keep the still flyer", () => {
+  const flyer = "https://example.supabase.co/storage/v1/object/public/reel-media/night/abc-flyer.jpg";
+  const opening = parseOpening({
+    beats: [
+      { box: { x: 0.69, y: 0.02, w: 0.31, h: 0.37 }, move: "pull", seconds: 2, text: { lines: ["Masks on."], at: "bottom", size: "big" } },
+      { box: { x: 0.35, y: 0.53, w: 0.3, h: 0.34 }, move: "tilt-up", seconds: 1.7 },
+    ],
+    hold: { x: 0.3, y: 0.5, w: 0.4, h: 0.4 },
+  })!;
+  const withOpening: StartDraft = { ...draft, reels: { screen: { title: "", tagline: "", watchLabel: "", heading: "" }, heroPrompt: "", reels: [], opening } };
+  const pub = claimPublication(withOpening, undefined, "https://posh.vip/e/gh", flyer);
+  assert.deepEqual(pub.backdrop, { kind: "image", src: flyer, fit: "poster", opening });
+  assert.equal(checkMedia(pub.backdrop), null);
+  assert.ok(pub.reels.every((r) => r.media?.kind === "image" && !("opening" in r.media)));
+  // The preview, before the claim, plays it over the flyer in the browser.
+  assert.equal(draftLink(withOpening).publication.backdrop && "opening" in draftLink(withOpening).publication.backdrop!, true);
 });

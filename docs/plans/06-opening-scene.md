@@ -139,3 +139,32 @@ Built with Remotion 4.0.526 (pinned) and its official agent skill
   checked on the server); the trailer becomes the opening scene's backdrop;
   the link's title waits for the poster shot to pass; an MP4 export for
   Instagram Stories and TikTok.
+
+## Shipped (Oct 11, 2026): the opening in the wizard
+
+The flyer's own words won (Oct 11): the opening cuts through the flyer with
+its own lines set over the shots, then settles under the link's title.
+
+- **Claude writes it** in the same call that drafts the reels
+  (`src/lib/server/funnel-draft.ts`, no extra cost): 3 or 4 shots on the
+  flyer's artwork, clear of its lettering, each with a camera move and maybe
+  a line from the flyer (a presenter credit as an eyebrow, then selling
+  lines), plus the hold. Never invented words.
+- **Every value is checked** (`src/lib/opening.ts`): boxes inside the flyer
+  and at least 28% of its width (35% for the hold) so nothing is enlarged
+  past its detail, moves and placements from fixed lists, lines short plain
+  text. A recipe coming back from a browser must already be exactly clean.
+- **Stored on the flyer backdrop**: `{ kind: "image", fit: "poster",
+  opening }`. A link without one, or a phone that can't play it, keeps the
+  still flyer. Free for everyone.
+- **Played by** `src/components/OpeningBackdrop.tsx` with Remotion's Player
+  (loaded only on links that have an opening): the cut once, the whole
+  flyer, then the hold, looping. The title, tagline and buttons come up as
+  the hold begins; a tap skips straight there; visitors who ask for less
+  motion get the hold, still. The composition takes the screen's own shape.
+- **The hold** is softened (a slight blur and dimming) under a strong scrim,
+  so whatever the flyer prints there never fights the link's own words.
+
+Set aside along the way: the flat and depth-map scenes (and the
+Transformers.js dependency they needed), the paid video models, and the
+club and hype trailer styles.
