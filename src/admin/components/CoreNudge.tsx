@@ -67,7 +67,8 @@ export default function CoreNudge({ collapsed }: { collapsed: boolean }) {
           <div className={`h-full rounded-full ${nudge.urgent ? "bg-deep-navy" : "bg-[#e8be5a]"}`} style={{ width: `${Math.round(nudge.used * 100)}%` }} />
         </div>
       )}
-      <p className={`mt-2 text-xs leading-snug ${nudge.urgent ? "text-deep-navy/85" : "text-white/80"}`}>{nudge.text}</p>
+      {/* On a short window the days left say enough. */}
+      <p className={`mt-2 text-xs leading-snug low:hidden ${nudge.urgent ? "text-deep-navy/85" : "text-white/80"}`}>{nudge.text}</p>
       <Link
         href={START_CORE_HREF}
         className={`mt-3 flex min-h-11 items-center justify-center rounded-lg text-sm font-bold ${nudge.urgent ? "bg-deep-navy text-white hover:bg-royal-blue" : "bg-[#e8be5a] text-deep-navy hover:brightness-110"}`}
