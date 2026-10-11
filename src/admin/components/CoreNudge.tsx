@@ -12,8 +12,7 @@ type Nudge = { eyebrow: string; title: string; text: string; action: string; urg
 
 /**
  * What to say about Core, or nothing: on a trial without a card yet, the
- * days left and that keeping Core now costs nothing until the trial ends
- * (sooner is never more expensive, so there's no reason to wait); on Free,
+ * days left and when it ends (keeping Core starts it at once); on Free,
  * what Core adds; with a declined card, update it. Nothing once they pay or
  * are comped. (docs/plans/03-billing.md, "Upgrade nudges".)
  */
@@ -26,7 +25,7 @@ export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null
     return {
       eyebrow: "Core trial",
       title: `${left === 1 ? "1 day" : `${left} days`} left`,
-      text: left > 2 ? `Keep Core now. You won't be charged until ${ends}.` : `Core ends ${ends}: Follow past 100 fans, presales and fans-only reels stop.`,
+      text: left > 2 ? `Your trial ends ${ends}. Keep Core to keep every fan.` : `Core ends ${ends}: Follow past 100 fans, presales and fans-only reels stop.`,
       action: "Keep Core",
       urgent: left <= 3,
       daysLeft: left,
