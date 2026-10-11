@@ -13,7 +13,48 @@ export const OPENING_MOVES = ["push", "pull", "tilt-up", "pan-left", "pan-right"
 export type OpeningMove = (typeof OPENING_MOVES)[number];
 export type OpeningText = { lines: string[]; at: "top" | "middle" | "bottom"; size: "eyebrow" | "big" };
 export type OpeningBeat = { box: Box; move: OpeningMove; seconds: number; text?: OpeningText };
+
+/**
+ * How an opening is directed, matched to the kind of event: its pace, how
+ * shots cut, what floats in the air and how its words should sound. Claude
+ * picks one when it reads the flyer; the scene plays it
+ * (.claude/skills/opening-scene has the reasoning behind each).
+ */
+export const OPENING_MOODS = {
+  electric: {
+    for: "club nights, parties, hip-hop and R&B nights, concerts, raves",
+    words: "short and loud: one or two words a line, like a hype reel",
+    pace: 0.75, build: 0.12, cut: "punch", flash: "accent", sparks: "embers", leak: true,
+  },
+  glamour: {
+    for: "galas, fashion shows, masquerades, awards, launches, black tie",
+    words: "confident and seductive, a promise of who they get to be",
+    pace: 1, build: 0.08, cut: "punch", flash: "white", sparks: "glitter", leak: true,
+  },
+  soulful: {
+    for: "jazz, live music, comedy, lounges, gospel, poetry, dinner shows",
+    words: "warm and unhurried, like an invitation",
+    pace: 1.15, build: 0.04, cut: "dissolve", flash: null, sparks: "haze", leak: true,
+  },
+  editorial: {
+    for: "book signings, author talks, galleries, panels, workshops, conferences",
+    words: "calm and considered, quiet lines that let the flyer speak",
+    pace: 1.25, build: 0.03, cut: "dissolve", flash: null, sparks: "dust", leak: false,
+  },
+  sunlit: {
+    for: "day parties, brunches, festivals, cookouts, outdoor and daytime events",
+    words: "bright and easy, sunshine and good company",
+    pace: 0.9, build: 0.08, cut: "punch", flash: "white", sparks: "motes", leak: true,
+  },
+} as const satisfies Record<string, { for: string; words: string; pace: number; build: number; cut: "punch" | "dissolve"; flash: "white" | "accent" | null; sparks: "embers" | "glitter" | "haze" | "dust" | "motes"; leak: boolean }>;
+export type OpeningMood = keyof typeof OPENING_MOODS;
+export const OPENING_MOOD_IDS = Object.keys(OPENING_MOODS) as OpeningMood[];
+/** Recipes from before moods were glamour. */
+export const DEFAULT_MOOD: OpeningMood = "glamour";
+
 export type OpeningRecipe = {
+  /** The kind of night it is, which sets how the scene is cut (OPENING_MOODS). */
+  mood?: OpeningMood;
   /** Two to four shots on the flyer's artwork; the whole flyer always follows them. */
   beats: OpeningBeat[];
   /** The calm shot the scene settles on, under the link's title. */
@@ -75,7 +116,8 @@ export function parseOpening(v: unknown): OpeningRecipe | null {
   });
   const hold = cleanBox(v.hold, MIN_HOLD_WIDTH, MIN_SHOT_HEIGHT);
   if (beats.length < 2 || !hold) return null;
-  return { beats, hold };
+  const mood = OPENING_MOOD_IDS.find((m) => m === v.mood);
+  return { ...(mood ? { mood } : {}), beats, hold };
 }
 
 const same = (a: unknown, b: unknown): boolean => {

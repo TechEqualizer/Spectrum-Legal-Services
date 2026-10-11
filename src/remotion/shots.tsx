@@ -96,8 +96,8 @@ export const LightLeak: React.FC<{ seed: number; hue: number }> = ({ seed, hue }
   );
 };
 
-// Sparks rising through every shot: positions are a function of the frame, so they render the same everywhere.
-const EMBERS = Array.from({ length: 34 }, (_, i) => {
+// What floats in the air, per mood: positions are a function of the frame, so they render the same everywhere.
+const SPECKS = Array.from({ length: 34 }, (_, i) => {
   const r = (n: number) => {
     const v = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453;
     return v - Math.floor(v);
@@ -105,31 +105,52 @@ const EMBERS = Array.from({ length: 34 }, (_, i) => {
   return { x: r(1), y: r(2), speed: 0.04 + r(3) * 0.08, size: 2 + r(4) * 5, sway: r(5) * 0.04, phase: r(6), near: r(7) > 0.82 };
 });
 
-export const Embers: React.FC<{ color: string }> = ({ color }) => {
+export type SparkKind = "embers" | "glitter" | "haze" | "dust" | "motes";
+
+/**
+ * embers: sparks rising and fading, brightest low (club, fire, stage).
+ * glitter: flecks falling and catching the light (gala, fashion).
+ * haze: a few big soft lights drifting slowly (jazz, lounge).
+ * dust: a few pale motes hanging in the light, barely moving (galleries, talks).
+ * motes: sun bokeh floating up, warm and soft (daytime).
+ */
+export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, color }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const sec = frame / fps;
+  const specks = kind === "dust" ? SPECKS.slice(0, 14) : kind === "haze" || kind === "motes" ? SPECKS.slice(0, 10) : SPECKS;
   return (
     <AbsoluteFill style={{ pointerEvents: "none", mixBlendMode: "screen" }}>
-      {EMBERS.map((e, i) => {
-        const y = (((e.y - sec * e.speed) % 1) + 1) % 1;
+      {specks.map((e, i) => {
+        const fall = kind === "glitter";
+        const speed = kind === "dust" ? e.speed * 0.15 : kind === "haze" ? e.speed * 0.3 : kind === "motes" ? e.speed * 0.4 : e.speed;
+        const y = (((e.y + (fall ? 1 : -1) * sec * speed) % 1) + 1) % 1;
         const x = e.x + Math.sin((sec * 0.6 + e.phase) * Math.PI * 2) * e.sway;
-        const size = e.near ? e.size * 3 : e.size;
+        const big = kind === "haze" || kind === "motes";
+        const size = big ? 40 + e.size * 14 : e.near ? e.size * 3 : kind === "dust" ? 1.5 + e.size * 0.3 : e.size;
+        // Glitter catches the light now and then; the rest glow steadily.
+        const glint = fall ? Math.pow(Math.max(0, Math.sin((sec * 1.5 + e.phase) * Math.PI * 2)), 8) : 0;
+        const opacity =
+          kind === "embers" ? (e.near ? 0.45 : 0.85) * Math.pow(y, 0.8)
+          : kind === "glitter" ? 0.25 + 0.75 * glint
+          : kind === "dust" ? 0.35
+          : kind === "haze" ? 0.12
+          : 0.18;
         return (
           <div
             key={i}
             style={{
               position: "absolute",
               left: x * width,
-              top: (0.1 + y * 0.95) * height,
+              top: (0.05 + y * 0.95) * height,
               width: size,
               height: size,
               borderRadius: "50%",
-              backgroundColor: color,
-              boxShadow: `0 0 ${size * 3}px ${size}px ${color}`,
-              // Near the lens: big and soft. Far: small and sharp. Brightest low, fading as they rise.
-              filter: e.near ? "blur(6px)" : undefined,
-              opacity: (e.near ? 0.45 : 0.85) * Math.pow(y, 0.8),
+              backgroundColor: kind === "dust" ? "#f4efe6" : color,
+              boxShadow: big || kind === "dust" ? undefined : `0 0 ${size * (fall ? 2 + glint * 4 : 3)}px ${size}px ${color}`,
+              // Near the lens: big and soft. Far: small and sharp.
+              filter: big ? "blur(18px)" : e.near && kind === "embers" ? "blur(6px)" : undefined,
+              opacity,
             }}
           />
         );

@@ -2,8 +2,8 @@ import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { pushCut } from "@remotion/transitions/push-cut";
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import type { OpeningRecipe, OpeningText } from "@/lib/opening";
-import { Embers, Grain, LightLeak, Shot, type TrailerShot } from "@/remotion/shots";
+import { DEFAULT_MOOD, OPENING_MOODS, type OpeningRecipe, type OpeningText } from "@/lib/opening";
+import { Grain, LightLeak, Shot, Sparks, type TrailerShot } from "@/remotion/shots";
 
 /**
  * The opening scene of a link, made from its flyer: a short intro that cuts
@@ -33,19 +33,43 @@ export type OpeningSceneProps = {
 const POSTER_SECONDS = 2.4;
 const HOLD_SECONDS = 6;
 
-/** The recipe's shots, then the whole flyer; and the hold. */
+// Frames each join takes: a punch-in is quick; a dissolve lingers. The join into the
+// whole flyer is a light leak (which overlaps nothing) or, without one, a dissolve.
+const CUT = { punch: 8, dissolve: 14 } as const;
+// The frame rate joins are counted at (OpeningBackdrop plays at 30).
+const FPS = 30;
+/** How this opening is directed (its mood), with recipes from before moods as glamour. */
+const directionOf = (recipe: OpeningRecipe) => OPENING_MOODS[recipe.mood ?? DEFAULT_MOOD];
+
+/**
+ * The recipe's shots at the mood's pace, each a little shorter than the one
+ * before (a trailer's cuts quicken into the reveal), but always long enough
+ * to read its words; then the whole flyer; and the hold.
+ */
 function cut(recipe: OpeningRecipe): { beats: Beat[]; hold: TrailerShot } {
+  const d = directionOf(recipe);
+  const last = recipe.beats.length - 1;
+  // The frames the joins either side of shot i take from it.
+  const join = (i: number) => (i < 0 ? 0 : i < last ? CUT[d.cut] : d.leak ? 0 : CUT.dissolve);
   return {
     beats: [
-      ...recipe.beats.map((b) => ({ shot: { box: b.box, move: b.move, seconds: b.seconds }, text: b.text })),
+      ...recipe.beats.map((b, i) => {
+        const words = b.text ? b.text.lines.join(" ").split(/\s+/).length : 0;
+        // Up, held for a glance plus a moment a word, then away, clear of the joins.
+        const readable = words ? 1.1 + 0.15 * words + (join(i - 1) + join(i)) / FPS : 0;
+        return { shot: { box: b.box, move: b.move, seconds: Math.max(b.seconds * d.pace * (1 - d.build * i), readable) }, text: b.text };
+      }),
       { shot: { box: { x: 0, y: 0, w: 1, h: 1 }, move: "poster" as const, seconds: POSTER_SECONDS } },
     ],
     hold: { box: recipe.hold, move: "breathe", seconds: HOLD_SECONDS },
   };
 }
 
-const CUT = 8;
 const INTO_HOLD = 20;
+const joins = (recipe: OpeningRecipe, beats: number) => {
+  const d = directionOf(recipe);
+  return (beats - 2) * CUT[d.cut] + (d.leak ? 0 : CUT.dissolve);
+};
 
 /**
  * When the hold starts (as the whole flyer begins fading into it: the title
@@ -54,7 +78,7 @@ const INTO_HOLD = 20;
  */
 export function openingFrames(recipe: OpeningRecipe, fps: number) {
   const { beats, hold } = cut(recipe);
-  const intro = beats.reduce((sum, b) => sum + Math.round(b.shot.seconds * fps), 0) - Math.max(0, beats.length - 2) * CUT;
+  const intro = beats.reduce((sum, b) => sum + Math.round(b.shot.seconds * fps), 0) - joins(recipe, beats.length);
   const holdStart = intro - INTO_HOLD;
   return { holdStart, loopFrom: intro, total: holdStart + Math.round(hold.seconds * fps) };
 }
@@ -63,6 +87,9 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { beats, hold } = cut(recipe);
+  const direction = directionOf(recipe);
+  // Frames the join after beat i overlaps the next beat (a light leak overlaps nothing).
+  const overlap = (i: number) => (i < 0 ? 0 : i < beats.length - 2 ? CUT[direction.cut] : i === beats.length - 2 && !direction.leak ? CUT.dissolve : 0);
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       <TransitionSeries>
@@ -70,17 +97,24 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
           const items = [
             <TransitionSeries.Sequence key={`beat-${i}`} name={`Beat ${i + 1}`} durationInFrames={Math.round(beat.shot.seconds * fps)} premountFor={fps}>
               <Shot src={src} width={width} height={height} shot={beat.shot} />
-              {beat.text && <Words text={beat.text} fontClass={fontClass} caps={caps} accent={accent} />}
+              {beat.text && <Words text={beat.text} fontClass={fontClass} caps={caps} accent={accent} enter={overlap(i - 1)} leave={overlap(i)} />}
             </TransitionSeries.Sequence>,
           ];
           if (i < beats.length - 2) {
+            const loud = direction.flash === "accent";
             items.push(
-              <TransitionSeries.Transition
-                key={`cut-${i}`}
-                presentation={pushCut({ flashColor: "#fff", flashOpacity: 0.5, flashFrames: 3, incomingStartScale: 1.16 })}
-                timing={linearTiming({ durationInFrames: CUT })}
-              />,
+              direction.cut === "punch" ? (
+                <TransitionSeries.Transition
+                  key={`cut-${i}`}
+                  presentation={pushCut({ flashColor: loud ? accent : "#fff", flashOpacity: loud ? 0.75 : 0.5, flashFrames: 3, incomingStartScale: loud ? 1.28 : 1.16 })}
+                  timing={linearTiming({ durationInFrames: CUT.punch })}
+                />
+              ) : (
+                <TransitionSeries.Transition key={`cut-${i}`} presentation={fade()} timing={linearTiming({ durationInFrames: CUT.dissolve })} />
+              ),
             );
+          } else if (i === beats.length - 2 && !direction.leak) {
+            items.push(<TransitionSeries.Transition key={`cut-${i}`} presentation={fade()} timing={linearTiming({ durationInFrames: CUT.dissolve })} />);
           } else if (i === beats.length - 2) {
             // A light leak washes into the last beat.
             items.push(
@@ -101,7 +135,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
           <AbsoluteFill style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.25) 62%, transparent 80%)" }} />
         </TransitionSeries.Sequence>
       </TransitionSeries>
-      <Embers color={accent} />
+      <Sparks kind={direction.sparks} color={accent} />
       <AbsoluteFill style={{ background: "radial-gradient(120% 85% at 50% 45%, transparent 50%, rgba(0,0,0,0.7))" }} />
       <Grain />
       {/* Letterbox bars open over the first second, like the first shot of a film. */}
@@ -111,7 +145,8 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
 };
 
 const Bars: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
-  const open = interpolate(frame, [0.2 * fps, 1.4 * fps], [1, 0], {
+  // Quick: the first image lands inside the first second (a hook, not a preamble).
+  const open = interpolate(frame, [0.05 * fps, 0.75 * fps], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.bezier(0.6, 0, 0.2, 1),
@@ -127,13 +162,16 @@ const Bars: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
 
 /**
  * A beat's lines, set over its shot: each line rises out of a mask one after
- * another, holds, then blurs away just before the cut.
+ * another, holds, then blurs away just before the cut. `enter` and `leave` are
+ * the frames the joins either side overlap this beat, so in a dissolve one
+ * beat's words are gone before the next one's come up, never on top of them.
  */
-const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; accent: string }> = ({ text, fontClass, caps, accent }) => {
+const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; accent: string; enter: number; leave: number }> = ({ text, fontClass, caps, accent, enter, leave }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const eyebrow = text.size === "eyebrow";
-  const out = interpolate(frame, [durationInFrames - 0.3 * fps, durationInFrames - 2], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const gone = durationInFrames - Math.max(2, leave);
+  const out = interpolate(frame, [gone - 0.3 * fps, gone], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const place = { top: { top: "13%" }, middle: { top: "40%" }, bottom: { bottom: "17%" } }[text.at];
   return (
     <>
@@ -160,7 +198,7 @@ const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; acc
         }}
       >
         {text.lines.map((line, i) => {
-          const start = 0.15 * fps + i * 5;
+          const start = enter + 0.15 * fps + i * 5;
           const p = interpolate(frame, [start, start + 0.45 * fps], [0, 1], {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
@@ -177,7 +215,7 @@ const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; acc
                   color: last ? accent : "#fff",
                   fontFamily: eyebrow ? "Montserrat, system-ui, sans-serif" : undefined,
                   fontWeight: eyebrow ? 700 : undefined,
-                  fontSize: eyebrow ? 22 : 74,
+                  fontSize: eyebrow ? 26 : 74,
                   lineHeight: eyebrow ? 1.5 : 1.02,
                   textTransform: eyebrow || caps ? "uppercase" : "none",
                   // The eyebrow's letters close in as it comes up, like a title credit.
@@ -192,7 +230,7 @@ const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; acc
         })}
         {eyebrow && (
           // A thin rule draws under the credit.
-          <div style={{ margin: "14px auto 0", height: 1, width: `${interpolate(frame, [0.4 * fps, 1.1 * fps], [0, 38], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}%`, backgroundColor: accent }} />
+          <div style={{ margin: "14px auto 0", height: 1, width: `${interpolate(frame, [enter + 0.4 * fps, enter + 1.1 * fps], [0, 38], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}%`, backgroundColor: accent }} />
         )}
       </div>
     </>
