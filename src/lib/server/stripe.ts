@@ -38,7 +38,7 @@ function form(params: Record<string, unknown>, prefix = "", out = new URLSearchP
   return out;
 }
 
-async function stripe<T>(method: "GET" | "POST", path: string, params: Record<string, unknown> = {}): Promise<T | null> {
+async function stripe<T>(method: "GET" | "POST" | "DELETE", path: string, params: Record<string, unknown> = {}): Promise<T | null> {
   const c = config();
   if (!c.key) return null;
   const body = form(params);
@@ -185,3 +185,6 @@ export function planFromSubscription(sub: StripeSubscription, deleted = false) {
 
 /** The subscription as Stripe has it now (events can arrive out of order, so never trust an old copy). */
 export const currentSubscription = (id: string) => stripe<StripeSubscription>("GET", `/v1/subscriptions/${encodeURIComponent(id)}`);
+
+/** Ends a subscription now (archiving its organizer): no more charges. The ended subscription, or null. */
+export const cancelSubscription = (id: string) => stripe<StripeSubscription>("DELETE", `/v1/subscriptions/${encodeURIComponent(id)}`);

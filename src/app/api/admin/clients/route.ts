@@ -5,6 +5,17 @@ import { EVENT_SLUG, newClientEvent } from "@/lib/new-event";
 import { asAdmin, getAdmin } from "@/lib/server/admin-auth";
 import { EVENT_FUNNELS_TAG, ORGANIZERS_TAG, slugIsFree } from "@/lib/server/funnels";
 
+/** Archived clients, for Events → Archived (full admins only): { clients: [{ slug, name, archivedAt }] }. */
+export async function GET() {
+  const admin = await getAdmin();
+  if (!admin) return NextResponse.json({ error: "Sign in again." }, { status: 401 });
+  if (!admin.slugs.includes("*")) return NextResponse.json({ error: "Only Showlnk sees archived clients." }, { status: 403 });
+  const res = await asAdmin("/rest/v1/organizers?archived_at=not.is.null&select=slug,name,archived_at&order=archived_at.desc", admin.accessToken, { cache: "no-store" });
+  if (!res?.ok) return NextResponse.json({ error: "Couldn't load archived clients." }, { status: 502 });
+  const rows = (await res.json()) as { slug: string; name: string; archived_at: string }[];
+  return NextResponse.json({ clients: rows.map((r) => ({ slug: r.slug, name: r.name, archivedAt: r.archived_at })) }, { headers: { "Cache-Control": "no-store" } });
+}
+
 // A new client (Events → New client): an organizer with its own bio link
 // (/f/<client>) and a first event to build from its flyer. Only full admins
 // add clients; the database checks that too ("Full admins add organizers").

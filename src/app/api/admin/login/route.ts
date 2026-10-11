@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   ACCESS_COOKIE,
+  allArchived,
   asAdmin,
   cookieOptions,
   REFRESH_COOKIE,
@@ -26,11 +27,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That email and password don't match." }, { status: 401 });
   }
 
-  const res = await asAdmin("/rest/v1/admin_users?select=email", tokens.access_token);
-  const rows = res?.ok ? ((await res.json()) as unknown[]) : [];
+  const res = await asAdmin(`/rest/v1/admin_users?select=*&email=eq.${encodeURIComponent(email)}`, tokens.access_token);
+  const rows = res?.ok ? ((await res.json()) as { slugs: string[]; organizers?: string[] }[]) : [];
   if (!rows.length) {
     await signOut(tokens.access_token);
     return NextResponse.json({ error: "This account doesn't have admin access." }, { status: 403 });
+  }
+  // Their organizer was archived by Showlnk: no way in until it's restored.
+  if (await allArchived(rows[0], tokens.access_token)) {
+    await signOut(tokens.access_token);
+    return NextResponse.json({ error: "This account was closed. Ask Showlnk to restore it." }, { status: 403 });
   }
 
   const response = NextResponse.json({ ok: true });

@@ -159,7 +159,7 @@ export async function getAdmin(): Promise<Admin | null> {
     });
     if (!res.ok) return null;
     const rows = (await res.json()) as { email: string; slugs: string[]; organizers?: string[] }[];
-    if (!rows[0]) return null;
+    if (!rows[0] || (await allArchived(rows[0], token))) return null;
     const meta = user.user_metadata ?? {};
     return {
       id: user.id ?? "",
@@ -173,6 +173,20 @@ export async function getAdmin(): Promise<Admin | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether every organizer this admin runs has been archived (and they have
+ * nothing else): they're signed out. An admin only reads active organizers
+ * (supabase/migrations/*_archive_organizers.sql), so an empty answer means so.
+ */
+export async function allArchived(row: { slugs: string[]; organizers?: string[] }, token: string): Promise<boolean> {
+  const organizers = row.organizers ?? [];
+  if (row.slugs.length || !organizers.length) return false;
+  const res = await asAdmin(`/rest/v1/organizers?select=slug&slug=in.(${organizers.map(encodeURIComponent).join(",")})`, token, { cache: "no-store" });
+  // If it can't be told, they stay signed in: the database still stops their edits.
+  if (!res?.ok) return false;
+  return ((await res.json().catch(() => [])) as unknown[]).length === 0;
 }
 
 /** Whether this admin runs this organizer's events (or manages every funnel). Matches the database's manages_organizer. */

@@ -60,6 +60,20 @@ export async function billingOf(organizer: string): Promise<{ status: PlanStatus
   }
 }
 
+/** The organizer's Stripe subscription, while it can still charge (server only); null if none, undefined if unreachable. */
+export async function chargingSubscriptionOf(organizer: string): Promise<string | null | undefined> {
+  const s = service();
+  if (!s) return undefined;
+  try {
+    const res = await fetch(`${s.url}/rest/v1/organizer_plans?organizer_slug=eq.${encodeURIComponent(organizer)}&select=status,stripe_subscription_id`, { headers: s.headers, cache: "no-store" });
+    if (!res.ok) return undefined;
+    const row = ((await res.json()) as { status: PlanStatus; stripe_subscription_id: string | null }[])[0];
+    return row?.stripe_subscription_id && ["active", "past_due", "trialing"].includes(row.status) ? row.stripe_subscription_id : null;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Writes the organizer's plan row (the Stripe webhook). Whether it saved. */
 export async function savePlan(organizer: string, row: Record<string, string | null>): Promise<boolean> {
   const s = service();
