@@ -179,7 +179,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
       </Sequence>
       {p.hook && (
         <Sequence from={0} durationInFrames={p.hook.dur} name="Hook">
-          <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} />
+          <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} solid={Boolean(story)} />
         </Sequence>
       )}
       <Sparks kind={d.sparks} color={accent} />
@@ -215,7 +215,7 @@ const Flash: React.FC<{ color: string; strength: number }> = ({ color, strength 
  * (the cutting moods), or the black falls away around them and they melt
  * into it (the dissolving ones).
  */
-const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; fontClass: string; caps: boolean; accent: string; through: boolean }> = ({
+const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; fontClass: string; caps: boolean; accent: string; through: boolean; solid: boolean }> = ({
   text,
   src,
   frame: fr,
@@ -224,6 +224,7 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
   caps,
   accent,
   through,
+  solid,
 }) => {
   const f = useCurrentFrame();
   const { fps, durationInFrames: dur, width: W, height: H } = useVideoConfig();
@@ -263,14 +264,19 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
                 lineHeight: `${size * 1.08}px`,
                 textAlign: "center",
                 whiteSpace: "nowrap",
-                color: "transparent",
-                // The sheen over the flyer, both cut to the letters; the flyer placed as the frame shows it.
-                backgroundImage: `linear-gradient(105deg, transparent ${sheen - 12}%, rgba(255,255,255,${0.55 * card}) ${sheen}%, transparent ${sheen + 12}%), url("${src}")`,
-                backgroundSize: `${W}px ${size * 1.08}px, ${at.width}px ${at.height}px`,
-                backgroundPosition: `0px 0px, ${at.left}px ${at.top - top}px`,
-                backgroundRepeat: "no-repeat",
-                backgroundClip: "text",
-                WebkitBackgroundClip: "text",
+                // The Stories video can't fill letters with a picture: there they're solid, edged in the highlight.
+                ...(solid
+                  ? { color: "#fff" }
+                  : {
+                      color: "transparent",
+                      // The sheen over the flyer, both cut to the letters; the flyer placed as the frame shows it.
+                      backgroundImage: `linear-gradient(105deg, transparent ${sheen - 12}%, rgba(255,255,255,${0.55 * card}) ${sheen}%, transparent ${sheen + 12}%), url("${src}")`,
+                      backgroundSize: `${W}px ${size * 1.08}px, ${at.width}px ${at.height}px`,
+                      backgroundPosition: `0px 0px, ${at.left}px ${at.top - top}px`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                    }),
                 // An edge in the look's color, so even a dark part of the flyer reads on black.
                 WebkitTextStroke: `${Math.max(1.5, size / 90) * card}px ${accent}`,
                 filter: `brightness(${1 + 0.6 * card}) contrast(1.1) saturate(1.2)`,

@@ -58,9 +58,10 @@ and doesn't draw everything a browser does. From a test render of Book
 Signing:
 
 - the hook's letters were an SVG mask with the flyer inside: drawn empty.
-  They're now real text with the flyer as its clipped background
-  (`background-clip: text`), with an edge in the highlight color, the same
-  in the link and the video (and better on a dark flyer);
+  They're now real text with an edge in the highlight color (better on a
+  dark flyer too). On the link the flyer shows through them
+  (`background-clip: text`); the renderer draws only the edge of such
+  text, so in the video they're solid white;
 - the hold's blur and dimming were on a wrapper: skipped. They're now on
   the flyer itself;
 - blend modes (the sparks, the flash, the bloom, the light leak's screen)

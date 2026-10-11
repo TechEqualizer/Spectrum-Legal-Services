@@ -106,8 +106,9 @@ function Exporting({ review, fontClass, caps }: { review: Ready; fontClass: stri
   const [state, setState] = useState("ready");
   useEffect(() => {
     const w = window as unknown as { __exportOpening?: unknown };
-    w.__exportOpening = async () => {
-      const { renderMediaOnWeb, getEncodableVideoCodecs } = await import("@remotion/web-renderer");
+    // With frames, draws just those frames as JPEGs (a quick look at what the video will show).
+    w.__exportOpening = async (frames?: number[]) => {
+      const { renderMediaOnWeb, renderStillOnWeb, getEncodableVideoCodecs } = await import("@remotion/web-renderer");
       const size = await new Promise<{ w: number; h: number }>((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
@@ -115,10 +116,22 @@ function Exporting({ review, fontClass, caps }: { review: Ready; fontClass: stri
         img.src = review.src;
       });
       const codecs = await getEncodableVideoCodecs("mp4");
-      const story = { title: review.title, when: review.tagline, link: "showlnk.com/f/book-signing", holdSeconds: 3.5 };
+      const story = { title: review.title, when: review.tagline, link: "showlnk.com/f/your-event", holdSeconds: 3.5 };
       const { total } = openingFrames(review.recipe, FPS, story.holdSeconds);
       const started = Date.now();
       const props = { src: review.src, width: size.w, height: size.h, recipe: review.recipe, fontClass, caps, accent: review.accent, story };
+      if (frames) {
+        const composition = { component: OpeningScene, id: "opening", width: 1080, height: 1920, fps: FPS, durationInFrames: total, defaultProps: props };
+        const stills: string[] = [];
+        for (const frame of frames) {
+          const still = await renderStillOnWeb({ composition, inputProps: props, frame, licenseKey: "free-license" });
+          const bytes = new Uint8Array(await (await still.blob({ format: "jpeg", quality: 0.85 })).arrayBuffer());
+          let bin = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          stills.push(btoa(bin));
+        }
+        return { stills };
+      }
       const result = await renderMediaOnWeb({
         composition: { component: OpeningScene, id: "opening", width: 1080, height: 1920, fps: FPS, durationInFrames: total, defaultProps: props },
         inputProps: props,
