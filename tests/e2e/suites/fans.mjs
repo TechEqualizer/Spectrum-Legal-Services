@@ -23,6 +23,7 @@ let mail = (await emails())[0];
 check('one email, to the address given', (await emails()).length === 1 && mail?.to?.[0] === 'fan@example.com', JSON.stringify(mail?.to));
 check('sent as the organizer via Showlnk', mail?.from === 'Big Love Productions via Showlnk <fans@showlnk.com>', mail?.from);
 check('subject names the organizer', mail?.subject === 'Confirm you want to follow Big Love Productions', mail?.subject);
+check("the email opens with Showlnk's logo, from this site", /<img src="https?:\/\/[^"]+\/showlnk\/logo\.png"[^>]*alt="Showlnk"/.test(mail?.html ?? ''));
 const link = linkIn(mail ?? { text: '' });
 check('the email carries a confirm link', Boolean(link));
 check('the HTML button has the same link', Boolean(link) && mail.html.includes(link));

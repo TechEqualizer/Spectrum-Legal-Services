@@ -7,6 +7,7 @@ import ReelStrip from "@/components/showlnk/ReelStrip";
 import SourcesBoard from "@/components/showlnk/SourcesBoard";
 import WaitlistStub from "@/components/showlnk/WaitlistStub";
 import "@/components/showlnk/showlnk.css";
+import ShowlnkLogo from "@/components/showlnk/ShowlnkLogo";
 
 // Showlnk's home page: the waitlist, set like a night's flyer.
 
@@ -31,20 +32,12 @@ const BOARD_SOURCES = [
   { source: "QR code on the flyer", visitors: 74, tickets: 12 },
 ];
 
-function Wordmark({ className = "" }: { className?: string }) {
-  return (
-    <span className={`sl-display tracking-normal normal-case ${className}`}>
-      show<span className="text-[var(--sl-gold)]">lnk</span>
-    </span>
-  );
-}
-
 export default function ShowlnkHome() {
   return (
     <div className={`sl ${show.variable} font-sans`}>
       <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-        <Link href="/" aria-label="Showlnk home" className="text-[2rem] leading-none">
-          <Wordmark />
+        <Link href="/" aria-label="Showlnk home" className="flex min-h-11 items-center">
+          <ShowlnkLogo className="h-8 w-auto sm:h-9" eager />
         </Link>
         <nav aria-label="Showlnk" className="flex items-center gap-1 sm:gap-3">
           <Link href="/admin/login" className="flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-[var(--sl-muted)] hover:text-[var(--sl-text)]">
@@ -173,9 +166,7 @@ export default function ShowlnkHome() {
 
       <footer className="border-t border-[var(--sl-line)]">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-8 pb-28 text-sm text-[var(--sl-muted)] sm:px-8 lg:pb-8">
-          <span className="text-2xl leading-none text-[var(--sl-text)]">
-            <Wordmark />
-          </span>
+          <ShowlnkLogo className="h-6 w-auto" />
           <span>© 2026 Showlnk. Reels that sell the night.</span>
           <nav aria-label="Showlnk footer" className="flex flex-wrap items-center gap-x-5">
             <Link href="/terms" className="flex min-h-11 items-center hover:text-[var(--sl-text)]">

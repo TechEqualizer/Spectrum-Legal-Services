@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import LoginForm from "@/admin/components/LoginForm";
 import "@/components/showlnk/showlnk.css";
+import ShowlnkLogo from "@/components/showlnk/ShowlnkLogo";
 
 export const metadata = { title: "Sign in | Showlnk" };
 
@@ -25,10 +26,8 @@ export default function LoginPage() {
       </aside>
 
       <main id="main-content" className="flex flex-col px-5 py-6 sm:px-10">
-        <Link href="/" aria-label="Showlnk home" className="self-start text-[2rem] leading-none">
-          <span className="sl-display normal-case tracking-normal">
-            show<span className="text-[var(--sl-gold)]">lnk</span>
-          </span>
+        <Link href="/" aria-label="Showlnk home" className="flex min-h-11 items-center self-start">
+          <ShowlnkLogo eager />
         </Link>
         <div className="flex flex-1 items-center justify-center py-10">
           {/* ?next= is read in the browser, so this page stays static. */}

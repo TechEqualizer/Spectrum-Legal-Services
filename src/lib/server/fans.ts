@@ -179,7 +179,7 @@ async function sendSignInEmail(to: string, organizer: string, link: string): Pro
   ].join("\n");
   const html = `<!doctype html><html><body style="margin:0;background:#0a0710;font-family:Montserrat,sans-serif;color:#f4eee4">
 <div style="max-width:480px;margin:0 auto;padding:40px 24px">
-<p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#b8adc4;margin:0 0 12px">Showlnk</p>
+<img src="${escapeHtml(new URL(link).origin)}/showlnk/logo.png" width="122" height="24" alt="Showlnk" style="display:block;border:0;margin:0 0 20px;color:#f4eee4;font-size:15px;font-weight:700">
 <h1 style="font-size:26px;line-height:1.2;margin:0 0 16px;color:#f4eee4">Follow ${escapeHtml(organizer)}</h1>
 <p style="font-size:16px;line-height:1.6;margin:0 0 28px;color:#e6dfd4">Confirm and you'll hear about their next nights first: presales, reveals and fans-only reels.</p>
 <a href="${escapeHtml(link)}" style="display:inline-block;background:#e8be5a;color:#1a1208;font-weight:700;font-size:16px;text-decoration:none;padding:14px 28px;border-radius:999px">Confirm and follow</a>
