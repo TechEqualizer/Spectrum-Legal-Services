@@ -1,6 +1,5 @@
-// The reel editor on Big Love's event: the live funnel's reels, their paths
-// and results, moving, editing, adding and removing reels, and funnels of
-// the admin's own.
+// The reel editor on Big Love's event: one event, one story. Its reels, their
+// paths and results, moving, editing, adding and removing reels (with Undo).
 import { chromium } from '../browser.mjs';
 const res=[]; const check=(n,ok,x='')=>res.push((ok?'PASS':'FAIL')+'  '+n+(x?'  ('+x+')':''));
 const errs=[]; const B='http://localhost:3002';
@@ -19,7 +18,7 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   const rowText = async i => (await rows.nth(i).textContent());
   check(w+': Reels is admin home', await p.getByRole('heading',{level:1}).textContent()==='Reels');
   check(w+': nav marks Reels current', await p.locator('nav [aria-current="page"]').textContent()==='Reels');
-  check(w+': only the live funnel, the default', await p.locator('[aria-pressed]').filter({hasText:'reel'}).count()===1 && await p.getByText('Default',{exact:true}).count()===1);
+  check(w+': one story: no funnels to pick or add', await p.locator('[aria-pressed]').filter({hasText:'reel'}).count()===0 && await p.getByRole('button',{name:'New funnel'}).count()===0 && await p.getByText('Default',{exact:true}).count()===0);
   check(w+': 5 reels in live funnel', await rows.count()===5);
   const r0 = await rowText(0);
   check(w+': row chips', r0.includes('The night') && r0.includes('Tickets') && r0.includes('Photo') && !r0.includes('No video yet'), r0.slice(0,160));
@@ -92,25 +91,21 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   check(w+': removed', await rows.count()===5);
   check(w+': paths to removed reel reset', !(await rows.allTextContents()).some(x=>x.includes('Limited tickets')));
 
-  // New funnel + default exclusivity
-  await p.getByRole('button',{name:'New funnel',exact:true}).click();
-  check(w+': new funnel empty', await p.getByText('No reels yet').isVisible());
-  await p.getByText('Funnel settings').click();
-  await p.getByLabel(/Default funnel/).check();
-  check(w+': one default only', await p.getByText('Default',{exact:true}).count()===1);
-  await p.selectOption('#add-existing',{index:1}); await p.getByRole('button',{name:'Add',exact:true}).click();
-  check(w+': add existing reel', await rows.count()===1);
-  await p.selectOption('#add-existing',{index:1}); await p.getByRole('button',{name:'Add',exact:true}).click();
+  // Remove has Undo.
+  const toast = p.getByRole('status').filter({ hasText: 'Reel removed' });
+  check(w+': remove says so, with Undo', await toast.isVisible() && await toast.getByRole('button',{name:'Undo'}).isVisible());
+  await toast.getByRole('button',{name:'Undo'}).click();
+  check(w+': Undo puts the reel back', await rows.count()===6 && (await titles()).includes('Limited tickets. Arrive early.'));
+  await p.getByRole('button',{name:'Remove Limited tickets. Arrive early. from this funnel'}).click();
 
-  // Unreachable warning in a small funnel
+  // Unreachable warning: a reel nothing leads to.
   const ft = await titles();
-  check(w+': two reels in the new funnel', ft.length===2, ft.join(' | '));
   await p.getByRole('button',{name:`Edit ${ft[0]}`}).click();
   const d2 = p.getByRole('dialog');
   await d2.getByLabel('When watched to the end').selectOption('end');
   await d2.getByLabel('When skipped').selectOption('end');
   await d2.getByRole('button',{name:'Save reel'}).click();
-  check(w+': unreachable flagged', await p.getByText('No path leads here').count()===1);
+  check(w+': unreachable flagged', await p.getByText('No path leads here').count()>=1);
   check(w+': fits width after edits', await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
 
   await p.goto(B+'/admin/overview',{waitUntil:'networkidle'});

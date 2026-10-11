@@ -79,3 +79,46 @@ Sources: [Apple's Human Interface Guidelines](https://developer.apple.com/design
 [Target Size and 2.5.5 (Adrian Roselli)](https://adrianroselli.com/2019/06/target-size-and-2-5-5.html).
 The 44pt and 48dp figures are confirmed across these sources; check the
 platform pages for the current wording.
+
+## Reels studio review (Oct 11, 2026)
+
+Two independent passes ran: a design critique of the studio at phone,
+laptop and wide sizes, and the detector plus a code scan. The studio scored
+23/40 on Nielsen's heuristics. The craft was sound: the measured floor
+passed and the detector found nothing real. The gaps were in the model and
+the high-stakes moments.
+
+Fixed (the P1s):
+
+- **One event, one story.**
+  - An event's link has one set of reels. There are no funnel tabs, no
+    "New funnel" and no audience rules.
+  - Settings is now "Your link": copy and open it, and where ticket links
+    live.
+  - The reel editor speaks Tickets:
+    - the "Tickets button" builds up, stays quiet or is lit from the start;
+    - the end card is Tickets;
+    - there is no Call/Book choice and no "What happened?" option.
+  - A new reel no longer defaults to a leftover legal topic. The in-code
+    demos keep their several funnels.
+- **Undo for what's destructive.**
+  - Remove reel and Discard get a toast with Undo.
+  - Taking published edits down asks first.
+  - The phone's publish bar has Undo.
+- **Publish with care.**
+  - Publish opens a sheet listing what changes ("1 reel edited", "The
+    opening's background") before Publish now.
+  - Afterwards the link shows, with Copy link, View live and Share. When
+    the link isn't live yet, it says it's saved and private.
+  - With nothing to publish, the header says "Published" with the time,
+    not a gray disabled button.
+
+Still open (P2):
+
+- The reel list doesn't show each reel's role (The Night, Your People,
+  Last Call), and it has too many chips.
+- The reel dialog is long, and its Save isn't sticky.
+- There are six ways to add a reel.
+- The 1024–1279px gap: the studio needs 1280px.
+- Drafts live per browser, so the agency's edits and the organizer's never
+  meet.

@@ -1,4 +1,4 @@
-import { chromium, pickEvent, settle } from '../browser.mjs';
+import { chromium, pickEvent, settle, publishEdits } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -61,7 +61,7 @@ await rd.getByRole('button', { name: 'Save reel' }).click(); await settle(p, 300
 check('reel editor changes its date', (await reelRow('Dress to impress').textContent()).includes(partyDay));
 
 // 5. Publish and tap the dates as a visitor
-await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 1500);
+await publishEdits(p, p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish', exact: true })); await settle(p, 1500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
 const ev = (id) => pub?.events?.find(e => e.id === id);
 check('published links', ev('mr-2026')?.reelId === partyReel && pub.events.length === 2, JSON.stringify(pub?.events?.map(e => [e.id, e.reelId])));

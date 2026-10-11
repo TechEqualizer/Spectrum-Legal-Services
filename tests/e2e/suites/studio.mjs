@@ -1,4 +1,4 @@
-import { animationsDone, chromium, pickEvent, settle } from '../browser.mjs';
+import { animationsDone, chromium, pickEvent, settle, publishEdits } from '../browser.mjs';
 const S = process.argv[2]; const B = 'http://localhost:3002'; const M = 'http://localhost:54321';
 const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL') + '  ' + n + (x ? '  (' + x + ')' : ''));
 process.on('uncaughtException', e => { console.log(res.join('\n')); console.log('ERR', e.message.split('\n').slice(0, 3).join(' ')); process.exit(1); });
@@ -71,7 +71,7 @@ check('row play: that reel in the phone', await phone.getByRole('region', { name
 await p.getByRole('tab', { name: 'Results' }).click();
 check('results tab', await p.getByText('By reel · last 30 days').isVisible() && await p.getByText('Watched to end').isVisible());
 await p.getByRole('tab', { name: 'Settings' }).click();
-check('settings tab', await p.getByLabel('Funnel name').isVisible() || await p.getByText('Funnel name').isVisible());
+check('settings tab: the link, one story', await p.getByRole('button', { name: 'Copy link' }).isVisible() && await p.getByText('Shown to').count() === 0);
 check('settings: no Paths link', await p.getByRole('link', { name: 'See every path' }).count() === 0);
 check('settings: only Settings looks selected', (await p.getByRole('tab', { selected: true }).allTextContents()).join() === 'Settings');
 await animationsDone(p, 1000); await p.screenshot({ path: S + '/studio-settings-1440.jpg' });
@@ -79,9 +79,9 @@ await p.getByRole('tab', { name: 'Design' }).click();
 
 // Publish from the top bar
 await p.getByRole('radio', { name: /Fashion serif/ }).click(); await settle(p, 400);
-await p.getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
+await publishEdits(p); await settle(p, 2500);
 const pub = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;
-check('published from top bar', pub?.look?.font === 'editorial' && await p.getByText('Everything is live').isVisible(), JSON.stringify(pub?.look?.font));
+check('published from top bar', pub?.look?.font === 'editorial' && await p.getByText(/Everything is published/).isVisible() && await p.getByRole('button', { name: 'Published' }).isDisabled(), JSON.stringify(pub?.look?.font));
 check('preview never tracked visits', tracked === 0, String(tracked));
 await p.screenshot({ path: S + '/studio-1440-after.jpg' });
 await p.request.delete(B + '/api/admin/publish?slug=events');

@@ -20,7 +20,7 @@ check('save time shown', await p.getByRole('region',{name:'Publish'}).getByText(
 // 2. Rename + reorder, then reload
 await p.getByRole('button',{name:"Move Burlesque, performances and a live DJ up"}).click(); await settle(p, 300);
 await p.reload(); await settle(p, 1200);
-check('after reload: still masquerade', (await p.getByLabel('Funnel name').inputValue())==='Masquerade on the Runway');
+check('after reload: still masquerade', (await p.evaluate(() => localStorage.getItem('admin_business')))==='masquerade' && await p.getByText('Masquerade on the Runway').first().isVisible());
 check('after reload: order kept', (await rows.nth(1).textContent()).includes('Burlesque'));
 const r2 = p.locator('section[aria-labelledby="order-title"] ol > li').nth(1);
 check('after reload: YouTube link kept', await r2.getByText('YouTube').isVisible());

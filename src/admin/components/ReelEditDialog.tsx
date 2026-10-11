@@ -43,9 +43,9 @@ type ReelEditDialogProps = {
 };
 
 export const EMPHASIS_LABELS: Record<ReelEmphasis, { label: string; help: string }> = {
-  builds: { label: "Builds up (default)", help: "Book starts quiet and fills with your color partway through." },
-  quiet: { label: "Quiet", help: "For teaching reels: no Book pill, and the rail stays plain." },
-  bold: { label: "Bold", help: "For pricing or consultation reels: highlighted from the start." },
+  builds: { label: "Builds up (default)", help: "The button starts quiet and fills with your color partway through the reel." },
+  quiet: { label: "Quiet", help: "No button on this reel; the side rail stays plain. For a moment that should just play." },
+  bold: { label: "Bold", help: "The button is lit from the start. For Last Call, prices and \"almost gone\"." },
 };
 
 const TRIGGERS: { id: FunnelTrigger; label: string }[] = [
@@ -176,6 +176,8 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
             </label>
           )}
           <div className="grid gap-4 md:grid-cols-2">
+          {/* An event's reels all sell tickets: no Call or Book to choose. */}
+          {!dates && (
           <label className="block">
             <span className="mb-1 block text-sm font-semibold text-deep-navy">Main button</span>
             <select className="form-input text-sm" value={draft.cta} onChange={(e) => set({ cta: e.target.value as ReelCta })}>
@@ -186,8 +188,9 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
               ))}
             </select>
           </label>
+          )}
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-deep-navy">Selling</span>
+            <span className="mb-1 block text-sm font-semibold text-deep-navy">{dates ? "Tickets button" : "Selling"}</span>
             <select
               className="form-input text-sm"
               value={draft.emphasis}
@@ -208,7 +211,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
         {/* Funnel-specific: paths and topic choice */}
         <fieldset className="space-y-4 border-t border-gray-100 pt-5">
           <legend className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-600">
-            In &ldquo;{funnel.name}&rdquo;
+            {dates ? "Where it leads" : <>In &ldquo;{funnel.name}&rdquo;</>}
           </legend>
           <div className="grid gap-4 md:grid-cols-2">
             {TRIGGERS.map((t) => (
@@ -230,7 +233,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
                   <option value="next">
                     Next in order{nextTitle ? `: ${nextTitle}` : " (end card)"}
                   </option>
-                  <option value="end">End card: call, book or text</option>
+                  <option value="end">End card{dates ? ": Tickets" : ": call, book or text"}</option>
                   {others.map((rid) => (
                     <option key={rid} value={rid}>
                       {funnel.order.indexOf(rid) + 1}. {library.find((r) => r.id === rid)?.title}
@@ -240,6 +243,8 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
               </label>
             ))}
           </div>
+          {/* A choice menu for intake funnels; an event's story doesn't branch on it. */}
+          {!dates && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <label className="flex min-h-11 items-center gap-3 text-sm font-semibold text-deep-navy">
               <input type="checkbox" className="h-5 w-5 accent-teal-accent" checked={isTopic} onChange={(e) => setIsTopic(e.target.checked)} />
@@ -252,6 +257,7 @@ export default function ReelEditDialog({ reel, funnel, library, services, topicL
               </label>
             )}
           </div>
+          )}
         </fieldset>
 
         {error && <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
