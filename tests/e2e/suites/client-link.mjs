@@ -25,7 +25,8 @@ await sheet.getByLabel('First name').fill('Ava'); await sheet.getByLabel('Mobile
 await sheet.getByRole('checkbox').first().check().catch(() => {});
 await sheet.getByRole('button', { name: 'Text me updates' }).click(); await settle(p, 800);
 check('lead actually sent', leads.length === 1 && leads[0].funnelId === 'masquerade-v1', JSON.stringify(leads).slice(0, 200));
-await ctx.close(); const ctx2 = await b.newContext({ storageState: S + '/auth.json' }); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(B + '/admin'); await settle(p2, 800);
+// Big Love's event selected (another suite's event can still be in the app's cached list).
+await ctx.close(); const ctx2 = await b.newContext({ storageState: S + '/auth.json' }); await ctx2.addInitScript(() => localStorage.setItem('admin_business', 'masquerade')); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(B + '/admin'); await settle(p2, 800);
 const navText = await p2.locator('nav[aria-label="Admin"]').innerText();
 check('admin shows Big Love, no demos', navText.includes('Big Love') && !/Aurelia|Demos/.test(navText), navText.slice(0, 200));
 // The sample links are gone for good.

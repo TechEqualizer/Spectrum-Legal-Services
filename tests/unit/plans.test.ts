@@ -9,9 +9,10 @@ const DAY = 864e5;
 const now = Date.parse("2026-11-10T12:00:00Z");
 const at = (days: number) => new Date(now + days * DAY).toISOString();
 
-test("Free has no Core", () => {
+test("without a plan, no Core: the link isn't live yet", () => {
   assert.equal(hasCore(FREE, now), false);
-  assert.equal(planSummary(FREE, now).title, "Free");
+  assert.equal(planSummary(FREE, now).title, "Not live yet");
+  assert.match(planSummary(FREE, now).detail, /Coming soon/);
 });
 
 test("comped is Core until its date, or for good", () => {
@@ -37,6 +38,7 @@ test("a declined card keeps Core for the grace week, then ends it", () => {
 test("active is Core; canceled isn't", () => {
   assert.equal(hasCore({ status: "active", periodEnd: at(20) }, now), true);
   assert.equal(hasCore({ status: "canceled" }, now), false);
+  assert.equal(planSummary({ status: "canceled" }, now).title, "Not live");
 });
 
 // The fan list on each plan (src/lib/fan-list.ts).

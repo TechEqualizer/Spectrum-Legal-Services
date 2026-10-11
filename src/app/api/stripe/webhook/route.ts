@@ -1,5 +1,6 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
+import { listOrganizerEvents } from "@/lib/server/funnels";
 import { planTag, savePlan } from "@/lib/server/plans";
 import { currentSubscription, planFromSubscription, verifiedEvent } from "@/lib/server/stripe";
 
@@ -29,7 +30,9 @@ export async function POST(request: Request) {
   const plan = planFromSubscription(sub, event.type === "customer.subscription.deleted");
   if (!plan) return NextResponse.json({ ok: true, ignored: sub.status });
   if (!(await savePlan(plan.organizer, plan.row))) return NextResponse.json({ error: "Couldn't save the plan." }, { status: 503 });
-  // The organizer's links follow at once.
+  // The organizer's links follow at once (live, or back to Coming soon), and
+  // so do their link previews, which are kept an hour otherwise.
   revalidateTag(planTag(plan.organizer), { expire: 0 });
+  for (const slug of [plan.organizer, ...(await listOrganizerEvents(plan.organizer)).map((f) => f.slug)]) revalidatePath(`/f/${slug}/opengraph-image`);
   return NextResponse.json({ ok: true });
 }

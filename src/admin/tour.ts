@@ -50,8 +50,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     path: "/admin",
     target: "publish",
-    title: "Nothing goes live until you Publish",
-    body: "Edits are saved on this device only. Tap Publish when it looks right: your live link updates within a few minutes.",
+    title: "Publish your edits",
+    body: "Edits are saved on this device only. Tap Publish when it looks right: your link updates within a few minutes.",
   },
   {
     path: "/admin/events",

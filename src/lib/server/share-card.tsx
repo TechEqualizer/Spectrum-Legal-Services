@@ -249,3 +249,27 @@ export async function shareCard(funnel: Funnel, reel?: Reel, now = Date.now()) {
     }
   );
 }
+
+/**
+ * The card for a link that isn't live (docs/plans/03-billing.md, "Pay to go
+ * live"): the organizer's name and Coming soon, nothing about the night. It
+ * is replaced by the real card the moment they go live.
+ */
+export async function comingSoonCard(name: string) {
+  const [sansTtf, sansBoldTtf] = await Promise.all([loadFont(FONT_FAMILIES.sans), loadFont(FONT_FAMILIES.sansBold)]);
+  return new ImageResponse(
+    (
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 88px", background: "#0a0710", fontFamily: "Sans" }}>
+        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 6, color: "#e8be5a", textTransform: "uppercase" }}>Coming soon</div>
+        <div style={{ marginTop: 22, fontSize: name.length > 28 ? 64 : 84, fontWeight: 800, lineHeight: 1.02, color: "#f4eee4" }}>{name}</div>
+      </div>
+    ),
+    {
+      ...SHARE_CARD_SIZE,
+      fonts: [
+        ...(sansTtf ? [{ name: "Sans", data: sansTtf, weight: 500 as const, style: "normal" as const }] : []),
+        ...(sansBoldTtf ? [{ name: "Sans", data: sansBoldTtf, weight: 800 as const, style: "normal" as const }] : []),
+      ],
+    }
+  );
+}

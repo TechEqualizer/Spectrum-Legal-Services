@@ -3,7 +3,7 @@
 // webhook writes it, and billing reads its Stripe ids, with the secret key.
 
 import { asAdmin, type Admin } from "@/lib/server/admin-auth";
-import { FREE, type Plan, type PlanStatus } from "@/lib/plans";
+import { FREE, hasCore, type Plan, type PlanStatus } from "@/lib/plans";
 
 type Row = {
   status: Exclude<PlanStatus, "free">;
@@ -99,4 +99,16 @@ export async function planOf(organizer: string): Promise<Plan | undefined> {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Whether an organizer's links are public (docs/plans/03-billing.md, "Pay to
+ * go live"): on a paid or comped plan, or within a declined card's grace.
+ * Built-in demos have no organizer and always are. If the plan can't be
+ * read, links stay up: a slow database never takes a paying organizer down.
+ */
+export async function linkIsLive(organizer: string | undefined): Promise<boolean> {
+  if (!organizer) return true;
+  const plan = await planOf(organizer);
+  return !plan || hasCore(plan);
 }

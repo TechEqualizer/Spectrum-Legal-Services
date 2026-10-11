@@ -49,7 +49,10 @@ const presales = new Map(); // funnel_id -> [{ funnel_id, date_id, url }], like 
 const sourceNames = new Map(); // organizer_slug -> Map(tag -> name), like source_names
 const invites = new Map(); // code_hash -> row, like signup_invites
 const organizerPlans = new Map(); // organizer_slug -> row, like organizer_plans (Big Love comped, as the migration seeds)
-const seedPlans = () => { organizerPlans.clear(); organizerPlans.set('biglove', { status: 'comped', billing_interval: null, trial_ends_at: null, current_period_end: null, comped_until: null }); };
+const comped = { status: 'comped', billing_interval: null, trial_ends_at: null, current_period_end: null, comped_until: null };
+// The fixtures' organizers (Golden Hour's and Lumen's events) stand for organizers who've gone live:
+// without a plan, their links would show Coming soon (docs/plans/03-billing.md, "Pay to go live").
+const seedPlans = () => { organizerPlans.clear(); for (const o of ['biglove', 'goldenhour', 'lumen']) organizerPlans.set(o, { ...comped }); };
 seedPlans();
 const sessions = new Map(); // token -> email
 const refreshes = new Map(); // refresh -> email
@@ -225,7 +228,6 @@ http.createServer((req, res) => {
       eventFunnels.set(b.p_event_slug, { slug: b.p_event_slug, funnel_id: b.p_funnel_id, organizer_slug: b.p_organizer_slug, data: b.p_event });
       if (b.p_publication) publications.set(b.p_event_slug, { slug: b.p_event_slug, data: b.p_publication, published_at: new Date().toISOString(), published_by: email });
       users[email] = { password: null, mustChange: false, ...users[email], admin: true, slugs: [], organizers: [b.p_organizer_slug], created: new Date().toISOString() };
-      organizerPlans.set(b.p_organizer_slug, { status: 'trialing', billing_interval: null, trial_ends_at: new Date(Date.now() + 14 * 864e5).toISOString(), current_period_end: null, comped_until: null });
       row.claimed_at = new Date().toISOString();
       row.claimed_organizer = b.p_organizer_slug;
       return json(res, 200, 'claimed');
@@ -346,7 +348,12 @@ http.createServer((req, res) => {
       return json(res, 200, [...organizers.values()].filter((o) => !eq('slug') || o.slug === eq('slug')));
     }
     // Test control: add an organizer straight to the table (a test-only one, e.g. Golden Hour's).
-    if (p === '/__organizer' && req.method === 'POST') { organizers.set(body.slug, { slug: body.slug, name: body.name }); return json(res, 201); }
+    // A test organizer, live (comped) unless { live: false }.
+    if (p === '/__organizer' && req.method === 'POST') {
+      organizers.set(body.slug, { slug: body.slug, name: body.name });
+      if (body.live !== false) organizerPlans.set(body.slug, { ...comped });
+      return json(res, 201);
+    }
     // Test control: add an event straight to the table (a second organizer event, dated).
     if (p === '/__event' && req.method === 'POST') { eventFunnels.set(body.slug, body); return json(res, 201); }
     // Test control: visitors' past reel events, dated `daysAgo` days back (for results over several periods).
