@@ -45,6 +45,20 @@ const glide = Easing.bezier(0.65, 0, 0.35, 1);
 const settle = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 /**
+ * A camera operator's sway: a few slow, unrelated waves (in screen pixels, and
+ * degrees of roll), so even a resting shot never looks computed. A hand-held
+ * camera (shake 4 and up) also has a quicker tremor.
+ */
+const sway = (f: number, amp: number) => {
+  const tremor = amp >= 4 ? 0.35 * Math.sin(f * 0.53) + 0.25 * Math.sin(f * 0.91 + 2) : 0;
+  return {
+    x: amp * (Math.sin(f * 0.071) + 0.6 * Math.sin(f * 0.173 + 1.3) + tremor),
+    y: amp * (Math.sin(f * 0.083 + 2.1) + 0.5 * Math.sin(f * 0.151) + tremor * 0.7),
+    roll: amp * 0.05 * Math.sin(f * 0.059 + 0.7),
+  };
+};
+
+/**
  * When everything happens, in frames: the hook (a first big line of up to
  * four words), each shot (at the mood's pace, a little shorter than the one
  * before, but always long enough to read), the camera's travel between shots
@@ -116,6 +130,9 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
     return { cam: { ...poster, z: poster.z + Math.log(1 + 0.03 * Math.min(1, (f - p.poster.from) / p.poster.dur)) }, cut: false };
   };
   const now = camAt(frame);
+  const hand = sway(frame, d.shake);
+  const s = Math.exp(now.cam.z);
+  const held = { ...now.cam, x: now.cam.x - hand.x / (width * s), y: now.cam.y - hand.y / (height * s) };
   // Motion blur from how far the picture moved since the last frame (none across a cut).
   const a = place(now.cam, fr);
   const b = place(camAt(Math.max(0, frame - 1)).cam, fr);
@@ -126,7 +143,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <Flyer src={src} frame={fr} cam={now.cam} blur={Math.min(5, speed * 0.12)} sweep={sweep} />
+      <Flyer src={src} frame={fr} cam={held} blur={Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={d.bloom} tilt={hand.roll} />
       {shots.map(
         (s, i) =>
           s.text && (
@@ -146,13 +163,13 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
       {d.leak && (
         // As the camera starts to pull back, so the reveal itself stays clear.
         <Sequence from={p.reveal.from - 6} durationInFrames={16} name="Light leak">
-          <AbsoluteFill style={{ opacity: 0.65 }}>
+          <AbsoluteFill style={{ opacity: 0.45 }}>
             <LightLeak seed={shots.length} hue={0} />
           </AbsoluteFill>
         </Sequence>
       )}
       <Sequence from={p.holdStart} durationInFrames={p.total - p.holdStart} name="Hold">
-        <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} />
+        <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} grade={d.grade} />
       </Sequence>
       {p.hook && (
         <Sequence from={0} durationInFrames={p.hook.dur} name="Hook">
@@ -211,7 +228,10 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
   const sizes = rows.map((r) => Math.min(H * 0.2, (W * 0.86) / (r.length * em)));
   const tall = sizes.reduce((sum, s) => sum + s * 0.92, 0);
   const tops = sizes.map((_, i) => (H - tall) / 2 + sizes.slice(0, i).reduce((sum, s) => sum + s * 0.92, 0));
-  const at = place(cam, fr);
+  // The flyer drifts inside the letters, arriving exactly where the first shot starts.
+  const at = place(mix({ ...cam, x: cam.x + 0.03, z: cam.z - Math.log(1.12) }, cam, settle(f / dur)), fr);
+  // A sheen crosses the words while they hold.
+  const sheen = interpolate(f, [0.25 * dur, 0.85 * dur], [-0.45, 1.1], clamp);
   const away = through ? interpolate(f, [dur - 10, dur], [0, 1], { ...clamp, easing: Easing.in(Easing.cubic) }) : 0;
   const card = 1 - (through ? interpolate(f, [dur - 5, dur], [0, 1], clamp) : interpolate(f, [dur - 0.45 * fps, dur], [0, 1], clamp));
   const zoom = (1 + 0.06 * (f / dur)) * (1 + 13 * away);
@@ -219,6 +239,11 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
     <AbsoluteFill style={{ opacity: through ? card : 1 }}>
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0 }}>
         <defs>
+          <linearGradient id={`${mask}-sheen`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#fff" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#fff" stopOpacity="0.75" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          </linearGradient>
           <mask id={mask}>
             <g transform={`translate(${W / 2} ${H / 2}) scale(${zoom}) translate(${-W / 2} ${-H / 2})`}>
               {rows.map((r, i) => {
@@ -260,6 +285,9 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
         />
         {/* A wash of the look's color through the letters, so even a dark part of the flyer reads. */}
         <rect width={W} height={H} mask={`url(#${mask})`} opacity={0.4 * card} style={{ fill: accent, mixBlendMode: "screen" }} />
+        <g mask={`url(#${mask})`} opacity={card}>
+          <rect x={sheen * W} y={-H * 0.1} width={W * 0.22} height={H * 1.2} transform={`skewX(-18)`} style={{ fill: `url(#${mask}-sheen)`, mixBlendMode: "screen" }} />
+        </g>
       </svg>
       {/* A hairline in the look's color under the words. */}
       <div
@@ -387,7 +415,7 @@ const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; acc
 };
 
 /** The calm loop under the title: the hold box breathing, softened and darkened below so the link's words read. */
-const Hold: React.FC<{ src: string; frame: Frame; base: Cam }> = ({ src, frame: fr, base }) => {
+const Hold: React.FC<{ src: string; frame: Frame; base: Cam; grade: string }> = ({ src, frame: fr, base, grade }) => {
   const f = useCurrentFrame();
   const { durationInFrames: dur } = useVideoConfig();
   // One breath from the end of the fade to the end, so the loop's two ends meet.
@@ -395,8 +423,8 @@ const Hold: React.FC<{ src: string; frame: Frame; base: Cam }> = ({ src, frame: 
   const breathe = 1.02 + 0.05 * (0.5 - 0.5 * Math.cos(t * Math.PI * 2));
   return (
     <AbsoluteFill style={{ opacity: interpolate(f, [0, INTO_HOLD], [0, 1], clamp) }}>
-      <AbsoluteFill style={{ filter: "blur(5px) brightness(0.7)" }}>
-        <Flyer src={src} frame={fr} cam={{ ...base, z: base.z + Math.log(breathe) }} />
+      <AbsoluteFill style={{ filter: "blur(3.5px) brightness(0.72)" }}>
+        <Flyer src={src} frame={fr} cam={{ ...base, z: base.z + Math.log(breathe) }} grade={grade} />
       </AbsoluteFill>
       <AbsoluteFill style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.25) 62%, transparent 80%)" }} />
     </AbsoluteFill>

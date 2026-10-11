@@ -55,6 +55,8 @@ const mp4 = join(out, 'opening.mp4');
 const errors = [];
 let start = 0;
 let held = 0;
+// Seconds of the opening per second of video (a draft plays faster).
+let speed = 1;
 
 if (opt.live) {
   const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 2, recordVideo: { dir: out, size } });
@@ -94,6 +96,7 @@ if (opt.live) {
     }, f);
     await page.screenshot({ path: join(dir, `${String(f / step).padStart(4, '0')}.jpg`), type: 'jpeg', quality: 92 });
   }
+  speed = step;
   held = holdStart / 30 / step;
   execFileSync('cp', [join(dir, `${String(Math.floor(Math.min(last, holdStart + 60) / step)).padStart(4, '0')}.jpg`), join(out, 'held.jpg')]);
   ffmpeg('-i', join(out, 'held.jpg'), join(out, 'held.png'));
@@ -129,7 +132,7 @@ const cols = Math.min(times.length, 8);
 ffmpeg('-framerate', '1', '-i', join(out, 'frame-%02d.png'), '-vf', `scale=200:-2,tile=${cols}x${Math.ceil(times.length / cols)}:padding=6:color=black`, '-frames:v', '1', join(out, 'sheet.png'));
 
 console.log(`Opening reviewed in ${out}`);
-times.forEach((t, i) => console.log(`  frame-${String(i + 1).padStart(2, '0')}.png  ${(t - start).toFixed(1)}s${cutTimes.includes(t) ? '  (cut)' : ''}`));
-console.log(`  The title came up at ${(held - start).toFixed(1)}s.`);
+times.forEach((t, i) => console.log(`  frame-${String(i + 1).padStart(2, '0')}.png  ${((t - start) * speed).toFixed(1)}s${cutTimes.includes(t) ? '  (cut)' : ''}`));
+console.log(`  The title came up at ${((held - start) * speed).toFixed(1)}s.`);
 console.log('  held.png  the hold under the title\n  sheet.png  every frame above\n  opening.mp4');
 if (errors.length) console.log('Page errors:\n' + errors.map((e) => `  ${e}`).join('\n'));

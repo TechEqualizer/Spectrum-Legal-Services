@@ -62,28 +62,60 @@ export function drift(base: Cam, move: OpeningMove, f: Frame): [Cam, Cam] {
 
 /**
  * The flyer as the camera sees it, over a blurred, darker copy of itself that
- * fills anything the flyer doesn't (the whole poster on a tall screen). A
- * light can sweep across the flyer itself (0 to 1; outside that, none).
+ * fills anything the flyer doesn't (the whole poster on a tall screen). The
+ * camera only ever transforms the flyer (never lays it out again), so phones
+ * move it on the GPU. On top: the mood's grade, a glow around its highlights
+ * (bloom), and a light that can sweep across the print (0 to 1; outside that,
+ * none). `tilt` turns the frame a fraction of a degree, like a hand-held camera.
  */
-export const Flyer: React.FC<{ src: string; frame: Frame; cam: Cam; blur?: number; sweep?: number; grade?: string }> = ({ src, frame, cam, blur = 0, sweep = -1, grade = "" }) => {
+export const Flyer: React.FC<{ src: string; frame: Frame; cam: Cam; blur?: number; sweep?: number; grade?: string; bloom?: number; tilt?: number }> = ({
+  src,
+  frame,
+  cam,
+  blur = 0,
+  sweep = -1,
+  grade = "contrast(1.12) saturate(1.15) brightness(1.03)",
+  bloom = 0,
+  tilt = 0,
+}) => {
+  const { W, H, fw, fh } = frame;
   const at = place(cam, frame);
+  const k = at.width / fw;
+  const layer: React.CSSProperties = {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: fw,
+    height: fh,
+    transformOrigin: "0 0",
+    transform: `translate(${W / 2}px, ${H / 2}px) rotate(${tilt}deg) translate(${at.left - W / 2}px, ${at.top - H / 2}px) scale(${k})`,
+  };
+  const img: React.CSSProperties = { width: "100%", height: "100%", maxWidth: "none", display: "block" };
   return (
     <AbsoluteFill style={{ backgroundColor: "#000", overflow: "hidden" }}>
       <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.45) saturate(1.4)", scale: "1.2" }} />
-      <div style={{ position: "absolute", ...at, overflow: "hidden", filter: `${blur > 0.2 ? `blur(${blur.toFixed(1)}px) ` : ""}contrast(1.12) saturate(1.15) brightness(1.03) ${grade}` }}>
-        <Img src={src} style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
+      {/* Blur is drawn before the scale, so it's divided by it to stay the same on screen. */}
+      <div style={{ ...layer, overflow: "hidden", filter: `${blur > 0.2 ? `blur(${(blur / k).toFixed(2)}px) ` : ""}${grade}` }}>
+        <Img src={src} style={img} />
         {sweep >= 0 && sweep <= 1 && (
           // A band of light across the print, like a glossy poster catching a spotlight.
           <div
             style={{
               position: "absolute",
               inset: 0,
-              mixBlendMode: "soft-light",
-              background: `linear-gradient(105deg, transparent ${sweep * 160 - 40}%, rgba(255,255,255,0.85) ${sweep * 160 - 25}%, transparent ${sweep * 160 - 10}%)`,
+              mixBlendMode: "screen",
+              background: `linear-gradient(115deg, transparent ${sweep * 170 - 45}%, rgba(255,255,255,0.12) ${sweep * 170 - 32}%, rgba(255,255,255,0.42) ${sweep * 170 - 27}%, rgba(255,255,255,0.12) ${sweep * 170 - 22}%, transparent ${sweep * 170 - 10}%)`,
             }}
           />
         )}
       </div>
+      {bloom > 0 && (
+        // The highlights spill a little light around themselves, as on film. Its filter never
+        // changes, so the browser draws it once and only moves it.
+        <div style={{ ...layer, opacity: bloom, mixBlendMode: "screen", filter: "blur(7px) brightness(1.45) contrast(1.5)" }}>
+          <Img src={src} style={img} />
+        </div>
+      )}
     </AbsoluteFill>
   );
 };
@@ -156,8 +188,9 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
             key={i}
             style={{
               position: "absolute",
-              left: x * width,
-              top: (0.05 + y * 0.95) * height,
+              left: 0,
+              top: 0,
+              transform: `translate(${x * width}px, ${(0.05 + y * 0.95) * height}px)`,
               width: size,
               height: size,
               borderRadius: "50%",

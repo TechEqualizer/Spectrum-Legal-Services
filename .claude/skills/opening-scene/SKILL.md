@@ -11,7 +11,8 @@ from a **recipe** (`src/lib/opening.ts`) that Claude writes when it reads the
 flyer. It plays like this (`src/remotion/OpeningScene.tsx`):
 
 1. **The hook.** The first shot's line (two to four words), huge on black,
-   one word a row, with the flyer showing through the letters. The cutting
+   one word a row, with the flyer drifting inside the letters and a sheen
+   crossing them. The cutting
    moods then fly through the words into the first shot; in the dissolving
    moods, the black falls away around the words instead.
 2. **One camera.** It moves across the flyer from shot to shot, resting on
@@ -41,6 +42,12 @@ words follow from it.
 | soulful | jazz, live music, comedy, lounges, gospel | 1.05× | camera glides, light leak | surfaces softly | haze | warm, an invitation |
 | editorial | book signings, talks, galleries, panels | 1.1× | camera glides, no leak | rises from a mask, left-aligned | dust | calm, let the flyer speak |
 | sunlit | day parties, brunches, festivals, cookouts | 0.9× | punch-in, white flash, light leak | rises from a mask | sun motes | bright and easy |
+
+Each mood also sets the light and the camera: a color grade (glamour warm and
+gold, editorial cool and crisp, soulful warm and soft, electric hard and
+saturated, sunlit bright), a bloom (the glow film gives highlights), and how
+steady the camera is (electric and sunlit hand-held; the rest a gentle
+float).
 
 The moods live in `OPENING_MOODS`. When a new kind of event doesn't fit any
 of them, add a mood there (its direction is plain data) rather than bending

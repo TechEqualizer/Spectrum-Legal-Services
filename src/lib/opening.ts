@@ -16,7 +16,9 @@ export type OpeningBeat = { box: Box; move: OpeningMove; seconds: number; text?:
 
 /**
  * How an opening is directed, matched to the kind of event: its pace, how
- * shots cut, what floats in the air and how its words should sound. Claude
+ * shots cut, what floats in the air, how its words move and should sound,
+ * its color (grade, and bloom: the glow around highlights) and how steady
+ * the camera is (shake: how far it wanders, in pixels; hand-held at 5). Claude
  * picks one when it reads the flyer; the scene plays it
  * (.claude/skills/opening-scene has the reasoning behind each).
  */
@@ -24,29 +26,29 @@ export const OPENING_MOODS = {
   electric: {
     for: "club nights, parties, hip-hop and R&B nights, concerts, raves",
     words: "short and loud: one or two words a line, like a hype reel",
-    pace: 0.8, build: 0.12, cut: "punch", flash: "accent", sparks: "embers", leak: true, type: "slam", align: "center",
+    pace: 0.8, build: 0.12, cut: "punch", flash: "accent", sparks: "embers", leak: true, type: "slam", align: "center", grade: "contrast(1.25) saturate(1.35) brightness(1.02)", bloom: 0.18, shake: 5,
   },
   glamour: {
     for: "galas, fashion shows, masquerades, awards, launches, black tie",
     words: "confident and seductive, a promise of who they get to be",
-    pace: 0.95, build: 0.08, cut: "punch", flash: "white", sparks: "glitter", leak: true, type: "track", align: "center",
+    pace: 0.95, build: 0.08, cut: "punch", flash: "white", sparks: "glitter", leak: true, type: "track", align: "center", grade: "contrast(1.16) saturate(1.2) sepia(0.12) brightness(1.04)", bloom: 0.22, shake: 2,
   },
   soulful: {
     for: "jazz, live music, comedy, lounges, gospel, poetry, dinner shows",
     words: "warm and unhurried, like an invitation",
-    pace: 1.05, build: 0.04, cut: "dissolve", flash: null, sparks: "haze", leak: true, type: "soft", align: "center",
+    pace: 1.05, build: 0.04, cut: "dissolve", flash: null, sparks: "haze", leak: true, type: "soft", align: "center", grade: "contrast(1.06) saturate(1.1) sepia(0.22) brightness(1.04)", bloom: 0.3, shake: 2,
   },
   editorial: {
     for: "book signings, author talks, galleries, panels, workshops, conferences",
     words: "calm and considered, quiet lines that let the flyer speak",
-    pace: 1.1, build: 0.03, cut: "dissolve", flash: null, sparks: "dust", leak: false, type: "rise", align: "left",
+    pace: 1.1, build: 0.03, cut: "dissolve", flash: null, sparks: "dust", leak: false, type: "rise", align: "left", grade: "contrast(1.2) saturate(0.85) brightness(1.02)", bloom: 0.08, shake: 1.5,
   },
   sunlit: {
     for: "day parties, brunches, festivals, cookouts, outdoor and daytime events",
     words: "bright and easy, sunshine and good company",
-    pace: 0.9, build: 0.08, cut: "punch", flash: "white", sparks: "motes", leak: true, type: "rise", align: "center",
+    pace: 0.9, build: 0.08, cut: "punch", flash: "white", sparks: "motes", leak: true, type: "rise", align: "center", grade: "contrast(1.06) saturate(1.25) sepia(0.08) brightness(1.08)", bloom: 0.28, shake: 5,
   },
-} as const satisfies Record<string, { for: string; words: string; pace: number; build: number; cut: "punch" | "dissolve"; flash: "white" | "accent" | null; sparks: "embers" | "glitter" | "haze" | "dust" | "motes"; leak: boolean; type: "slam" | "track" | "rise" | "soft"; align: "center" | "left" }>;
+} as const satisfies Record<string, { for: string; words: string; pace: number; build: number; cut: "punch" | "dissolve"; flash: "white" | "accent" | null; sparks: "embers" | "glitter" | "haze" | "dust" | "motes"; leak: boolean; type: "slam" | "track" | "rise" | "soft"; align: "center" | "left"; grade: string; bloom: number; shake: number }>;
 export type OpeningMood = keyof typeof OPENING_MOODS;
 export const OPENING_MOOD_IDS = Object.keys(OPENING_MOODS) as OpeningMood[];
 /** Recipes from before moods were glamour. */
