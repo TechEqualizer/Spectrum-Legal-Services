@@ -191,11 +191,13 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
     ...coreReels(e.live.reels).map(({ role, reel }) => ({
       name: REEL_ROLES[role],
       hint: REEL_DRIVERS[role].question,
-      // A reel showing only the flyer (as a new link's do) still needs its video.
-      state: !reel ? "missing" : reel.media && !isFlyerOnly(reel.media, scene) ? "ready" : "video",
+      // A reel cut from the flyer sells already; one showing only the still flyer still needs its video.
+      state: !reel ? "missing" : reel.media?.kind === "image" && reel.media.cut ? "cut" : reel.media && !isFlyerOnly(reel.media, scene) ? "ready" : "video",
     })),
-  ] as { name: string; hint: string; state: "ready" | "video" | "missing" }[];
-  const left = steps.filter((s) => s.state !== "ready").length;
+  ] as { name: string; hint: string; state: "ready" | "cut" | "video" | "missing" }[];
+  const left = steps.filter((s) => s.state !== "ready" && s.state !== "cut").length;
+  const label = { ready: "Ready", cut: "Flyer cut", video: "Needs video", missing: "Missing" } as const;
+  const done = (s: (typeof steps)[number]) => s.state === "ready" || s.state === "cut";
 
   return (
     <section aria-labelledby={id} data-tour="home-next" className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
@@ -233,23 +235,23 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
             <button
               type="button"
               onClick={() => onOpen(e.funnel.slug)}
-              aria-label={`${s.name}: ${s.state === "ready" ? "ready" : s.state === "video" ? "needs video" : "missing"}. Open in Reels.`}
+              aria-label={`${s.name}: ${s.state === "cut" ? "plays its cut from your flyer" : label[s.state].toLowerCase()}. Open in Reels.`}
               className="flex min-h-14 w-full items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 text-left hover:bg-soft-gray"
             >
               <span
                 aria-hidden="true"
                 className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${
-                  s.state === "ready" ? "bg-teal-accent/20 text-teal-800" : s.state === "video" ? "bg-amber-100 text-amber-900" : "border border-dashed border-gray-400 text-gray-600"
+                  done(s) ? "bg-teal-accent/20 text-teal-800" : s.state === "video" ? "bg-amber-100 text-amber-900" : "border border-dashed border-gray-400 text-gray-600"
                 }`}
               >
-                {s.state === "ready" ? <CheckIcon /> : s.state === "video" ? "!" : "+"}
+                {done(s) ? <CheckIcon /> : s.state === "video" ? "!" : "+"}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-deep-navy">{s.name}</span>
                 <span className="block truncate text-xs text-gray-600">{s.hint}</span>
               </span>
-              <span className={`flex-shrink-0 text-xs font-semibold ${s.state === "ready" ? "text-teal-800" : s.state === "video" ? "text-amber-900" : "text-gray-600"}`}>
-                {s.state === "ready" ? "Ready" : s.state === "video" ? "Needs video" : "Missing"}
+              <span className={`flex-shrink-0 text-xs font-semibold ${done(s) ? "text-teal-800" : s.state === "video" ? "text-amber-900" : "text-gray-600"}`}>
+                {label[s.state]}
               </span>
             </button>
           </li>

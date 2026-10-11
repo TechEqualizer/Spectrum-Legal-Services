@@ -32,11 +32,19 @@ export type OpeningSceneProps = {
    * this many seconds instead of looping.
    */
   story?: { title: string; when: string; link: string; holdSeconds: number };
+  /**
+   * A reel's cut (src/lib/opening.ts): no hold under a title. It ends on the
+   * whole flyer, crisp, held a moment under the reel's own title and Tickets
+   * button, and the reel moves on. Words stay off the bottom, which is theirs.
+   */
+  reel?: boolean;
 };
 
 type Frame = { W: number; H: number; fw: number; fh: number };
 
 const POSTER_SECONDS = 1;
+// A reel ends on the whole flyer, long enough to take in and tap Tickets.
+const REEL_POSTER_SECONDS = 2.2;
 const HOLD_SECONDS = 6;
 // Frames the whole flyer takes to fade into the hold, and a punch-in to settle.
 const INTO_HOLD = 20;
@@ -70,7 +78,7 @@ const sway = (f: number, amp: number) => {
  * (when the mood dissolves rather than cuts), the pull-back to the whole
  * flyer, the flyer itself, and the hold.
  */
-function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS) {
+function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS, reel = false) {
   const d = directionOf(recipe);
   const sec = (s: number) => Math.round(s * fps);
   const first = recipe.beats[0].text;
@@ -88,10 +96,13 @@ function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS) {
     return stop;
   });
   const reveal = { from: at, dur: sec((d.cut === "punch" ? 0.9 : 1.2) * d.pace) };
-  const poster = { from: reveal.from + reveal.dur, dur: sec(POSTER_SECONDS) };
+  const poster = { from: reveal.from + reveal.dur, dur: sec(reel ? REEL_POSTER_SECONDS : POSTER_SECONDS) };
   const loopFrom = poster.from + poster.dur;
   const holdStart = loopFrom - INTO_HOLD;
-  return { d, hook: hook ? { dur: hookFor, text: hook } : null, stops, travel, reveal, poster, holdStart, loopFrom, total: holdStart + sec(holdSeconds) };
+  const hookPlan = hook ? { dur: hookFor, text: hook } : null;
+  // A reel's cut has no hold: it's over when the flyer has had its moment.
+  if (reel) return { d, hook: hookPlan, stops, travel, reveal, poster, holdStart: loopFrom, loopFrom, total: loopFrom };
+  return { d, hook: hookPlan, stops, travel, reveal, poster, holdStart, loopFrom, total: holdStart + sec(holdSeconds) };
 }
 
 /**
@@ -104,10 +115,13 @@ export function openingFrames(recipe: OpeningRecipe, fps: number, holdSeconds?: 
   return { holdStart, loopFrom, total };
 }
 
-export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story }) => {
+/** A reel's cut, in frames: it ends on the whole flyer. */
+export const cutFrames = (recipe: OpeningRecipe, fps: number) => plan(recipe, fps, undefined, true).total;
+
+export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story, reel = false }) => {
   const frame = useCurrentFrame();
   const { fps, width: W, height: H } = useVideoConfig();
-  const p = plan(recipe, fps, story?.holdSeconds);
+  const p = plan(recipe, fps, story?.holdSeconds, reel);
   const { d } = p;
   const fr: Frame = { W, H, fw: width, fh: height };
   const shots = p.stops.map((s, i) => ({ ...s, cams: drift(camOn(recipe.beats[i].box, fr), recipe.beats[i].move, fr) }));
@@ -153,7 +167,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
         (s, i) =>
           s.text && (
             <Sequence key={i} from={s.from} durationInFrames={s.dur} name={`Words ${i + 1}`}>
-              <Words text={s.text} fontClass={fontClass} caps={caps} accent={accent} type={d.type} left={d.align === "left"} />
+              <Words text={reel && s.text.at === "bottom" ? { ...s.text, at: "middle" } : s.text} fontClass={fontClass} caps={caps} accent={accent} type={d.type} left={d.align === "left"} />
             </Sequence>
           ),
       )}
@@ -173,10 +187,12 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
           </AbsoluteFill>
         </Sequence>
       )}
-      <Sequence from={p.holdStart} durationInFrames={p.total - p.holdStart} name="Hold">
-        <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} grade={d.grade} />
-        {story && <StoryCard story={story} fontClass={fontClass} caps={caps} accent={accent} />}
-      </Sequence>
+      {!reel && (
+        <Sequence from={p.holdStart} durationInFrames={p.total - p.holdStart} name="Hold">
+          <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} grade={d.grade} />
+          {story && <StoryCard story={story} fontClass={fontClass} caps={caps} accent={accent} />}
+        </Sequence>
+      )}
       {p.hook && (
         <Sequence from={0} durationInFrames={p.hook.dur} name="Hook">
           <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} solid={Boolean(story)} />

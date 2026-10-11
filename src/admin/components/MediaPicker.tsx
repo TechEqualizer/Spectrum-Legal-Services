@@ -81,7 +81,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
 
   const thumb = thumbnailOf(value);
   const kindLabel =
-    value?.kind === "youtube" ? "YouTube" : value?.kind === "image" ? "Photo" : value?.kind === "video" ? "Video" : "";
+    value?.kind === "youtube" ? "YouTube" : value?.kind === "image" ? (value.cut ? "Flyer cut" : "Photo") : value?.kind === "video" ? "Video" : "";
 
   return (
     <div className="space-y-3">

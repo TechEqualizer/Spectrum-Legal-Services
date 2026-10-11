@@ -42,6 +42,11 @@ export type DraftReel = {
   source: "photo" | "flyer_art" | "text";
   /** The full prompt for a video tool: camera, length, scene, shared look, what to avoid. */
   videoPrompt: string;
+  /**
+   * The reel cut from the flyer itself (in the opening's mood), so it sells
+   * from the first minute, before any video exists (src/lib/opening.ts).
+   */
+  cut?: OpeningRecipe;
 };
 
 export type FunnelDraft = {

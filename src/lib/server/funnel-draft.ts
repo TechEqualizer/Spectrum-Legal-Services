@@ -3,13 +3,14 @@
 // each built on one proven reason people buy a ticket: The Night (desire and
 // self-image), Your People (belonging and real social proof) and Last Call
 // (fear of missing out, from true deadlines only). Each comes with a
-// ready-to-paste video prompt. Nothing is saved here: the admin reviews the
-// draft before it goes into the editor.
+// ready-to-paste video prompt, and its own cut from the flyer that plays
+// until that video exists (docs/plans/08-flyer-cuts.md). Nothing is saved
+// here: the admin reviews the draft before it goes into the editor.
 
 import Anthropic from "@anthropic-ai/sdk";
 import { flyerBlock, missingKeyProblem, type FlyerInput } from "@/lib/server/flyer-import";
 import { REEL_ORDER, REEL_ROLES, type DraftReel, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
-import { OPENING_MOODS, OPENING_MOOD_IDS, OPENING_MOVES, parseOpening, type OpeningMood, type OpeningRecipe } from "@/lib/opening";
+import { OPENING_MOODS, OPENING_MOOD_IDS, OPENING_MOVES, parseCut, parseOpening, type OpeningMood, type OpeningRecipe } from "@/lib/opening";
 import { SCREEN_LIMITS } from "@/lib/publication";
 
 const str = (description: string) => ({ type: "string", description });
@@ -55,6 +56,39 @@ const OPENING_SCHEMA = {
     hold: box("The calm shot the scene settles on under the page's title: the flyer's strongest figure or image, with room below it"),
   },
 };
+/** A reel's cut: shots on the flyer with that reel's words, in the opening's mood (it ends on the whole flyer). */
+const CUT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["beats"],
+  properties: {
+    beats: {
+      type: "array",
+      description: "3 shots on the flyer's artwork (2 to 4), in the order they play",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["box", "move", "seconds", "text"],
+        properties: {
+          box: box("The part of the flyer this shot shows: a subject a fan recognizes, clear of the flyer's lettering, at least a third of the flyer's width, close to a tall phone shape"),
+          move: { type: "string", enum: [...OPENING_MOVES], description: "The camera's move through the shot" },
+          seconds: { type: "number", description: "1.2 to 2.2: the_night and your_people 1.6 to 2.2, last_call 1.2 to 1.6" },
+          text: {
+            type: "object",
+            additionalProperties: false,
+            required: ["lines", "at", "size"],
+            properties: {
+              lines: { type: "array", items: str("One short line, under 24 characters"), description: "1 to 3 lines, five words at most in all" },
+              at: { type: "string", enum: ["top", "middle"], description: "Where the shot has room for words, away from faces (the reel's own title and Tickets button sit at the bottom)" },
+              size: { type: "string", enum: ["eyebrow", "big"], description: "big for a selling line; eyebrow for a small credit" },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -86,7 +120,7 @@ const SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["role", "title", "summary", "hook", "captions", "date", "source", "camera", "seconds", "prompt"],
+        required: ["role", "title", "summary", "hook", "captions", "date", "source", "camera", "seconds", "prompt", "cut"],
         properties: {
           role: { type: "string", enum: Object.keys(REEL_ROLES) },
           title: str("Reel title, under 60 characters"),
@@ -98,6 +132,7 @@ const SCHEMA = {
           camera: str("Camera move"),
           seconds: { type: "integer" },
           prompt: str("What happens on screen"),
+          cut: CUT_SCHEMA,
         },
       },
     },
@@ -115,6 +150,17 @@ ${OPENING_MOOD_IDS.map((m) => `   - ${m}: ${OPENING_MOODS[m].for}. Words: ${OPEN
    - Words: one idea per shot, five words at most, copied from the flyer's own words (its taglines, the night's promise, the presenter credit); never invent words, names, dates or claims the flyer doesn't print. Put them where the shot is dark and empty enough for white type, never over a face.
    - The hold: the calm shot the scene settles on under the page's title, with room at the bottom.`;
 
+/**
+ * How to cut each reel from the flyer (.claude/skills/flyer-cuts). Until the
+ * organizer has video, these are the reels: the flyer, directed three more
+ * ways, each selling one reason to buy.
+ */
+const cutBrief = `each reel's cut: the reel itself until the organizer adds a video, cut from the flyer with the same camera as the opening and in the opening's mood (it's played for you: the shots, then the whole flyer, then the reel's own title and Tickets button over it). Someone who gave you only a flyer should feel they got three trailers. Four cuts come from one flyer, so make each one feel different by its framing, its rhythm and its words:
+   - the_night: closer than the opening. Its first shot is the most desirable detail on the flyer (a face, eyes behind a mask, the outfit, the light) with a big line of two to four words, which opens the reel alone, huge on black, so make it the line that most makes someone want to be there. Then push in, tighter each shot. Lines sell who they get to be, in second person and present tense ("You, in gold.").
+   - your_people: wider than the others, and unhurried. Pan across the crowd, the group, the dancers or the room, the way they face, and pull back to show more of the scene; no hook. Lines answer "is this for someone like me?" with what the flyer says: who it's for, the dress code, the age, the music, the vibe, an invitation to bring their people.
+   - last_call: brisk. Shorter shots, a punch on each one, and one true fact a shot, read from the flyer or the dates you were given: the date, the place, the price, the time doors open, a deadline, few tickets left only when you were told so. The date comes last, right before the whole flyer. If the flyer gives no facts beyond the date, use the date and one line on why not to wait for it.
+   For all three: 3 shots (2 when the flyer has little artwork, 4 only for four distinct subjects), each on a subject a fan recognizes, clear of the flyer's lettering, at least a third of the flyer's width, close to a tall phone shape. Don't repeat a shot from the opening or another reel unless it's closer; never the same move twice in a row. One line per shot, five words at most, set where the shot is dark and empty (top or middle, never over a face: the bottom belongs to the reel's title and Tickets button). Lines can be your own words in the reel's voice, but every fact in them (names, dates, times, places, prices, performers, dress code, age, how many are left) must be on the flyer or in the dates above. Never invent quotes, reviews, numbers, "selling fast" or "sold out".`;
+
 const instructions = (ctx: DraftContext) => `You are a creative director for nightlife and live events. From an event flyer, you plan the short vertical video funnel an organizer shares in their Instagram bio: an opening scene with a looping background video, then three reels that play one after another, each ending on a Tickets button. Your job is to make people want to be there and buy a ticket.
 
 Today is ${ctx.today}. The organizer's brand is "${ctx.brand}". Dates already known: ${ctx.dates.length ? ctx.dates.map((d) => [d.date, d.name, d.price, d.status === "few_left" ? "few tickets left" : d.status === "sold_out" ? "sold out" : ""].filter(Boolean).join(", ")).join("; ") : "none yet"}.${ctx.photos ? " The organizer will also use their own event photos." : ""}
@@ -126,7 +172,7 @@ Write five things:
    - the_night ("Will this be amazing?"): desire and self-image. Sell who the viewer gets to BE that night, not the venue: the arrival, the peak moment, the look, the feeling, in second person and present tense ("You, in gold."). Cinematic and aspirational.
    - your_people ("Is this for someone like me?"): belonging and social proof. People like the viewer go and love it: friends getting ready, arriving together, the crowd, the photo moment. Feels real and phone-shot, not polished. Answer the quiet doubts the flyer can answer (dress code, age, the vibe). Never invent testimonials, quotes, reviews, attendance numbers or named guests; prefer the organizer's real photos and footage (source: photo).
    - last_call ("Why buy now?"): fear of missing out. What waiting costs, using only true facts: the event date, a price, a deadline or sales cutoff, or limited tickets, and only when the flyer or the known dates say so. If none are stated, the urgency is simply the date getting close. Short, direct, and it ends on the reason to buy now.
-   For each reel: a short, punchy title true to the flyer; a summary of what the viewer gets; the hook (the first two seconds that stop the scroll); 2 to 4 short caption lines to add when editing; and date set to the date it sells when there is one.
+   For each reel: a short, punchy title true to the flyer; a summary of what the viewer gets; the hook (the first two seconds that stop the scroll); 2 to 4 short caption lines to add when editing; date set to the date it sells when there is one; and its cut: ${cutBrief}
 - For every clip (hero and each reel), a video prompt for an AI video tool, vertical 9:16: a camera move (slow and elegant: push in, dolly out, arc, crane, rack focus), its length in seconds (5 to 8; the hero loops seamlessly, 6 to 8), and what happens on screen in vivid, concrete, filmable detail: people, wardrobe, light, motion, and the final frame. Set source to photo when the organizer's own event photo should be the starting image (people and venue shots), flyer_art when the flyer's own imagery is the best start, and text when it should be generated from words alone.
 - styleLock: one paragraph of shared look so every clip matches, drawn from the flyer's palette, lighting and era (lens, light, colors, grain, frame rate, 9:16).
 - avoid: what every clip must avoid. Always include on-screen text, letters, logos and watermarks (the page adds its own words), warped hands, distorted or melting faces, flicker and sudden cuts.
@@ -240,6 +286,7 @@ export function cleanDraft(raw: Record<string, unknown>): FunnelDraft | { proble
   const hero = (raw.hero ?? {}) as Record<string, unknown>;
   // One reel per core role, always in REEL_ORDER, whatever order they came in.
   const byRole = new Map<ReelRole, DraftReel>();
+  const cuts = new Map<ReelRole, unknown>();
   for (const r of Array.isArray(raw.reels) ? raw.reels : []) {
     if (!r || typeof r !== "object") continue;
     const x = r as Record<string, unknown>;
@@ -248,6 +295,7 @@ export function cleanDraft(raw: Record<string, unknown>): FunnelDraft | { proble
     const date = typeof x.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.date) ? x.date : undefined;
     const source = x.source === "photo" || x.source === "flyer_art" ? x.source : "text";
     const captions = (Array.isArray(x.captions) ? x.captions : []).map((c) => clean(c, 60)).filter(Boolean).slice(0, 4);
+    cuts.set(x.role as ReelRole, x.cut);
     byRole.set(x.role as ReelRole, {
       role: x.role as ReelRole,
       title,
@@ -264,10 +312,16 @@ export function cleanDraft(raw: Record<string, unknown>): FunnelDraft | { proble
         .join("\n\n"),
     });
   }
-  const reels = REEL_ORDER.flatMap((role) => byRole.get(role) ?? []);
+  const opening = parseOpening(raw.opening);
+  const mood = opening?.mood ?? OPENING_MOOD_IDS.find((m) => m === (raw.opening as Record<string, unknown> | undefined)?.mood);
+  // Each cut plays in the opening's mood; one that doesn't check out leaves the reel on the still flyer.
+  const reels = REEL_ORDER.flatMap((role) => {
+    const reel = byRole.get(role);
+    const cut = reel && parseCut(cuts.get(role), mood);
+    return reel ? [cut ? { ...reel, cut } : reel] : [];
+  });
   if (!reels.length) return { problem: "Couldn't draft reels from this flyer. Try a clearer photo." };
   const fit = (s: unknown, key: keyof typeof SCREEN_LIMITS) => clean(s, SCREEN_LIMITS[key]);
-  const opening = parseOpening(raw.opening);
   return {
     screen: { title: fit(screen.title, "title"), tagline: fit(screen.tagline, "tagline"), watchLabel: fit(screen.watchLabel, "watchLabel"), heading: fit(screen.heading, "heading") },
     heroPrompt: clipPrompt(hero.camera, hero.seconds, hero.prompt, styleLock, avoid, true),

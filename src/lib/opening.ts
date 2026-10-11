@@ -136,3 +136,18 @@ export function checkOpening(v: unknown): string | null {
   const clean = parseOpening(v);
   return clean && same(clean, v) ? null : "bad opening scene";
 }
+
+/** A reel's cut ends on the whole flyer, so its hold is all of it. */
+const WHOLE_FLYER: Box = { x: 0, y: 0, w: 1, h: 1 };
+
+/**
+ * A reel's cut (.claude/skills/flyer-cuts), cleaned like an opening: in the
+ * opening's mood, its words kept off the bottom (the reel's title and Tickets
+ * button are there), ending on the whole flyer. Null when too little of it is
+ * usable, and the reel shows the still flyer.
+ */
+export function parseCut(v: unknown, mood?: OpeningMood): OpeningRecipe | null {
+  if (!isObject(v) || !Array.isArray(v.beats)) return null;
+  const beats = v.beats.map((b) => (isObject(b) && isObject(b.text) && b.text.at === "bottom" ? { ...b, text: { ...b.text, at: "middle" } } : b));
+  return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER });
+}

@@ -28,6 +28,10 @@ flyer. It plays like this (`src/remotion/OpeningScene.tsx`):
 For Remotion itself (frames, sequences, transitions), also follow
 `remotion-best-practices`.
 
+Each core reel also plays a cut from the flyer on this same engine (the
+scene's `reel` mode) until it has a video. For those, also follow
+`flyer-cuts`.
+
 ## Read the event first
 
 Every flyer says what kind of night it is: what happens there, the venue,

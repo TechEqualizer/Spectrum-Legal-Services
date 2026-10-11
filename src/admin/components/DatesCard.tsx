@@ -62,7 +62,7 @@ export default function DatesCard({
   /** Use a flyer's look (and the flyer itself, as an upload link, behind the opening screen). */
   onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
   /** Use a funnel drafted from a flyer. */
-  onDraft: (draft: FunnelDraft) => void;
+  onDraft: (draft: FunnelDraft, flyer: string | undefined) => void;
   /** In the studio, where its story step names it. */
   inStudio?: boolean;
   /** Open Import flyer right away (a new event, made to be filled from its flyer). */
@@ -209,8 +209,8 @@ export default function DatesCard({
             if (found && !moreToDo({ ...found, lookUsed: true }, added)) closeImport();
           }}
           onDrafted={(draft) => setFound((f) => (f ? { ...f, draft } : f))}
-          onDraft={(draft) => {
-            onDraft(draft);
+          onDraft={(draft, flyer) => {
+            onDraft(draft, flyer);
             setFound((f) => (f ? { ...f, draftUsed: true } : f));
             if (found && !moreToDo({ ...found, draftUsed: true }, added)) closeImport();
           }}

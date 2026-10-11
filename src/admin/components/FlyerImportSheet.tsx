@@ -69,8 +69,8 @@ export default function FlyerImportSheet({
   onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
   /** A funnel drafted from the flyer, to show for review. */
   onDrafted: (draft: FunnelDraft) => void;
-  /** Use the drafted funnel. */
-  onDraft: (draft: FunnelDraft) => void;
+  /** Use the drafted funnel (with the flyer, for the reels cut from it). */
+  onDraft: (draft: FunnelDraft, flyer: string | undefined) => void;
   onClose: () => void;
 }) {
   const id = useId();
@@ -112,8 +112,8 @@ export default function FlyerImportSheet({
         note: body.note ?? "",
         source: payload,
         ...(body.look ? { look: body.look } : {}),
-        // The (shrunk) flyer, kept so it can go behind the opening screen and survive a reload.
-        ...(body.look && blob ? { flyer: keepUpload(new File([blob], "flyer.jpg", { type: "image/jpeg" })) } : {}),
+        // The (shrunk) flyer, kept so it can go behind the opening screen, play as each drafted reel's cut, and survive a reload.
+        ...(blob ? { flyer: keepUpload(new File([blob], "flyer.jpg", { type: "image/jpeg" })) } : {}),
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't read the flyer. Try again.");
@@ -214,7 +214,7 @@ export default function FlyerImportSheet({
             </>
           )}
           {found.source && (
-            <DraftOffer slug={slug} found={found} onDrafted={onDrafted} onUse={onDraft} />
+            <DraftOffer slug={slug} found={found} onDrafted={onDrafted} onUse={(d) => onDraft(d, found.flyer)} />
           )}
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => onFound(null)} className="min-h-11 px-1 text-sm font-semibold text-deep-navy hover:underline">
@@ -441,7 +441,11 @@ function DraftOffer({
     return (
       <section aria-labelledby={`${id}-title`} className="rounded-xl bg-white p-4">
         <h3 id={`${id}-title`} className="flex items-center gap-1.5 font-bold text-deep-navy">Funnel drafted <CheckIcon /></h3>
-        <p className="mt-1 text-sm text-gray-600">Your reels are in the editor, each marked Needs video with its prompt.</p>
+        <p className="mt-1 text-sm text-gray-600">
+          {found.draft?.reels.some((r) => r.cut) && found.flyer
+            ? "Your reels are in the editor, each cut from your flyer until you add its video. Each has its video prompt."
+            : "Your reels are in the editor, each marked Needs video with its prompt."}
+        </p>
       </section>
     );
   }
