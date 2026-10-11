@@ -70,12 +70,13 @@ export default function AdminNav() {
   const folded = (on: string, off = "") => (collapsed ? on : off);
   return (
     <nav
-      className={`bg-deep-navy text-white lg:sticky lg:top-0 lg:z-40 lg:flex lg:h-screen lg:flex-shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 motion-reduce:transition-none ${folded("lg:w-[4.5rem]", "lg:w-60")}`}
+      // Exactly the window's height, however short: its lower part scrolls on its own, never the page.
+      className={`bg-deep-navy text-white lg:sticky lg:top-0 lg:z-40 lg:flex lg:h-dvh lg:flex-shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 motion-reduce:transition-none ${folded("lg:w-[4.5rem]", "lg:w-60")}`}
       aria-label="Admin"
     >
       {/* Phones: one compact bar, the event on the left (tap to switch), Core and the account on the right.
           Nothing in it may push the others off screen, however long the name. Desktop: the sidebar's head. */}
-      <div className={`flex items-center gap-2 py-2 pl-4 pr-2 lg:block lg:py-6 ${folded("lg:px-3", "lg:px-5")}`}>
+      <div className={`flex items-center gap-2 py-2 pl-4 pr-2 lg:block lg:py-6 low:py-4 ${folded("lg:px-3", "lg:px-5")}`}>
         <Link href="/" aria-label="Back to the site" className={`hidden ${folded("", "lg:inline-flex")}`}>
           {funnel ? <BrandLogo brand={funnel.brand} size="sm" /> : <span className="text-lg font-black tracking-tight">Showlnk</span>}
         </Link>
@@ -93,7 +94,7 @@ export default function AdminNav() {
             )}
           </span>
         )}
-        <div className={`relative flex min-h-11 min-w-0 flex-1 flex-col justify-center lg:mt-5 lg:min-h-0 ${folded("lg:hidden", "lg:block")}`}>
+        <div className={`relative flex min-h-11 min-w-0 flex-1 flex-col justify-center lg:mt-5 lg:min-h-0 low:mt-3 ${folded("lg:hidden", "lg:block")}`}>
           <p className="truncate text-[11px] font-bold uppercase tracking-widest text-sky-accent">
             <span className="lg:hidden">{organizerName ?? "Admin"}</span>
             <span className="hidden lg:inline">Admin</span>
@@ -137,6 +138,10 @@ export default function AdminNav() {
           <Account collapsed={collapsed} />
         </div>
       </div>
+      {/* Desktop: the places and Core scroll here on a window too short for them (the account menu above stays unclipped). */}
+      <div
+        className={`contents lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:overscroll-contain ${folded("lg:[scrollbar-width:none]", "lg:[scrollbar-color:rgb(255_255_255/0.25)_transparent] lg:[scrollbar-width:thin]")}`}
+      >
       {/* Phones: a bottom tab bar, every place visible and in thumb reach. Desktop: the sidebar. */}
       <ul
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-white/10 bg-deep-navy pb-[env(safe-area-inset-bottom)] lg:static lg:flex lg:flex-col lg:gap-1 lg:border-0 lg:px-3 lg:pb-0"
@@ -178,7 +183,7 @@ export default function AdminNav() {
           );
         })}
       </ul>
-      <div className="hidden space-y-1 px-3 pb-5 lg:mt-auto lg:block">
+      <div className="hidden space-y-1 px-3 pb-5 lg:mt-auto lg:block low:pb-3 low:pt-3">
         {/* Core: the trial's days left and Keep Core, or Get Core on Free. */}
         <CoreNudge collapsed={collapsed} />
         <Link
@@ -208,6 +213,7 @@ export default function AdminNav() {
           {!collapsed && <span>Collapse</span>}
         </button>
       </div>
+      </div>
     </nav>
   );
 }
@@ -229,7 +235,7 @@ function Account({ collapsed = false }: { collapsed?: boolean }) {
   };
   return (
     <>
-      <details ref={menu} className="group relative lg:mt-4">
+      <details ref={menu} className="group relative lg:mt-4 low:mt-2">
         <summary
           data-tour="account"
           aria-label={`Account: ${name ?? email}`}

@@ -25,6 +25,8 @@
    a compact caption on short screens such as phones in landscape. */
 @custom-variant tall (@media (min-width: 768px) and (min-height: 600px));
 @custom-variant short (@media (max-height: 520px));
+/* The admin's desktop sidebar on a short window (a laptop, a zoomed page): tighter, so it fits. */
+@custom-variant low (@media (min-width: 64rem) and (max-height: 860px));
 
 @theme inline {
   --color-deep-navy: var(--deep-navy);
