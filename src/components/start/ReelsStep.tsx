@@ -1,17 +1,27 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { REEL_DRIVERS, REEL_ROLES, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
 import { SCREEN_LIMITS } from "@/lib/publication";
 import { nightName, reelId, reelsOf, type StartDraft } from "@/lib/start-draft";
 
 const GOLD_LINK = "min-h-11 text-sm font-semibold text-[var(--sl-gold)] underline underline-offset-4";
-const SHOW = "min-h-11 shrink-0 rounded-full border border-[var(--sl-line)] px-4 text-sm font-semibold text-[var(--sl-text)] hover:border-[var(--sl-gold)]";
+
+/** Why each part sells, in a line: what the visitor gets from it. */
+const SELLS: Record<"opening" | ReelRole, string> = {
+  opening: "The first thing fans see: your night, its dates and Tickets.",
+  the_night: "Makes them want it.",
+  your_people: "Shows them it's for people like them.",
+  last_call: "Gives them a reason to buy now.",
+};
 
 /**
- * Step 2 of the sign-up wizard: the opening scene and three reels drafted
- * from the flyer, playing in the phone. Every word can be changed here and
- * the phone keeps up. Building is free; going live comes after the claim.
+ * Step 2 of the sign-up wizard: watch your night. The phone plays the story
+ * drafted from the flyer (the opening, then The Night, Your People and Last
+ * Call, ending on Tickets); each part is named here with why it sells, and a
+ * tap plays it. The words can be changed, folded away under "Change the
+ * words"; the next step claims the link. Building is free; going live comes
+ * after the claim.
  */
 export default function ReelsStep({
   draft,
@@ -32,25 +42,35 @@ export default function ReelsStep({
 }) {
   const id = useId();
   const reels = reelsOf(draft);
+  // The part last played in the phone; it starts at the opening.
+  const [playing, setPlaying] = useState<"opening" | ReelRole>("opening");
   const setScreen = (key: keyof FunnelDraft["screen"], value: string) => onChange({ ...reels, screen: { ...reels.screen, [key]: value } });
   const setReel = (role: ReelRole, key: "title" | "summary", value: string) =>
     onChange({ ...reels, reels: reels.reels.map((r) => (r.role === role ? { ...r, [key]: value } : r)) });
+  const play = (part: "opening" | ReelRole) => {
+    setPlaying(part);
+    onShow(part === "opening" ? undefined : reelId(part));
+  };
+  const parts: { part: "opening" | ReelRole; label: string; title: string }[] = [
+    { part: "opening", label: "Opening", title: reels.screen.title },
+    ...reels.reels.map((r) => ({ part: r.role, label: REEL_ROLES[r.role], title: r.title })),
+  ];
 
   return (
     <section aria-labelledby={`${id}-title`} className="mt-10">
       <p className="text-sm font-semibold text-[var(--sl-gold)]">Step 2 of 3</p>
       <h1 id={`${id}-title`} className="sl-display mt-2 text-[clamp(2.75rem,9vw,4.5rem)] leading-[0.92]">
-        Your night, in reels.
+        Watch your night.
       </h1>
       <p className="mt-4 max-w-[34rem] text-lg text-[var(--sl-text)]/80">
-        An opening scene and three reels for {nightName(draft)}, each answering what fans ask before they buy. Change any words; the phone keeps up.
+        Your flyer, made into the story fans watch before they buy {nightName(draft)} tickets: an opening and three reels, ending on Tickets.
       </p>
 
       {drafting && !draft.reels ? (
         <div role="status" className="mt-8 flex items-center gap-4 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5">
           <span aria-hidden="true" className="start-spinner size-6 shrink-0 rounded-full border-2 border-[var(--sl-gold)]/30 border-t-[var(--sl-gold)]" />
           <div>
-            <p className="font-semibold text-[var(--sl-text)]">Writing your reels…</p>
+            <p className="font-semibold text-[var(--sl-text)]">Making your story…</p>
             <p className="text-sm text-[var(--sl-muted)]">From your flyer: who fans get to be that night, who they&apos;ll be with, and why to buy now.</p>
           </div>
         </div>
@@ -58,36 +78,76 @@ export default function ReelsStep({
         <>
           {!draft.reels && (
             <p className="mt-6 text-sm text-[var(--sl-muted)]">
-              {draft.reelsFailed ? "We couldn't write these from your flyer just now, so they" : "These"} start from your flyer&apos;s basics. Make them yours.
+              {draft.reelsFailed ? "We couldn't write these from your flyer just now, so they" : "These"} start from your flyer&apos;s basics. Make them yours under Change the words.
             </p>
           )}
-          <ol className="mt-8 grid gap-4">
-            <li className="rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5">
-              <Head n={0} label="Opening" question="The first thing fans see" onShow={() => onShow()} />
-              <Field label="Title" value={reels.screen.title} max={SCREEN_LIMITS.title} onChange={(v) => setScreen("title", v)} />
-              <Field label="Line under it" value={reels.screen.tagline} max={SCREEN_LIMITS.tagline} long onChange={(v) => setScreen("tagline", v)} />
-            </li>
-            {reels.reels.map((r, i) => (
-              <li key={r.role} className="rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5">
-                <Head n={i + 1} label={REEL_ROLES[r.role]} question={REEL_DRIVERS[r.role].question} onShow={() => onShow(reelId(r.role))} />
-                <Field label="Title" value={r.title} max={80} onChange={(v) => setReel(r.role, "title", v)} />
-                <Field label="Words" value={r.summary} max={280} long onChange={(v) => setReel(r.role, "summary", v)} />
-              </li>
-            ))}
+          <ol aria-label="Your story" className="mt-8 grid gap-2">
+            {parts.map((x, i) => {
+              const on = playing === x.part;
+              return (
+                <li key={x.part}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={`Play ${x.label} in the phone`}
+                    onClick={() => play(x.part)}
+                    className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-3.5 text-left transition-colors motion-reduce:transition-none ${
+                      on ? "border-[var(--sl-gold)] bg-[var(--sl-gold)]/[0.08]" : "border-[var(--sl-line)] bg-[var(--sl-night-2)] hover:border-[var(--sl-gold)]/60"
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${on ? "bg-[var(--sl-gold)] text-[var(--sl-ink)]" : "border border-[var(--sl-line)] text-[var(--sl-text)]/80"}`}
+                    >
+                      {on ? <PlayIcon /> : i || "▸"}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold uppercase tracking-wider text-[var(--sl-gold)]">{x.label}</span>
+                      <span className="mt-0.5 block truncate font-semibold text-[var(--sl-text)]">{x.title || "Untitled"}</span>
+                      <span className="block text-sm text-[var(--sl-muted)]">{SELLS[x.part]}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ol>
-          <p className="mt-4 text-sm text-[var(--sl-muted)]">
-            Your videos come after you claim your link. Until then, each reel plays over your flyer.
-          </p>
+          <p className="mt-3 text-sm text-[var(--sl-muted)]">Until your videos come, each reel plays over your flyer. You add them after you claim your link.</p>
+
+          <details className="group mt-6 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)]">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 font-semibold text-[var(--sl-text)] [&::-webkit-details-marker]:hidden">
+              Change the words
+              <svg aria-hidden="true" className="size-4 text-[var(--sl-muted)] transition-transform group-open:rotate-180 motion-reduce:transition-none" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </summary>
+            <div className="grid gap-6 border-t border-[var(--sl-line)] px-5 pb-5 pt-1">
+              <fieldset>
+                <legend className="mt-4 text-xs font-semibold uppercase tracking-wider text-[var(--sl-gold)]">Opening</legend>
+                <Field label="Title" value={reels.screen.title} max={SCREEN_LIMITS.title} onChange={(v) => setScreen("title", v)} />
+                <Field label="Line under it" value={reels.screen.tagline} max={SCREEN_LIMITS.tagline} long onChange={(v) => setScreen("tagline", v)} />
+              </fieldset>
+              {reels.reels.map((r, i) => (
+                <fieldset key={r.role}>
+                  <legend className="text-xs font-semibold uppercase tracking-wider text-[var(--sl-gold)]">
+                    {i + 1} · {REEL_ROLES[r.role]} <span className="font-normal normal-case tracking-normal text-[var(--sl-muted)]">{REEL_DRIVERS[r.role].question}</span>
+                  </legend>
+                  <Field label="Title" value={r.title} max={80} onChange={(v) => setReel(r.role, "title", v)} />
+                  <Field label="Words" value={r.summary} max={280} long onChange={(v) => setReel(r.role, "summary", v)} />
+                </fieldset>
+              ))}
+            </div>
+          </details>
         </>
       )}
 
-      <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
+      {/* Phones: the next step stays in reach at the bottom while they watch. */}
+      <div className="fixed inset-x-0 bottom-0 z-20 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[var(--sl-line)] bg-[var(--sl-night)]/95 px-5 py-3 backdrop-blur lg:static lg:mt-10 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
         <button
           type="button"
           onClick={onNext}
-          className="inline-flex min-h-12 items-center rounded-full bg-[var(--sl-gold)] px-8 text-base font-bold text-[var(--sl-ink)] hover:bg-[var(--sl-gold-deep)]"
+          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-[var(--sl-gold)] px-8 text-base font-bold text-[var(--sl-ink)] hover:bg-[var(--sl-gold-deep)] lg:flex-none"
         >
-          Continue
+          Claim this link
         </button>
         <button type="button" onClick={onBack} className={GOLD_LINK}>
           Back to your flyer
@@ -97,20 +157,11 @@ export default function ReelsStep({
   );
 }
 
-function Head({ n, label, question, onShow }: { n: number; label: string; question: string; onShow: () => void }) {
+function PlayIcon() {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--sl-gold)]">
-          {n ? `${n} · ` : ""}
-          {label}
-        </p>
-        <p className="mt-0.5 text-sm text-[var(--sl-muted)]">{question}</p>
-      </div>
-      <button type="button" className={SHOW} aria-label={`Play ${label} in the phone`} onClick={onShow}>
-        Play
-      </button>
-    </div>
+    <svg aria-hidden="true" className="size-3.5" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M8 5v14l11-7z" />
+    </svg>
   );
 }
 

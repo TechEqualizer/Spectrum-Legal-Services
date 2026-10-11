@@ -15,7 +15,7 @@ import type { Look } from "@/lib/look";
 const W = 390;
 const H = 844;
 
-const STEPS = ["Your flyer", "Your reels", "Your link"] as const;
+const STEPS = ["Your flyer", "Watch it", "Your link"] as const;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const today = () => {
@@ -357,7 +357,8 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         )}
       </div>
 
-      <div ref={phoneRef} className="mx-auto w-full max-w-[300px] lg:sticky lg:top-8 lg:max-w-none lg:self-start">
+      {/* Step 2 is for watching: on a phone, the phone comes first. */}
+      <div ref={phoneRef} className={`mx-auto w-full max-w-[300px] lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${step === 1 ? "order-first" : ""}`}>
         <Phone draft={draft} reading={reading} core={step > 0} replay={replay} />
         <p className="mt-4 text-center text-sm text-[var(--sl-muted)]">
           {found ? "Your link, as fans will see it. Tap around." : "Your link, live. It fills in from your flyer."}

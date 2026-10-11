@@ -11,6 +11,15 @@ presale or a fans-only reel, because those are the Fans add-on now. The
 preview shows only what going live gives. The trial notes below are
 history.
 
+**Step 2 is now "Watch your night" (Oct 11, 2026).** A form of word boxes
+felt like homework, not the "wow". Step 2 now leads with the phone playing
+the story, first on a phone. Beside it are the four parts (Opening, The
+Night, Your People, Last Call), each naming its drafted title and saying in
+a line why it sells; a tap plays that part. The word boxes fold away under
+"Change the words". The main button is "Claim this link", and on a phone it
+stays in reach at the bottom. This follows the paywall advice in Plan 3:
+ask once the value has been seen.
+
 Invite-only for now (decided Oct 10, 2026): Showlnk sends invite links; the
 waitlist on showlnk.com stays as it is.
 
