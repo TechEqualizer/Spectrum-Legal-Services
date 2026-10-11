@@ -33,24 +33,38 @@ export type OpeningSceneProps = {
 const POSTER_SECONDS = 2.4;
 const HOLD_SECONDS = 6;
 
+// Frames each join takes: a punch-in is quick; a dissolve lingers. The join into the
+// whole flyer is a light leak (which overlaps nothing) or, without one, a dissolve.
+const CUT = { punch: 8, dissolve: 14 } as const;
+// The frame rate joins are counted at (OpeningBackdrop plays at 30).
+const FPS = 30;
 /** How this opening is directed (its mood), with recipes from before moods as glamour. */
 const directionOf = (recipe: OpeningRecipe) => OPENING_MOODS[recipe.mood ?? DEFAULT_MOOD];
 
-/** The recipe's shots at the mood's pace, then the whole flyer; and the hold. */
+/**
+ * The recipe's shots at the mood's pace, each a little shorter than the one
+ * before (a trailer's cuts quicken into the reveal), but always long enough
+ * to read its words; then the whole flyer; and the hold.
+ */
 function cut(recipe: OpeningRecipe): { beats: Beat[]; hold: TrailerShot } {
-  const { pace } = directionOf(recipe);
+  const d = directionOf(recipe);
+  const last = recipe.beats.length - 1;
+  // The frames the joins either side of shot i take from it.
+  const join = (i: number) => (i < 0 ? 0 : i < last ? CUT[d.cut] : d.leak ? 0 : CUT.dissolve);
   return {
     beats: [
-      ...recipe.beats.map((b) => ({ shot: { box: b.box, move: b.move, seconds: b.seconds * pace }, text: b.text })),
+      ...recipe.beats.map((b, i) => {
+        const words = b.text ? b.text.lines.join(" ").split(/\s+/).length : 0;
+        // Up, held for a glance plus a moment a word, then away, clear of the joins.
+        const readable = words ? 1.1 + 0.15 * words + (join(i - 1) + join(i)) / FPS : 0;
+        return { shot: { box: b.box, move: b.move, seconds: Math.max(b.seconds * d.pace * (1 - d.build * i), readable) }, text: b.text };
+      }),
       { shot: { box: { x: 0, y: 0, w: 1, h: 1 }, move: "poster" as const, seconds: POSTER_SECONDS } },
     ],
     hold: { box: recipe.hold, move: "breathe", seconds: HOLD_SECONDS },
   };
 }
 
-// Frames each join takes: a punch-in is quick; a dissolve lingers. The join into the
-// whole flyer is a light leak (which overlaps nothing) or, without one, a dissolve.
-const CUT = { punch: 8, dissolve: 14 } as const;
 const INTO_HOLD = 20;
 const joins = (recipe: OpeningRecipe, beats: number) => {
   const d = directionOf(recipe);
@@ -131,7 +145,8 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
 };
 
 const Bars: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
-  const open = interpolate(frame, [0.2 * fps, 1.4 * fps], [1, 0], {
+  // Quick: the first image lands inside the first second (a hook, not a preamble).
+  const open = interpolate(frame, [0.05 * fps, 0.75 * fps], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.bezier(0.6, 0, 0.2, 1),

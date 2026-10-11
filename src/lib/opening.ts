@@ -24,29 +24,29 @@ export const OPENING_MOODS = {
   electric: {
     for: "club nights, parties, hip-hop and R&B nights, concerts, raves",
     words: "short and loud: one or two words a line, like a hype reel",
-    pace: 0.75, cut: "punch", flash: "accent", sparks: "embers", leak: true,
+    pace: 0.75, build: 0.12, cut: "punch", flash: "accent", sparks: "embers", leak: true,
   },
   glamour: {
     for: "galas, fashion shows, masquerades, awards, launches, black tie",
     words: "confident and seductive, a promise of who they get to be",
-    pace: 1, cut: "punch", flash: "white", sparks: "glitter", leak: true,
+    pace: 1, build: 0.08, cut: "punch", flash: "white", sparks: "glitter", leak: true,
   },
   soulful: {
     for: "jazz, live music, comedy, lounges, gospel, poetry, dinner shows",
     words: "warm and unhurried, like an invitation",
-    pace: 1.15, cut: "dissolve", flash: null, sparks: "haze", leak: true,
+    pace: 1.15, build: 0.04, cut: "dissolve", flash: null, sparks: "haze", leak: true,
   },
   editorial: {
     for: "book signings, author talks, galleries, panels, workshops, conferences",
     words: "calm and considered, quiet lines that let the flyer speak",
-    pace: 1.25, cut: "dissolve", flash: null, sparks: "dust", leak: false,
+    pace: 1.25, build: 0.03, cut: "dissolve", flash: null, sparks: "dust", leak: false,
   },
   sunlit: {
     for: "day parties, brunches, festivals, cookouts, outdoor and daytime events",
     words: "bright and easy, sunshine and good company",
-    pace: 0.9, cut: "punch", flash: "white", sparks: "motes", leak: true,
+    pace: 0.9, build: 0.08, cut: "punch", flash: "white", sparks: "motes", leak: true,
   },
-} as const satisfies Record<string, { for: string; words: string; pace: number; cut: "punch" | "dissolve"; flash: "white" | "accent" | null; sparks: "embers" | "glitter" | "haze" | "dust" | "motes"; leak: boolean }>;
+} as const satisfies Record<string, { for: string; words: string; pace: number; build: number; cut: "punch" | "dissolve"; flash: "white" | "accent" | null; sparks: "embers" | "glitter" | "haze" | "dust" | "motes"; leak: boolean }>;
 export type OpeningMood = keyof typeof OPENING_MOODS;
 export const OPENING_MOOD_IDS = Object.keys(OPENING_MOODS) as OpeningMood[];
 /** Recipes from before moods were glamour. */

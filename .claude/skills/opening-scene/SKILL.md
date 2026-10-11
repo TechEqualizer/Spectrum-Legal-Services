@@ -32,6 +32,33 @@ The moods live in `OPENING_MOODS`. When a new kind of event doesn't fit any
 of them, add a mood there (its direction is plain data) rather than bending
 one. A book signing is never electric, and a club night is never editorial.
 
+## Cut it like a teaser
+
+What trailer editors and short-form video agree on (sources in
+`docs/plans/06-opening-scene.md`):
+
+- **Hook first.** Viewers decide within a second or two, so the first shot
+  is the flyer's most striking image (a face or figure when it has one) with
+  its most enticing line. No preamble: never open on a logo, the presenter
+  credit or the date. A credit, if used, is an eyebrow on the second shot.
+- **One hook, one idea per card.** Each shot carries one line of at most
+  five words, made to read with the sound off.
+- **Tease, build, reveal, then the call to action.** The shots get closer or
+  more intense. The cuts quicken into the reveal (each shot is a little
+  shorter than the one before, by the mood's `build`). The whole flyer is
+  the reveal, and the title and button over the hold are the call to action.
+  The lines move from the promise of the night toward when and where, so the
+  date or place comes last.
+- **Withhold.** Show a face, a mask, a skyline, not the whole picture; the
+  flyer only shows in full at the reveal.
+- **Every move guides the eye.** End each move framed on its subject. Push
+  in on a face, tilt up a standing figure, and pan across a crowd or skyline
+  in the direction it faces. Don't use the same move twice in a row, and
+  don't shoot the same subject twice unless the second shot is closer.
+- **Readable, then gone.** A line is on screen for a glance plus a moment
+  per word (the scene stretches a shot to make room). It clears before the
+  next line comes up.
+
 ## Directing rules
 
 1. **Shots are things a fan recognizes**: a face, a figure, the venue, a
@@ -41,13 +68,11 @@ one. A book signing is never electric, and a club night is never editorial.
 3. **Sharp, not enlarged.** A shot is at least 28% of the flyer's width and
    18% of its height, and the hold at least 35% of its width. The code widens
    smaller boxes, so give it boxes that are already big enough.
-4. **The flyer's words only.** Eyebrow first (the presenter credit, when
-   there is one), then one or two selling lines per shot, copied from the
-   flyer. Never invent names, dates or claims.
+4. **The flyer's words only**, copied from it. Never invent names, dates or
+   claims.
 5. **Words where the shot is dark and empty**, never over a face. Top,
    middle or bottom.
-6. **Moves vary.** Don't use the same move twice in a row. Pull out on a
-   face, tilt up a figure, pan across a crowd or a skyline, push in last.
+6. **Moves follow the subject** (see "Every move guides the eye" above).
 7. **The hold is calm.** It's a shot with room at the bottom for the title
    and button, and it is softened under them, so it never fights them.
 
@@ -75,12 +100,17 @@ ffmpeg we already have; nothing gets installed.
 
    Times are printed from the opening's start.
 3. Look at `sheet.png` and `held.png` (Read them), and check:
+   - [ ] Does the first image and line land inside the first second? Is it
+     the strongest the flyer has, not a credit or the date?
+   - [ ] Does it build: closer or more intense shot to shot, quickening into
+     the whole flyer, with the date or place last?
    - [ ] Does it feel like this kind of event? (Pace, cuts and particles fit
      the mood.)
    - [ ] Is every line readable, the eyebrow included, with nothing over a
      face or the flyer's own type?
    - [ ] Does one beat's words clear before the next beat's words come up?
-   - [ ] Is every shot a recognizable subject, and sharp?
+   - [ ] Is every shot a recognizable subject, sharp, and no repeat of an
+     earlier one unless it's closer?
    - [ ] Is each line on screen long enough to read (about a second or
      more)?
    - [ ] Is the whole flyer shown crisp before the hold?

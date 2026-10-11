@@ -209,3 +209,38 @@ things, both fixed for every event:
 - A shot of lace texture alone read as nothing; Claude is now told every
   shot must be something a fan recognizes (a face, a figure, the venue, a
   prop).
+
+## Update (Oct 11, 2026): cut like a teaser (researched)
+
+The owner felt the first version didn't follow best practice. What trailer
+editors and short-form video guides agree on, and what changed:
+
+| Practice | Where it comes from | What changed |
+| --- | --- | --- |
+| Hook in the first one or two seconds; no logo or intro first | Short-form hook guides; TikTok ad research (people in the first two seconds) | The first shot is the flyer's most striking image (a face or figure) with its best line, never the credit or the date. The letterbox opens in 0.75 s, not 1.4 s. |
+| One hook, one message, five words or fewer on screen, made to read with the sound off | Event teaser guides; vertical ad guides | At most five words a shot. |
+| Tease, build, climax, then a call to action; cuts quicken toward the climax | Trailer editing breakdowns (three-act shape, denser cuts near the end) | Each shot is shorter than the one before, by the mood's `build` (electric 12%, editorial 3%). The lines move from the promise toward when and where, then the whole flyer, then the title and button. |
+| Tease, don't tell: withhold the full picture | Trailer editors (Mental Floss interviews); Netflix's teaser-then-trailer phasing | The flyer only shows whole at the reveal. |
+| A move decides what the eye sees first and where it rests; vary the moves | Ken Burns technique guides | Each shot ends framed on its subject; no repeated move or subject. |
+| A key line needs time to be read; on-screen reading is slower than on paper | Kinetic typography analyses (about 0.2 s a word in fast montage, more for key lines) | A shot always lasts long enough to read its line (about 1.1 s plus 0.15 s a word, clear of the joins). |
+
+Sources: [How to edit a movie trailer (Jonny Elwyn)](https://jonnyelwyn.co.uk/film-and-video-editing/how-to-edit-a-movie-trailer/),
+[How to edit film trailers (Jonny Elwyn)](https://jonnyelwyn.co.uk/film-and-video-editing/how-to-edit-film-trailers/),
+[How to make a movie trailer (StudioBinder)](https://www.studiobinder.com/blog/how-to-make-a-movie-trailer/),
+[14 secrets of movie trailer editors (Mental Floss)](https://www.mentalfloss.com/article/91351/14-secrets-movie-trailer-editors),
+[Stop the scroll in 3 seconds (Jelly Marketing)](https://jellymarketing.ca/blog/stop-the-scroll-in-3-seconds-secrets-to-high-performing-short-form-video-hooks/),
+[The science of the short-form hook (True Future Media)](https://www.truefuturemedia.com/articles/science-of-short-form-video-hooks),
+[TikTok creative best practices (Genero)](https://genero.com/insights/tiktok-creative-best-practices),
+[Vertical video ad best practices (Tiger Pistol)](https://tigerpistol.com/vertical-video-ad-best-practices/),
+[Videos that boost ticket sales (Humanitix)](https://humanitix.com/au/blog/how-to-make-a-great-video-that-boosts-your-event-ticket-sales),
+[Video design for event marketing (Typito)](https://typito.com/blog/video-design-guide-event-marketing/),
+["Don't Blink": type and rhythm (Motionographer)](https://motionographer.com/?p=64918),
+[Kinetic typography (Santa Rosa JC)](https://canvas.santarosa.edu/courses/28549/pages/week-11-page-7-kinetic-typography),
+[Ken Burns in Premiere (Motion Array)](https://motionarray.com/learn/premiere-pro/ken-burns-premiere-pro/),
+[Using the Ken Burns effect (Frameo)](https://frameo.ai/blog/use-ken-burns-effect-images/).
+Most are practitioner and vendor guides, not studies; the specific
+retention numbers they quote are left out.
+
+Not taken yet: cutting to a beat (the opening is silent today; if a music
+bed is added, snap shot lengths to its tempo), and a "suck-back" (a breath
+of stillness right before the reveal).
