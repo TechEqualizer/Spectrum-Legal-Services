@@ -118,6 +118,14 @@ http.createServer((req, res) => {
       sessions.set(s.id, s);
       return json(200, { id: s.id, url: `${HERE}/pay/${s.id}` });
     }
+    // Ending a subscription now (archiving its organizer): Stripe then sends customer.subscription.deleted.
+    if ((m = p.match(/^\/v1\/subscriptions\/([\w]+)$/)) && req.method === 'DELETE') {
+      const sub = subscriptions.get(m[1]);
+      if (!sub) return json(404, { error: { message: 'No such subscription' } });
+      sub.status = 'canceled';
+      setTimeout(() => send('customer.subscription.deleted', sub), 50);
+      return json(200, sub);
+    }
     if ((m = p.match(/^\/v1\/subscriptions\/([\w]+)$/)) && req.method === 'GET') {
       const sub = subscriptions.get(m[1]);
       return sub ? json(200, sub) : json(404, { error: { message: 'No such subscription' } });

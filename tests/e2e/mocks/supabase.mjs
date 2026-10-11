@@ -28,8 +28,10 @@ const initialUsers = () => ({
 });
 let users = initialUsers();
 // Like the database's manages_organizer and can_publish_funnel.
-const managesOrganizer = (email, org) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].organizers.includes(org));
-const canPublishFunnel = (email, slug) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || users[email].slugs.includes(slug) || users[email].organizers.includes(eventFunnels.get(slug)?.organizer_slug));
+// Like the real functions: an archived organizer's admins manage nothing of theirs (full admins still do).
+const archived = (org) => Boolean(organizers.get(org)?.archived_at);
+const managesOrganizer = (email, org) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || (users[email].organizers.includes(org) && !archived(org)));
+const canPublishFunnel = (email, slug) => Boolean(users[email]?.admin) && (users[email].slugs.includes('*') || (!archived(eventFunnels.get(slug)?.organizer_slug) && (users[email].slugs.includes(slug) || users[email].organizers.includes(eventFunnels.get(slug)?.organizer_slug))));
 const publications = new Map(); // slug -> row
 const eventDates = new Map(); // funnel_id -> rows, like event_dates
 // What visitors did, like reel_events and leads (kept for funnel_stats).
@@ -323,8 +325,11 @@ http.createServer((req, res) => {
       if (req.method === 'DELETE') { publications.delete(slug); return json(res, 204); }
     }
     const eq = (k) => (url.searchParams.get(k) || '').replace(/^eq\./, '');
+    // Like the real policies: the public and organizers' admins read active organizers and their events; full admins (and the secret key) all.
+    const seesArchived = () => (req.headers.apikey === 'test-secret' && req.headers.authorization === 'Bearer test-secret') || Boolean(users[emailOf(req)]?.slugs?.includes('*'));
     if (p === '/rest/v1/event_funnels' && req.method === 'GET') {
-      const rows = [...eventFunnels.values()].filter((r) => (!eq('slug') || r.slug === eq('slug')) && (!eq('funnel_id') || r.funnel_id === eq('funnel_id')) && (!eq('organizer_slug') || r.organizer_slug === eq('organizer_slug')));
+      const all = seesArchived();
+      const rows = [...eventFunnels.values()].filter((r) => (all || !archived(r.organizer_slug)) && (!eq('slug') || r.slug === eq('slug')) && (!eq('funnel_id') || r.funnel_id === eq('funnel_id')) && (!eq('organizer_slug') || r.organizer_slug === eq('organizer_slug')));
       return json(res, 200, rows.sort((a, b) => a.slug.localeCompare(b.slug)));
     }
     // Like the real policy: an organizer's admins add its events.
@@ -345,7 +350,19 @@ http.createServer((req, res) => {
       return json(res, 201);
     }
     if (p === '/rest/v1/organizers' && req.method === 'GET') {
-      return json(res, 200, [...organizers.values()].filter((o) => !eq('slug') || o.slug === eq('slug')));
+      const all = seesArchived();
+      const among = /^in\.\((.*)\)$/.exec(url.searchParams.get('slug') || '')?.[1].split(',').map(decodeURIComponent);
+      const onlyArchived = url.searchParams.get('archived_at') === 'not.is.null';
+      return json(res, 200, [...organizers.values()].filter((o) => (all || !o.archived_at) && (!eq('slug') || among || o.slug === eq('slug')) && (!among || among.includes(o.slug)) && (!onlyArchived || o.archived_at)).map((o) => ({ archived_at: null, ...o })));
+    }
+    // Like the real policy: only full admins change organizers (archive, restore).
+    if (p === '/rest/v1/organizers' && req.method === 'PATCH') {
+      const email = emailOf(req);
+      if (!email || !users[email]?.slugs?.includes('*')) return json(res, 200, []);
+      const o = organizers.get(eq('slug'));
+      if (!o) return json(res, 200, []);
+      if ('archived_at' in body) o.archived_at = body.archived_at;
+      return json(res, 200, [{ archived_at: null, ...o }]);
     }
     // Test control: add an organizer straight to the table (a test-only one, e.g. Golden Hour's).
     // A test organizer, live (comped) unless { live: false }.

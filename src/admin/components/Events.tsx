@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useLinkOrigin } from "@/admin/link-origin";
 import { selectAdminBusiness, useAdminEvents, useMaybeAdminBusiness, type AdminEvent } from "@/admin/AdminBusiness";
+import { ArchiveClient, ArchivedClients } from "@/admin/components/ArchiveClient";
 import NewClientSheet from "@/admin/components/NewClientSheet";
 import CopyButton from "@/admin/components/ui/CopyButton";
 import { PlusIcon } from "@/admin/components/ui/icons";
@@ -116,6 +117,7 @@ export default function Events() {
                     Hand off
                   </Link>
                 )}
+                {fullAccess && <ArchiveClient organizer={org} />}
               </div>
             </div>
             <ul role="list" className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -144,6 +146,8 @@ export default function Events() {
       {events.length > 0 && !canAdd && (
         <p className="px-1 text-sm text-gray-600">Next event coming up? Send Showlnk the flyer and we&apos;ll add it here.</p>
       )}
+
+      {fullAccess && <ArchivedClients />}
 
       {addingClient && (
         <NewClientSheet
