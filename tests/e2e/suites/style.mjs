@@ -130,6 +130,11 @@ await dlg.getByText('Your opening is ready').waitFor({ timeout: 10000 }).catch((
 const againAsk = JSON.stringify((await (await fetch(C + '/__last')).json()).body.system);
 check('opening: another cut asks for a different one, in the chosen mood', /a different cut/.test(againAsk) && /chose the mood: editorial/.test(againAsk));
 check('opening: keeps the chosen mood', (await moods.getByRole('radio', { checked: true }).innerText()) === 'Editorial');
+// The video for Stories: this test browser can't encode H.264 (Instagram's codec), so it says so instead of making one.
+check('stories video offered', await dlg.getByText('For Stories and TikTok').isVisible() && await dlg.getByRole('button', { name: 'Make the video' }).isVisible());
+await dlg.getByRole('button', { name: 'Make the video' }).click();
+await dlg.getByRole('alert').filter({ hasText: /Instagram-ready|can't make videos/ }).waitFor({ timeout: 10000 }).catch(() => {});
+check("stories video: says why it can't be made here", await dlg.getByRole('alert').filter({ hasText: /Try the latest Chrome or Safari/ }).isVisible(), await dlg.getByRole('alert').allInnerTexts().then((t) => t.join(' ')));
 await dlg.getByRole('button', { name: 'Done' }).click(); await settle(p, 300);
 await p.getByRole('region', { name: 'Publish' }).getByRole('button', { name: 'Publish' }).click(); await settle(p, 2500);
 const withOpening = (await (await fetch(M + '/__state')).json()).publications.find(x => x.slug === 'masquerade')?.data;

@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { AbsoluteFill, Easing, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { DEFAULT_MOOD, OPENING_MOODS, type OpeningRecipe, type OpeningText } from "@/lib/opening";
 import { Flyer, Grain, LightLeak, Sparks, camOn, camOnPoster, drift, mix, place, type Cam } from "@/remotion/shots";
@@ -27,6 +26,12 @@ export type OpeningSceneProps = {
   caps: boolean;
   /** The look's highlight, for the last line, the rules and what floats in the air (any CSS color). */
   accent: string;
+  /**
+   * The download for Stories: the hold ends on its own card (the title, when,
+   * and where to get tickets), since there's no page under it, and lasts
+   * this many seconds instead of looping.
+   */
+  story?: { title: string; when: string; link: string; holdSeconds: number };
 };
 
 type Frame = { W: number; H: number; fw: number; fh: number };
@@ -65,7 +70,7 @@ const sway = (f: number, amp: number) => {
  * (when the mood dissolves rather than cuts), the pull-back to the whole
  * flyer, the flyer itself, and the hold.
  */
-function plan(recipe: OpeningRecipe, fps: number) {
+function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS) {
   const d = directionOf(recipe);
   const sec = (s: number) => Math.round(s * fps);
   const first = recipe.beats[0].text;
@@ -86,7 +91,7 @@ function plan(recipe: OpeningRecipe, fps: number) {
   const poster = { from: reveal.from + reveal.dur, dur: sec(POSTER_SECONDS) };
   const loopFrom = poster.from + poster.dur;
   const holdStart = loopFrom - INTO_HOLD;
-  return { d, hook: hook ? { dur: hookFor, text: hook } : null, stops, travel, reveal, poster, holdStart, loopFrom, total: holdStart + sec(HOLD_SECONDS) };
+  return { d, hook: hook ? { dur: hookFor, text: hook } : null, stops, travel, reveal, poster, holdStart, loopFrom, total: holdStart + sec(holdSeconds) };
 }
 
 /**
@@ -94,15 +99,15 @@ function plan(recipe: OpeningRecipe, fps: number) {
  * can come up then), when its loop starts (the fade done, so a repeat never
  * shows the flyer again), and the frames in all.
  */
-export function openingFrames(recipe: OpeningRecipe, fps: number) {
-  const { holdStart, loopFrom, total } = plan(recipe, fps);
+export function openingFrames(recipe: OpeningRecipe, fps: number, holdSeconds?: number) {
+  const { holdStart, loopFrom, total } = plan(recipe, fps, holdSeconds);
   return { holdStart, loopFrom, total };
 }
 
-export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent }) => {
+export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story }) => {
   const frame = useCurrentFrame();
   const { fps, width: W, height: H } = useVideoConfig();
-  const p = plan(recipe, fps);
+  const p = plan(recipe, fps, story?.holdSeconds);
   const { d } = p;
   const fr: Frame = { W, H, fw: width, fh: height };
   const shots = p.stops.map((s, i) => ({ ...s, cams: drift(camOn(recipe.beats[i].box, fr), recipe.beats[i].move, fr) }));
@@ -170,10 +175,11 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
       )}
       <Sequence from={p.holdStart} durationInFrames={p.total - p.holdStart} name="Hold">
         <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} grade={d.grade} />
+        {story && <StoryCard story={story} fontClass={fontClass} caps={caps} accent={accent} />}
       </Sequence>
       {p.hook && (
         <Sequence from={0} durationInFrames={p.hook.dur} name="Hook">
-          <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} />
+          <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} solid={Boolean(story)} />
         </Sequence>
       )}
       <Sparks kind={d.sparks} color={accent} />
@@ -203,12 +209,13 @@ const Flash: React.FC<{ color: string; strength: number }> = ({ color, strength 
 
 /**
  * The hook: the flyer's first line, huge, one word a row, each row filling
- * the width, cut out of black with the flyer showing through the letters.
- * Then the camera flies through the words into the first shot (the cutting
- * moods), or the black falls away around them and they melt into it (the
- * dissolving ones).
+ * the width, cut out of black with the flyer showing through the letters
+ * (CSS text clipping, which the Stories download can draw too), a sheen
+ * crossing them. Then the camera flies through the words into the first shot
+ * (the cutting moods), or the black falls away around them and they melt
+ * into it (the dissolving ones).
  */
-const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; fontClass: string; caps: boolean; accent: string; through: boolean }> = ({
+const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; fontClass: string; caps: boolean; accent: string; through: boolean; solid: boolean }> = ({
   text,
   src,
   frame: fr,
@@ -217,78 +224,71 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
   caps,
   accent,
   through,
+  solid,
 }) => {
   const f = useCurrentFrame();
   const { fps, durationInFrames: dur, width: W, height: H } = useVideoConfig();
-  // An id fit for url(#...): React's own carries characters a CSS url can't.
-  const mask = `hook-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const rows = (text.lines.length === 1 ? text.lines[0].split(/\s+/).slice(0, 3) : text.lines).map((r) => (caps ? r.toUpperCase() : r));
-  // Each row as wide as the frame allows (a rough measure of the face's letters), never taller than a fifth of it.
-  const em = caps ? 0.74 : 0.58;
-  const sizes = rows.map((r) => Math.min(H * 0.2, (W * 0.86) / (r.length * em)));
+  // Each row about as wide as the frame (a rough measure of the face's letters), never taller than a fifth of it.
+  const em = caps ? 0.78 : 0.6;
+  const sizes = rows.map((r) => Math.min(H * 0.2, (W * 0.84) / (r.length * em)));
   const tall = sizes.reduce((sum, s) => sum + s * 0.92, 0);
   const tops = sizes.map((_, i) => (H - tall) / 2 + sizes.slice(0, i).reduce((sum, s) => sum + s * 0.92, 0));
   // The flyer drifts inside the letters, arriving exactly where the first shot starts.
   const at = place(mix({ ...cam, x: cam.x + 0.03, z: cam.z - Math.log(1.12) }, cam, settle(f / dur)), fr);
-  // A sheen crosses the words while they hold.
-  const sheen = interpolate(f, [0.25 * dur, 0.85 * dur], [-0.45, 1.1], clamp);
+  // A sheen crosses the words while they hold (in percent across a row).
+  const sheen = interpolate(f, [0.25 * dur, 0.85 * dur], [-30, 130], clamp);
   const away = through ? interpolate(f, [dur - 10, dur], [0, 1], { ...clamp, easing: Easing.in(Easing.cubic) }) : 0;
   const card = 1 - (through ? interpolate(f, [dur - 5, dur], [0, 1], clamp) : interpolate(f, [dur - 0.45 * fps, dur], [0, 1], clamp));
   const zoom = (1 + 0.06 * (f / dur)) * (1 + 13 * away);
   return (
     <AbsoluteFill style={{ opacity: through ? card : 1 }}>
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0 }}>
-        <defs>
-          <linearGradient id={`${mask}-sheen`} x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#fff" stopOpacity="0.75" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
-          </linearGradient>
-          <mask id={mask}>
-            <g transform={`translate(${W / 2} ${H / 2}) scale(${zoom}) translate(${-W / 2} ${-H / 2})`}>
-              {rows.map((r, i) => {
-                const size = sizes[i];
-                // The rows come up one after another.
-                const p = interpolate(f, [2 + i * 4, 2 + i * 4 + 0.35 * fps], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
-                return (
-                  <text
-                    key={i}
-                    className={fontClass}
-                    x={W / 2}
-                    y={tops[i] + size * 0.78}
-                    fontSize={size}
-                    textAnchor="middle"
-                    fill="white"
-                    opacity={p}
-                    transform={`translate(0 ${(1 - p) * size * 0.25})`}
-                    textLength={Math.min(W * 0.86, r.length * em * size)}
-                    lengthAdjust="spacingAndGlyphs"
-                  >
-                    {r}
-                  </text>
-                );
-              })}
-            </g>
-          </mask>
-        </defs>
-        <rect width={W} height={H} fill="#000" opacity={card} />
-        {/* The flyer exactly where the first shot will be, brighter, so the letters read on black. */}
-        <image
-          href={src}
-          x={at.left}
-          y={at.top}
-          width={at.width}
-          height={at.height}
-          preserveAspectRatio="none"
-          mask={`url(#${mask})`}
-          style={{ filter: `brightness(${1 + 0.9 * card}) contrast(1.1) saturate(1.2)` }}
-        />
-        {/* A wash of the look's color through the letters, so even a dark part of the flyer reads. */}
-        <rect width={W} height={H} mask={`url(#${mask})`} opacity={0.4 * card} style={{ fill: accent, mixBlendMode: "screen" }} />
-        <g mask={`url(#${mask})`} opacity={card}>
-          <rect x={sheen * W} y={-H * 0.1} width={W * 0.22} height={H * 1.2} transform={`skewX(-18)`} style={{ fill: `url(#${mask}-sheen)`, mixBlendMode: "screen" }} />
-        </g>
-      </svg>
+      <AbsoluteFill style={{ backgroundColor: "#000", opacity: card }} />
+      <AbsoluteFill style={{ transform: `scale(${zoom})`, transformOrigin: "50% 50%" }}>
+        {rows.map((r, i) => {
+          const size = sizes[i];
+          const top = tops[i] - size * 0.08;
+          // The rows come up one after another.
+          const p = interpolate(f, [2 + i * 4, 2 + i * 4 + 0.35 * fps], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+          return (
+            <div
+              key={i}
+              className={fontClass}
+              style={{
+                position: "absolute",
+                left: 0,
+                top,
+                width: W,
+                height: size * 1.08,
+                fontSize: size,
+                lineHeight: `${size * 1.08}px`,
+                textAlign: "center",
+                whiteSpace: "nowrap",
+                // The Stories video can't fill letters with a picture: there they're solid, edged in the highlight.
+                ...(solid
+                  ? { color: "#fff" }
+                  : {
+                      color: "transparent",
+                      // The sheen over the flyer, both cut to the letters; the flyer placed as the frame shows it.
+                      backgroundImage: `linear-gradient(105deg, transparent ${sheen - 12}%, rgba(255,255,255,${0.55 * card}) ${sheen}%, transparent ${sheen + 12}%), url("${src}")`,
+                      backgroundSize: `${W}px ${size * 1.08}px, ${at.width}px ${at.height}px`,
+                      backgroundPosition: `0px 0px, ${at.left}px ${at.top - top}px`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundClip: "text",
+                      WebkitBackgroundClip: "text",
+                    }),
+                // An edge in the look's color, so even a dark part of the flyer reads on black.
+                WebkitTextStroke: `${Math.max(1.5, size / 90) * card}px ${accent}`,
+                filter: `brightness(${1 + 0.6 * card}) contrast(1.1) saturate(1.2)`,
+                opacity: p,
+                translate: `0px ${(1 - p) * size * 0.25}px`,
+              }}
+            >
+              {r}
+            </div>
+          );
+        })}
+      </AbsoluteFill>
       {/* A hairline in the look's color under the words. */}
       <div
         style={{
@@ -303,6 +303,41 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
         }}
       />
     </AbsoluteFill>
+  );
+};
+
+/**
+ * The Stories download's last seconds: the event's title, when, and where to
+ * get tickets, kept clear of Instagram's own bars at the top and bottom.
+ */
+const StoryCard: React.FC<{ story: { title: string; when: string; link: string }; fontClass: string; caps: boolean; accent: string }> = ({ story, fontClass, caps, accent }) => {
+  const f = useCurrentFrame();
+  const { fps, width: W, height: H } = useVideoConfig();
+  const up = (delay: number) => interpolate(f, [INTO_HOLD + delay * fps, INTO_HOLD + (delay + 0.5) * fps], [0, 1], { ...clamp, easing: Easing.out(Easing.cubic) });
+  const size = Math.min(W * 0.13, (W * 0.84) / Math.max(6, Math.min(story.title.length, 18) * (caps ? 0.62 : 0.5)));
+  return (
+    <div style={{ position: "absolute", left: W * 0.08, right: W * 0.08, bottom: H * 0.2, color: "#fff" }}>
+      <div className={fontClass} style={{ fontSize: size, lineHeight: 1, textTransform: caps ? "uppercase" : "none", opacity: up(0), translate: `0px ${(1 - up(0)) * 24}px`, textShadow: "0 2px 24px rgba(0,0,0,0.5)" }}>
+        {story.title}
+      </div>
+      <div style={{ marginTop: W * 0.03, fontFamily: "Montserrat, system-ui, sans-serif", fontWeight: 600, fontSize: W * 0.038, opacity: up(0.25) * 0.9 }}>{story.when}</div>
+      <div
+        style={{
+          marginTop: W * 0.05,
+          display: "inline-block",
+          padding: `${W * 0.018}px ${W * 0.04}px`,
+          borderRadius: 999,
+          border: `3px solid ${accent}`,
+          fontFamily: "Montserrat, system-ui, sans-serif",
+          fontWeight: 700,
+          fontSize: W * 0.034,
+          letterSpacing: "0.02em",
+          opacity: up(0.5),
+        }}
+      >
+        Tickets: {story.link}
+      </div>
+    </div>
   );
 };
 
@@ -423,9 +458,8 @@ const Hold: React.FC<{ src: string; frame: Frame; base: Cam; grade: string }> = 
   const breathe = 1.02 + 0.05 * (0.5 - 0.5 * Math.cos(t * Math.PI * 2));
   return (
     <AbsoluteFill style={{ opacity: interpolate(f, [0, INTO_HOLD], [0, 1], clamp) }}>
-      <AbsoluteFill style={{ filter: "blur(3.5px) brightness(0.72)" }}>
-        <Flyer src={src} frame={fr} cam={{ ...base, z: base.z + Math.log(breathe) }} grade={grade} />
-      </AbsoluteFill>
+      {/* Softened and dimmed on the flyer itself (the Stories download draws filters there, not on a wrapper). */}
+      <Flyer src={src} frame={fr} cam={{ ...base, z: base.z + Math.log(breathe) }} grade={`${grade} brightness(0.72)`} blur={3.5} />
       <AbsoluteFill style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.25) 62%, transparent 80%)" }} />
     </AbsoluteFill>
   );
