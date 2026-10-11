@@ -787,8 +787,9 @@ function RailButton({
   placement?: "overlay" | "side";
 }) {
   const side = placement === "side";
+  // Filled with the button color, the icon takes the color that reads on it (like every filled button).
   const circle = highlight
-    ? "rounded-full bg-teal-accent shadow-md"
+    ? "rounded-full bg-teal-accent text-on-accent shadow-md"
     : side
       ? "rounded-full bg-white/10 hover:bg-white/20"
       : "[filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.6))]";
