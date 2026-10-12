@@ -321,7 +321,18 @@ function merged(words: Record<string, unknown>, direction: Record<string, unknow
   return { ...words, map: direction.map, opening: direction.opening, reels };
 }
 
-export async function draftFunnel(input: FlyerInput, ctx: DraftContext): Promise<FunnelDraft | { problem: string }> {
+export type DraftOptions = {
+  /**
+   * Each better draft as it's ready, before the last: the words alone (the
+   * reels over the still flyer), then the cuts while they're polished. Never
+   * one whose lines state a fact the flyer doesn't.
+   */
+  onDraft?: (draft: FunnelDraft) => void;
+  /** The flyer's dates, when they're still being read as the draft starts: what its lines are checked against. */
+  known?: Promise<DraftContext["dates"]>;
+};
+
+export async function draftFunnel(input: FlyerInput, ctx: DraftContext, { onDraft, known }: DraftOptions = {}): Promise<FunnelDraft | { problem: string }> {
   if (!process.env.ANTHROPIC_API_KEY) return { problem: missingKeyProblem() };
   // The flyer's own size, so Claude can place every shot in its pixels.
   const px = input.kind === "image" ? base64ImageSize(input.data) : null;
@@ -333,9 +344,17 @@ export async function draftFunnel(input: FlyerInput, ctx: DraftContext): Promise
     px ? "Plan the funnel for this event. Write only the words and prompts here: screen, hero, styleLock, avoid and the three reels. The map, the opening and the reels' cuts are asked for separately." : "Plan the funnel for this event.",
   );
   const directionTurns = turn("Cut this flyer: map it, then cut the opening, then one cut for each reel (the_night, your_people, last_call). Only these here; the words and prompts are asked for separately.");
+  let directed = false;
   const [words, direction] = await Promise.all([
-    ask(system, wordsTurns, wordsSchema, 16000, "funnel draft", failed),
-    px ? ask(system, directionTurns, directionSchema(px), 16000, "funnel direction", failed) : null,
+    ask(system, wordsTurns, wordsSchema, 16000, "funnel draft", failed).then((w) => {
+      // The words usually come first: shown at once, the reels over the still flyer.
+      if (px && onDraft && !directed && !("problem" in w)) {
+        const d = cleanDraft(w.raw);
+        if (!("problem" in d)) onDraft(d);
+      }
+      return w;
+    }),
+    px ? ask(system, directionTurns, directionSchema(px), 16000, "funnel direction", failed).finally(() => (directed = true)) : null,
   ]);
   if ("problem" in words) return { problem: words.problem === "refusal" ? "This flyer couldn't be used for a draft. Build the funnel by hand." : words.problem };
   // Without the direction, the reels still come, over the still flyer.
@@ -344,9 +363,12 @@ export async function draftFunnel(input: FlyerInput, ctx: DraftContext): Promise
   const draft = cleanDraft(first, px);
   if ("problem" in draft) return draft;
   // Checked against the rules in code; anything broken goes back once to be fixed.
-  const problems = draftProblems(first, draft, px, factsOf(ctx));
+  const facts = factsOf({ ...ctx, dates: known ? await known : ctx.dates });
+  const problems = draftProblems(first, draft, px, facts);
   if (!problems.length) return draft;
   console.info("[funnel draft] fixing:", problems);
+  // Shown while it's fixed, unless a line states a fact the flyer doesn't: that waits for the fix.
+  if (onDraft && draftProblems(first, draft, px).length === problems.length) onDraft(draft);
   const second = await ask(system, [...directionTurns, { role: "assistant", content: direction.text }, fixTurn(problems)], directionSchema(px), 16000, "funnel direction fix", failed);
   if ("problem" in second) return draft;
   const fixed = cleanDraft(merged(words.raw, second.raw), px);

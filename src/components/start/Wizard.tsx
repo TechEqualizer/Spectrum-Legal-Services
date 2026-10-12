@@ -91,6 +91,18 @@ const parse = (raw: string | null): StartDraft | null => {
   }
 };
 
+/** The reels as they are, with a later stage's shots: its opening, and each reel's cut. */
+function withShots(now: FunnelDraft, next: FunnelDraft): FunnelDraft {
+  return {
+    ...now,
+    ...(next.opening ? { opening: next.opening } : {}),
+    reels: now.reels.map((r) => {
+      const cut = next.reels.find((x) => x.role === r.role)?.cut;
+      return cut ? { ...r, cut } : r;
+    }),
+  };
+}
+
 /**
  * The sign-up wizard (docs/plans/05-signup.md). Three steps, the phone
  * beside them playing the link as it's made. Step 1 here: the flyer and
@@ -187,8 +199,11 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         return setDrafting(true);
       }
       if (line.draft) {
-        setDrafting(false);
-        return update({ reels: line.draft as FunnelDraft, reelsFailed: undefined });
+        // Drafts come in stages (the words, then the cuts, then the cuts polished): a later one
+        // only brings its shots, so words the organizer has already changed stay theirs.
+        const next = line.draft as FunnelDraft;
+        const now = (parse(readRaw(key)) ?? {}).reels;
+        return update({ reels: now ? withShots(now, next) : next, reelsFailed: undefined });
       }
       if (typeof line.draftError === "string") {
         setDrafting(false);
@@ -422,8 +437,9 @@ function Phone({
     };
   }, []);
 
-  // A new flyer, its depth map, look, set of reels or step starts the link over, so the change is seen; typed words change in place.
-  const scene = [draft.flyer?.length, Boolean(draft.depth), JSON.stringify(draft.look), JSON.stringify(draft.dates), core && Boolean(draft.reels), core].join("|");
+  // A new flyer, its depth map, look, set of reels, their shots (the opening and cuts arrive after the words) or step
+  // starts the link over, so the change is seen; typed words, and the shots polished, change in place.
+  const scene = [draft.flyer?.length, Boolean(draft.depth), JSON.stringify(draft.look), JSON.stringify(draft.dates), core && Boolean(draft.reels), Boolean(draft.reels?.opening), core].join("|");
   const shown = useRef({ scene: "", n: 0 });
 
   useEffect(() => {

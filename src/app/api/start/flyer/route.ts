@@ -18,12 +18,14 @@ const STOPPED: Record<string, string> = {
 
 // The sign-up wizard's flyer (photo or PDF), with an invite instead of a
 // sign-in. Each flyer counts once against the invite (5 at most), since
-// reading costs money, and gets two answers, one per line as each is ready:
+// reading costs money, and gets its answers one per line as each is ready:
 // what the flyer says (step 1 shows it at once), then the reels drafted
-// from it (step 2), while the organizer carries on. Nothing is saved.
+// from it (step 2), while the organizer carries on. The draft starts with
+// the reading, not after it, and comes in stages, each better than the last:
+// the words, then the cuts, then the cuts polished. Nothing is saved.
 // POST { invite, type, data, today } -> NDJSON lines:
 //   { read: { dates, note, look } } or { error }
-//   then, when it found a date, { draft } or { draftError }
+//   then, when it found a date, { draft } one or more times, or { draftError }
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { invite?: unknown; type?: unknown; data?: unknown; today?: unknown } | null;
   const code = typeof body?.invite === "string" ? body.invite : "";
@@ -46,25 +48,40 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (line: unknown) => controller.enqueue(encoder.encode(JSON.stringify(line) + "\n"));
+      let open = true;
+      const send = (line: unknown) => open && controller.enqueue(encoder.encode(JSON.stringify(line) + "\n"));
+      const close = () => {
+        open = false;
+        controller.close();
+      };
       // No event yet: the page is a new one, named from the flyer.
-      const read = await readFlyer(input, "a new night, named from this flyer", today);
+      const reading = readFlyer(input, "a new night, named from this flyer", today);
+      // Drafted alongside the reading (Claude reads the dates off the flyer itself), and checked against
+      // what the reading found. Each stage goes out once the reading has, never before it.
+      let readSent: () => void = () => {};
+      const afterRead = new Promise<void>((resolve) => (readSent = resolve));
+      const drafting = draftFunnel(
+        input,
+        { brand: "the organizer", today, dates: [], photos: false },
+        {
+          known: reading.then((r) =>
+            "problem" in r ? [] : r.dates.map((d) => ({ date: d.date, name: d.name, ...(d.time ? { time: d.time } : {}), ...(d.venue ? { venue: d.venue } : {}), ...(d.price ? { price: d.price } : {}) })),
+          ),
+          onDraft: (draft) => void afterRead.then(() => send({ draft })),
+        },
+      );
+      const read = await reading;
       if ("problem" in read) {
         send({ error: read.problem });
-        return controller.close();
+        return close();
       }
       send({ read });
+      readSent();
       if (read.dates.length) {
-        const first = read.dates[0];
-        const draft = await draftFunnel(input, {
-          brand: first.name || "the organizer",
-          today,
-          dates: read.dates.map((d) => ({ date: d.date, name: d.name, ...(d.time ? { time: d.time } : {}), ...(d.venue ? { venue: d.venue } : {}), ...(d.price ? { price: d.price } : {}) })),
-          photos: false,
-        });
+        const draft = await drafting;
         send("problem" in draft ? { draftError: draft.problem } : { draft });
       }
-      controller.close();
+      close();
     },
   });
   return new Response(stream, { headers: { ...NO_STORE, "Content-Type": "application/x-ndjson; charset=utf-8" } });

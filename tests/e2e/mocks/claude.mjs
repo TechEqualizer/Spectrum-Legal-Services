@@ -94,7 +94,7 @@ http.createServer((req, res) => {
       res.setHeader('content-type', 'application/json');
       setTimeout(() => res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5',
         content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? sized({ opening: draft.opening }, last.body.system) : drafting ? (schema?.properties?.cuts ? sized(direction, last.body.system) : words) : replies[mode === 'nodraft' ? 'multi' : mode]) }],
-        stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } })), 600);
+        stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } })), schema?.properties?.cuts ? 1500 : 600); // the shots take longer than the words
       return;
     }
     res.statusCode = 404; res.end();
