@@ -24,7 +24,7 @@ export type FlyerFound = {
   note: string;
   look?: Look;
   flyer?: string;
-  /** Its depth map (a kept upload), made in the background once the flyer is read. */
+  /** Its depth map (a kept upload), made in the background while the flyer is read. */
   depth?: string;
   lookUsed?: boolean;
   source?: FlyerSource;
@@ -103,6 +103,15 @@ export default function FlyerImportSheet({
     setError("");
     try {
       const { blob, ...payload } = file ? await shrink(file) : { text, blob: undefined };
+      // Its depth map, made alongside the reading (the model takes a while), so it's usually
+      // there by the time a look or draft is used, and the opening and cuts move with parallax.
+      const depthSrc = blob && onDepth ? URL.createObjectURL(blob) : undefined;
+      const depthMade = depthSrc
+        ? import("@/lib/depth-map")
+            .then(({ makeDepthMap }) => makeDepthMap(depthSrc))
+            .catch(() => null)
+            .finally(() => URL.revokeObjectURL(depthSrc))
+        : null;
       const res = await fetch("/api/admin/import-event", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,11 +130,7 @@ export default function FlyerImportSheet({
         // The (shrunk) flyer, kept so it can go behind the opening screen, play as each drafted reel's cut, and survive a reload.
         ...(flyer ? { flyer } : {}),
       });
-      // Its depth map, in the background (the opening and cuts move with parallax once it's there).
-      if (flyer && onDepth)
-        void import("@/lib/depth-map").then(({ makeDepthMap }) =>
-          makeDepthMap(flyer).then((png) => png && onDepth(flyer, keepUpload(new File([png], "depth.png", { type: "image/png" })))),
-        );
+      if (flyer && onDepth) void depthMade?.then((png) => png && onDepth(flyer, keepUpload(new File([png], "depth.png", { type: "image/png" }))));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't read the flyer. Try again.");
     } finally {
