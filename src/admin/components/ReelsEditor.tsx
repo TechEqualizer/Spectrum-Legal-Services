@@ -140,11 +140,11 @@ export default function ReelsEditor() {
 
   /**
    * A funnel drafted from a flyer: its reels (new, each with its video
-   * prompt, marked Needs video) become the published funnel's order, and
-   * its words go on the opening screen. The old reels stay in the library,
-   * and Undo puts everything back.
+   * prompt, and playing its cut from the flyer until it has a video) become
+   * the published funnel's order, and its words go on the opening screen.
+   * The old reels stay in the library, and Undo puts everything back.
    */
-  const applyDraft = (draft: FunnelDraft) => {
+  const applyDraft = (draft: FunnelDraft, flyer?: string) => {
     const before = { library, funnels, screen };
     const dates = events ?? builtFunnel.events ?? [];
     const taken = new Set(library.map((r) => r.id));
@@ -164,8 +164,10 @@ export default function ReelsEditor() {
         ...(event ? { eventId: event.id } : {}),
         role: d.role,
         ...(d.role === "last_call" ? { emphasis: "bold" as const } : {}),
+        ...(flyer && d.cut ? { media: { kind: "image" as const, src: flyer, cut: d.cut } } : {}),
       };
     });
+    const cut = reels.filter((r) => r.media).length;
     const target = publishedFunnel(funnels);
     keepPrompts(slug, prompts);
     setLibrary([...reels, ...library]);
@@ -177,7 +179,7 @@ export default function ReelsEditor() {
     const next: ScreenCopy = { ...screen };
     for (const [k, v] of Object.entries(words) as [keyof ScreenCopy, string | undefined][]) if (v) next[k] = v;
     setScreen(next);
-    setToast(`Funnel drafted: ${reels.length} reels, each with a video prompt`, () => {
+    setToast(`Funnel drafted: ${reels.length} reels${cut ? ", cut from your flyer" : ""}, each with a video prompt`, () => {
       setLibrary(before.library);
       setFunnels(before.funnels);
       setScreen(before.screen);

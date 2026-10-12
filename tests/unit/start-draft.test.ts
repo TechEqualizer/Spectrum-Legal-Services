@@ -3,7 +3,7 @@
 // (Follow, presales, fans-only reels) in the preview.
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { parseOpening } from "@/lib/opening";
+import { parseCut, parseOpening } from "@/lib/opening";
 import { applyPublication, checkMedia } from "@/lib/publication";
 import { basicReels, claimPublication, draftLink, httpsLink, needsTicketLink, suggestedName, type StartDraft } from "@/lib/start-draft";
 
@@ -115,4 +115,16 @@ test("the opening Claude cut from the flyer plays on the link, and only there: r
   assert.ok(pub.reels.every((r) => r.media?.kind === "image" && !("opening" in r.media)));
   // The preview, before the claim, plays it over the flyer in the browser.
   assert.equal(draftLink(withOpening).publication.backdrop && "opening" in draftLink(withOpening).publication.backdrop!, true);
+});
+
+test("each reel plays the cut Claude made from the flyer; one without a cut keeps the still flyer", () => {
+  const flyer = "https://example.supabase.co/storage/v1/object/public/reel-media/night/abc-flyer.jpg";
+  const cut = parseCut({ beats: [{ box: { x: 0.2, y: 0.1, w: 0.4, h: 0.4 }, move: "push", seconds: 1.8, text: { lines: ["You, in gold."], at: "top", size: "big" } }, { box: { x: 0.3, y: 0.5, w: 0.4, h: 0.4 }, move: "pull", seconds: 1.8 }] }, "glamour")!;
+  const reel = (role: "the_night" | "your_people", withCut: boolean) => ({ role, title: role, summary: "", hook: "", captions: [], source: "text" as const, videoPrompt: "", ...(withCut ? { cut } : {}) });
+  const withCuts: StartDraft = { ...draft, reels: { screen: { title: "", tagline: "", watchLabel: "", heading: "" }, heroPrompt: "", reels: [reel("the_night", true), reel("your_people", false)] } };
+  const pub = claimPublication(withCuts, undefined, "https://posh.vip/e/gh", flyer);
+  const [night, people] = pub.reels;
+  assert.deepEqual(night.media, { kind: "image", src: flyer, fit: "poster", cut });
+  assert.deepEqual(people.media, { kind: "image", src: flyer, fit: "poster" });
+  assert.ok(pub.reels.every((r) => checkMedia(r.media) === null));
 });

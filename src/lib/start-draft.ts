@@ -137,8 +137,8 @@ export function draftLink(d: StartDraft, { core = false, timeZone = browserZone(
         role: r.role,
         ...(event ? { eventId: event.id } : {}),
         ...(r.role === "last_call" ? { emphasis: "bold" as const } : {}),
-        // Until their videos come, each reel plays over the flyer.
-        ...(flyer ? { media: flyer } : {}),
+        // Until their videos come, each reel plays its cut from the flyer (or the still flyer).
+        ...(flyer ? { media: r.cut ? { ...flyer, cut: r.cut } : flyer } : {}),
       };
     });
     const s = drafted.screen;
@@ -189,7 +189,7 @@ export const suggestedName = (d: StartDraft) => {
 /**
  * What the claim publishes on the new event: the reels' words, the opening's
  * words, the dates and the look, and the flyer (once stored at `flyerUrl`)
- * as the opening scene and behind each reel.
+ * as the opening scene and each reel's cut.
  */
 export function claimPublication(d: StartDraft, timeZone?: string, ticketUrl?: string, flyerUrl?: string): Publication {
   // A date needs a ticket link to go live: the flyer's, else the one they gave, else another date's.

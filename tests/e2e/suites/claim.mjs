@@ -92,7 +92,7 @@ check('skipping it leaves the welcome', (await tour.count()) === 0 && await welc
 await p.reload(); await settle(p, 1500);
 check('a reload doesn\'t start it again', (await tour.count()) === 0 && await welcome.isVisible());
 const four = (await p.getByText('The four things').locator('..').locator('..').innerText().catch(() => '')).replace(/\s+/g, ' ');
-check('Home: the opening scene from the flyer, the reels still need video', /Opening scene .*Ready/.test(four) && (four.match(/Needs video/g) ?? []).length === 3, four);
+check('Home: the opening scene from the flyer, and each reel its flyer cut', /Opening scene .*Ready/.test(four) && (four.match(/Flyer cut/g) ?? []).length === 3 && !/Needs video/.test(four) && /all set/.test(four), four);
 await p.screenshot({ path: 'claim-home-1279.png', fullPage: true });
 
 // What the claim made.
@@ -108,6 +108,9 @@ const op = pub?.backdrop?.opening;
 check('the opening is stored with it, cleaned: its mood, 3 shots, none too small', op?.mood === 'glamour' && op?.beats?.length === 3 && op.beats.every((b) => b.box.w >= 0.28) && !JSON.stringify(op).includes('Dropped') && op.hold?.w >= 0.35, JSON.stringify(op));
 check('their flyer, stored with the event', /^http:\/\/localhost:54321\/storage\/v1\/object\/public\/reel-media\/golden-hour-halloween\/[a-z0-9]+-flyer\.jpg$/.test(flyerUrl) && pub.backdrop.kind === 'image' && pub.backdrop.fit === 'poster', JSON.stringify(pub?.backdrop));
 check('behind each reel, and as the look\'s flyer', pub?.reels?.every((r) => r.media?.src === flyerUrl) && pub?.look?.flyer === flyerUrl);
+const cutOf = (role) => pub?.reels?.find((r) => r.role === role)?.media?.cut;
+check('each reel keeps its cut from the flyer: in the opening\'s mood, ending on the whole flyer', ['the_night', 'your_people', 'last_call'].every((role) => cutOf(role)?.mood === 'glamour' && cutOf(role)?.beats?.length === 2 && cutOf(role)?.hold?.w === 1), JSON.stringify(pub?.reels?.map((r) => r.media)));
+check('a cut\'s words stay off the bottom (the reel\'s title and Tickets are there)', cutOf('last_call')?.beats?.[1]?.text?.at === 'middle');
 const stored = await fetch(flyerUrl);
 check('the stored flyer is the JPEG', stored.ok && stored.headers.get('content-type') === 'image/jpeg' && (await stored.arrayBuffer()).byteLength > 1000);
 check('their dates, on their clock', pub?.events?.length === 2 && pub.events[0].timeZone === 'America/New_York' && pub.events[0].startsAt.startsWith('2026-10-31T23:00'), JSON.stringify(pub?.events?.[0]));
@@ -135,6 +138,7 @@ await fan.getByRole('button', { name: /Sneak peek inside|Step inside/ }).first()
 const followShown = fan.getByText('Follow', { exact: true }).locator('visible=true').first();
 await followShown.waitFor({ timeout: 8000 }).catch(() => {});
 check('their link has Follow', await followShown.isVisible().catch(() => false));
+check('their reels play the cuts from their flyer', await fan.getByText('Gold all night', { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true, () => false));
 
 // The invite is used up; the draft left the browser.
 await p.goto(B + '/start?invite=' + code); await settle(p, 500);

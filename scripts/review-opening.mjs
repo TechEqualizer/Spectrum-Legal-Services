@@ -4,7 +4,10 @@
 //
 //   node scripts/review-opening.mjs --flyer /clients/x/flyer.jpg --recipe recipe.json \
 //     [--font editorial] [--accent "#D8818C"] [--title "Book signing"] [--tagline "..."] \
-//     [--out dir] [--base http://localhost:3000]
+//     [--out dir] [--base http://localhost:3000] [--reel]
+//
+// --reel watches a reel's flyer cut instead (no hold: it ends on the whole
+// flyer), under a stand-in of the reel's title and Tickets.
 //
 // Needs `npm run dev` running (the page, /dev/opening, is never served in
 // production). Renders the opening on a 390×844 phone, frame by frame at 2×
@@ -34,6 +37,8 @@ const { values: opt } = parseArgs({
     base: { type: 'string', default: 'http://localhost:3000' },
     scene: { type: 'string', default: '0.25' },
     live: { type: 'boolean', default: false },
+    // A reel's flyer cut (.claude/skills/flyer-cuts) instead of an opening.
+    reel: { type: 'boolean', default: false },
     // A quick draft: every Nth frame only (the video plays at N times speed).
     step: { type: 'string', default: '1' },
   },
@@ -45,7 +50,7 @@ if (!opt.flyer || !opt.recipe) {
 const out = resolve(opt.out);
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
-const review = { src: opt.flyer, recipe: JSON.parse(readFileSync(opt.recipe, 'utf8')), font: opt.font, accent: opt.accent, title: opt.title, tagline: opt.tagline, frames: !opt.live };
+const review = { src: opt.flyer, recipe: JSON.parse(readFileSync(opt.recipe, 'utf8')), font: opt.font, accent: opt.accent, title: opt.title, tagline: opt.tagline, frames: !opt.live, reel: opt.reel };
 
 // Software GL, so the light leak draws on machines without a GPU.
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });

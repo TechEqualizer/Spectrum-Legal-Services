@@ -14,7 +14,7 @@ import { publicationTag } from "@/lib/server/publications";
 import { isTimeZone } from "@/lib/event-time";
 import { REEL_ROLES, type FunnelDraft } from "@/lib/funnel-draft";
 import { parseLook } from "@/lib/look";
-import { parseOpening } from "@/lib/opening";
+import { parseCut, parseOpening } from "@/lib/opening";
 import { claimPublication, nightName, type StartDraft } from "@/lib/start-draft";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -48,11 +48,12 @@ function draftFrom(input: unknown): StartDraft {
       ? {
           screen: { title: str(r.screen.title, 60), tagline: str(r.screen.tagline, 140), watchLabel: str(r.screen.watchLabel, 24), heading: str(r.screen.heading, 40) },
           heroPrompt: "",
-          reels: r.reels.flatMap((x) =>
-            x && typeof x === "object" && typeof x.role === "string" && x.role in REEL_ROLES
-              ? [{ role: x.role, title: str(x.title, 80), summary: str(x.summary, 280), hook: "", captions: [], ...(typeof x.date === "string" ? { date: str(x.date, 10) } : {}), source: "text" as const, videoPrompt: "" }]
-              : []
-          ),
+          reels: r.reels.flatMap((x) => {
+            if (!x || typeof x !== "object" || typeof x.role !== "string" || !(x.role in REEL_ROLES)) return [];
+            // Each reel's cut from the flyer, cleaned the same way.
+            const cut = parseCut(x.cut, opening?.mood, x.role === "the_night");
+            return [{ role: x.role, title: str(x.title, 80), summary: str(x.summary, 280), hook: "", captions: [], ...(typeof x.date === "string" ? { date: str(x.date, 10) } : {}), source: "text" as const, videoPrompt: "", ...(cut ? { cut } : {}) }];
+          }),
           ...(opening ? { opening } : {}),
         }
       : undefined;

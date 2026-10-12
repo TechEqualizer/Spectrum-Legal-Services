@@ -42,6 +42,8 @@ export default function ReelsStep({
 }) {
   const id = useId();
   const reels = reelsOf(draft);
+  // The reels were cut from the flyer (not just shown over it).
+  const cut = reels.reels.some((r) => r.cut);
   // The part last played in the phone; it starts at the opening.
   const [playing, setPlaying] = useState<"opening" | ReelRole>("opening");
   const setScreen = (key: keyof FunnelDraft["screen"], value: string) => onChange({ ...reels, screen: { ...reels.screen, [key]: value } });
@@ -63,14 +65,14 @@ export default function ReelsStep({
         Watch your night.
       </h1>
       <p className="mt-4 max-w-[34rem] text-lg text-[var(--sl-text)]/80">
-        Your flyer, made into the story fans watch before they buy {nightName(draft)} tickets: an opening and three reels, ending on Tickets.
+        {cut ? "One flyer in. An opening and three reels out, each cut from your flyer" : "Your flyer, made into the story fans watch"} to sell {nightName(draft)}, ending on Tickets.
       </p>
 
       {drafting && !draft.reels ? (
         <div role="status" className="mt-8 flex items-center gap-4 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5">
           <span aria-hidden="true" className="start-spinner size-6 shrink-0 rounded-full border-2 border-[var(--sl-gold)]/30 border-t-[var(--sl-gold)]" />
           <div>
-            <p className="font-semibold text-[var(--sl-text)]">Making your story…</p>
+            <p className="font-semibold text-[var(--sl-text)]">Cutting your flyer into a story…</p>
             <p className="text-sm text-[var(--sl-muted)]">From your flyer: who fans get to be that night, who they&apos;ll be with, and why to buy now.</p>
           </div>
         </div>
@@ -111,7 +113,11 @@ export default function ReelsStep({
               );
             })}
           </ol>
-          <p className="mt-3 text-sm text-[var(--sl-muted)]">Until your videos come, each reel plays over your flyer. You add them after you claim your link.</p>
+          <p className="mt-3 text-sm text-[var(--sl-muted)]">
+            {cut
+              ? "Every shot is your flyer, directed like a trailer. Got videos? Add them after you claim your link, and they take a reel's place."
+              : "Until your videos come, each reel plays over your flyer. You add them after you claim your link."}
+          </p>
 
           <details className="group mt-6 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)]">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 font-semibold text-[var(--sl-text)] [&::-webkit-details-marker]:hidden">

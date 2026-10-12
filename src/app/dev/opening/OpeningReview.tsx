@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import OpeningBackdrop from "@/components/OpeningBackdrop";
 import { titleFontClass } from "@/components/lookFonts";
 import type { LookFont } from "@/lib/look";
-import { parseOpening, type OpeningRecipe } from "@/lib/opening";
-import { OpeningScene, openingFrames } from "@/remotion/OpeningScene";
+import { parseCut, parseOpening, type OpeningMood, type OpeningRecipe } from "@/lib/opening";
+import { OpeningScene, cutFrames, openingFrames } from "@/remotion/OpeningScene";
 
-type Review = { src: string; recipe: unknown; font?: LookFont; accent?: string; title?: string; tagline?: string; frames?: boolean; exporting?: boolean };
-type Ready = { src: string; recipe: OpeningRecipe; font?: LookFont; accent: string; title: string; tagline: string; frames: boolean; exporting: boolean };
+type Review = { src: string; recipe: unknown; font?: LookFont; accent?: string; title?: string; tagline?: string; frames?: boolean; exporting?: boolean; reel?: boolean };
+/** reel: a reel's flyer cut (.claude/skills/flyer-cuts), under a stand-in of the reel's title and Tickets. */
+type Ready = { src: string; recipe: OpeningRecipe; font?: LookFont; accent: string; title: string; tagline: string; frames: boolean; exporting: boolean; reel: boolean };
 
 const FPS = 30;
 
@@ -26,10 +27,10 @@ export default function OpeningReview() {
     // The script hands the flyer and recipe over in sessionStorage, checked like any recipe.
     try {
       const r = JSON.parse(sessionStorage.getItem("opening-review") ?? "null") as Review | null;
-      const recipe = r && parseOpening(r.recipe);
+      const recipe = r && (r.reel ? parseCut(r.recipe, (r.recipe as { mood?: OpeningMood } | null)?.mood, (r.recipe as { hook?: unknown } | null)?.hook !== false) : parseOpening(r.recipe));
       // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the browser on mount
       if (!r || !recipe) setProblem("No recipe, or not a valid one.");
-      else setReview({ src: r.src, recipe, font: r.font, accent: r.accent ?? "#ffffff", title: r.title ?? "", tagline: r.tagline ?? "", frames: Boolean(r.frames), exporting: Boolean(r.exporting) });
+      else setReview({ src: r.src, recipe, font: r.font, accent: r.accent ?? "#ffffff", title: r.title ?? "", tagline: r.tagline ?? "", frames: Boolean(r.frames), exporting: Boolean(r.exporting), reel: Boolean(r.reel) });
     } catch {
       setProblem("No recipe, or not a valid one.");
     }
@@ -46,7 +47,8 @@ export default function OpeningReview() {
       ) : (
         <OpeningBackdrop src={review.src} recipe={review.recipe} fontClass={font} caps={caps} paused={false} skip={false} onHold={() => setHeld(true)} />
       )}
-      {held && (
+      {review.reel && <ReelChrome title={review.title} accent={review.accent} />}
+      {held && !review.reel && (
         <div className={`absolute inset-x-0 bottom-0 px-6 pb-14 ${review.frames ? "" : "cine-reveal"}`} data-held>
           <h1 className={`text-5xl leading-[0.95] text-white ${font}`}>{review.title}</h1>
           <p className="mt-3 text-[15px] text-white/85">{review.tagline}</p>
@@ -61,7 +63,9 @@ export default function OpeningReview() {
 function Frames({ review, fontClass, caps, onHold }: { review: Ready; fontClass: string; caps: boolean; onHold: (held: boolean) => void }) {
   const ref = useRef<PlayerRef>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const { holdStart, total } = openingFrames(review.recipe, FPS);
+  // A reel's cut has no hold: it ends when the whole flyer has had its moment.
+  const cut = review.reel ? cutFrames(review.recipe, FPS) : 0;
+  const { holdStart, total } = review.reel ? { holdStart: cut - 1, total: cut } : openingFrames(review.recipe, FPS);
   useEffect(() => {
     const img = new Image();
     img.onload = () => setSize({ w: img.naturalWidth, h: img.naturalHeight });
@@ -86,7 +90,7 @@ function Frames({ review, fontClass, caps, onHold }: { review: Ready; fontClass:
     <Player
       ref={ref}
       component={OpeningScene}
-      inputProps={{ src: review.src, width: size.w, height: size.h, recipe: review.recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)" }}
+      inputProps={{ src: review.src, width: size.w, height: size.h, recipe: review.recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)", reel: review.reel }}
       durationInFrames={total}
       compositionWidth={Math.round((window.innerWidth * k) / 2) * 2}
       compositionHeight={Math.round((window.innerHeight * k) / 2) * 2}
@@ -150,4 +154,18 @@ function Exporting({ review, fontClass, caps }: { review: Ready; fontClass: stri
     };
   }, [review, fontClass, caps]);
   return <main className="p-6 text-white" data-export-state={state}>{state}</main>;
+}
+
+/** A stand-in for the reel's own bottom: its organizer, title and Tickets, where a cut's words must not go. */
+function ReelChrome({ title, accent }: { title: string; accent: string }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pb-4 pl-3 pr-[76px] pt-24">
+      <div className="flex items-center gap-2">
+        <span className="h-8 w-8 rounded-full ring-1 ring-white/70" style={{ backgroundColor: accent }} />
+        <span className="text-[15px] font-semibold">@organizer</span>
+        <span className="flex h-7 items-center rounded-full px-3 text-sm font-semibold text-black" style={{ backgroundColor: accent }}>Tickets</span>
+      </div>
+      <p className="mt-2.5 line-clamp-1 text-[15px]">{title}</p>
+    </div>
+  );
 }

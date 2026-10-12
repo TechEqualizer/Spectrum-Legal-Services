@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import {
   funnelReel,
@@ -20,6 +21,10 @@ import { fanRefsOf, isFansReel } from "@/lib/fan-reels";
 import SourceLink from "@/components/SourceLink";
 import type { LeadIntent } from "@/lib/leads";
 import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
+import { titleFontClass } from "@/components/lookFonts";
+
+// A reel's cut from the flyer loads its player only when one plays.
+const FlyerCut = dynamic(() => import("@/components/FlyerCut"), { ssr: false });
 
 type ReelViewerProps = {
   funnel: Funnel;
@@ -397,6 +402,7 @@ export default function ReelViewer({
               onProgress={(fraction) => setProgress({ step, fraction })}
               onFinished={() => advance("completed")}
               onFollow={follow && !isFollowing ? () => setSheet("follow") : undefined}
+              titleFont={funnel.cover.titleFont}
             />
           )}
 
@@ -910,6 +916,8 @@ type ReelSlideProps = {
   onFinished: () => void;
   /** Opens Follow, for a fans-only reel this visitor can't watch yet. */
   onFollow?: () => void;
+  /** The look's title face, for the words in a cut from the flyer. */
+  titleFont?: Funnel["cover"]["titleFont"];
 };
 
 /** A fans-only reel this viewer can't play (yet): no media, or private files not signed. */
@@ -921,7 +929,31 @@ function ReelSlide(props: ReelSlideProps) {
   if (isLockedHere(props.reel)) return <LockedSlide {...props} />;
   if (media?.kind === "video") return <VideoSlide {...props} media={media} />;
   if (media?.kind === "youtube") return <YouTubeSlide {...props} id={media.id} />;
+  if (media?.kind === "image" && media.cut) return <CutSlide {...props} src={media.src} cut={media.cut} />;
   return <TimedSlide {...props} />;
+}
+
+/**
+ * The flyer, directed as this reel (see FlyerCut): plays like a video and
+ * moves on when it's done. The still flyer for less motion, or when the cut
+ * can't play.
+ */
+function CutSlide({ src, cut, ...props }: ReelSlideProps & { src: string; cut: NonNullable<Extract<ReelMedia, { kind: "image" }>["cut"]> }) {
+  const [still] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [failed, setFailed] = useState(false);
+  if (still || failed) return <TimedSlide {...props} />;
+  return (
+    <FlyerCut
+      src={src}
+      recipe={cut}
+      fontClass={titleFontClass(props.titleFont)}
+      caps={props.titleFont === "regal" || props.titleFont === "bold"}
+      paused={props.isPaused}
+      onProgress={props.onProgress}
+      onFinished={props.onFinished}
+      onCantPlay={() => setFailed(true)}
+    />
+  );
 }
 
 /** Keeps the latest callbacks for listeners and timers set up once. */

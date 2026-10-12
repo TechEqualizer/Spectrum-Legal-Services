@@ -96,6 +96,10 @@ await part('The Night').click();
 await p.waitForTimeout(1200);
 check('Play: the reel, in the phone', await phone.getByText('You, in gold', { exact: true }).first().isVisible().catch(() => false));
 check('Play: marks the part playing', (await part('The Night').getAttribute('aria-pressed')) === 'true' && (await part('Opening').getAttribute('aria-pressed')) === 'false');
+// Only a flyer, and every reel is cut from it: The Night plays its own shots and words, then moves on to Your People, cut its own way.
+check('the reels are sold as cut from the flyer', await p.getByText('One flyer in. An opening and three reels out', { exact: false }).isVisible());
+check('The Night: its cut from the flyer, with its own words', await phone.getByText('Gold all night', { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true, () => false));
+check('then Your People, cut its own way', await phone.getByText('Thirty and up', { exact: true }).first().waitFor({ timeout: 15000 }).then(() => true, () => false));
 
 // Building is free and there is no trial: no Core card here, and the phone shows
 // only what going live gives (no Follow, presale or fans-only reel; those are the Fans add-on).

@@ -84,7 +84,7 @@ export default function ReelRow({ date, hasPrompt, stats, reel, index, count, fu
             {reel.visibility === "fans" && <Chip tone="navy">Fans only</Chip>}
             {!reel.media && <Chip tone="amber">{hasPrompt ? "Needs video" : "No video yet"}</Chip>}
             {reel.media?.kind === "youtube" && <Chip>YouTube</Chip>}
-            {reel.media?.kind === "image" && <Chip>Photo</Chip>}
+            {reel.media?.kind === "image" && <Chip>{reel.media.cut ? "Flyer cut" : "Photo"}</Chip>}
             {unreachable && <Chip tone="red">No path leads here</Chip>}
           </div>
           <p className="mt-1.5 text-xs text-gray-600">

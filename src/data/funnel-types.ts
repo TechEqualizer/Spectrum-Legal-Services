@@ -93,6 +93,13 @@ export type ReelMedia =
        * (src/lib/opening.ts). Without one, or where it can't play, the still flyer.
        */
       opening?: OpeningRecipe;
+      /**
+       * A reel's flyer can play as a cut: the same kind of recipe as an
+       * opening, directed for what this reel sells (The Night, Your People,
+       * Last Call), ending on the whole flyer. Played until the organizer
+       * adds their own video.
+       */
+      cut?: OpeningRecipe;
     };
 
 export type FunnelTrigger = "completed" | "skipped";

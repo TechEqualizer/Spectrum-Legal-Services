@@ -15,6 +15,13 @@ const replies = {
   none: { dates: [], note: 'This looks like a menu, not an event flyer.', look: { found: false, background: '#000000', depth: '#000000', button: '#000000', highlight: '#000000', light: '#000000', font: 'classic' } },
 };
 const clip = (camera, seconds, prompt) => ({ camera, seconds, prompt });
+// A reel's cut from the flyer: shots with the reel's own words (Last Call's date asked for the bottom: it moves to the middle).
+const shot = (x, y, move, line, at = 'top') => ({ box: { x, y, w: 0.34, h: 0.36 }, move, seconds: 1.8, text: { lines: [line], at, size: 'big' } });
+const cuts = {
+  the_night: { beats: [shot(0.35, 0.5, 'push', 'Behind the mask'), shot(0.6, 0.05, 'pull', 'Gold all night', 'middle')] },
+  your_people: { beats: [shot(0.1, 0.5, 'pan-right', 'Grown and sexy'), shot(0.4, 0.3, 'pull', 'Thirty and up')] },
+  last_call: { beats: [shot(0.5, 0.1, 'push', '$31 GA'), shot(0.2, 0.4, 'pull', 'Saturday, Oct 31', 'bottom')] },
+};
 const draft = {
   screen: { title: 'Masks on, Detroit', tagline: 'One night. Every mask hides a story. Detroit, Oct 31, 21+.', watchLabel: 'Step inside the night', heading: 'Which night are you in?' },
   // The opening, cut from the flyer: one shot with an unknown move (dropped) and one too small to stay sharp (widened).
@@ -33,9 +40,9 @@ const draft = {
   hero: clip('slow push in', 8, 'A woman in a gold filigree mask turns to camera as candlelight flickers; the bottom third falls into shadow.'),
   // Out of order, with a duplicate and an unknown role: the app keeps one of each, in order.
   reels: [
-    { role: 'last_call', title: 'Last call', summary: 'GA ends Oct 30. After that, the door price.', hook: 'GA ends Thursday.', captions: ['$31 GA ends Oct 30', 'VIP is limited', 'Masks on, Detroit'], date: '2026-10-31', source: 'text', ...clip('slow push in', 6, 'An empty runway glows; room for a button below.') },
-    { role: 'the_night', title: 'Masks on', summary: 'You, in gold, on the runway. Who is behind the mask?', hook: 'A gold mask turns to camera.', captions: ['You, in gold.', 'Masks on.', 'Secrets revealed.'], date: '2026-10-31', source: 'photo', ...clip('rack focus', 6, 'Close on the mask, eyes open.') },
-    { role: 'your_people', title: 'Bring your crew', summary: 'Grown and sexy, 30+. Your people, masked, all night.', hook: 'Friends tie each other\'s masks in a mirror.', captions: ['Bring your crew', 'Grown and sexy, 30+'], date: null, source: 'photo', ...clip('handheld', 6, 'Friends laugh as they arrive.') },
+    { role: 'last_call', title: 'Last call', summary: 'GA ends Oct 30. After that, the door price.', hook: 'GA ends Thursday.', captions: ['$31 GA ends Oct 30', 'VIP is limited', 'Masks on, Detroit'], date: '2026-10-31', source: 'text', ...clip('slow push in', 6, 'An empty runway glows; room for a button below.'), cut: cuts.last_call },
+    { role: 'the_night', title: 'Masks on', summary: 'You, in gold, on the runway. Who is behind the mask?', hook: 'A gold mask turns to camera.', captions: ['You, in gold.', 'Masks on.', 'Secrets revealed.'], date: '2026-10-31', source: 'photo', ...clip('rack focus', 6, 'Close on the mask, eyes open.'), cut: cuts.the_night },
+    { role: 'your_people', title: 'Bring your crew', summary: 'Grown and sexy, 30+. Your people, masked, all night.', hook: 'Friends tie each other\'s masks in a mirror.', captions: ['Bring your crew', 'Grown and sexy, 30+'], date: null, source: 'photo', ...clip('handheld', 6, 'Friends laugh as they arrive.'), cut: cuts.your_people },
     { role: 'the_night', title: 'Second night reel', summary: 'Dropped: one per role.', hook: '', captions: [], date: null, source: 'text', ...clip('arc', 6, 'x') },
     { role: 'hook', title: 'Old role', summary: '', hook: '', captions: [], date: null, source: 'text', camera: '', seconds: 5, prompt: '' },
   ],
