@@ -98,6 +98,8 @@ export default function StyleSheet({
 
   const original = useMemo(() => builtInColors(funnel), [funnel]);
   const flyer = look?.flyer || (media?.kind === "image" && media.fit ? media.src : undefined);
+  // The flyer's depth map stays with it whatever the background or opening becomes.
+  const depth = media?.kind === "image" && media.src === flyer ? media.depth : undefined;
   const suggestions = look?.suggestions ?? [];
   const palette = look?.palette?.length ? look.palette : [...new Set(Object.values(look?.colors ?? original))];
 
@@ -130,8 +132,8 @@ export default function StyleSheet({
       : b === "glow" || !flyer
         ? null
         : b === "poster" && op
-          ? { kind: "image", src: flyer, fit: b, opening: op }
-          : { kind: "image", src: flyer, fit: b };
+          ? { kind: "image", src: flyer, fit: b, opening: op, ...(depth ? { depth } : {}) }
+          : { kind: "image", src: flyer, fit: b, ...(depth ? { depth } : {}) };
   /**
    * A change: kept in the sheet until Done, or applied at once in a panel.
    * null colors: the original. An opening puts the flyer behind the title;
@@ -191,7 +193,7 @@ export default function StyleSheet({
               flyer={flyer}
               opening={opening}
               onChange={(o) => commit({ opening: o })}
-              story={{ title, when: nextWhen, link: `${host.replace(/^https?:\/\/(www\.)?/, "")}/f/${funnel.slug}`, fontClass: titleFontClass(font), caps: font === "regal" || font === "bold", accent: shown["--sky-accent"] }}
+              story={{ ...(depth ? { depth } : {}), title, when: nextWhen, link: `${host.replace(/^https?:\/\/(www\.)?/, "")}/f/${funnel.slug}`, fontClass: titleFontClass(font), caps: font === "regal" || font === "bold", accent: shown["--sky-accent"] }}
             />
           </Group>
 
@@ -721,6 +723,7 @@ export function StylePreview({
           key={JSON.stringify(media.opening)}
           src={media.src}
           recipe={media.opening}
+          depth={media.depth}
           fontClass={titleFontClass(font)}
           caps={font === "regal" || font === "bold"}
           paused={false}

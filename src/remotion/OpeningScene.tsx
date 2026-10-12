@@ -43,6 +43,11 @@ export type OpeningSceneProps = {
    * No bloom, light leak, grain or motion blur, and fewer specks in the air.
    */
   lite?: boolean;
+  /**
+   * The flyer's depth map (bright is near), when it has one: shots move with
+   * parallax, near things more than far. Not on the lite tier.
+   */
+  depth?: string;
 };
 
 type Frame = { W: number; H: number; fw: number; fh: number };
@@ -54,6 +59,9 @@ const HOLD_SECONDS = 6;
 // Frames the whole flyer takes to fade into the hold, and a punch-in to settle.
 const INTO_HOLD = 20;
 const SNAP = 7;
+// How far depth moves the nearest things past the focus over a shot (a fraction of the flyer), and how much a push grows them.
+const DEPTH_SHIFT = 0.03;
+const DEPTH_DOLLY = 0.08;
 
 /** How this opening is directed (its mood), with recipes from before moods as glamour. */
 const directionOf = (recipe: OpeningRecipe) => OPENING_MOODS[recipe.mood ?? DEFAULT_MOOD];
@@ -181,7 +189,7 @@ export function openingFrames(recipe: OpeningRecipe, fps: number, holdSeconds?: 
 /** A reel's cut, in frames: it ends on the whole flyer. */
 export const cutFrames = (recipe: OpeningRecipe, fps: number) => plan(recipe, fps, undefined, true).total;
 
-export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story, reel = false, lite = false }) => {
+export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story, reel = false, lite = false, depth }) => {
   const frame = useCurrentFrame();
   const { fps, width: W, height: H } = useVideoConfig();
   const p = plan(recipe, fps, story?.holdSeconds, reel);
@@ -249,6 +257,26 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
     if (f < p.poster.from) return { cam: hermite(shots[lastI].cams[1], speedOf(lastI), poster, still, f - p.reveal.from, p.reveal.dur), cut: false };
     return { cam: { ...poster, z: poster.z + Math.log(1 + 0.03 * Math.min(1, (f - p.poster.from) / p.poster.dur)) }, cut: false };
   };
+  /**
+   * How the depth moves at frame f: through each shot the near things travel
+   * with its move (a pan slides them across, a tilt up lifts them, a push
+   * grows them toward the lens), around the shot's focus, which holds still.
+   * Still between and after shots.
+   */
+  const depthAt = (f: number, i?: number): NonNullable<React.ComponentProps<typeof Flyer>["depth"]> | undefined => {
+    if (!depth || lite) return undefined;
+    const k = i ?? shots.findIndex((s) => f >= s.from && f < s.from + s.dur);
+    const beat = recipe.beats[k];
+    if (!beat) return { src: depth, shift: [0, 0], dolly: 0, focus: [0.5, 0.5] };
+    const u = Math.min(1, Math.max(0, (f - shots[k].from) / shots[k].dur));
+    const f0 = beat.focus ?? beat.box;
+    const focus: [number, number] = [f0.x + f0.w / 2, f0.y + f0.h / 2];
+    const swing = (2 * u - 1) * DEPTH_SHIFT;
+    const shift: [number, number] =
+      beat.move === "pan-left" ? [swing, 0] : beat.move === "pan-right" ? [-swing, 0] : beat.move === "tilt-up" ? [0, swing] : [0, 0];
+    const dolly = beat.move === "push" ? DEPTH_DOLLY * u : beat.move === "pull" ? DEPTH_DOLLY * (1 - u) : 0;
+    return { src: depth, shift, dolly, focus };
+  };
   const now = camAt(frame);
   const hand = sway(frame, d.shake);
   const s = Math.exp(now.cam.z);
@@ -263,10 +291,10 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <Flyer src={src} frame={fr} cam={held} blur={lite ? 0 : Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} />
+      <Flyer src={src} frame={fr} cam={held} blur={lite ? 0 : Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} depth={depthAt(frame)} />
       {now.into && (
         <AbsoluteFill style={{ opacity: now.into.t }}>
-          <Flyer src={src} frame={fr} cam={{ ...now.into.cam, x: now.into.cam.x - hand.x / (width * Math.exp(now.into.cam.z)), y: now.into.cam.y - hand.y / (height * Math.exp(now.into.cam.z)) }} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} />
+          <Flyer src={src} frame={fr} cam={{ ...now.into.cam, x: now.into.cam.x - hand.x / (width * Math.exp(now.into.cam.z)), y: now.into.cam.y - hand.y / (height * Math.exp(now.into.cam.z)) }} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} depth={depthAt(frame, shots.findIndex((s) => s.from > frame))} />
         </AbsoluteFill>
       )}
       {shots.map(

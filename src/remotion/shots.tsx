@@ -1,5 +1,7 @@
 import { lightLeak } from "@remotion/effects/light-leak";
+import { useState } from "react";
 import { AbsoluteFill, Img, Solid, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { DepthFlyer } from "@/remotion/depth";
 import type { Box, OpeningMove } from "@/lib/opening";
 
 // The pieces the opening scene is made of (src/remotion/OpeningScene.tsx):
@@ -83,16 +85,20 @@ export function drift(base: Cam, move: OpeningMove, f: Frame, box?: Box): [Cam, 
  * (bloom), and a light that can sweep across the print (0 to 1; outside that,
  * none). `tilt` turns the frame a fraction of a degree, like a hand-held camera.
  */
-export const Flyer: React.FC<{ src: string; frame: Frame; cam: Cam; blur?: number; sweep?: number; grade?: string; bloom?: number; tilt?: number }> = ({
-  src,
-  frame,
-  cam,
-  blur = 0,
-  sweep = -1,
-  grade = "contrast(1.12) saturate(1.15) brightness(1.03)",
-  bloom = 0,
-  tilt = 0,
-}) => {
+export const Flyer: React.FC<{
+  src: string;
+  frame: Frame;
+  cam: Cam;
+  blur?: number;
+  sweep?: number;
+  grade?: string;
+  bloom?: number;
+  tilt?: number;
+  /** The flyer's depth map, and how it moves this frame: drawn with parallax (falls back to flat if it can't). */
+  depth?: { src: string; shift: [number, number]; dolly: number; focus: [number, number] };
+}> = ({ src, frame, cam, blur = 0, sweep = -1, grade = "contrast(1.12) saturate(1.15) brightness(1.03)", bloom = 0, tilt = 0, depth }) => {
+  const [flat, setFlat] = useState(false);
+  const deep = Boolean(depth) && !flat;
   const { W, H, fw, fh } = frame;
   const at = place(cam, frame);
   const k = at.width / fw;
@@ -114,8 +120,19 @@ export const Flyer: React.FC<{ src: string; frame: Frame; cam: Cam; blur?: numbe
     <AbsoluteFill style={{ backgroundColor: "#000", overflow: "hidden" }}>
       {!covered && <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.45) saturate(1.4)", scale: "1.2" }} />}
       {/* Blur is drawn before the scale, so it's divided by it to stay the same on screen. */}
-      <div style={{ ...layer, overflow: "hidden", filter: `${stepped > 0 ? `blur(${(stepped / k).toFixed(2)}px) ` : ""}${grade}` }}>
-        <Img src={src} style={img} />
+      {deep && depth && (
+        <DepthFlyer
+          src={src}
+          depth={depth.src}
+          W={W}
+          H={H}
+          view={{ rect: at, roll: tilt, shift: depth.shift, dolly: depth.dolly, focus: depth.focus }}
+          style={{ filter: `${stepped > 0 ? `blur(${stepped.toFixed(2)}px) ` : ""}${grade}` }}
+          onFail={() => setFlat(true)}
+        />
+      )}
+      <div style={{ ...layer, overflow: "hidden", filter: deep ? undefined : `${stepped > 0 ? `blur(${(stepped / k).toFixed(2)}px) ` : ""}${grade}` }}>
+        {!deep && <Img src={src} style={img} />}
         {sweep >= 0 && sweep <= 1 && (
           // A band of light across the print, like a glossy poster catching a spotlight.
           <div

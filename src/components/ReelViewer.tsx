@@ -929,7 +929,7 @@ function ReelSlide(props: ReelSlideProps) {
   if (isLockedHere(props.reel)) return <LockedSlide {...props} />;
   if (media?.kind === "video") return <VideoSlide {...props} media={media} />;
   if (media?.kind === "youtube") return <YouTubeSlide {...props} id={media.id} />;
-  if (media?.kind === "image" && media.cut) return <CutSlide {...props} src={media.src} cut={media.cut} />;
+  if (media?.kind === "image" && media.cut) return <CutSlide {...props} src={media.src} cut={media.cut} depth={media.depth} />;
   return <TimedSlide {...props} />;
 }
 
@@ -938,7 +938,7 @@ function ReelSlide(props: ReelSlideProps) {
  * moves on when it's done. The still flyer for less motion, or when the cut
  * can't play.
  */
-function CutSlide({ src, cut, ...props }: ReelSlideProps & { src: string; cut: NonNullable<Extract<ReelMedia, { kind: "image" }>["cut"]> }) {
+function CutSlide({ src, cut, depth, ...props }: ReelSlideProps & { src: string; cut: NonNullable<Extract<ReelMedia, { kind: "image" }>["cut"]>; depth?: string }) {
   const [still] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [failed, setFailed] = useState(false);
   if (still || failed) return <TimedSlide {...props} />;
@@ -946,6 +946,7 @@ function CutSlide({ src, cut, ...props }: ReelSlideProps & { src: string; cut: N
     <FlyerCut
       src={src}
       recipe={cut}
+      depth={depth}
       fontClass={titleFontClass(props.titleFont)}
       caps={props.titleFont === "regal" || props.titleFont === "bold"}
       paused={props.isPaused}

@@ -41,6 +41,8 @@ const { values: opt } = parseArgs({
     reel: { type: 'boolean', default: false },
     // Which reel the cut is (the_night, your_people, last_call): it sets how the cut is cut.
     role: { type: 'string', default: 'the_night' },
+    // The flyer's depth map (a URL path like the flyer's), to watch it with parallax.
+    depth: { type: 'string' },
     // A quick draft: every Nth frame only (the video plays at N times speed).
     step: { type: 'string', default: '1' },
   },
@@ -52,7 +54,7 @@ if (!opt.flyer || !opt.recipe) {
 const out = resolve(opt.out);
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
-const review = { src: opt.flyer, recipe: JSON.parse(readFileSync(opt.recipe, 'utf8')), font: opt.font, accent: opt.accent, title: opt.title, tagline: opt.tagline, frames: !opt.live, reel: opt.reel, role: opt.role };
+const review = { src: opt.flyer, recipe: JSON.parse(readFileSync(opt.recipe, 'utf8')), font: opt.font, accent: opt.accent, title: opt.title, tagline: opt.tagline, frames: !opt.live, reel: opt.reel, role: opt.role, ...(opt.depth ? { depth: opt.depth } : {}) };
 
 // Software GL, so the light leak draws on machines without a GPU.
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });

@@ -100,6 +100,12 @@ export type ReelMedia =
        * adds their own video.
        */
       cut?: OpeningRecipe;
+      /**
+       * The flyer's depth map (a grayscale picture of it, bright is near),
+       * made once on the organizer's side: its opening and cuts move with
+       * parallax (src/remotion/depth.tsx).
+       */
+      depth?: string;
     };
 
 export type FunnelTrigger = "completed" | "skipped";
