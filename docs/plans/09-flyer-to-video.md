@@ -110,6 +110,31 @@ stays a later decision.
    event for a 6s opening loop and three 6s reels. Only after testing how
    each model treats lettering, and only behind a paid tier.
 
+## Phase 1 progress (Oct 12, 2026)
+
+Built:
+
+| Gap | What changed | How we checked |
+| --- | --- | --- |
+| 1 | Claude gets the flyer's pixel size (read from its bytes), maps it first (subjects, lettering), and gives every box and each shot's focus in pixels. Code converts them. | Unit tests; the e2e mock answers in pixels |
+| 2 | `lintRecipes` checks the rules in code: repeated moves, shots on lettering, over five words, The Night's hook, Last Call's date last, reused shots, lines too long to show, and facts the flyer and dates don't state. Broken drafts go back to Claude once. | Unit tests; e2e checks the re-ask carries the problems |
+| 3 | Shots last long enough for words to hold still: entrance + 0.35s + 0.15s a word + exit | Words now hold across at least two half-second samples |
+| 4 | The camera keeps moving through every join; gliding shots truly dissolve | The slowest moment inside a shot moves about 3x more |
+| 5 | A pan crosses a wide box end to end; zoom capped at 4x (a 2.4x cap was tried and let lettering in) | Renders |
+| 6 | Words move off each shot's focus | Renders |
+| 7 | Four-word hooks keep every word | Renders |
+| 8 | Lighter frames on every device: the blurred copy only when needed, motion blur and glitter in steps, grain at 1x the area instead of 4x. A lite tier for phones with ≤4 GB memory, ≤2 cores or Data Saver. | Chromium with the CPU slowed 6x and no GPU: old engine 4.8 fps, new full 5.0, new lite 18 |
+| 9 | Your People glides, Last Call punches, whatever the mood | Renders |
+| 11 | A cut that can't play shows the whole flyer, not a crop; the title and Tickets come up within 15s even if the player never loads (1.5s after a tap) | Typecheck and review only; no test covers these fallbacks yet |
+
+Still open from phase 1:
+- **A real-phone frame-rate test.** The full tier's remaining cost is CSS
+  filters, which a phone's GPU should carry; the software test can't show
+  that.
+- **The 12-flyer eval set.** This environment has no Claude key, so the new
+  director hasn't run on real flyers yet. The first live drafts need
+  watching with `scripts/review-opening.mjs`.
+
 ## Roadmap
 
 **Phase 1: the lean rebuild (1 to 2 weeks, free).** Gaps 1, 2, 3, 4, 5, 7,

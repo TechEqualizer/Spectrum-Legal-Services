@@ -38,6 +38,11 @@ export type OpeningSceneProps = {
    * button, and the reel moves on. Words stay off the bottom, which is theirs.
    */
   reel?: boolean;
+  /**
+   * A modest phone (src/components/motion-tier.ts): the same cut, lighter.
+   * No bloom, light leak, grain or motion blur, and fewer specks in the air.
+   */
+  lite?: boolean;
 };
 
 type Frame = { W: number; H: number; fw: number; fh: number };
@@ -176,7 +181,7 @@ export function openingFrames(recipe: OpeningRecipe, fps: number, holdSeconds?: 
 /** A reel's cut, in frames: it ends on the whole flyer. */
 export const cutFrames = (recipe: OpeningRecipe, fps: number) => plan(recipe, fps, undefined, true).total;
 
-export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story, reel = false }) => {
+export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story, reel = false, lite = false }) => {
   const frame = useCurrentFrame();
   const { fps, width: W, height: H } = useVideoConfig();
   const p = plan(recipe, fps, story?.holdSeconds, reel);
@@ -258,10 +263,10 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <Flyer src={src} frame={fr} cam={held} blur={Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={d.bloom} tilt={hand.roll} />
+      <Flyer src={src} frame={fr} cam={held} blur={lite ? 0 : Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} />
       {now.into && (
         <AbsoluteFill style={{ opacity: now.into.t }}>
-          <Flyer src={src} frame={fr} cam={{ ...now.into.cam, x: now.into.cam.x - hand.x / (width * Math.exp(now.into.cam.z)), y: now.into.cam.y - hand.y / (height * Math.exp(now.into.cam.z)) }} grade={d.grade} bloom={d.bloom} tilt={hand.roll} />
+          <Flyer src={src} frame={fr} cam={{ ...now.into.cam, x: now.into.cam.x - hand.x / (width * Math.exp(now.into.cam.z)), y: now.into.cam.y - hand.y / (height * Math.exp(now.into.cam.z)) }} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} />
         </AbsoluteFill>
       )}
       {shots.map(
@@ -280,7 +285,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
             </Sequence>
           ),
       )}
-      {d.leak && (
+      {d.leak && !lite && (
         // As the camera starts to pull back, so the reveal itself stays clear.
         <Sequence from={p.reveal.from - 6} durationInFrames={16} name="Light leak">
           <AbsoluteFill style={{ opacity: 0.45 }}>
@@ -299,9 +304,9 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
           <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} solid={Boolean(story)} />
         </Sequence>
       )}
-      <Sparks kind={d.sparks} color={accent} />
+      <Sparks kind={d.sparks} color={accent} lite={lite} />
       <AbsoluteFill style={{ background: "radial-gradient(120% 85% at 50% 45%, transparent 50%, rgba(0,0,0,0.7))" }} />
-      <Grain />
+      {!lite && <Grain />}
       {/* Without a hook, letterbox bars open quickly over the first shot, like the first shot of a film. */}
       {!p.hook && <Bars frame={frame} fps={fps} />}
     </AbsoluteFill>

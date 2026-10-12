@@ -106,11 +106,15 @@ export const Flyer: React.FC<{ src: string; frame: Frame; cam: Cam; blur?: numbe
     transform: `translate(${W / 2}px, ${H / 2}px) rotate(${tilt}deg) translate(${at.left - W / 2}px, ${at.top - H / 2}px) scale(${k})`,
   };
   const img: React.CSSProperties = { width: "100%", height: "100%", maxWidth: "none", display: "block" };
+  // The blurred copy only where the flyer doesn't fill the frame (a few pixels' margin for the hand-held tilt).
+  const covered = at.left <= -8 && at.top <= -8 && at.left + at.width >= W + 8 && at.top + at.height >= H + 8;
+  // Motion blur in steps, so the filter (costly to redraw) changes only now and then, not every frame.
+  const stepped = Math.round(blur / 1.5) * 1.5;
   return (
     <AbsoluteFill style={{ backgroundColor: "#000", overflow: "hidden" }}>
-      <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.45) saturate(1.4)", scale: "1.2" }} />
+      {!covered && <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.45) saturate(1.4)", scale: "1.2" }} />}
       {/* Blur is drawn before the scale, so it's divided by it to stay the same on screen. */}
-      <div style={{ ...layer, overflow: "hidden", filter: `${blur > 0.2 ? `blur(${(blur / k).toFixed(2)}px) ` : ""}${grade}` }}>
+      <div style={{ ...layer, overflow: "hidden", filter: `${stepped > 0 ? `blur(${(stepped / k).toFixed(2)}px) ` : ""}${grade}` }}>
         <Img src={src} style={img} />
         {sweep >= 0 && sweep <= 1 && (
           // A band of light across the print, like a glossy poster catching a spotlight.
@@ -176,11 +180,12 @@ export type SparkKind = "embers" | "glitter" | "haze" | "dust" | "motes";
  * dust: a few pale motes hanging in the light, barely moving (galleries, talks).
  * motes: sun bokeh floating up, warm and soft (daytime).
  */
-export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, color }) => {
+export const Sparks: React.FC<{ kind: SparkKind; color: string; lite?: boolean }> = ({ kind, color, lite = false }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const sec = frame / fps;
-  const specks = kind === "dust" ? SPECKS.slice(0, 14) : kind === "haze" || kind === "motes" ? SPECKS.slice(0, 10) : SPECKS;
+  // Lite (a modest phone): a dozen specks, with no glow or blur to redraw.
+  const specks = (kind === "dust" ? SPECKS.slice(0, 14) : kind === "haze" || kind === "motes" ? SPECKS.slice(0, 10) : SPECKS).slice(0, lite ? 12 : undefined);
   return (
     <AbsoluteFill style={{ pointerEvents: "none", mixBlendMode: "screen" }}>
       {specks.map((e, i) => {
@@ -191,7 +196,8 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
         const big = kind === "haze" || kind === "motes";
         const size = big ? 40 + e.size * 14 : e.near ? e.size * 3 : kind === "dust" ? 1.5 + e.size * 0.3 : e.size;
         // Glitter catches the light now and then; the rest glow steadily.
-        const glint = fall ? Math.pow(Math.max(0, Math.sin((sec * 1.5 + e.phase) * Math.PI * 2)), 8) : 0;
+        // In quarter steps, so the glow (costly to redraw) changes only now and then.
+        const glint = fall ? Math.round(Math.pow(Math.max(0, Math.sin((sec * 1.5 + e.phase) * Math.PI * 2)), 8) * 4) / 4 : 0;
         const opacity =
           kind === "embers" ? (e.near ? 0.45 : 0.85) * Math.pow(y, 0.8)
           : kind === "glitter" ? 0.25 + 0.75 * glint
@@ -210,9 +216,9 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
               height: size,
               borderRadius: "50%",
               backgroundColor: kind === "dust" ? "#f4efe6" : color,
-              boxShadow: big || kind === "dust" ? undefined : `0 0 ${size * (fall ? 2 + glint * 4 : 3)}px ${size}px ${color}`,
+              boxShadow: lite || big || kind === "dust" ? undefined : `0 0 ${size * (fall ? 2 + glint * 4 : 3)}px ${size}px ${color}`,
               // Near the lens: big and soft. Far: small and sharp.
-              filter: big ? "blur(18px)" : e.near && kind === "embers" ? "blur(6px)" : undefined,
+              filter: lite ? undefined : big ? "blur(18px)" : e.near && kind === "embers" ? "blur(6px)" : undefined,
               opacity,
             }}
           />
@@ -222,18 +228,17 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
   );
 };
 
-/** Film grain, a new pattern every two frames. */
+/** Film grain, a new pattern every two frames: one screen of a repeating tile, shifted, so it costs one layer. */
 export const Grain: React.FC = () => {
   const frame = useCurrentFrame();
-  const step = Math.floor(frame / 2) % 5;
-  const offsets = ["0% 0%", "-6% 4%", "5% -7%", "-3% -4%", "7% 6%"];
+  const step = Math.floor(frame / 2) % 7;
+  const offsets = ["0px 0px", "-61px 37px", "53px -71px", "-29px -43px", "71px 59px", "17px -89px", "-83px 11px"];
   return (
     <AbsoluteFill
       style={{
-        inset: "-50%",
         opacity: 0.14,
         mixBlendMode: "overlay",
-        translate: offsets[step].replace(/%/g, "%"),
+        backgroundPosition: offsets[step],
         backgroundImage:
           "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
       }}

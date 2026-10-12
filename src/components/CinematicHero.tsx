@@ -65,6 +65,13 @@ function Hero({ funnel, revealed, eyebrow, actions, paused = false, onSwipeUp }:
   const [skip, setSkip] = useState(false);
   const onHold = useCallback(() => setSettled(true), []);
   const shown = revealed && settled;
+  // The title and Tickets never wait on a player that's slow or failed to load: they come up
+  // after the longest an opening runs, or soon after a tap that came before the player was ready.
+  useEffect(() => {
+    if (!opening || !revealed || settled) return;
+    const t = setTimeout(() => setSettled(true), skip ? 1500 : 15000);
+    return () => clearTimeout(t);
+  }, [opening, revealed, settled, skip]);
 
   return (
     <div

@@ -1197,6 +1197,17 @@ function TimedSlide({ reel, isPaused, onProgress, onFinished }: ReelSlideProps) 
   }, [isPaused, callbacks]);
 
   if (reel.media?.kind === "image") {
+    // A flyer whose cut can't play here (less motion, or it failed) shows whole, over a soft copy of itself:
+    // cropping would cut off its date and price.
+    if (reel.media.cut)
+      return (
+        <div className="absolute inset-0 overflow-hidden bg-black">
+          {/* eslint-disable-next-line @next/next/no-img-element -- the organizer's flyer */}
+          <img src={reel.media.src} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-2xl" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- the organizer's flyer */}
+          <img src={reel.media.src} alt="" className="absolute inset-x-0 top-[8%] mx-auto max-h-[70%] w-full object-contain" />
+        </div>
+      );
     return (
       // eslint-disable-next-line @next/next/no-img-element -- any photo the business adds
       <img src={reel.media.src} alt="" className="absolute inset-0 h-full w-full bg-black object-cover" />
