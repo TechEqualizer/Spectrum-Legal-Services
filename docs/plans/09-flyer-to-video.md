@@ -220,6 +220,34 @@ Truly instant would mean a cut made without Claude. Expected now (estimated
 from that one run, not yet measured): the words in about 20 seconds, the shots
 in about 30, the fix after that only if the check finds problems.
 
+## Step 1 shows the work (the "all I did was drop my flyer" moment)
+
+The goal: an organizer drops one flyer and says "wow, I got all of this".
+Since the draft starts with the reading, most of the work was already
+happening during step 1, unseen: the phone there showed only the name, the
+flyer and the dates, and the card only what the flyer said.
+
+What works elsewhere:
+- The labor illusion: people value the same result more when they see the
+  work done for them. In Buell and Norton's travel-search study, showing the
+  flights being searched raised the perceived value of the service by 8%
+  (Management Science, 2011:
+  https://pubsonline.informs.org/doi/fpi/10.1287/mnsc.1110.1376). The work
+  here is real, so showing it is honest.
+- Gamma builds a whole presentation from a paragraph in 30 to 60 seconds
+  (https://gamma.app/explore/content/guides/turn-a-simple-paragraph-into-a-complete-presentation-with-gamma):
+  the same "typed one thing, got all this" promise, at about our wait.
+
+So, right after the scan:
+- The "From your flyer" card lists what the flyer is becoming, each line
+  ticked as it really lands (BuildList): the night and its dates; its colors
+  (swatches from the flyer); three reels, by their titles; the opening and
+  the cuts, counted; the flyer in 3D (only where a depth map is being made).
+  "Building your link…" turns to "Your link is built."
+- The phone shows the drafted story from step 1 (the reels once written,
+  then the opening and cuts), not only from step 2.
+- Continue reads "Watch your night" once the flyer is read.
+
 ## Roadmap
 
 **Phase 1: the lean rebuild (1 to 2 weeks, free).** Gaps 1, 2, 3, 4, 5, 7,
