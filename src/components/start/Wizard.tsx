@@ -64,10 +64,12 @@ const storageKey = (code: string) => `showlnk-start-${code.slice(0, 12)}`;
 const listeners = new Set<() => void>();
 let memory: Record<string, string> = {};
 function readRaw(key: string): string {
+  // This visit's latest first: if saving ever failed (storage full), the saved copy is older.
+  if (key in memory) return memory[key];
   try {
-    return localStorage.getItem(key) ?? memory[key] ?? "{}";
+    return localStorage.getItem(key) ?? "{}";
   } catch {
-    return memory[key] ?? "{}";
+    return "{}";
   }
 }
 function writeRaw(key: string, value: string) {

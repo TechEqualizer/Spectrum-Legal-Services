@@ -86,14 +86,16 @@ http.createServer((req, res) => {
         res.statusCode = 400;
         return res.end(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: `The compiled grammar is too large, which would cause performance issues. Simplify your tool schemas or reduce the number of strict tools. (mock: ${weight(schema)} > ${GRAMMAR_LIMIT})` } }));
       }
-      const drafting = /creative director/.test(JSON.stringify(last.body.system));
+      // This request's own prompt: answers go out later, when `last` may be another request (the draft sends three at once).
+      const system = last.body.system;
+      const drafting = /creative director/.test(JSON.stringify(system));
       // The Design tab's opening alone: the draft's opening.
-      const cutting = /you cut the opening of the link/.test(JSON.stringify(last.body.system));
+      const cutting = /you cut the opening of the link/.test(JSON.stringify(system));
       // nodraft: flyers read as multi, but drafting reels is declined.
       if (mode === 'refusal' || (mode === 'nodraft' && drafting)) return res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: 'refusal', usage: { input_tokens: 1, output_tokens: 0 } }));
       res.setHeader('content-type', 'application/json');
       setTimeout(() => res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5',
-        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? sized({ opening: draft.opening }, last.body.system) : drafting ? (schema?.properties?.cuts ? sized(direction, last.body.system) : words) : replies[mode === 'nodraft' ? 'multi' : mode]) }],
+        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? sized({ opening: draft.opening }, system) : drafting ? (schema?.properties?.cuts ? sized(direction, system) : words) : replies[mode === 'nodraft' ? 'multi' : mode]) }],
         stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } })), schema?.properties?.cuts ? 1500 : 600); // the shots take longer than the words
       return;
     }
