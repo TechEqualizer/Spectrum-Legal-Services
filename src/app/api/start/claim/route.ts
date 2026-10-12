@@ -5,7 +5,7 @@ import { EVENT_SLUG, newClientEvent, slugFromName } from "@/lib/new-event";
 import { applyPublication, parsePublication } from "@/lib/publication";
 import { ACCESS_COOKIE, cookieOptions, REFRESH_COOKIE, REFRESH_MAX_AGE, signInWithPassword } from "@/lib/server/admin-auth";
 import { createLogin, deleteLogin } from "@/lib/server/auth-admin";
-import { flyerBytes, removeFlyer, storeFlyer } from "@/lib/server/flyer-store";
+import { depthBytes, flyerBytes, removeFlyer, storeFlyer } from "@/lib/server/flyer-store";
 import { syncEventDates } from "@/lib/server/event-dates";
 import { EVENT_FUNNELS_TAG, ORGANIZERS_TAG, slugIsFree } from "@/lib/server/funnels";
 import { claimInvite, inviteStatus } from "@/lib/server/invites";
@@ -115,8 +115,11 @@ export async function POST(request: Request) {
   // If it can't be stored, the link still works without it.
   const bytes = flyerBytes((body?.draft as { flyer?: unknown } | undefined)?.flyer);
   const flyer = bytes ? await storeFlyer(eventSlug, bytes) : null;
-  const dropFlyer = () => (flyer ? removeFlyer(flyer.path) : Promise.resolve());
-  const publication = parsePublication(JSON.parse(JSON.stringify(claimPublication(draft, timeZone, ticketUrl, flyer?.url))), event);
+  // And its depth map, when this browser made one (the opening and cuts move with parallax).
+  const depthPng = flyer ? depthBytes((body?.draft as { depth?: unknown } | undefined)?.depth) : null;
+  const depth = depthPng ? await storeFlyer(eventSlug, depthPng, "depth") : null;
+  const dropFlyer = () => Promise.all([flyer && removeFlyer(flyer.path), depth && removeFlyer(depth.path)]);
+  const publication = parsePublication(JSON.parse(JSON.stringify(claimPublication(draft, timeZone, ticketUrl, flyer?.url, depth?.url))), event);
   if (typeof publication === "string") {
     console.error("[claim] reels didn't check out:", publication);
     await dropFlyer();

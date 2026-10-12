@@ -17,6 +17,8 @@ export type StoryInput = {
   /** The flyer (same-origin or a public link). */
   src: string;
   recipe: OpeningRecipe;
+  /** The flyer's depth map, for parallax. */
+  depth?: string;
   /** The look's title font class, and whether its big lines are capitals. */
   fontClass: string;
   caps: boolean;
@@ -53,7 +55,7 @@ export async function renderStory(input: StoryInput, onProgress: (p: number) => 
   // The title font has to be loaded before the first frame is drawn.
   await document.fonts.ready;
   const story = { title: input.title, when: input.when, link: input.link, holdSeconds: CARD_SECONDS };
-  const props = { src: input.src, width: size.w, height: size.h, recipe: input.recipe, fontClass: input.fontClass, caps: input.caps, accent: input.accent, story };
+  const props = { src: input.src, width: size.w, height: size.h, recipe: input.recipe, fontClass: input.fontClass, caps: input.caps, accent: input.accent, story, ...(input.depth ? { depth: input.depth } : {}) };
   const result = await renderMediaOnWeb({
     composition: { component: OpeningScene, id: "story", width: 1080, height: 1920, fps: FPS, durationInFrames: openingFrames(input.recipe, FPS, CARD_SECONDS).total, defaultProps: props },
     inputProps: props,

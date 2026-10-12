@@ -24,6 +24,8 @@ export type FlyerFound = {
   note: string;
   look?: Look;
   flyer?: string;
+  /** Its depth map (a kept upload), made in the background once the flyer is read. */
+  depth?: string;
   lookUsed?: boolean;
   source?: FlyerSource;
   draft?: FunnelDraft;
@@ -54,6 +56,7 @@ export default function FlyerImportSheet({
   onLook,
   onDrafted,
   onDraft,
+  onDepth,
   onClose,
 }: {
   slug: string;
@@ -66,11 +69,13 @@ export default function FlyerImportSheet({
   onFound: (result: FlyerFound | null) => void;
   onReview: (index: number) => void;
   /** Use the flyer's look, and the flyer as the opening screen's background if given. */
-  onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
+  onLook: (look: Look, flyer: string | undefined, asBackground: boolean, depth: string | undefined) => void;
+  /** The depth map of a flyer it read, when it's ready (a while after). */
+  onDepth?: (flyer: string, depth: string) => void;
   /** A funnel drafted from the flyer, to show for review. */
   onDrafted: (draft: FunnelDraft) => void;
   /** Use the drafted funnel (with the flyer, for the reels cut from it). */
-  onDraft: (draft: FunnelDraft, flyer: string | undefined) => void;
+  onDraft: (draft: FunnelDraft, flyer: string | undefined, depth: string | undefined) => void;
   onClose: () => void;
 }) {
   const id = useId();
@@ -107,14 +112,20 @@ export default function FlyerImportSheet({
       const body = (await res.json().catch(() => ({}))) as { dates?: ImportedDate[]; note?: string; look?: Look; error?: string };
       if (res.status === 401) throw new Error("Your sign-in expired. Sign in again, then try.");
       if (!res.ok || !body.dates) throw new Error(body.error ?? "Couldn't read the flyer. Try again.");
+      const flyer = blob ? keepUpload(new File([blob], "flyer.jpg", { type: "image/jpeg" })) : undefined;
       onFound({
         dates: body.dates,
         note: body.note ?? "",
         source: payload,
         ...(body.look ? { look: body.look } : {}),
         // The (shrunk) flyer, kept so it can go behind the opening screen, play as each drafted reel's cut, and survive a reload.
-        ...(blob ? { flyer: keepUpload(new File([blob], "flyer.jpg", { type: "image/jpeg" })) } : {}),
+        ...(flyer ? { flyer } : {}),
       });
+      // Its depth map, in the background (the opening and cuts move with parallax once it's there).
+      if (flyer && onDepth)
+        void import("@/lib/depth-map").then(({ makeDepthMap }) =>
+          makeDepthMap(flyer).then((png) => png && onDepth(flyer, keepUpload(new File([png], "depth.png", { type: "image/png" })))),
+        );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't read the flyer. Try again.");
     } finally {
@@ -161,7 +172,7 @@ export default function FlyerImportSheet({
               onWithFlyer={setWithFlyer}
               title={found.dates[0]?.name.split(": ")[0] || "Your event"}
               used={Boolean(found.lookUsed)}
-              onUse={(chosen) => onLook(chosen, found.flyer, withFlyer)}
+              onUse={(chosen) => onLook(chosen, found.flyer, withFlyer, found.depth)}
             />
           )}
           {found.dates.length === 0 ? (
@@ -214,7 +225,7 @@ export default function FlyerImportSheet({
             </>
           )}
           {found.source && (
-            <DraftOffer slug={slug} found={found} onDrafted={onDrafted} onUse={(d) => onDraft(d, found.flyer)} />
+            <DraftOffer slug={slug} found={found} onDrafted={onDrafted} onUse={(d) => onDraft(d, found.flyer, found.depth)} />
           )}
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => onFound(null)} className="min-h-11 px-1 text-sm font-semibold text-deep-navy hover:underline">

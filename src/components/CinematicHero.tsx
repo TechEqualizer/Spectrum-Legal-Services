@@ -101,6 +101,7 @@ function Hero({ funnel, revealed, eyebrow, actions, paused = false, onSwipeUp }:
           <OpeningBackdrop
             src={media.src}
             recipe={opening as OpeningRecipe}
+            depth={media.depth}
             fontClass={titleFontClass(cover.titleFont)}
             caps={cover.titleFont === "regal" || cover.titleFont === "bold"}
             paused={paused}

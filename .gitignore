@@ -49,3 +49,6 @@ next-env.d.ts
 tests/e2e/.out/
 .impeccable/config.local.json
 .claude/settings.local.json
+
+# onnxruntime-web's runtime, copied from node_modules on install (scripts/copy-ort.mjs)
+/public/ort/

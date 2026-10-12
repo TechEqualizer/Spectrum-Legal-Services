@@ -20,6 +20,7 @@ const FPS = 30;
 export default function OpeningBackdrop({
   src,
   recipe,
+  depth,
   fontClass,
   caps,
   paused,
@@ -28,6 +29,8 @@ export default function OpeningBackdrop({
 }: {
   src: string;
   recipe: OpeningRecipe;
+  /** The flyer's depth map, for parallax. */
+  depth?: string;
   fontClass: string;
   caps: boolean;
   paused: boolean;
@@ -108,7 +111,7 @@ export default function OpeningBackdrop({
         <Player
           ref={ref}
           component={OpeningScene}
-          inputProps={{ src, width: size.w, height: size.h, recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)", lite }}
+          inputProps={{ src, width: size.w, height: size.h, recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)", lite, depth }}
           durationInFrames={total}
           compositionWidth={frame.w}
           compositionHeight={frame.h}

@@ -62,3 +62,8 @@ test("only The Night opens on its hook; the others open straight on their first 
   // And each reel cuts its own way, whatever the mood: Your People glides, Last Call punches.
   assert.deepEqual(d.reels.map((r) => r.cut?.treatment), [undefined, "glide", "punch"]);
 });
+
+test("a flyer's depth map is a link like the flyer's own, never a blob from one browser", () => {
+  assert.equal(checkMedia({ kind: "image", src: "/flyer.jpg", depth: "https://x.supabase.co/storage/v1/object/public/reel-media/night/depth.png" }), null);
+  assert.equal(checkMedia({ kind: "image", src: "/flyer.jpg", depth: "blob:https://showlnk.com/abc" }), "depth map needs an https link");
+});

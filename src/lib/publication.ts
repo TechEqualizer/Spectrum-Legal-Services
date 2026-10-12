@@ -121,6 +121,7 @@ export function checkMedia(m: unknown, fansFolder?: string): string | null {
     // Only a flyer shown whole behind the opening screen plays as an opening.
     if (m.opening !== undefined && (m.fit !== "poster" || fansFolder !== undefined || checkOpening(m.opening))) return "bad opening scene";
     if (m.cut !== undefined && checkOpening(m.cut)) return "bad flyer cut";
+    if (m.depth !== undefined && !ok(m.depth)) return "depth map needs an https link";
     return ok(m.src) ? null : "photo needs an https link";
   }
   if (m.kind === "video") {

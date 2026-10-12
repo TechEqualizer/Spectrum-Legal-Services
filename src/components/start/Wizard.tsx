@@ -163,7 +163,20 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         setReading(null);
         setReadsLeft((n) => n - 1);
         if (!read.dates.length) return setError("We couldn't find a date on that flyer. Try a clearer photo, or the one with the date on it.");
-        update({ flyer: picture, dates: read.dates, look: read.look, reels: undefined, reelsFailed: undefined });
+        update({ flyer: picture, depth: undefined, dates: read.dates, look: read.look, reels: undefined, reelsFailed: undefined });
+        // Its depth map, in the background: the phone's opening and cuts move with parallax once it's there.
+        if (picture)
+          void import("@/lib/depth-map").then(({ makeDepthMap }) =>
+            makeDepthMap(picture).then(async (png) => {
+              if (!png || mine !== attempt.current) return;
+              const url = await new Promise<string>((resolve) => {
+                const r = new FileReader();
+                r.onload = () => resolve(String(r.result));
+                r.readAsDataURL(png);
+              });
+              if (mine === attempt.current) update({ depth: url });
+            }),
+          );
         return setDrafting(true);
       }
       if (line.draft) {

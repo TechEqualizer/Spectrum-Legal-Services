@@ -60,9 +60,9 @@ export default function DatesCard({
   /** Saves a date and links its reel. */
   onSave: (event: FunnelEvent, reel: ReelChoice, isNew: boolean) => void;
   /** Use a flyer's look (and the flyer itself, as an upload link, behind the opening screen). */
-  onLook: (look: Look, flyer: string | undefined, asBackground: boolean) => void;
+  onLook: (look: Look, flyer: string | undefined, asBackground: boolean, depth: string | undefined) => void;
   /** Use a funnel drafted from a flyer. */
-  onDraft: (draft: FunnelDraft, flyer: string | undefined) => void;
+  onDraft: (draft: FunnelDraft, flyer: string | undefined, depth: string | undefined) => void;
   /** In the studio, where its story step names it. */
   inStudio?: boolean;
   /** Open Import flyer right away (a new event, made to be filled from its flyer). */
@@ -202,15 +202,16 @@ export default function DatesCard({
           taken={days}
           onFound={onFound}
           onReview={review}
-          onLook={(look, flyer, asBackground) => {
-            onLook(look, flyer, asBackground);
+          onDepth={(flyer, depth) => setFound((f) => (f && f.flyer === flyer ? { ...f, depth } : f))}
+          onLook={(look, flyer, asBackground, depth) => {
+            onLook(look, flyer, asBackground, depth);
             setFound((f) => (f ? { ...f, lookUsed: true } : f));
             // Nothing else to do here: close.
             if (found && !moreToDo({ ...found, lookUsed: true }, added)) closeImport();
           }}
           onDrafted={(draft) => setFound((f) => (f ? { ...f, draft } : f))}
-          onDraft={(draft, flyer) => {
-            onDraft(draft, flyer);
+          onDraft={(draft, flyer, depth) => {
+            onDraft(draft, flyer, depth);
             setFound((f) => (f ? { ...f, draftUsed: true } : f));
             if (found && !moreToDo({ ...found, draftUsed: true }, added)) closeImport();
           }}
