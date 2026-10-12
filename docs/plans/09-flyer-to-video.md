@@ -175,6 +175,27 @@ Still open from phase 1:
 - Off in the e2e tests (`NEXT_PUBLIC_DEPTH_MAPS=off`), which would otherwise
   download the model on every run.
 
+## Drafts failed in production after phase 1 (fixed)
+
+Every draft from #97 on failed with a 400 from the API: "The compiled grammar
+is too large, which would cause performance issues." Phase 1b put the map, a
+focus box per shot and pixel boxes (each an object of four keys, in seven
+places) into the one schema that drafted everything, and the API compiles each
+structured-output schema into a grammar with an internal size limit beyond the
+documented ones (24 optional parameters, 16 unions; both were met). The e2e
+mock accepted any schema, so nothing caught it; with no draft, the wizard fell
+back to the flyer's basics, with no opening and no cuts, so depth had nothing
+to move.
+
+Fixed: the draft is two answers asked at once, the words (`wordsSchema`) and
+the direction (`directionSchema`: map, opening, cuts by role), each well under
+half the size that failed; every box is a list `[x1, y1, x2, y2]`; if the
+direction fails the words still come. The mock now refuses a schema over a
+stand-in limit (measured without descriptions; the failing one was 4,176
+characters, the limit is 3,000, the two halves 1,185 and 2,142), and the draft
+suite checks both answers are asked. Source: platform.claude.com/docs/en/build-with-claude/structured-outputs
+("Schema complexity limits").
+
 ## Roadmap
 
 **Phase 1: the lean rebuild (1 to 2 weeks, free).** Gaps 1, 2, 3, 4, 5, 7,

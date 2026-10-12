@@ -4,6 +4,8 @@ const res = []; const check = (n, ok, x = '') => res.push((ok ? 'PASS' : 'FAIL')
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const mode = (m) => fetch(C + '/__mode', { method: 'POST', body: m });
 const last = () => fetch(C + '/__last').then(r => r.json());
+// Every request to Claude since this was last asked (the draft sends the words and the direction at once).
+const sent = () => fetch(C + '/__log').then(r => r.json());
 const W = Number(process.argv[3] || 390);
 const b = await chromium.launch();
 const ctx = await b.newContext({ timezoneId: 'America/Detroit',  storageState: S + '/auth.json', viewport: { width: W, height: W > 1000 ? 900 : 844 }, ...(W < 1000 ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {}) });
@@ -33,15 +35,21 @@ await sheet.getByRole('button', { name: /Review Golden Hour: Halloween/ }).click
 await sheet.getByRole('button', { name: 'Add date' }).click(); await settle(p, 400);
 check('back to the sheet after adding', await sheet.getByRole('heading', { name: 'Draft your whole funnel?' }).isVisible());
 
+await sent();
 await sheet.getByRole('button', { name: 'Draft my funnel' }).click();
 check('writing state', await sheet.getByRole('button', { name: 'Writing your funnel…' }).isVisible());
 await sheet.getByRole('heading', { name: 'Your funnel, drafted' }).waitFor({ timeout: 8000 }).catch(() => {});
 check('draft preview', await sheet.getByRole('heading', { name: 'Your funnel, drafted' }).isVisible());
 const req = await last();
+const asked = await sent();
+const wordsAsk = asked.find((r) => r.output_config?.format?.schema?.properties?.reels);
+const directionAsk = asked.find((r) => r.output_config?.format?.schema?.properties?.cuts && r.messages.length === 1);
+check('the draft is two answers asked at once: the words, and the shots on the flyer', asked.length === 3 && Boolean(wordsAsk) && Boolean(directionAsk) && !wordsAsk.output_config.format.schema.properties.reels.items.properties.cut, asked.map((r) => Object.keys(r.output_config?.format?.schema?.properties ?? {}).join('+')).join(' | '));
+check('every box is a list of four pixels, not an object', directionAsk?.output_config.format.schema.properties.opening.properties.hold.type === 'array');
 check('draft request: model, schema, flyer image resent', req.body.model === 'claude-opus-5-5' && req.body.output_config?.format?.type === 'json_schema' && req.body.messages[0].content[0].type === 'image');
 check('draft request: dates and brand in prompt', /2026-10-31/.test(req.body.system) && /creative director/.test(req.body.system));
 check('draft request: the three core drivers', /the_night/.test(req.body.system) && /your_people/.test(req.body.system) && /last_call/.test(req.body.system) && /Never invent testimonials/.test(req.body.system));
-check('draft request: each reel cut from the flyer, facts only from it', /each reel's cut/.test(req.body.system) && /Never invent quotes, reviews, numbers/.test(req.body.system) && Boolean(req.body.output_config.format.schema.properties.reels.items.properties.cut));
+check('draft request: each reel cut from the flyer, facts only from it', /each reel's cut/.test(req.body.system) && /Never invent quotes, reviews, numbers/.test(req.body.system) && Boolean(req.body.output_config.format.schema.properties.cuts));
 check('draft request: Claude is told the flyer\'s pixel size, and maps it before cutting', /flyer image is 360x640 pixels/.test(req.body.system) && Boolean(req.body.output_config.format.schema.properties.map));
 check('the draft is checked in code and its problems go back once to be fixed', req.body.messages.length === 3 && req.body.messages[1].role === 'assistant' && /Your plan breaks these rules/.test(JSON.stringify(req.body.messages[2])) && /\$31/.test(JSON.stringify(req.body.messages[2])), JSON.stringify(req.body.messages[2] ?? '').slice(0, 300));
 check('draft request: price for true urgency', /From \$30/.test(req.body.system), req.body.system.slice(0, 400));
@@ -96,6 +104,7 @@ await mode('multi');
 await sheet.getByRole('button', { name: 'Read flyer' }).click();
 await sheet.getByText('Found 2 dates').waitFor({ timeout: 8000 }).catch(() => {});
 await mode('refusal');
+await sent();
 await sheet.getByRole('button', { name: 'Draft my funnel' }).click();
 await sheet.getByRole('alert').waitFor({ timeout: 8000 }).catch(() => {});
 check('refusal message', await sheet.getByRole('alert').filter({ hasText: 'build the funnel by hand' }).isVisible().catch(() => false) || /by hand/.test(await sheet.getByRole('alert').first().textContent()));

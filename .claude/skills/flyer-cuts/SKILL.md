@@ -1,6 +1,6 @@
 ---
 name: flyer-cuts
-description: Direct and review a reel's flyer cut, the short trailer each core reel (The Night, Your People, Last Call) plays from the event's flyer until the organizer adds a video. Use when changing how Claude writes cuts (cutBrief and CUT_SCHEMA in src/lib/server/funnel-draft.ts), parseCut, the scene's reel mode, FlyerCut, or when someone says a reel cut looks wrong, repetitive, slow or salesy.
+description: Direct and review a reel's flyer cut, the short trailer each core reel (The Night, Your People, Last Call) plays from the event's flyer until the organizer adds a video. Use when changing how Claude writes cuts (cutBrief and cutSchema in src/lib/server/funnel-draft.ts), parseCut, the scene's reel mode, FlyerCut, or when someone says a reel cut looks wrong, repetitive, slow or salesy.
 ---
 
 # Flyer cuts
@@ -77,13 +77,15 @@ wizard's phone (`/start`, step 2) or the studio preview. Check:
 - [ ] Does Last Call end on the date, then the whole flyer under Tickets?
 - [ ] Is each line on screen long enough to read with the sound off?
 
-When a fix belongs to every cut, change `cutBrief` or `CUT_SCHEMA`, or the
+When a fix belongs to every cut, change `cutBrief` or `cutSchema`, or the
 scene's reel mode, not one recipe.
 
 ## Where cuts come from and go
 
 - Written in `draftFunnel` (sign-up wizard and the studio's Draft from flyer),
-  cleaned by `parseCut`, stored on the reel's photo
+  in the direction answer (`directionSchema`: the map, the opening and the
+  cuts), asked alongside the words; if it fails, the reels still come, over
+  the still flyer. Cleaned by `parseCut`, stored on the reel's photo
   `{ kind: "image", src: flyer, cut }`, checked on publish (`checkMedia`).
 - Played by `FlyerCut` in `ReelViewer` (`CutSlide`); less motion or a broken
   flyer gets the still flyer.

@@ -49,7 +49,7 @@ const draft = {
 };
 // Claude places boxes in the flyer's pixels when the prompt gives its size: the fractions above, as pixels, with a
 // tight focus in each shot and a map of the flyer (its subjects, and lettering in a strip along the bottom edge).
-const toPx = (b, w, h) => ({ x1: Math.round(b.x * w), y1: Math.round(b.y * h), x2: Math.round((b.x + b.w) * w), y2: Math.round((b.y + b.h) * h) });
+const toPx = (b, w, h) => [Math.round(b.x * w), Math.round(b.y * h), Math.round((b.x + b.w) * w), Math.round((b.y + b.h) * h)];
 const inPixels = (r, w, h) => r && {
   ...r,
   beats: r.beats.map((x) => ({ ...x, box: toPx(x.box, w, h), focus: toPx({ x: x.box.x + x.box.w * 0.4, y: x.box.y + x.box.h * 0.2, w: x.box.w * 0.2, h: x.box.h * 0.2 }, w, h) })),
@@ -60,16 +60,32 @@ const sized = (reply, system) => {
   if (!m) return reply;
   const [w, h] = [Number(m[1]), Number(m[2])];
   const map = { subjects: (reply.opening?.beats ?? []).map((x, i) => ({ what: `subject ${i + 1}`, box: toPx(x.box, w, h) })), lettering: [toPx({ x: 0.05, y: 0.97, w: 0.9, h: 0.03 }, w, h)] };
-  return { map, ...reply, opening: inPixels(reply.opening, w, h), ...(reply.reels ? { reels: reply.reels.map((r) => (r.cut ? { ...r, cut: inPixels(r.cut, w, h) } : r)) } : {}) };
+  return { map, ...reply, opening: inPixels(reply.opening, w, h), ...(reply.cuts ? { cuts: reply.cuts.map((c) => ({ role: c.role, ...inPixels(c, w, h) })) } : {}) };
 };
+// The draft comes in two answers: the words (no opening, no cuts), and the direction (the map, opening and cuts).
+const words = { ...draft, opening: undefined, reels: draft.reels.map(({ cut, ...r }) => r) };
+const direction = { opening: draft.opening, cuts: draft.reels.flatMap((r) => (r.cut ? [{ role: r.role, ...r.cut }] : [])) };
+// A stand-in for the API's limit on how big a schema it will compile. The one schema that drafted everything
+// at once measured 4,176 characters this way, and the API refused it: "The compiled grammar is too large".
+const GRAMMAR_LIMIT = 3000;
+const weight = (schema) => JSON.stringify(schema ?? {}, (k, v) => (k === 'description' ? undefined : v)).length;
+let log = [];
 
 http.createServer((req, res) => {
   let body = ''; req.on('data', c => body += c); req.on('end', () => {
     if (req.url === '/__mode') { mode = body; return res.end('ok'); }
     if (req.url === '/__last') { res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify(last)); }
+    // Every request since the last time this was asked (the draft sends two at once).
+    if (req.url === '/__log') { res.setHeader('content-type', 'application/json'); const out = log; log = []; return res.end(JSON.stringify(out)); }
     if (req.url.startsWith('/v1/messages')) {
       last = { headers: req.headers, body: JSON.parse(body) };
+      log.push(last.body);
       res.setHeader('content-type', 'application/json');
+      const schema = last.body.output_config?.format?.schema;
+      if (weight(schema) > GRAMMAR_LIMIT) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: `The compiled grammar is too large, which would cause performance issues. Simplify your tool schemas or reduce the number of strict tools. (mock: ${weight(schema)} > ${GRAMMAR_LIMIT})` } }));
+      }
       const drafting = /creative director/.test(JSON.stringify(last.body.system));
       // The Design tab's opening alone: the draft's opening.
       const cutting = /you cut the opening of the link/.test(JSON.stringify(last.body.system));
@@ -77,7 +93,7 @@ http.createServer((req, res) => {
       if (mode === 'refusal' || (mode === 'nodraft' && drafting)) return res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: 'refusal', usage: { input_tokens: 1, output_tokens: 0 } }));
       res.setHeader('content-type', 'application/json');
       setTimeout(() => res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5',
-        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? sized({ opening: draft.opening }, last.body.system) : drafting ? sized(draft, last.body.system) : replies[mode === 'nodraft' ? 'multi' : mode]) }],
+        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? sized({ opening: draft.opening }, last.body.system) : drafting ? (schema?.properties?.cuts ? sized(direction, last.body.system) : words) : replies[mode === 'nodraft' ? 'multi' : mode]) }],
         stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } })), 600);
       return;
     }
