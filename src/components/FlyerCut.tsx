@@ -4,6 +4,7 @@ import { Player, type PlayerRef } from "@remotion/player";
 import { useEffect, useRef, useState } from "react";
 import type { OpeningRecipe } from "@/lib/opening";
 import { OpeningScene, cutFrames } from "@/remotion/OpeningScene";
+import { prefersLiteMotion } from "@/components/motion-tier";
 
 const FPS = 30;
 
@@ -40,6 +41,7 @@ export default function FlyerCut({
   const box = useRef<HTMLDivElement>(null);
   const [frame, setFrame] = useState<{ w: number; h: number } | null>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const [lite] = useState(prefersLiteMotion);
   const total = cutFrames(recipe, FPS);
   const ready = Boolean(size && frame);
   const callbacks = useRef({ onProgress, onFinished, onCantPlay });
@@ -99,7 +101,7 @@ export default function FlyerCut({
         <Player
           ref={ref}
           component={OpeningScene}
-          inputProps={{ src, width: size.w, height: size.h, recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)", reel: true }}
+          inputProps={{ src, width: size.w, height: size.h, recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)", reel: true, lite }}
           durationInFrames={total}
           compositionWidth={frame.w}
           compositionHeight={frame.h}

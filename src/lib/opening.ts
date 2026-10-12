@@ -12,7 +12,12 @@ export type Box = { x: number; y: number; w: number; h: number };
 export const OPENING_MOVES = ["push", "pull", "tilt-up", "pan-left", "pan-right"] as const;
 export type OpeningMove = (typeof OPENING_MOVES)[number];
 export type OpeningText = { lines: string[]; at: "top" | "middle" | "bottom"; size: "eyebrow" | "big" };
-export type OpeningBeat = { box: Box; move: OpeningMove; seconds: number; text?: OpeningText };
+/**
+ * One shot: the part of the flyer it shows (box), the camera's move, how long
+ * it plays, its words, and its focus: the face or the point of the subject
+ * the shot is about, which the scene frames and keeps its words off.
+ */
+export type OpeningBeat = { box: Box; move: OpeningMove; seconds: number; text?: OpeningText; focus?: Box };
 
 /**
  * How an opening is directed, matched to the kind of event: its pace, how
@@ -67,6 +72,12 @@ export type OpeningRecipe = {
    * so the opening and the reels don't all start the same way.)
    */
   hook?: false;
+  /**
+   * A reel's own way of cutting, whatever the mood: "glide" (the camera
+   * travels, unhurried: Your People) or "punch" (hard, quick cuts: Last Call).
+   * Without it, the mood's.
+   */
+  treatment?: "glide" | "punch";
 };
 
 /** A shot narrower than this share of the flyer would be enlarged past its detail and look soft. */
@@ -120,12 +131,15 @@ export function parseOpening(v: unknown): OpeningRecipe | null {
     if (!box || !move) return [];
     const seconds = round(clamp(num(b.seconds) ?? 1.7, 1.2, 2.6), 1);
     const text = cleanText(b.text);
-    return [{ box, move, seconds, ...(text ? { text } : {}) }];
+    // The focus, small as it may be (a face), inside the flyer.
+    const focus = b.focus === undefined ? null : cleanBox(b.focus, 0.01, 0.01);
+    return [{ box, move, seconds, ...(text ? { text } : {}), ...(focus ? { focus } : {}) }];
   });
   const hold = cleanBox(v.hold, MIN_HOLD_WIDTH, MIN_SHOT_HEIGHT);
   if (beats.length < 2 || !hold) return null;
   const mood = OPENING_MOOD_IDS.find((m) => m === v.mood);
-  return { ...(mood ? { mood } : {}), beats, hold, ...(v.hook === false ? { hook: false as const } : {}) };
+  const treatment = v.treatment === "glide" || v.treatment === "punch" ? v.treatment : null;
+  return { ...(mood ? { mood } : {}), beats, hold, ...(v.hook === false ? { hook: false as const } : {}), ...(treatment ? { treatment } : {}) };
 }
 
 const same = (a: unknown, b: unknown): boolean => {
@@ -149,12 +163,26 @@ const WHOLE_FLYER: Box = { x: 0, y: 0, w: 1, h: 1 };
 /**
  * A reel's cut (.claude/skills/flyer-cuts), cleaned like an opening: in the
  * opening's mood, its words kept off the bottom (the reel's title and Tickets
- * button are there), ending on the whole flyer. `hook`: whether it may open
- * on its first line, huge on black (The Night's only). Null when too little of
- * it is usable, and the reel shows the still flyer.
+ * button are there), ending on the whole flyer. Its reel sets how it's cut:
+ * only The Night opens on its hook (its first line, huge on black), Your
+ * People glides and Last Call punches, whatever the mood, so the reels never
+ * play the same film. Null when too little of it is usable, and the reel shows
+ * the still flyer.
  */
-export function parseCut(v: unknown, mood?: OpeningMood, hook = true): OpeningRecipe | null {
+export function parseCut(v: unknown, mood?: OpeningMood, role?: "the_night" | "your_people" | "last_call"): OpeningRecipe | null {
   if (!isObject(v) || !Array.isArray(v.beats)) return null;
   const beats = v.beats.map((b) => (isObject(b) && isObject(b.text) && b.text.at === "bottom" ? { ...b, text: { ...b.text, at: "middle" } } : b));
-  return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER, ...(hook ? {} : { hook: false }) });
+  const hook = !role || role === "the_night";
+  const treatment = role === "your_people" ? "glide" : role === "last_call" ? "punch" : undefined;
+  return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER, ...(hook ? {} : { hook: false }), ...(treatment ? { treatment } : {}) });
+}
+
+/** A box given in the flyer's pixels (x1, y1 the top left, x2, y2 the bottom right corner), as fractions of the flyer. */
+export function boxFromPixels(v: unknown, size: { w: number; h: number }): Box | null {
+  if (!isObject(v)) return null;
+  const [x1, y1, x2, y2] = [num(v.x1), num(v.y1), num(v.x2), num(v.y2)];
+  if (x1 === null || y1 === null || x2 === null || y2 === null) return null;
+  const [l, r] = [Math.min(x1, x2), Math.max(x1, x2)].map((x) => clamp(x / size.w, 0, 1));
+  const [t, b] = [Math.min(y1, y2), Math.max(y1, y2)].map((y) => clamp(y / size.h, 0, 1));
+  return r - l > 0 && b - t > 0 ? { x: round(l, 4), y: round(t, 4), w: round(r - l, 4), h: round(b - t, 4) } : null;
 }

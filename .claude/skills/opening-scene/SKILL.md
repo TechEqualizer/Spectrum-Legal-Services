@@ -80,23 +80,35 @@ What trailer editors and short-form video agree on (sources in
   in on a face, tilt up a standing figure, and pan across a crowd or skyline
   in the direction it faces. Don't use the same move twice in a row, and
   don't shoot the same subject twice unless the second shot is closer.
-- **Readable, then gone.** A line is on screen for a glance plus a moment
-  per word (the scene stretches a shot to make room). It clears before the
-  next line comes up.
+- **Readable, then gone.** A line holds still and readable for 0.35s plus
+  0.15s a word, about the pace subtitles are timed to, on top of its type
+  style's entrance and exit. The scene stretches a shot to make room
+  (`wordsNeed` in OpeningScene.tsx). It clears before the next line comes
+  up. This is the one reading rule; older numbers in plan 06 are superseded.
+- **Keep the camera moving.** Each shot's move runs at an even speed and the
+  camera never stops between shots: it leaves one moving and arrives at the
+  next moving. Dissolving moods truly dissolve, with each camera kept inside
+  its own shot's box, so nothing sweeps across the lettering. Only the
+  landing on the whole flyer comes to rest.
 
 ## Directing rules
 
 1. **Shots are things a fan recognizes**: a face, a figure, the venue, a
    prop. Never a crop of texture or background alone (lace, a wall, sky).
 2. **Never over the flyer's lettering.** Each shot's box sits on the artwork.
-   The flyer's own type only appears in the whole-flyer beat, crisp.
+   The flyer's own type only appears in the whole-flyer beat, crisp. Claude
+   maps the lettering first, and the lint (`src/lib/recipe-lint.ts`) refuses
+   a shot whose box takes in more than a little of it.
 3. **Sharp, not enlarged.** A shot is at least 28% of the flyer's width and
    18% of its height, and the hold at least 35% of its width. The code widens
-   smaller boxes, so give it boxes that are already big enough.
+   smaller boxes, so give it boxes that are already big enough. The camera
+   never enlarges past 4x (at a 720-pixel short side). A tighter cap was
+   tried and brought lettering into shots, which is worse than softness.
 4. **The flyer's words only**, copied from it. Never invent names, dates or
    claims.
 5. **Words where the shot is dark and empty**, never over a face. Top,
-   middle or bottom.
+   middle or bottom. Each shot names its focus (the face or point it's
+   about), and the scene moves the words to the slot that covers it least.
 6. **Moves follow the subject** (see "Every move guides the eye" above).
 7. **The hold is calm.** It's a shot with room at the bottom for the title
    and button, and it is softened under them, so it never fights them.
@@ -152,6 +164,27 @@ ffmpeg we already have; nothing gets installed.
 When a fix belongs in how Claude writes openings for everyone, change the
 instructions in `src/lib/server/funnel-draft.ts` (or a mood in
 `OPENING_MOODS`), not just the one recipe.
+
+## Video is not a screen
+
+impeccable bans eyebrow labels, gradient text and stacked effects on
+interface screens. The video is an exception, on purpose: the presenter
+credit is an eyebrow, the hook's sheen is a gradient in the letters, and a
+mood layers grade, bloom, grain and particles like a film finish. Keep each
+mood to what it needs. Modest phones get the lite tier
+(`src/components/motion-tier.ts`), which drops bloom, the light leak, grain
+and motion blur.
+
+## How Claude places shots
+
+In pixels, never fractions: Anthropic's vision docs say Claude places boxes
+well in absolute pixels and poorly in normalized ones. The server reads the
+flyer's size from its bytes (`src/lib/image-size.ts`) and tells Claude.
+Claude maps the flyer first (subjects, lettering), then gives every box and
+focus as `x1, y1, x2, y2` pixels. Code converts them (`boxFromPixels`),
+checks every rule (`lintRecipes`) and sends anything broken back once to be
+fixed. Watch it with `scripts/review-opening.mjs`; the plan behind it is
+docs/plans/09-flyer-to-video.md.
 
 ## Where openings come from
 

@@ -26,6 +26,11 @@ different job, framing, rhythm and voice for each:
 
 Never reuse a shot from the opening or another reel unless it's closer.
 
+Each reel also cuts its own way, whatever the mood (`treatment`, set by
+`parseCut` from the reel): Your People glides with true dissolves, 10%
+slower; Last Call punches with hard cuts and a flash, 15% faster; The Night
+takes the mood's cut. In an electric mood, Your People no longer slams.
+
 Only The Night opens on its hook (its first line alone, huge on black). If
 every cut did, the opening and all three reels would start the same way, so
 `parseCut` marks the other two `hook: false` and they open straight on their
@@ -52,7 +57,9 @@ Last Call fastest.
    "sold out".
 4. **Short.** 2 to 4 shots (3 is right), five words a line at most: about 6
    to 9 seconds in all. The Night and Your People 1.6 to 2.2 seconds a shot,
-   Last Call 1.2 to 1.6.
+   Last Call 1.2 to 1.6. A shot with words always lasts long enough to read
+   them still (see opening-scene, "Readable, then gone"), so fewer words is
+   how Last Call stays brisk.
 5. **Real video wins.** A cut is the reel until the organizer adds media;
    then it's gone. Don't make cuts compete with real footage.
 

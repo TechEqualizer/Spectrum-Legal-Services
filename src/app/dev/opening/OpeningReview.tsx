@@ -8,7 +8,7 @@ import type { LookFont } from "@/lib/look";
 import { parseCut, parseOpening, type OpeningMood, type OpeningRecipe } from "@/lib/opening";
 import { OpeningScene, cutFrames, openingFrames } from "@/remotion/OpeningScene";
 
-type Review = { src: string; recipe: unknown; font?: LookFont; accent?: string; title?: string; tagline?: string; frames?: boolean; exporting?: boolean; reel?: boolean };
+type Review = { src: string; recipe: unknown; font?: LookFont; accent?: string; title?: string; tagline?: string; frames?: boolean; exporting?: boolean; reel?: boolean; role?: "the_night" | "your_people" | "last_call" };
 /** reel: a reel's flyer cut (.claude/skills/flyer-cuts), under a stand-in of the reel's title and Tickets. */
 type Ready = { src: string; recipe: OpeningRecipe; font?: LookFont; accent: string; title: string; tagline: string; frames: boolean; exporting: boolean; reel: boolean };
 
@@ -27,7 +27,7 @@ export default function OpeningReview() {
     // The script hands the flyer and recipe over in sessionStorage, checked like any recipe.
     try {
       const r = JSON.parse(sessionStorage.getItem("opening-review") ?? "null") as Review | null;
-      const recipe = r && (r.reel ? parseCut(r.recipe, (r.recipe as { mood?: OpeningMood } | null)?.mood, (r.recipe as { hook?: unknown } | null)?.hook !== false) : parseOpening(r.recipe));
+      const recipe = r && (r.reel ? parseCut(r.recipe, (r.recipe as { mood?: OpeningMood } | null)?.mood, r.role) : parseOpening(r.recipe));
       // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the browser on mount
       if (!r || !recipe) setProblem("No recipe, or not a valid one.");
       else setReview({ src: r.src, recipe, font: r.font, accent: r.accent ?? "#ffffff", title: r.title ?? "", tagline: r.tagline ?? "", frames: Boolean(r.frames), exporting: Boolean(r.exporting), reel: Boolean(r.reel) });

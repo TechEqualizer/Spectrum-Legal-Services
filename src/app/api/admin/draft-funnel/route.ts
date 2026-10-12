@@ -27,12 +27,14 @@ export async function POST(request: Request) {
   const dates = (Array.isArray(body?.dates) ? body.dates : [])
     .slice(0, 20)
     .flatMap((d) => {
-      const x = (d ?? {}) as { date?: unknown; name?: unknown; price?: unknown; status?: unknown };
+      const x = (d ?? {}) as { date?: unknown; time?: unknown; name?: unknown; venue?: unknown; price?: unknown; status?: unknown };
       if (typeof x.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(x.date)) return [];
       const status = x.status === "few_left" || x.status === "sold_out" || x.status === "on_sale" ? (x.status as "few_left" | "sold_out" | "on_sale") : undefined;
       return [{
         date: x.date,
         name: typeof x.name === "string" ? x.name.slice(0, 80) : "",
+        ...(typeof x.time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(x.time) ? { time: x.time } : {}),
+        ...(typeof x.venue === "string" && x.venue ? { venue: x.venue.slice(0, 80) } : {}),
         ...(typeof x.price === "string" && x.price ? { price: x.price.slice(0, 40) } : {}),
         ...(status ? { status } : {}),
       }];

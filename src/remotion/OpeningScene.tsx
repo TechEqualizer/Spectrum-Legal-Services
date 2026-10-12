@@ -38,6 +38,11 @@ export type OpeningSceneProps = {
    * button, and the reel moves on. Words stay off the bottom, which is theirs.
    */
   reel?: boolean;
+  /**
+   * A modest phone (src/components/motion-tier.ts): the same cut, lighter.
+   * No bloom, light leak, grain or motion blur, and fewer specks in the air.
+   */
+  lite?: boolean;
 };
 
 type Frame = { W: number; H: number; fw: number; fh: number };
@@ -54,8 +59,43 @@ const SNAP = 7;
 const directionOf = (recipe: OpeningRecipe) => OPENING_MOODS[recipe.mood ?? DEFAULT_MOOD];
 const wordsIn = (t?: OpeningText) => (t ? t.lines.join(" ").split(/\s+/).length : 0);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const glide = Easing.bezier(0.65, 0, 0.35, 1);
 const settle = Easing.bezier(0.25, 0.1, 0.25, 1);
+
+/** Where each word slot sits on the screen, top to bottom (fractions of its height). */
+const SLOTS = { top: [0.1, 0.32], middle: [0.38, 0.58], bottom: [0.62, 0.86] } as const;
+
+/**
+ * Where a shot's words go: where the director asked, unless that would put
+ * them over the shot's focus (its face or subject, as it lands on screen),
+ * then the slot that covers it least. A reel's bottom is its title and
+ * Tickets button, so never there.
+ */
+function wordsAt(asked: OpeningText["at"], focus: [number, number] | null, reel: boolean): OpeningText["at"] {
+  const slots = (reel ? ["top", "middle"] : ["top", "middle", "bottom"]) as OpeningText["at"][];
+  const want = reel && asked === "bottom" ? "middle" : asked;
+  if (!focus) return want;
+  const covers = (at: OpeningText["at"]) => Math.max(0, Math.min(SLOTS[at][1], focus[1]) - Math.max(SLOTS[at][0], focus[0]));
+  if (covers(want) === 0) return want;
+  const mid = (focus[0] + focus[1]) / 2;
+  return [...slots].sort((a, b) => covers(a) - covers(b) || Math.abs((SLOTS[b][0] + SLOTS[b][1]) / 2 - mid) - Math.abs((SLOTS[a][0] + SLOTS[a][1]) / 2 - mid))[0];
+}
+
+/**
+ * The camera from one place to another over `dur` frames, leaving at one
+ * speed and arriving at another (per frame, in the camera's own units), so
+ * it never stops on the way: a cubic Hermite curve.
+ */
+const hermite = (a: Cam, va: Cam, b: Cam, vb: Cam, f: number, dur: number): Cam => {
+  const u = Math.min(1, Math.max(0, f / Math.max(1, dur)));
+  const u2 = u * u;
+  const u3 = u2 * u;
+  const h00 = 2 * u3 - 3 * u2 + 1;
+  const h10 = u3 - 2 * u2 + u;
+  const h01 = -2 * u3 + 3 * u2;
+  const h11 = u3 - u2;
+  const at = (k: "x" | "y" | "z") => h00 * a[k] + h10 * dur * va[k] + h01 * b[k] + h11 * dur * vb[k];
+  return { x: at("x"), y: at("y"), z: at("z") };
+};
 
 /**
  * A camera operator's sway: a few slow, unrelated waves (in screen pixels, and
@@ -72,14 +112,38 @@ const sway = (f: number, amp: number) => {
 };
 
 /**
+ * How long a shot's words need, in seconds: the time they take to come up
+ * (about half of it already readable), a still, readable moment (a glance
+ * plus a beat a word, about 17 characters a second, as subtitles are timed),
+ * and the time they take to clear. Each type style comes up at its own speed.
+ */
+function wordsNeed(text: OpeningText | undefined, type: "slam" | "track" | "rise" | "soft") {
+  if (!text) return 0;
+  const words = wordsIn(text);
+  const lines = text.lines.length;
+  const fps = 30;
+  const enter =
+    text.size === "eyebrow" ? 0.5 + (lines - 1) * (5 / fps)
+    : type === "slam" ? (2 + words * 4 + 4) / fps
+    : type === "soft" ? 0.7 + (lines - 1) * (8 / fps)
+    : (type === "track" ? 0.6 : 0.45) + (lines - 1) * (5 / fps);
+  const read = 0.35 + 0.15 * words;
+  const exit = 0.25 + 3 / fps;
+  return enter * 0.5 + read + exit;
+}
+
+/**
  * When everything happens, in frames: the hook (a first big line of up to
- * four words), each shot (at the mood's pace, a little shorter than the one
- * before, but always long enough to read), the camera's travel between shots
- * (when the mood dissolves rather than cuts), the pull-back to the whole
- * flyer, the flyer itself, and the hold.
+ * four words), each shot (its seconds at the mood's pace, a little shorter
+ * than the one before, but always long enough for its words to be read while
+ * still), the camera's travel between shots (when the mood dissolves rather
+ * than cuts), the pull-back to the whole flyer, the flyer itself, and the hold.
  */
 function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS, reel = false) {
-  const d = directionOf(recipe);
+  const mood = directionOf(recipe);
+  // A reel's own treatment overrides the mood's cut: Your People glides, unhurried; Last Call punches, brisk.
+  const cut = recipe.treatment === "glide" ? "dissolve" : recipe.treatment === "punch" ? "punch" : mood.cut;
+  const d = { ...mood, cut, pace: mood.pace * (recipe.treatment === "glide" ? 1.1 : recipe.treatment === "punch" ? 0.85 : 1) } as const;
   const sec = (s: number) => Math.round(s * fps);
   const first = recipe.beats[0].text;
   const hook = recipe.hook !== false && first?.size === "big" && wordsIn(first) <= 4 ? first : null;
@@ -89,8 +153,7 @@ function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS, re
   const stops = recipe.beats.map((b, i) => {
     // The hook's own shot is its payoff: a short look, its line already said.
     const text = i === 0 && hook ? undefined : b.text;
-    const words = wordsIn(text);
-    const seconds = i === 0 && hook ? 0.7 * d.pace : Math.max(b.seconds * 0.62 * d.pace * (1 - d.build * i), words ? 0.8 + 0.12 * words : 0.7);
+    const seconds = i === 0 && hook ? 0.7 * d.pace : Math.max(b.seconds * 0.8 * d.pace * (1 - d.build * i), text ? wordsNeed(text, d.type) : 0.7);
     const stop = { from: at, dur: sec(seconds), text };
     at += stop.dur + (i < recipe.beats.length - 1 ? travel : 0);
     return stop;
@@ -118,34 +181,72 @@ export function openingFrames(recipe: OpeningRecipe, fps: number, holdSeconds?: 
 /** A reel's cut, in frames: it ends on the whole flyer. */
 export const cutFrames = (recipe: OpeningRecipe, fps: number) => plan(recipe, fps, undefined, true).total;
 
-export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story, reel = false }) => {
+export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, recipe, fontClass, caps, accent, story, reel = false, lite = false }) => {
   const frame = useCurrentFrame();
   const { fps, width: W, height: H } = useVideoConfig();
   const p = plan(recipe, fps, story?.holdSeconds, reel);
   const { d } = p;
   const fr: Frame = { W, H, fw: width, fh: height };
-  const shots = p.stops.map((s, i) => ({ ...s, cams: drift(camOn(recipe.beats[i].box, fr), recipe.beats[i].move, fr) }));
+  const shots = p.stops.map((s, i) => {
+    const beat = recipe.beats[i];
+    const cams = drift(camOn(beat.box, fr), beat.move, fr, beat.box);
+    // Where the shot's focus lands on screen, halfway through, so its words stay off it.
+    const at = place(mix(cams[0], cams[1], 0.5), fr);
+    const focus: [number, number] | null = beat.focus ? [(at.top + beat.focus.y * at.height) / H, (at.top + (beat.focus.y + beat.focus.h) * at.height) / H] : null;
+    return { ...s, cams, text: s.text && { ...s.text, at: wordsAt(s.text.at, focus, reel) } };
+  });
   const poster = camOnPoster(fr);
   const punch = d.cut === "punch";
   // A punch-in lands on every shot after a cut (the first too, when the hook flies into it).
   const punched = (i: number) => punch && (i > 0 || Boolean(p.hook));
 
-  /** Where the camera is at frame f, and whether a cut lands there. */
-  const camAt = (f: number): { cam: Cam; cut: boolean } => {
+  // Each shot's own move runs at an even speed, and the camera never stops
+  // between shots: it leaves one still moving, travels (or cuts), and arrives
+  // at the next already moving, like a camera operator rather than a
+  // slideshow. Only the landing on the whole flyer comes to rest.
+  const speedOf = (i: number) => {
+    const [a0, a1] = shots[i].cams;
+    const k = 1 / Math.max(1, shots[i].dur);
+    return { x: (a1.x - a0.x) * k, y: (a1.y - a0.y) * k, z: (a1.z - a0.z) * k };
+  };
+  const still = { x: 0, y: 0, z: 0 };
+  /** A camera kept looking inside its shot's box (as far as the view fits), so a drift never strays onto the flyer's lettering. */
+  const inBox = (c: Cam, box: OpeningRecipe["beats"][number]["box"]): Cam => {
+    const z = Math.max(c.z, camOn(box, fr).z);
+    const halfW = W / (2 * width * Math.exp(z));
+    const halfH = H / (2 * height * Math.exp(z));
+    const keep = (v: number, lo: number, hi: number) => (lo <= hi ? Math.min(hi, Math.max(lo, v)) : (lo + hi) / 2);
+    return { x: keep(c.x, box.x + halfW, box.x + box.w - halfW), y: keep(c.y, box.y + halfH, box.y + box.h - halfH), z };
+  };
+
+  /** Where the camera is at frame f, and whether a cut lands there; while one shot dissolves into the next, the incoming shot's camera and how far in it is. */
+  const camAt = (f: number): { cam: Cam; cut: boolean; into?: { cam: Cam; t: number } } => {
     if (f < shots[0].from) return { cam: shots[0].cams[0], cut: false };
     for (let i = 0; i < shots.length; i++) {
       const s = shots[i];
       if (f < s.from + s.dur) {
-        const c = mix(s.cams[0], s.cams[1], settle((f - s.from) / s.dur));
+        const c = mix(s.cams[0], s.cams[1], (f - s.from) / s.dur);
         const k = f - s.from;
         if (punched(i) && k < SNAP) c.z += Math.log(1 + 0.16 * (1 - Easing.out(Easing.cubic)(k / SNAP)));
         return { cam: c, cut: punched(i) && k === 0 };
       }
       const next = shots[i + 1];
-      if (next && f < next.from) return { cam: mix(s.cams[1], next.cams[0], glide((f - s.from - s.dur) / p.travel)), cut: false };
+      // A true dissolve: the outgoing shot keeps drifting as it fades, the next comes up already moving,
+      // so the camera never sweeps across the flyer's lettering between them.
+      if (next && f < next.from) {
+        const k = f - s.from - s.dur;
+        const out = speedOf(i);
+        const inn = speedOf(i + 1);
+        const back = next.from - f;
+        return {
+          cam: inBox({ x: s.cams[1].x + out.x * k, y: s.cams[1].y + out.y * k, z: s.cams[1].z + out.z * k }, recipe.beats[i].box),
+          cut: false,
+          into: { cam: inBox({ x: next.cams[0].x - inn.x * back, y: next.cams[0].y - inn.y * back, z: next.cams[0].z - inn.z * back }, recipe.beats[i + 1].box), t: settle(k / p.travel) },
+        };
+      }
     }
-    const last = shots[shots.length - 1].cams[1];
-    if (f < p.poster.from) return { cam: mix(last, poster, glide((f - p.reveal.from) / p.reveal.dur)), cut: false };
+    const lastI = shots.length - 1;
+    if (f < p.poster.from) return { cam: hermite(shots[lastI].cams[1], speedOf(lastI), poster, still, f - p.reveal.from, p.reveal.dur), cut: false };
     return { cam: { ...poster, z: poster.z + Math.log(1 + 0.03 * Math.min(1, (f - p.poster.from) / p.poster.dur)) }, cut: false };
   };
   const now = camAt(frame);
@@ -162,12 +263,17 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
-      <Flyer src={src} frame={fr} cam={held} blur={Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={d.bloom} tilt={hand.roll} />
+      <Flyer src={src} frame={fr} cam={held} blur={lite ? 0 : Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} />
+      {now.into && (
+        <AbsoluteFill style={{ opacity: now.into.t }}>
+          <Flyer src={src} frame={fr} cam={{ ...now.into.cam, x: now.into.cam.x - hand.x / (width * Math.exp(now.into.cam.z)), y: now.into.cam.y - hand.y / (height * Math.exp(now.into.cam.z)) }} grade={d.grade} bloom={lite ? 0 : d.bloom} tilt={hand.roll} />
+        </AbsoluteFill>
+      )}
       {shots.map(
         (s, i) =>
           s.text && (
             <Sequence key={i} from={s.from} durationInFrames={s.dur} name={`Words ${i + 1}`}>
-              <Words text={reel && s.text.at === "bottom" ? { ...s.text, at: "middle" } : s.text} fontClass={fontClass} caps={caps} accent={accent} type={d.type} left={d.align === "left"} />
+              <Words text={s.text} fontClass={fontClass} caps={caps} accent={accent} type={d.type} left={d.align === "left"} />
             </Sequence>
           ),
       )}
@@ -175,11 +281,11 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
         (s, i) =>
           punched(i) && (
             <Sequence key={`flash-${i}`} from={s.from} durationInFrames={4} name={`Flash ${i + 1}`}>
-              <Flash color={d.flash === "accent" ? accent : "#fff"} strength={d.flash === "accent" ? 0.75 : 0.5} />
+              <Flash color={d.flash === "accent" ? accent : "#fff"} strength={d.flash === "accent" ? 0.75 : d.flash ? 0.5 : 0.3} />
             </Sequence>
           ),
       )}
-      {d.leak && (
+      {d.leak && !lite && (
         // As the camera starts to pull back, so the reveal itself stays clear.
         <Sequence from={p.reveal.from - 6} durationInFrames={16} name="Light leak">
           <AbsoluteFill style={{ opacity: 0.45 }}>
@@ -198,9 +304,9 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
           <Hook text={p.hook.text} src={src} frame={fr} cam={shots[0].cams[0]} fontClass={fontClass} caps={caps} accent={accent} through={punch} solid={Boolean(story)} />
         </Sequence>
       )}
-      <Sparks kind={d.sparks} color={accent} />
+      <Sparks kind={d.sparks} color={accent} lite={lite} />
       <AbsoluteFill style={{ background: "radial-gradient(120% 85% at 50% 45%, transparent 50%, rgba(0,0,0,0.7))" }} />
-      <Grain />
+      {!lite && <Grain />}
       {/* Without a hook, letterbox bars open quickly over the first shot, like the first shot of a film. */}
       {!p.hook && <Bars frame={frame} fps={fps} />}
     </AbsoluteFill>
@@ -244,7 +350,8 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
 }) => {
   const f = useCurrentFrame();
   const { fps, durationInFrames: dur, width: W, height: H } = useVideoConfig();
-  const rows = (text.lines.length === 1 ? text.lines[0].split(/\s+/).slice(0, 3) : text.lines).map((r) => (caps ? r.toUpperCase() : r));
+  // One word a row for a one-line hook (all of its words: up to four), else its own lines.
+  const rows = (text.lines.length === 1 ? text.lines[0].split(/\s+/).slice(0, 4) : text.lines).map((r) => (caps ? r.toUpperCase() : r));
   // Each row about as wide as the frame (a rough measure of the face's letters), never taller than a fifth of it.
   const em = caps ? 0.78 : 0.6;
   const sizes = rows.map((r) => Math.min(H * 0.2, (W * 0.84) / (r.length * em)));

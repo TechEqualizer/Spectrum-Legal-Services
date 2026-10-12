@@ -47,6 +47,22 @@ const draft = {
     { role: 'hook', title: 'Old role', summary: '', hook: '', captions: [], date: null, source: 'text', camera: '', seconds: 5, prompt: '' },
   ],
 };
+// Claude places boxes in the flyer's pixels when the prompt gives its size: the fractions above, as pixels, with a
+// tight focus in each shot and a map of the flyer (its subjects, and lettering in a strip along the bottom edge).
+const toPx = (b, w, h) => ({ x1: Math.round(b.x * w), y1: Math.round(b.y * h), x2: Math.round((b.x + b.w) * w), y2: Math.round((b.y + b.h) * h) });
+const inPixels = (r, w, h) => r && {
+  ...r,
+  beats: r.beats.map((x) => ({ ...x, box: toPx(x.box, w, h), focus: toPx({ x: x.box.x + x.box.w * 0.4, y: x.box.y + x.box.h * 0.2, w: x.box.w * 0.2, h: x.box.h * 0.2 }, w, h) })),
+  ...(r.hold ? { hold: toPx(r.hold, w, h) } : {}),
+};
+const sized = (reply, system) => {
+  const m = JSON.stringify(system).match(/flyer image is (\d+)x(\d+) pixels/);
+  if (!m) return reply;
+  const [w, h] = [Number(m[1]), Number(m[2])];
+  const map = { subjects: (reply.opening?.beats ?? []).map((x, i) => ({ what: `subject ${i + 1}`, box: toPx(x.box, w, h) })), lettering: [toPx({ x: 0.05, y: 0.97, w: 0.9, h: 0.03 }, w, h)] };
+  return { map, ...reply, opening: inPixels(reply.opening, w, h), ...(reply.reels ? { reels: reply.reels.map((r) => (r.cut ? { ...r, cut: inPixels(r.cut, w, h) } : r)) } : {}) };
+};
+
 http.createServer((req, res) => {
   let body = ''; req.on('data', c => body += c); req.on('end', () => {
     if (req.url === '/__mode') { mode = body; return res.end('ok'); }
@@ -61,7 +77,7 @@ http.createServer((req, res) => {
       if (mode === 'refusal' || (mode === 'nodraft' && drafting)) return res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: 'refusal', usage: { input_tokens: 1, output_tokens: 0 } }));
       res.setHeader('content-type', 'application/json');
       setTimeout(() => res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: 'claude-opus-5-5',
-        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? { opening: draft.opening } : drafting ? draft : replies[mode === 'nodraft' ? 'multi' : mode]) }],
+        content: [{ type: 'thinking', thinking: '', signature: 'x' }, { type: 'text', text: JSON.stringify(cutting ? sized({ opening: draft.opening }, last.body.system) : drafting ? sized(draft, last.body.system) : replies[mode === 'nodraft' ? 'multi' : mode]) }],
         stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } })), 600);
       return;
     }

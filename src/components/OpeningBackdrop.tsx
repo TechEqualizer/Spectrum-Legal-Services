@@ -4,6 +4,7 @@ import { Player, type PlayerRef } from "@remotion/player";
 import { useEffect, useRef, useState } from "react";
 import type { OpeningRecipe } from "@/lib/opening";
 import { OpeningScene, openingFrames } from "@/remotion/OpeningScene";
+import { prefersLiteMotion } from "@/components/motion-tier";
 
 const FPS = 30;
 
@@ -40,6 +41,7 @@ export default function OpeningBackdrop({
   const [frame, setFrame] = useState<{ w: number; h: number } | null>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [reached, setReached] = useState(false);
+  const [lite] = useState(prefersLiteMotion);
   const { holdStart, loopFrom, total } = openingFrames(recipe, FPS);
   const still = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const ready = Boolean(size && frame);
@@ -106,7 +108,7 @@ export default function OpeningBackdrop({
         <Player
           ref={ref}
           component={OpeningScene}
-          inputProps={{ src, width: size.w, height: size.h, recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)" }}
+          inputProps={{ src, width: size.w, height: size.h, recipe, fontClass, caps, accent: "var(--sky-accent, #ffffff)", lite }}
           durationInFrames={total}
           compositionWidth={frame.w}
           compositionHeight={frame.h}

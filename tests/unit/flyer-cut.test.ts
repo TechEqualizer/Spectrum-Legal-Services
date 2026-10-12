@@ -52,11 +52,13 @@ test("the draft keeps each reel's cut, in the opening's mood", () => {
 test("only The Night opens on its hook; the others open straight on their first shot", () => {
   const short = { beats: [beat({ text: { lines: ["Dress to impress"], at: "top", size: "big" } }), beat({ move: "pull" })] };
   assert.equal(parseCut(short, "glamour")?.hook, undefined);
-  const plain = parseCut(short, "glamour", false);
+  const plain = parseCut(short, "glamour", "your_people");
   assert.equal(plain?.hook, false);
   assert.equal(checkOpening(plain), null);
   const reel = (role: string) => ({ role, title: role, summary: "", hook: "", captions: [], date: null, source: "text", camera: "", seconds: 6, prompt: "", cut: short });
   const d = cleanDraft({ screen: {}, reels: [reel("the_night"), reel("your_people"), reel("last_call")] });
   assert.ok(!("problem" in d));
   assert.deepEqual(d.reels.map((r) => r.cut?.hook), [undefined, false, false]);
+  // And each reel cuts its own way, whatever the mood: Your People glides, Last Call punches.
+  assert.deepEqual(d.reels.map((r) => r.cut?.treatment), [undefined, "glide", "punch"]);
 });

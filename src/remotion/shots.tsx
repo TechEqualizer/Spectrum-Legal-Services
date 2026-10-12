@@ -12,14 +12,24 @@ export type Cam = { x: number; y: number; z: number };
 type Frame = { W: number; H: number; fw: number; fh: number };
 
 /**
+ * How far the camera may enlarge the flyer: 4 composition pixels per flyer
+ * pixel at a 720-pixel short side. Only the smallest shots reach it; past it
+ * a flyer goes visibly soft, so such a shot shows a little more around it.
+ * (Tighter caps were tried: they brought the flyer's own lettering into
+ * shots, which is worse than a little softness.)
+ */
+const MAX_ENLARGE = 4;
+
+/**
  * The camera on a box: the box covers the frame, so nothing outside it (the
  * flyer's own lettering, which Claude keeps the boxes clear of) comes into
- * view, and the frame is always filled.
+ * view, and the frame is always filled; never enlarged past the flyer's own
+ * detail.
  */
 export const camOn = (b: Box, { W, H, fw, fh }: Frame): Cam => ({
   x: b.x + b.w / 2,
   y: b.y + b.h / 2,
-  z: Math.log(Math.max(W / (b.w * fw), H / (b.h * fh), W / fw, H / fh)),
+  z: Math.log(Math.max(Math.min(Math.max(W / (b.w * fw), H / (b.h * fh)), (MAX_ENLARGE * Math.min(W, H)) / 720), W / fw, H / fh)),
 });
 
 /** The whole flyer, a little inside the frame. */
@@ -39,24 +49,29 @@ export function place(c: Cam, { W, H, fw, fh }: Frame) {
 
 /**
  * The camera's move while it rests on a shot: in, out, up or across. The
- * sideways moves ride a little closer in, so they stay inside the box.
+ * sideways moves ride a little closer in, so they stay inside the box; across
+ * a box wider (or taller) than the frame shows, a pan (or tilt) travels its
+ * whole width (or height), so a wide crowd is seen from one end to the other.
  */
-export function drift(base: Cam, move: OpeningMove, f: Frame): [Cam, Cam] {
+export function drift(base: Cam, move: OpeningMove, f: Frame, box?: Box): [Cam, Cam] {
   const s = Math.exp(base.z);
   const seenW = f.W / (f.fw * s);
   const seenH = f.H / (f.fh * s);
   const z = (k: number) => base.z + Math.log(k);
+  // How far the camera can travel inside the box, at the moves' slightly closer zoom.
+  const spanX = box ? Math.max(0.05 * seenW, (box.w - seenW / 1.08) / 2) : 0.05 * seenW;
+  const spanY = box ? Math.max(0.04 * seenH, (box.h - seenH / 1.08) / 2) : 0.04 * seenH;
   switch (move) {
     case "push":
       return [base, { ...base, z: z(1.14) }];
     case "pull":
       return [{ ...base, z: z(1.14) }, base];
     case "tilt-up":
-      return [{ ...base, y: base.y + 0.04 * seenH, z: z(1.08) }, { ...base, y: base.y - 0.04 * seenH, z: z(1.11) }];
+      return [{ ...base, y: base.y + spanY, z: z(1.08) }, { ...base, y: base.y - spanY, z: z(1.11) }];
     case "pan-left":
-      return [{ ...base, x: base.x + 0.05 * seenW, z: z(1.08) }, { ...base, x: base.x - 0.05 * seenW, z: z(1.11) }];
+      return [{ ...base, x: base.x + spanX, z: z(1.08) }, { ...base, x: base.x - spanX, z: z(1.11) }];
     case "pan-right":
-      return [{ ...base, x: base.x - 0.05 * seenW, z: z(1.08) }, { ...base, x: base.x + 0.05 * seenW, z: z(1.11) }];
+      return [{ ...base, x: base.x - spanX, z: z(1.08) }, { ...base, x: base.x + spanX, z: z(1.11) }];
   }
 }
 
@@ -91,11 +106,15 @@ export const Flyer: React.FC<{ src: string; frame: Frame; cam: Cam; blur?: numbe
     transform: `translate(${W / 2}px, ${H / 2}px) rotate(${tilt}deg) translate(${at.left - W / 2}px, ${at.top - H / 2}px) scale(${k})`,
   };
   const img: React.CSSProperties = { width: "100%", height: "100%", maxWidth: "none", display: "block" };
+  // The blurred copy only where the flyer doesn't fill the frame (a few pixels' margin for the hand-held tilt).
+  const covered = at.left <= -8 && at.top <= -8 && at.left + at.width >= W + 8 && at.top + at.height >= H + 8;
+  // Motion blur in steps, so the filter (costly to redraw) changes only now and then, not every frame.
+  const stepped = Math.round(blur / 1.5) * 1.5;
   return (
     <AbsoluteFill style={{ backgroundColor: "#000", overflow: "hidden" }}>
-      <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.45) saturate(1.4)", scale: "1.2" }} />
+      {!covered && <Img src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.45) saturate(1.4)", scale: "1.2" }} />}
       {/* Blur is drawn before the scale, so it's divided by it to stay the same on screen. */}
-      <div style={{ ...layer, overflow: "hidden", filter: `${blur > 0.2 ? `blur(${(blur / k).toFixed(2)}px) ` : ""}${grade}` }}>
+      <div style={{ ...layer, overflow: "hidden", filter: `${stepped > 0 ? `blur(${(stepped / k).toFixed(2)}px) ` : ""}${grade}` }}>
         <Img src={src} style={img} />
         {sweep >= 0 && sweep <= 1 && (
           // A band of light across the print, like a glossy poster catching a spotlight.
@@ -161,11 +180,12 @@ export type SparkKind = "embers" | "glitter" | "haze" | "dust" | "motes";
  * dust: a few pale motes hanging in the light, barely moving (galleries, talks).
  * motes: sun bokeh floating up, warm and soft (daytime).
  */
-export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, color }) => {
+export const Sparks: React.FC<{ kind: SparkKind; color: string; lite?: boolean }> = ({ kind, color, lite = false }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const sec = frame / fps;
-  const specks = kind === "dust" ? SPECKS.slice(0, 14) : kind === "haze" || kind === "motes" ? SPECKS.slice(0, 10) : SPECKS;
+  // Lite (a modest phone): a dozen specks, with no glow or blur to redraw.
+  const specks = (kind === "dust" ? SPECKS.slice(0, 14) : kind === "haze" || kind === "motes" ? SPECKS.slice(0, 10) : SPECKS).slice(0, lite ? 12 : undefined);
   return (
     <AbsoluteFill style={{ pointerEvents: "none", mixBlendMode: "screen" }}>
       {specks.map((e, i) => {
@@ -176,7 +196,8 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
         const big = kind === "haze" || kind === "motes";
         const size = big ? 40 + e.size * 14 : e.near ? e.size * 3 : kind === "dust" ? 1.5 + e.size * 0.3 : e.size;
         // Glitter catches the light now and then; the rest glow steadily.
-        const glint = fall ? Math.pow(Math.max(0, Math.sin((sec * 1.5 + e.phase) * Math.PI * 2)), 8) : 0;
+        // In quarter steps, so the glow (costly to redraw) changes only now and then.
+        const glint = fall ? Math.round(Math.pow(Math.max(0, Math.sin((sec * 1.5 + e.phase) * Math.PI * 2)), 8) * 4) / 4 : 0;
         const opacity =
           kind === "embers" ? (e.near ? 0.45 : 0.85) * Math.pow(y, 0.8)
           : kind === "glitter" ? 0.25 + 0.75 * glint
@@ -195,9 +216,9 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
               height: size,
               borderRadius: "50%",
               backgroundColor: kind === "dust" ? "#f4efe6" : color,
-              boxShadow: big || kind === "dust" ? undefined : `0 0 ${size * (fall ? 2 + glint * 4 : 3)}px ${size}px ${color}`,
+              boxShadow: lite || big || kind === "dust" ? undefined : `0 0 ${size * (fall ? 2 + glint * 4 : 3)}px ${size}px ${color}`,
               // Near the lens: big and soft. Far: small and sharp.
-              filter: big ? "blur(18px)" : e.near && kind === "embers" ? "blur(6px)" : undefined,
+              filter: lite ? undefined : big ? "blur(18px)" : e.near && kind === "embers" ? "blur(6px)" : undefined,
               opacity,
             }}
           />
@@ -207,18 +228,17 @@ export const Sparks: React.FC<{ kind: SparkKind; color: string }> = ({ kind, col
   );
 };
 
-/** Film grain, a new pattern every two frames. */
+/** Film grain, a new pattern every two frames: one screen of a repeating tile, shifted, so it costs one layer. */
 export const Grain: React.FC = () => {
   const frame = useCurrentFrame();
-  const step = Math.floor(frame / 2) % 5;
-  const offsets = ["0% 0%", "-6% 4%", "5% -7%", "-3% -4%", "7% 6%"];
+  const step = Math.floor(frame / 2) % 7;
+  const offsets = ["0px 0px", "-61px 37px", "53px -71px", "-29px -43px", "71px 59px", "17px -89px", "-83px 11px"];
   return (
     <AbsoluteFill
       style={{
-        inset: "-50%",
         opacity: 0.14,
         mixBlendMode: "overlay",
-        translate: offsets[step].replace(/%/g, "%"),
+        backgroundPosition: offsets[step],
         backgroundImage:
           "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
       }}
