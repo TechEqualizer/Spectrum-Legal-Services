@@ -95,7 +95,11 @@ const timeout = <T>(p: Promise<T>, ms: number) =>
  * `model`, another model of the same shape (the tests use a tiny stand-in).
  */
 export async function makeDepthMap(src: string, model = DEPTH_MODEL_URL): Promise<Blob | null> {
-  if (!canMakeDepth()) return null;
+  if (!canMakeDepth()) {
+    console.info("[depth] not tried here (turned off, saving data, or under 4 GB of memory)");
+    return null;
+  }
+  const started = performance.now();
   try {
     return await timeout(
       (async () => {
@@ -125,7 +129,10 @@ export async function makeDepthMap(src: string, model = DEPTH_MODEL_URL): Promis
         outCanvas.width = ow;
         outCanvas.height = oh;
         outCanvas.getContext("2d")!.putImageData(map, 0, 0);
-        return await new Promise<Blob | null>((resolve) => outCanvas.toBlob(resolve, "image/png"));
+        const png = await new Promise<Blob | null>((resolve) => outCanvas.toBlob(resolve, "image/png"));
+        // Said either way, so whoever's checking can see it worked (and how long a phone takes).
+        console.info(`[depth] made a ${ow}×${oh} depth map in ${((performance.now() - started) / 1000).toFixed(1)}s`);
+        return png;
       })(),
       TIMEOUT_MS,
     );

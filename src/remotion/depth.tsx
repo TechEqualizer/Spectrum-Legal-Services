@@ -69,14 +69,18 @@ const load = (src: string) =>
     img.src = src;
   });
 
-/** The depth map, softened a little so edges stretch smoothly instead of tearing. */
+/**
+ * The depth map, softened so the edge of a near thing stretches the picture
+ * behind it gently over a wide band instead of tearing it in a thin one (a
+ * frame line bending, lettering folding over itself). About 1.5% of the map.
+ */
 function softened(img: HTMLImageElement): HTMLCanvasElement {
   const c = document.createElement("canvas");
   const k = Math.min(1, 512 / Math.max(img.naturalWidth, img.naturalHeight));
   c.width = Math.max(1, Math.round(img.naturalWidth * k));
   c.height = Math.max(1, Math.round(img.naturalHeight * k));
   const ctx = c.getContext("2d")!;
-  ctx.filter = "blur(3px)";
+  ctx.filter = `blur(${Math.max(2, Math.round(Math.max(c.width, c.height) * 0.015))}px)`;
   ctx.drawImage(img, 0, 0, c.width, c.height);
   return c;
 }

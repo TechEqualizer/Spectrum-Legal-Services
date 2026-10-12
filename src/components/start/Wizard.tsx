@@ -138,6 +138,22 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
     if (window.matchMedia("(max-width: 1023px)").matches) phoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     const mine = ++attempt.current;
     setDrafting(false);
+    // Its depth map, made alongside the reading (the model takes a while), for the phone's parallax.
+    const depthMade = picture
+      ? import("@/lib/depth-map")
+          .then(({ makeDepthMap }) => makeDepthMap(picture))
+          .then((png) =>
+            png
+              ? new Promise<string | null>((resolve) => {
+                  const r = new FileReader();
+                  r.onload = () => resolve(String(r.result));
+                  r.onerror = () => resolve(null);
+                  r.readAsDataURL(png);
+                })
+              : null,
+          )
+          .catch(() => null)
+      : null;
     const res = await fetch("/api/start/flyer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -164,19 +180,10 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         setReadsLeft((n) => n - 1);
         if (!read.dates.length) return setError("We couldn't find a date on that flyer. Try a clearer photo, or the one with the date on it.");
         update({ flyer: picture, depth: undefined, dates: read.dates, look: read.look, reels: undefined, reelsFailed: undefined });
-        // Its depth map, in the background: the phone's opening and cuts move with parallax once it's there.
-        if (picture)
-          void import("@/lib/depth-map").then(({ makeDepthMap }) =>
-            makeDepthMap(picture).then(async (png) => {
-              if (!png || mine !== attempt.current) return;
-              const url = await new Promise<string>((resolve) => {
-                const r = new FileReader();
-                r.onload = () => resolve(String(r.result));
-                r.readAsDataURL(png);
-              });
-              if (mine === attempt.current) update({ depth: url });
-            }),
-          );
+        // Once the depth map is there, the phone starts over with it (see Phone's `scene`).
+        void depthMade?.then((url) => {
+          if (url && mine === attempt.current) update({ depth: url });
+        });
         return setDrafting(true);
       }
       if (line.draft) {
@@ -415,8 +422,8 @@ function Phone({
     };
   }, []);
 
-  // A new flyer, look, set of reels or step starts the link over, so the change is seen; typed words change in place.
-  const scene = [draft.flyer?.length, JSON.stringify(draft.look), JSON.stringify(draft.dates), core && Boolean(draft.reels), core].join("|");
+  // A new flyer, its depth map, look, set of reels or step starts the link over, so the change is seen; typed words change in place.
+  const scene = [draft.flyer?.length, Boolean(draft.depth), JSON.stringify(draft.look), JSON.stringify(draft.dates), core && Boolean(draft.reels), core].join("|");
   const shown = useRef({ scene: "", n: 0 });
 
   useEffect(() => {

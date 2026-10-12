@@ -148,14 +148,30 @@ Still open from phase 1:
   onnxruntime-web 1.30.0. It was audited before install: MIT, no install
   scripts, no new audit findings. The runtime is served from our own site
   (`public/ort/`, copied on install). It runs in the organizer's browser
-  once the flyer is read, in the wizard and the studio's import, and the map
+  in the wizard (from the moment the flyer is chosen) and the studio's import, and the map
   is stored next to the flyer at claim or publish. Anything that fails
   leaves the flyer flat. A stand-in model of the same shape ran the whole
   pipeline in a browser (518x728 output, correct orientation and colors).
   The real model can't be reached from the build environment yet.
-  **Before merging:** run `scripts/make-depth.mjs` on the Masquerade and
-  Book Signing flyers, look at the maps, then watch the cuts with
-  `scripts/review-opening.mjs --depth`.
+  Merged (#98) before that check; still to do: run `scripts/make-depth.mjs`
+  on the Masquerade and Book Signing flyers, look at the maps, then watch
+  the cuts with `scripts/review-opening.mjs --depth`. The console says
+  `[depth] made a WxH depth map in Ns` when it works, and why when it doesn't.
+- **Visible (after the first try on production):** testing the wizard on a
+  desktop, no difference could be seen. Three reasons, all fixed:
+  - The map came too late. It started only once the flyer was read and took
+    15 to 45 seconds, by which time the phone's opening had played flat and
+    stopped on the hold. Now it starts as soon as the flyer is chosen, and
+    the phone starts over once it lands.
+  - It was too faint: near things moved 3% of the flyer over a shot (a few
+    pixels in the phone). Now 5%, a push grows them 12% (was 8%), and the
+    whole flyer and the hold drift slowly instead of standing still.
+  - Depth jumped back to still between shots. Now it stays as the last shot
+    left it and settles during the pull-back.
+  At the stronger setting a hard-edged test map tore the picture at the
+  edge of a near thing (a frame line bent, lettering folded over itself).
+  Softening the map over about 1.5% of its size (was 3 px) turned that into
+  a gentle curve.
 - Off in the e2e tests (`NEXT_PUBLIC_DEPTH_MAPS=off`), which would otherwise
   download the model on every run.
 
