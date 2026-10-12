@@ -423,7 +423,7 @@ function DraftOffer({
       const res = await fetch("/api/admin/draft-funnel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, today: localDay(new Date()), dates: found.dates.map((d) => ({ date: d.date, name: d.name, price: d.price })), ...found.source }),
+        body: JSON.stringify({ slug, today: localDay(new Date()), dates: found.dates.map((d) => ({ date: d.date, time: d.time, name: d.name, venue: d.venue, price: d.price })), ...found.source }),
       }).catch(() => null);
       if (!res) throw new Error("Couldn't reach the server. Check your connection and try again.");
       const body = (await res.json().catch(() => ({}))) as Partial<FunnelDraft> & { error?: string };

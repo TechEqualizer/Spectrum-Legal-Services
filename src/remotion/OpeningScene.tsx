@@ -54,8 +54,24 @@ const SNAP = 7;
 const directionOf = (recipe: OpeningRecipe) => OPENING_MOODS[recipe.mood ?? DEFAULT_MOOD];
 const wordsIn = (t?: OpeningText) => (t ? t.lines.join(" ").split(/\s+/).length : 0);
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const glide = Easing.bezier(0.65, 0, 0.35, 1);
 const settle = Easing.bezier(0.25, 0.1, 0.25, 1);
+
+/**
+ * The camera from one place to another over `dur` frames, leaving at one
+ * speed and arriving at another (per frame, in the camera's own units), so
+ * it never stops on the way: a cubic Hermite curve.
+ */
+const hermite = (a: Cam, va: Cam, b: Cam, vb: Cam, f: number, dur: number): Cam => {
+  const u = Math.min(1, Math.max(0, f / Math.max(1, dur)));
+  const u2 = u * u;
+  const u3 = u2 * u;
+  const h00 = 2 * u3 - 3 * u2 + 1;
+  const h10 = u3 - 2 * u2 + u;
+  const h01 = -2 * u3 + 3 * u2;
+  const h11 = u3 - u2;
+  const at = (k: "x" | "y" | "z") => h00 * a[k] + h10 * dur * va[k] + h01 * b[k] + h11 * dur * vb[k];
+  return { x: at("x"), y: at("y"), z: at("z") };
+};
 
 /**
  * A camera operator's sway: a few slow, unrelated waves (in screen pixels, and
@@ -72,11 +88,32 @@ const sway = (f: number, amp: number) => {
 };
 
 /**
+ * How long a shot's words need, in seconds: the time they take to come up
+ * (about half of it already readable), a still, readable moment (a glance
+ * plus a beat a word, about 17 characters a second, as subtitles are timed),
+ * and the time they take to clear. Each type style comes up at its own speed.
+ */
+function wordsNeed(text: OpeningText | undefined, type: "slam" | "track" | "rise" | "soft") {
+  if (!text) return 0;
+  const words = wordsIn(text);
+  const lines = text.lines.length;
+  const fps = 30;
+  const enter =
+    text.size === "eyebrow" ? 0.5 + (lines - 1) * (5 / fps)
+    : type === "slam" ? (2 + words * 4 + 4) / fps
+    : type === "soft" ? 0.7 + (lines - 1) * (8 / fps)
+    : (type === "track" ? 0.6 : 0.45) + (lines - 1) * (5 / fps);
+  const read = 0.35 + 0.15 * words;
+  const exit = 0.25 + 3 / fps;
+  return enter * 0.5 + read + exit;
+}
+
+/**
  * When everything happens, in frames: the hook (a first big line of up to
- * four words), each shot (at the mood's pace, a little shorter than the one
- * before, but always long enough to read), the camera's travel between shots
- * (when the mood dissolves rather than cuts), the pull-back to the whole
- * flyer, the flyer itself, and the hold.
+ * four words), each shot (its seconds at the mood's pace, a little shorter
+ * than the one before, but always long enough for its words to be read while
+ * still), the camera's travel between shots (when the mood dissolves rather
+ * than cuts), the pull-back to the whole flyer, the flyer itself, and the hold.
  */
 function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS, reel = false) {
   const d = directionOf(recipe);
@@ -89,8 +126,7 @@ function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS, re
   const stops = recipe.beats.map((b, i) => {
     // The hook's own shot is its payoff: a short look, its line already said.
     const text = i === 0 && hook ? undefined : b.text;
-    const words = wordsIn(text);
-    const seconds = i === 0 && hook ? 0.7 * d.pace : Math.max(b.seconds * 0.62 * d.pace * (1 - d.build * i), words ? 0.8 + 0.12 * words : 0.7);
+    const seconds = i === 0 && hook ? 0.7 * d.pace : Math.max(b.seconds * 0.8 * d.pace * (1 - d.build * i), text ? wordsNeed(text, d.type) : 0.7);
     const stop = { from: at, dur: sec(seconds), text };
     at += stop.dur + (i < recipe.beats.length - 1 ? travel : 0);
     return stop;
@@ -130,22 +166,33 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
   // A punch-in lands on every shot after a cut (the first too, when the hook flies into it).
   const punched = (i: number) => punch && (i > 0 || Boolean(p.hook));
 
+  // Each shot's own move runs at an even speed, and the camera never stops
+  // between shots: it leaves one still moving, travels (or cuts), and arrives
+  // at the next already moving, like a camera operator rather than a
+  // slideshow. Only the landing on the whole flyer comes to rest.
+  const speedOf = (i: number) => {
+    const [a0, a1] = shots[i].cams;
+    const k = 1 / Math.max(1, shots[i].dur);
+    return { x: (a1.x - a0.x) * k, y: (a1.y - a0.y) * k, z: (a1.z - a0.z) * k };
+  };
+  const still = { x: 0, y: 0, z: 0 };
+
   /** Where the camera is at frame f, and whether a cut lands there. */
   const camAt = (f: number): { cam: Cam; cut: boolean } => {
     if (f < shots[0].from) return { cam: shots[0].cams[0], cut: false };
     for (let i = 0; i < shots.length; i++) {
       const s = shots[i];
       if (f < s.from + s.dur) {
-        const c = mix(s.cams[0], s.cams[1], settle((f - s.from) / s.dur));
+        const c = mix(s.cams[0], s.cams[1], (f - s.from) / s.dur);
         const k = f - s.from;
         if (punched(i) && k < SNAP) c.z += Math.log(1 + 0.16 * (1 - Easing.out(Easing.cubic)(k / SNAP)));
         return { cam: c, cut: punched(i) && k === 0 };
       }
       const next = shots[i + 1];
-      if (next && f < next.from) return { cam: mix(s.cams[1], next.cams[0], glide((f - s.from - s.dur) / p.travel)), cut: false };
+      if (next && f < next.from) return { cam: hermite(s.cams[1], speedOf(i), next.cams[0], speedOf(i + 1), f - s.from - s.dur, p.travel), cut: false };
     }
-    const last = shots[shots.length - 1].cams[1];
-    if (f < p.poster.from) return { cam: mix(last, poster, glide((f - p.reveal.from) / p.reveal.dur)), cut: false };
+    const lastI = shots.length - 1;
+    if (f < p.poster.from) return { cam: hermite(shots[lastI].cams[1], speedOf(lastI), poster, still, f - p.reveal.from, p.reveal.dur), cut: false };
     return { cam: { ...poster, z: poster.z + Math.log(1 + 0.03 * Math.min(1, (f - p.poster.from) / p.poster.dur)) }, cut: false };
   };
   const now = camAt(frame);
@@ -244,7 +291,8 @@ const Hook: React.FC<{ text: OpeningText; src: string; frame: Frame; cam: Cam; f
 }) => {
   const f = useCurrentFrame();
   const { fps, durationInFrames: dur, width: W, height: H } = useVideoConfig();
-  const rows = (text.lines.length === 1 ? text.lines[0].split(/\s+/).slice(0, 3) : text.lines).map((r) => (caps ? r.toUpperCase() : r));
+  // One word a row for a one-line hook (all of its words: up to four), else its own lines.
+  const rows = (text.lines.length === 1 ? text.lines[0].split(/\s+/).slice(0, 4) : text.lines).map((r) => (caps ? r.toUpperCase() : r));
   // Each row about as wide as the frame (a rough measure of the face's letters), never taller than a fifth of it.
   const em = caps ? 0.78 : 0.6;
   const sizes = rows.map((r) => Math.min(H * 0.2, (W * 0.84) / (r.length * em)));

@@ -42,6 +42,8 @@ check('draft request: model, schema, flyer image resent', req.body.model === 'cl
 check('draft request: dates and brand in prompt', /2026-10-31/.test(req.body.system) && /creative director/.test(req.body.system));
 check('draft request: the three core drivers', /the_night/.test(req.body.system) && /your_people/.test(req.body.system) && /last_call/.test(req.body.system) && /Never invent testimonials/.test(req.body.system));
 check('draft request: each reel cut from the flyer, facts only from it', /each reel's cut/.test(req.body.system) && /Never invent quotes, reviews, numbers/.test(req.body.system) && Boolean(req.body.output_config.format.schema.properties.reels.items.properties.cut));
+check('draft request: Claude is told the flyer\'s pixel size, and maps it before cutting', /flyer image is 360x640 pixels/.test(req.body.system) && Boolean(req.body.output_config.format.schema.properties.map));
+check('the draft is checked in code and its problems go back once to be fixed', req.body.messages.length === 3 && req.body.messages[1].role === 'assistant' && /Your plan breaks these rules/.test(JSON.stringify(req.body.messages[2])) && /\$31/.test(JSON.stringify(req.body.messages[2])), JSON.stringify(req.body.messages[2] ?? '').slice(0, 300));
 check('draft request: price for true urgency', /From \$30/.test(req.body.system), req.body.system.slice(0, 400));
 const items = sheet.locator('section ol > li');
 check('three core reels, one per role', await items.count() === 3, String(await items.count()));

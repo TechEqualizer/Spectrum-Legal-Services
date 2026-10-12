@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         const draft = await draftFunnel(input, {
           brand: first.name || "the organizer",
           today,
-          dates: read.dates.map((d) => ({ date: d.date, name: d.name, ...(d.price ? { price: d.price } : {}) })),
+          dates: read.dates.map((d) => ({ date: d.date, name: d.name, ...(d.time ? { time: d.time } : {}), ...(d.venue ? { venue: d.venue } : {}), ...(d.price ? { price: d.price } : {}) })),
           photos: false,
         });
         send("problem" in draft ? { draftError: draft.problem } : { draft });
