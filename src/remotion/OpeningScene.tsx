@@ -205,9 +205,17 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
     return { x: (a1.x - a0.x) * k, y: (a1.y - a0.y) * k, z: (a1.z - a0.z) * k };
   };
   const still = { x: 0, y: 0, z: 0 };
+  /** A camera kept looking inside its shot's box (as far as the view fits), so a drift never strays onto the flyer's lettering. */
+  const inBox = (c: Cam, box: OpeningRecipe["beats"][number]["box"]): Cam => {
+    const z = Math.max(c.z, camOn(box, fr).z);
+    const halfW = W / (2 * width * Math.exp(z));
+    const halfH = H / (2 * height * Math.exp(z));
+    const keep = (v: number, lo: number, hi: number) => (lo <= hi ? Math.min(hi, Math.max(lo, v)) : (lo + hi) / 2);
+    return { x: keep(c.x, box.x + halfW, box.x + box.w - halfW), y: keep(c.y, box.y + halfH, box.y + box.h - halfH), z };
+  };
 
-  /** Where the camera is at frame f, and whether a cut lands there. */
-  const camAt = (f: number): { cam: Cam; cut: boolean } => {
+  /** Where the camera is at frame f, and whether a cut lands there; while one shot dissolves into the next, the incoming shot's camera and how far in it is. */
+  const camAt = (f: number): { cam: Cam; cut: boolean; into?: { cam: Cam; t: number } } => {
     if (f < shots[0].from) return { cam: shots[0].cams[0], cut: false };
     for (let i = 0; i < shots.length; i++) {
       const s = shots[i];
@@ -218,7 +226,19 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
         return { cam: c, cut: punched(i) && k === 0 };
       }
       const next = shots[i + 1];
-      if (next && f < next.from) return { cam: hermite(s.cams[1], speedOf(i), next.cams[0], speedOf(i + 1), f - s.from - s.dur, p.travel), cut: false };
+      // A true dissolve: the outgoing shot keeps drifting as it fades, the next comes up already moving,
+      // so the camera never sweeps across the flyer's lettering between them.
+      if (next && f < next.from) {
+        const k = f - s.from - s.dur;
+        const out = speedOf(i);
+        const inn = speedOf(i + 1);
+        const back = next.from - f;
+        return {
+          cam: inBox({ x: s.cams[1].x + out.x * k, y: s.cams[1].y + out.y * k, z: s.cams[1].z + out.z * k }, recipe.beats[i].box),
+          cut: false,
+          into: { cam: inBox({ x: next.cams[0].x - inn.x * back, y: next.cams[0].y - inn.y * back, z: next.cams[0].z - inn.z * back }, recipe.beats[i + 1].box), t: settle(k / p.travel) },
+        };
+      }
     }
     const lastI = shots.length - 1;
     if (f < p.poster.from) return { cam: hermite(shots[lastI].cams[1], speedOf(lastI), poster, still, f - p.reveal.from, p.reveal.dur), cut: false };
@@ -239,6 +259,11 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
   return (
     <AbsoluteFill style={{ backgroundColor: "#000" }}>
       <Flyer src={src} frame={fr} cam={held} blur={Math.min(5, speed * 0.12)} sweep={sweep} grade={d.grade} bloom={d.bloom} tilt={hand.roll} />
+      {now.into && (
+        <AbsoluteFill style={{ opacity: now.into.t }}>
+          <Flyer src={src} frame={fr} cam={{ ...now.into.cam, x: now.into.cam.x - hand.x / (width * Math.exp(now.into.cam.z)), y: now.into.cam.y - hand.y / (height * Math.exp(now.into.cam.z)) }} grade={d.grade} bloom={d.bloom} tilt={hand.roll} />
+        </AbsoluteFill>
+      )}
       {shots.map(
         (s, i) =>
           s.text && (

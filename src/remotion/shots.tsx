@@ -12,12 +12,13 @@ export type Cam = { x: number; y: number; z: number };
 type Frame = { W: number; H: number; fw: number; fh: number };
 
 /**
- * How far the camera may enlarge the flyer: about 2.4 composition pixels per
- * flyer pixel at a 720-pixel short side. Past that, a 1600-pixel flyer goes
- * soft, so a shot too small to fill the frame shows a little more around it
- * instead.
+ * How far the camera may enlarge the flyer: 4 composition pixels per flyer
+ * pixel at a 720-pixel short side. Only the smallest shots reach it; past it
+ * a flyer goes visibly soft, so such a shot shows a little more around it.
+ * (Tighter caps were tried: they brought the flyer's own lettering into
+ * shots, which is worse than a little softness.)
  */
-const MAX_ENLARGE = 2.4;
+const MAX_ENLARGE = 4;
 
 /**
  * The camera on a box: the box covers the frame, so nothing outside it (the
