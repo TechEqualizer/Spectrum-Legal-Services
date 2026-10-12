@@ -61,6 +61,12 @@ export type OpeningRecipe = {
   beats: OpeningBeat[];
   /** The calm shot the scene settles on, under the link's title. */
   hold: Box;
+  /**
+   * false: no hook, even when the first line is short and big; the cut opens
+   * straight on its first shot. (Only The Night's reel cut opens on its hook,
+   * so the opening and the reels don't all start the same way.)
+   */
+  hook?: false;
 };
 
 /** A shot narrower than this share of the flyer would be enlarged past its detail and look soft. */
@@ -119,7 +125,7 @@ export function parseOpening(v: unknown): OpeningRecipe | null {
   const hold = cleanBox(v.hold, MIN_HOLD_WIDTH, MIN_SHOT_HEIGHT);
   if (beats.length < 2 || !hold) return null;
   const mood = OPENING_MOOD_IDS.find((m) => m === v.mood);
-  return { ...(mood ? { mood } : {}), beats, hold };
+  return { ...(mood ? { mood } : {}), beats, hold, ...(v.hook === false ? { hook: false as const } : {}) };
 }
 
 const same = (a: unknown, b: unknown): boolean => {
@@ -143,11 +149,12 @@ const WHOLE_FLYER: Box = { x: 0, y: 0, w: 1, h: 1 };
 /**
  * A reel's cut (.claude/skills/flyer-cuts), cleaned like an opening: in the
  * opening's mood, its words kept off the bottom (the reel's title and Tickets
- * button are there), ending on the whole flyer. Null when too little of it is
- * usable, and the reel shows the still flyer.
+ * button are there), ending on the whole flyer. `hook`: whether it may open
+ * on its first line, huge on black (The Night's only). Null when too little of
+ * it is usable, and the reel shows the still flyer.
  */
-export function parseCut(v: unknown, mood?: OpeningMood): OpeningRecipe | null {
+export function parseCut(v: unknown, mood?: OpeningMood, hook = true): OpeningRecipe | null {
   if (!isObject(v) || !Array.isArray(v.beats)) return null;
   const beats = v.beats.map((b) => (isObject(b) && isObject(b.text) && b.text.at === "bottom" ? { ...b, text: { ...b.text, at: "middle" } } : b));
-  return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER });
+  return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER, ...(hook ? {} : { hook: false }) });
 }

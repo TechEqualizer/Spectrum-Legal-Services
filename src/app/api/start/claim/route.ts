@@ -51,7 +51,7 @@ function draftFrom(input: unknown): StartDraft {
           reels: r.reels.flatMap((x) => {
             if (!x || typeof x !== "object" || typeof x.role !== "string" || !(x.role in REEL_ROLES)) return [];
             // Each reel's cut from the flyer, cleaned the same way.
-            const cut = parseCut(x.cut, opening?.mood);
+            const cut = parseCut(x.cut, opening?.mood, x.role === "the_night");
             return [{ role: x.role, title: str(x.title, 80), summary: str(x.summary, 280), hook: "", captions: [], ...(typeof x.date === "string" ? { date: str(x.date, 10) } : {}), source: "text" as const, videoPrompt: "", ...(cut ? { cut } : {}) }];
           }),
           ...(opening ? { opening } : {}),

@@ -47,7 +47,10 @@ opening was built on.
   Claude sees all four together, so it can keep them apart.
 - **Three treatments.** The Night: closer than the opening, its hook line
   first, pushing in. Your People: wider and unhurried, pans and pull-backs,
-  no hook. Last Call: brisk, one true fact a shot, the date last.
+  no hook. Last Call: brisk, no hook, one true fact a shot, the date last.
+  Only The Night may open on its hook (`hook: false` on the others), or the
+  opening and every reel would start the same way, as they did when first
+  watched on the Masquerade flyer.
 - **Words.** A cut's lines may be Claude's own words in the reel's voice
   ("You, in gold."), unlike the opening's, which are copied from the flyer.
   Every fact in them (names, dates, places, prices, dress code, age, how

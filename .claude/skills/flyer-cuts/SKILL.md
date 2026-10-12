@@ -22,9 +22,20 @@ different job, framing, rhythm and voice for each:
 | --- | --- | --- | --- | --- |
 | The Night | "Will this be amazing?" Desire and self-image | Closer than the opening: eyes, the mask, the outfit, the light | A hook line alone on black first, then pushes, tighter each shot | Who they get to be, second person, present tense ("You, in gold.") |
 | Your People | "Is this for someone like me?" Belonging | Wider than the others: the crowd, the group, the room | Unhurried, pans the way the subject faces, pull-backs; no hook | Who it's for, from the flyer: dress code, age, music, vibe, bring your people |
-| Last Call | "Why buy now?" True urgency | Punch-ins on subjects | Brisk: shorter shots, one fact each | The date, place, price, doors, a deadline; the date last |
+| Last Call | "Why buy now?" True urgency | Punch-ins on subjects | Brisk: no hook, straight onto its first fact; shorter shots, one fact each | The date, place, price, doors, a deadline; the date last |
 
 Never reuse a shot from the opening or another reel unless it's closer.
+
+Only The Night opens on its hook (its first line alone, huge on black). If
+every cut did, the opening and all three reels would start the same way, so
+`parseCut` marks the other two `hook: false` and they open straight on their
+first shot, under letterbox bars. Seen on the Masquerade flyer: with a hook
+each, all four started identically.
+
+A flyer with only two or three subjects (Masquerade: the masked face, the
+lace, the model) will show the same subjects in every cut. Then the framing
+and the words carry the difference: The Night closest, Your People widest,
+Last Call fastest.
 
 ## The rules a cut adds to the opening's
 

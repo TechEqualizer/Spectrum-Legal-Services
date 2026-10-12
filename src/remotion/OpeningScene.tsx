@@ -82,7 +82,7 @@ function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS, re
   const d = directionOf(recipe);
   const sec = (s: number) => Math.round(s * fps);
   const first = recipe.beats[0].text;
-  const hook = first?.size === "big" && wordsIn(first) <= 4 ? first : null;
+  const hook = recipe.hook !== false && first?.size === "big" && wordsIn(first) <= 4 ? first : null;
   const hookFor = hook ? sec((d.cut === "punch" ? 0.85 : 1.15) * d.pace) : 0;
   const travel = d.cut === "dissolve" ? sec(0.5 * d.pace) : 0;
   let at = hookFor;
