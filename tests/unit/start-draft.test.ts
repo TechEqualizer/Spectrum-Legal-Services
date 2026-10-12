@@ -16,7 +16,7 @@ const date = (d: string, extra: Partial<NonNullable<StartDraft["dates"]>[number]
   ticketUrl: "",
   ...extra,
 });
-const draft: StartDraft = { role: "Venue", flyer: "data:image/jpeg;base64,AAAA", dates: [date("2026-10-31"), date("2026-11-08", { name: "Golden Hour II" })] };
+const draft: StartDraft = { flyer: "data:image/jpeg;base64,AAAA", dates: [date("2026-10-31"), date("2026-11-08", { name: "Golden Hour II" })] };
 
 test("step 1: the night and its dates, no Fans extras", () => {
   const { funnel, publication } = draftLink(draft);

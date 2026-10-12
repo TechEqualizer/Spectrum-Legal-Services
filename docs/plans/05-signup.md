@@ -84,11 +84,14 @@ Most conversion figures in these are vendors' own and unverified.
 - **The wizard** at `/start`, Showlnk's own look (the dark night palette),
   a step bar across the top, the phone beside the form on a wide screen
   and above it on a phone:
-  1. **Drop your flyer.** Upload (or take a photo). "What do you run?":
-     Promoter, Venue, Artist or DJ, Organizer. As the flyer is read, the
-     phone fills in the night's name, date and venue, in the flyer's
-     colors.
-  2. **Your night, in reels.** The phone plays the opening scene and The
+  1. **Drop your flyer.** Upload (or take a photo); nothing else is asked.
+     As the flyer is read, the phone fills in the night's name, date and
+     venue, in the flyer's colors. ("What do you run?" was asked here until
+     October 2026; nothing used the answer, and it stood between the flyer
+     and the reveal, so it's gone.)
+  2. **Your night, in reels.** Comes on its own once the flyer is read, no
+     button: what the flyer said, and the list of what it's becoming, ticked
+     as each piece lands, above the story. The phone plays the opening scene and The
      Night, Your People and Last Call, drafted from the flyer. Each reel's
      words can be changed in place. Follow, a fans-only reel and a presale
      badge show in the preview, marked "Core · free for 14 days". Videos:
@@ -190,3 +193,29 @@ Most conversion figures in these are vendors' own and unverified.
 - Roles: Promoter, Venue, Artist or DJ, Organizer.
 - Claim with email and password (the admin's own sign-in): no detour to an
   inbox at the moment they're most sold.
+
+## One action, then the reveal (October 2026)
+
+Testing the wizard, picking "what do you run" and pressing Continue twice
+made it feel like a form, not magic. Nothing used the role, so it's gone;
+the flyer's reading opens the night on its own (no Continue), with what the
+flyer said, the list of what it's becoming, and the story playing; the one
+button left until the claim is "Claim this link".
+
+What works elsewhere:
+- Partiful asks for no account to start; registration comes only as people
+  go deeper (Consumer App Lab:
+  https://consumerapplab.substack.com/p/inside-the-secret-program-turning).
+- Fewer fields generally convert better, but which fields matters more than
+  how many: an Unbounce test lost 14% removing the fields people engaged
+  with (summary: https://www.mailmunch.com/blog/form-length-affect-conversion-rate).
+  A question nothing uses is the clean case to remove.
+- People value a result more when they watch the work done for them (the
+  labor illusion, Buell and Norton 2011:
+  https://pubsonline.informs.org/doi/fpi/10.1287/mnsc.1110.1376), which is
+  why the night shows each piece landing rather than a spinner.
+
+Next, if the claim still feels heavy: its six fields (name and link,
+prefilled; the ticket page only when the flyer had none; email, password,
+terms) could become email and terms, with a sign-in link instead of a
+password, and the name and link folded into one "Change" line.

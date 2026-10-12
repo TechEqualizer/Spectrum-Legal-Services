@@ -5,7 +5,6 @@ import { REEL_DRIVERS, REEL_ROLES, type FunnelDraft, type ReelRole } from "@/lib
 import { SCREEN_LIMITS } from "@/lib/publication";
 import { nightName, reelId, reelsOf, type StartDraft } from "@/lib/start-draft";
 
-const GOLD_LINK = "min-h-11 text-sm font-semibold text-[var(--sl-gold)] underline underline-offset-4";
 
 /** Why each part sells, in a line: what the visitor gets from it. */
 const SELLS: Record<"opening" | ReelRole, string> = {
@@ -27,17 +26,18 @@ export default function ReelsStep({
   draft,
   drafting,
   onChange,
+  facts,
   onShow,
-  onBack,
   onNext,
 }: {
   draft: StartDraft;
   /** The reels are still being written. */
   drafting: boolean;
   onChange: (reels: FunnelDraft) => void;
+  /** What the flyer said and what it's becoming, under the heading. */
+  facts?: React.ReactNode;
   /** Start the phone over, at this reel (or the opening). */
   onShow: (reelId?: string) => void;
-  onBack: () => void;
   onNext: () => void;
 }) {
   const id = useId();
@@ -68,20 +68,12 @@ export default function ReelsStep({
         {cut ? "One flyer in. An opening and three reels out, each cut from your flyer" : "Your flyer, made into the story fans watch"} to sell {nightName(draft)}, ending on Tickets.
       </p>
 
-      {/* Never a wait: the story plays from the flyer's basics at once, and gets better in place as Claude writes it. */}
-      {drafting && !cut ? (
-        <div role="status" className="mt-8 flex items-center gap-3 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] px-4 py-3">
-          <span aria-hidden="true" className="start-spinner size-5 shrink-0 rounded-full border-2 border-[var(--sl-gold)]/30 border-t-[var(--sl-gold)]" />
-          <p className="text-sm text-[var(--sl-text)]/85">
-            {draft.reels ? "Your reels are written. Now cutting your flyer into shots…" : "Writing your reels from the flyer: who fans get to be, who they'll be with, and why to buy now…"}
-          </p>
-        </div>
-      ) : (
-        !draft.reels && (
-          <p className="mt-6 text-sm text-[var(--sl-muted)]">
-            {draft.reelsFailed ? "We couldn't write these from your flyer just now, so they" : "These"} start from your flyer&apos;s basics. Make them yours under Change the words.
-          </p>
-        )
+      {facts}
+      {/* Never a wait: the story plays from the flyer's basics at once, and gets better in place as it's written (the list above says how far it's got). */}
+      {!drafting && !draft.reels && (
+        <p className="mt-6 text-sm text-[var(--sl-muted)]">
+          {draft.reelsFailed ? "We couldn't write these from your flyer just now, so they" : "These"} start from your flyer&apos;s basics. Make them yours under Change the words.
+        </p>
       )}
       <>
           <ol aria-label="Your story" className="mt-8 grid gap-2">
@@ -157,9 +149,6 @@ export default function ReelsStep({
           className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-[var(--sl-gold)] px-8 text-base font-bold text-[var(--sl-ink)] hover:bg-[var(--sl-gold-deep)] lg:flex-none"
         >
           Claim this link
-        </button>
-        <button type="button" onClick={onBack} className={GOLD_LINK}>
-          Back to your flyer
         </button>
       </div>
     </section>
