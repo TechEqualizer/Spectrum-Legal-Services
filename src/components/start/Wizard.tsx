@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExtern
 import { shrink } from "@/lib/flyer-file";
 import ClaimStep from "@/components/start/ClaimStep";
 import ReelsStep from "@/components/start/ReelsStep";
+import BuildList, { type DepthState } from "@/components/start/BuildList";
 import type { StartState } from "@/components/start/StartPreview";
 import type { FunnelDraft } from "@/lib/funnel-draft";
 import { draftLink, ROLES, type StartDraft } from "@/lib/start-draft";
@@ -63,10 +64,12 @@ const storageKey = (code: string) => `showlnk-start-${code.slice(0, 12)}`;
 const listeners = new Set<() => void>();
 let memory: Record<string, string> = {};
 function readRaw(key: string): string {
+  // This visit's latest first: if saving ever failed (storage full), the saved copy is older.
+  if (key in memory) return memory[key];
   try {
-    return localStorage.getItem(key) ?? memory[key] ?? "{}";
+    return localStorage.getItem(key) ?? "{}";
   } catch {
-    return memory[key] ?? "{}";
+    return "{}";
   }
 }
 function writeRaw(key: string, value: string) {
@@ -124,6 +127,8 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   const [dragging, setDragging] = useState(false);
   // The reels are being written (after the flyer is read, in the same answer).
   const [drafting, setDrafting] = useState(false);
+  // The flyer's depth map, for the list of what's being built (once made, it's on the draft).
+  const [depthState, setDepthState] = useState<DepthState>("none");
   // Start the phone over, at a reel when given.
   const [replay, setReplay] = useState<{ n: number; reelId?: string }>({ n: 0 });
   const show = (reel?: string) => setReplay((r) => ({ n: r.n + 1, reelId: reel }));
@@ -150,6 +155,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
     if (window.matchMedia("(max-width: 1023px)").matches) phoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     const mine = ++attempt.current;
     setDrafting(false);
+    setDepthState(picture ? "making" : "none");
     // Its depth map, made alongside the reading (the model takes a while), for the phone's parallax.
     const depthMade = picture
       ? import("@/lib/depth-map")
@@ -194,7 +200,9 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         update({ flyer: picture, depth: undefined, dates: read.dates, look: read.look, reels: undefined, reelsFailed: undefined });
         // Once the depth map is there, the phone starts over with it (see Phone's `scene`).
         void depthMade?.then((url) => {
-          if (url && mine === attempt.current) update({ depth: url });
+          if (mine !== attempt.current) return;
+          if (url) update({ depth: url });
+          setDepthState(url ? "done" : "none");
         });
         return setDrafting(true);
       }
@@ -312,6 +320,8 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
                   {(draft.dates?.length ?? 0) > 1 && (
                     <p className="mt-2 text-sm text-[var(--sl-muted)]">And {draft.dates!.length - 1} more {draft.dates!.length === 2 ? "date" : "dates"} from the flyer.</p>
                   )}
+                  {/* Everything the flyer is becoming, ticked off as it lands, while the phone builds it. */}
+                  <BuildList draft={draft} drafting={drafting} depth={draft.depth ? "done" : depthState} />
                   <p className="mt-4 text-sm text-[var(--sl-muted)]">Anything off? You can change it all once your link is yours.</p>
                   <button
                     type="button"
@@ -357,7 +367,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
                 onClick={() => setStep(1)}
                 className="inline-flex min-h-12 items-center rounded-full bg-[var(--sl-gold)] px-8 text-base font-bold text-[var(--sl-ink)] hover:bg-[var(--sl-gold-deep)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Continue
+                {found ? "Watch your night" : "Continue"}
               </button>
               {!canContinue && loaded && (
                 <p className="text-sm text-[var(--sl-muted)]">{!found ? "Add your flyer to continue." : "Pick what you run to continue."}</p>
@@ -394,7 +404,8 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
 
       {/* Step 2 is for watching: on a phone, the phone comes first. */}
       <div ref={phoneRef} className={`mx-auto w-full max-w-[300px] lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${step === 1 ? "order-first" : ""}`}>
-        <Phone draft={draft} reading={reading} core={step > 0} replay={replay} />
+        {/* The story shows in the phone as soon as it's written, from step 1: the organizer watches it being built. */}
+        <Phone draft={draft} reading={reading} core={step > 0 || Boolean(draft.reels)} replay={replay} />
         <p className="mt-4 text-center text-sm text-[var(--sl-muted)]">
           {found ? "Your link, as fans will see it. Tap around." : "Your link, live. It fills in from your flyer."}
         </p>
