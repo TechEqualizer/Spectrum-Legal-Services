@@ -135,6 +135,30 @@ Still open from phase 1:
   director hasn't run on real flyers yet. The first live drafts need
   watching with `scripts/review-opening.mjs`.
 
+## Phase 2: depth (in progress)
+
+- **Renderer (built):** `src/remotion/depth.tsx`. One WebGL2 pass draws the
+  camera's view and shifts each pixel by its depth, so near things move more:
+  a pan slides them, a tilt lifts them, a push grows them, around the shot's
+  focus, which holds still. It falls back to flat without WebGL2 or a map;
+  the lite tier skips it. Checked with a synthetic depth map: depth frames
+  differ from flat ones, more as a push goes on.
+- **Maps (built, unverified on the real model):** `src/lib/depth-map.ts`
+  runs Depth Anything V2 Small (Apache-2.0, about 27 MB quantized) with
+  onnxruntime-web 1.30.0. It was audited before install: MIT, no install
+  scripts, no new audit findings. The runtime is served from our own site
+  (`public/ort/`, copied on install). It runs in the organizer's browser
+  once the flyer is read, in the wizard and the studio's import, and the map
+  is stored next to the flyer at claim or publish. Anything that fails
+  leaves the flyer flat. A stand-in model of the same shape ran the whole
+  pipeline in a browser (518x728 output, correct orientation and colors).
+  The real model can't be reached from the build environment yet.
+  **Before merging:** run `scripts/make-depth.mjs` on the Masquerade and
+  Book Signing flyers, look at the maps, then watch the cuts with
+  `scripts/review-opening.mjs --depth`.
+- Off in the e2e tests (`NEXT_PUBLIC_DEPTH_MAPS=off`), which would otherwise
+  download the model on every run.
+
 ## Roadmap
 
 **Phase 1: the lean rebuild (1 to 2 weeks, free).** Gaps 1, 2, 3, 4, 5, 7,

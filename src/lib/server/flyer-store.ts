@@ -21,15 +21,28 @@ export function flyerBytes(dataUrl: unknown): Buffer | null {
   return bytes.length > 3 && bytes.length <= MAX_BYTES && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff ? bytes : null;
 }
 
-/** Stores the flyer in the event's folder; its public address, or null. */
-export async function storeFlyer(eventSlug: string, bytes: Buffer): Promise<{ url: string; path: string } | null> {
+/** The flyer's depth map as the wizard keeps it: a PNG data URL, small (a grayscale picture under 1 MB). */
+const PNG = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/;
+
+/** The depth map's bytes, or null when it isn't one the wizard would send. */
+export function depthBytes(dataUrl: unknown): Buffer | null {
+  if (typeof dataUrl !== "string") return null;
+  const m = PNG.exec(dataUrl);
+  if (!m) return null;
+  const bytes = Buffer.from(m[1], "base64");
+  // A real PNG starts 89 50 4E 47.
+  return bytes.length > 8 && bytes.length <= 1024 * 1024 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 ? bytes : null;
+}
+
+/** Stores the flyer (or its depth map) in the event's folder; its public address, or null. */
+export async function storeFlyer(eventSlug: string, bytes: Buffer, kind: "flyer" | "depth" = "flyer"): Promise<{ url: string; path: string } | null> {
   const url = env("SUPABASE_URL"), secret = env("SUPABASE_SECRET_KEY");
   if (!url || !secret) return null;
-  const path = `${eventSlug}/${Date.now().toString(36)}-flyer.jpg`;
+  const path = `${eventSlug}/${Date.now().toString(36)}-${kind === "depth" ? "depth.png" : "flyer.jpg"}`;
   try {
     const res = await fetch(`${url}/storage/v1/object/reel-media/${path}`, {
       method: "POST",
-      headers: { apikey: secret, Authorization: `Bearer ${secret}`, "Content-Type": "image/jpeg", "x-upsert": "false" },
+      headers: { apikey: secret, Authorization: `Bearer ${secret}`, "Content-Type": kind === "depth" ? "image/png" : "image/jpeg", "x-upsert": "false" },
       body: new Uint8Array(bytes),
     });
     if (!res.ok) {

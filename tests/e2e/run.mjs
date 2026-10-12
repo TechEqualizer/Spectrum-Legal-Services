@@ -43,6 +43,8 @@ const env = {
   ANTHROPIC_API_KEY: "test-key",
   ANTHROPIC_BASE_URL: CLAUDE,
   NEXT_TELEMETRY_DISABLED: "1",
+  // Depth maps would download a 27 MB model on every run (tests/unit/depth.test.ts and scripts/make-depth.mjs cover them).
+  NEXT_PUBLIC_DEPTH_MAPS: "off",
 };
 for (const key of ["RESEND_API_KEY", "LEAD_NOTIFY_EMAIL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "EVENTBRITE_CLIENT_ID", "EVENTBRITE_CLIENT_SECRET", "EVENTBRITE_TOKEN_KEY", "EVENTBRITE_OAUTH_BASE", "EVENTBRITE_API_BASE", "RESEND_API_BASE", "FAN_COOKIE_SECRET", "FAN_FROM_EMAIL", "SHOWLNK_POSTAL_ADDRESS", "SHOWLNK_CONTACT_EMAIL", "FOLLOW_ORGANIZERS", "FOLLOW_HOLD", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_API_BASE", "PLAN_CACHE_SECONDS"]) delete env[key];
 // The mock's own secret key, for Send login (Settings → Accounts) only.

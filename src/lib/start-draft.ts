@@ -19,6 +19,8 @@ export type StartDraft = {
   role?: Role;
   /** The flyer as a small JPEG data URL (a PDF has none), for the phone's backdrop. */
   flyer?: string;
+  /** Its depth map as a PNG data URL, made in this browser once the flyer is read (src/lib/depth-map.ts). */
+  depth?: string;
   /** What the flyer said. */
   dates?: ImportedDate[];
   look?: Look;
@@ -118,7 +120,7 @@ export function draftLink(d: StartDraft, { core = false, timeZone = browserZone(
   const name = nightName(d);
   const funnel = newClientEvent(name, { slug: "your-night", name });
   const events = d.dates?.length ? draftEvents(d.dates, timeZone) : undefined;
-  const flyer = d.flyer ? { kind: "image" as const, src: d.flyer, fit: "poster" as const } : undefined;
+  const flyer = d.flyer ? { kind: "image" as const, src: d.flyer, fit: "poster" as const, ...(d.depth ? { depth: d.depth } : {}) } : undefined;
 
   let reels: EditorReel[] = funnel.reels.map((r) => ({ ...r, cta: "funnel" as const }));
   let screen: Publication["screen"];
@@ -191,12 +193,13 @@ export const suggestedName = (d: StartDraft) => {
  * words, the dates and the look, and the flyer (once stored at `flyerUrl`)
  * as the opening scene and each reel's cut.
  */
-export function claimPublication(d: StartDraft, timeZone?: string, ticketUrl?: string, flyerUrl?: string): Publication {
+export function claimPublication(d: StartDraft, timeZone?: string, ticketUrl?: string, flyerUrl?: string, depthUrl?: string): Publication {
   // A date needs a ticket link to go live: the flyer's, else the one they gave, else another date's.
   const fallback = httpsLink(ticketUrl) || d.dates?.map((x) => httpsLink(x.ticketUrl)).find(Boolean) || "";
   const dates = d.dates?.map((x) => ({ ...x, ticketUrl: httpsLink(x.ticketUrl) || fallback })).filter((x) => x.ticketUrl);
   // The flyer, once stored at its own address: the opening scene and, until their videos come, behind each reel.
-  const { publication } = draftLink({ ...d, dates, flyer: flyerUrl }, { core: true, timeZone });
+  // Its depth map goes with it only once stored too (never a data URL on a public link).
+  const { publication } = draftLink({ ...d, dates, flyer: flyerUrl, depth: flyerUrl ? depthUrl : undefined }, { core: true, timeZone });
   const reels = publication.reels;
   const claimed: Publication = { ...publication, reels, funnel: { ...publication.funnel, order: reels.map((r) => r.id) } };
   if (!flyerUrl) delete claimed.backdrop;

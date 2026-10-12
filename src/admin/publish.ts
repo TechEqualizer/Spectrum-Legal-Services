@@ -127,7 +127,12 @@ async function uploadOne(slug: string, blobUrl: string, fans: boolean): Promise<
 function swapMedia<T extends ReelMedia | null | undefined>(media: T, urls: Map<string, string>): T {
   if (!media || media.kind === "youtube") return media;
   const swap = (s: string | undefined) => (s && urls.get(s)) ?? s;
-  return { ...media, src: swap(media.src), ...(media.kind === "video" ? { poster: swap(media.poster), captions: swap(media.captions) } : {}) } as T;
+  return {
+    ...media,
+    src: swap(media.src),
+    ...(media.kind === "video" ? { poster: swap(media.poster), captions: swap(media.captions) } : {}),
+    ...(media.kind === "image" && media.depth ? { depth: swap(media.depth) } : {}),
+  } as T;
 }
 
 /**
@@ -144,7 +149,7 @@ export async function publish(
   const privately = new Set<string>();
   const collect = (m: ReelMedia | null | undefined, fans = false) => {
     if (!m || m.kind === "youtube") return;
-    for (const s of [m.src, m.kind === "video" ? m.poster : undefined, m.kind === "video" ? m.captions : undefined]) {
+    for (const s of [m.src, m.kind === "video" ? m.poster : undefined, m.kind === "video" ? m.captions : undefined, m.kind === "image" ? m.depth : undefined]) {
       if (s?.startsWith("blob:")) {
         uploads.add(s);
         if (fans) privately.add(s);

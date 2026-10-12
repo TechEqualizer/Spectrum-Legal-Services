@@ -126,11 +126,11 @@ export default function ReelsEditor() {
   };
 
   /** A look matched to a flyer, optionally with the flyer behind the opening screen. Undo puts both back. */
-  const applyLook = (next: Look, flyer?: string, asBackground = false) => {
+  const applyLook = (next: Look, flyer?: string, asBackground = false, depth?: string) => {
     const before = { look, heroMedia };
     // The flyer stays with the look, so Style can put it behind the title later.
     setLook(flyer ? { ...next, flyer } : next);
-    if (flyer && asBackground) setHeroMedia({ kind: "image", src: flyer, fit: "poster" });
+    if (flyer && asBackground) setHeroMedia({ kind: "image", src: flyer, fit: "poster", ...(depth ? { depth } : {}) });
     setToast(flyer && asBackground ? "Look and background matched to your flyer" : "Look matched to your flyer", () => {
       setLook(before.look);
       setHeroMedia(before.heroMedia);
@@ -144,7 +144,7 @@ export default function ReelsEditor() {
    * the published funnel's order, and its words go on the opening screen.
    * The old reels stay in the library, and Undo puts everything back.
    */
-  const applyDraft = (draft: FunnelDraft, flyer?: string) => {
+  const applyDraft = (draft: FunnelDraft, flyer?: string, depth?: string) => {
     const before = { library, funnels, screen };
     const dates = events ?? builtFunnel.events ?? [];
     const taken = new Set(library.map((r) => r.id));
@@ -164,7 +164,7 @@ export default function ReelsEditor() {
         ...(event ? { eventId: event.id } : {}),
         role: d.role,
         ...(d.role === "last_call" ? { emphasis: "bold" as const } : {}),
-        ...(flyer && d.cut ? { media: { kind: "image" as const, src: flyer, cut: d.cut } } : {}),
+        ...(flyer && d.cut ? { media: { kind: "image" as const, src: flyer, cut: d.cut, ...(depth ? { depth } : {}) } } : {}),
       };
     });
     const cut = reels.filter((r) => r.media).length;
