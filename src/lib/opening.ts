@@ -72,6 +72,12 @@ export type OpeningRecipe = {
    * so the opening and the reels don't all start the same way.)
    */
   hook?: false;
+  /**
+   * A reel's own way of cutting, whatever the mood: "glide" (the camera
+   * travels, unhurried: Your People) or "punch" (hard, quick cuts: Last Call).
+   * Without it, the mood's.
+   */
+  treatment?: "glide" | "punch";
 };
 
 /** A shot narrower than this share of the flyer would be enlarged past its detail and look soft. */
@@ -132,7 +138,8 @@ export function parseOpening(v: unknown): OpeningRecipe | null {
   const hold = cleanBox(v.hold, MIN_HOLD_WIDTH, MIN_SHOT_HEIGHT);
   if (beats.length < 2 || !hold) return null;
   const mood = OPENING_MOOD_IDS.find((m) => m === v.mood);
-  return { ...(mood ? { mood } : {}), beats, hold, ...(v.hook === false ? { hook: false as const } : {}) };
+  const treatment = v.treatment === "glide" || v.treatment === "punch" ? v.treatment : null;
+  return { ...(mood ? { mood } : {}), beats, hold, ...(v.hook === false ? { hook: false as const } : {}), ...(treatment ? { treatment } : {}) };
 }
 
 const same = (a: unknown, b: unknown): boolean => {
@@ -156,14 +163,18 @@ const WHOLE_FLYER: Box = { x: 0, y: 0, w: 1, h: 1 };
 /**
  * A reel's cut (.claude/skills/flyer-cuts), cleaned like an opening: in the
  * opening's mood, its words kept off the bottom (the reel's title and Tickets
- * button are there), ending on the whole flyer. `hook`: whether it may open
- * on its first line, huge on black (The Night's only). Null when too little of
- * it is usable, and the reel shows the still flyer.
+ * button are there), ending on the whole flyer. Its reel sets how it's cut:
+ * only The Night opens on its hook (its first line, huge on black), Your
+ * People glides and Last Call punches, whatever the mood, so the reels never
+ * play the same film. Null when too little of it is usable, and the reel shows
+ * the still flyer.
  */
-export function parseCut(v: unknown, mood?: OpeningMood, hook = true): OpeningRecipe | null {
+export function parseCut(v: unknown, mood?: OpeningMood, role?: "the_night" | "your_people" | "last_call"): OpeningRecipe | null {
   if (!isObject(v) || !Array.isArray(v.beats)) return null;
   const beats = v.beats.map((b) => (isObject(b) && isObject(b.text) && b.text.at === "bottom" ? { ...b, text: { ...b.text, at: "middle" } } : b));
-  return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER, ...(hook ? {} : { hook: false }) });
+  const hook = !role || role === "the_night";
+  const treatment = role === "your_people" ? "glide" : role === "last_call" ? "punch" : undefined;
+  return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER, ...(hook ? {} : { hook: false }), ...(treatment ? { treatment } : {}) });
 }
 
 /** A box given in the flyer's pixels (x1, y1 the top left, x2, y2 the bottom right corner), as fractions of the flyer. */

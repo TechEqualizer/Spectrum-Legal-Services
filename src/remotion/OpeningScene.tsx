@@ -56,6 +56,25 @@ const wordsIn = (t?: OpeningText) => (t ? t.lines.join(" ").split(/\s+/).length 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const settle = Easing.bezier(0.25, 0.1, 0.25, 1);
 
+/** Where each word slot sits on the screen, top to bottom (fractions of its height). */
+const SLOTS = { top: [0.1, 0.32], middle: [0.38, 0.58], bottom: [0.62, 0.86] } as const;
+
+/**
+ * Where a shot's words go: where the director asked, unless that would put
+ * them over the shot's focus (its face or subject, as it lands on screen),
+ * then the slot that covers it least. A reel's bottom is its title and
+ * Tickets button, so never there.
+ */
+function wordsAt(asked: OpeningText["at"], focus: [number, number] | null, reel: boolean): OpeningText["at"] {
+  const slots = (reel ? ["top", "middle"] : ["top", "middle", "bottom"]) as OpeningText["at"][];
+  const want = reel && asked === "bottom" ? "middle" : asked;
+  if (!focus) return want;
+  const covers = (at: OpeningText["at"]) => Math.max(0, Math.min(SLOTS[at][1], focus[1]) - Math.max(SLOTS[at][0], focus[0]));
+  if (covers(want) === 0) return want;
+  const mid = (focus[0] + focus[1]) / 2;
+  return [...slots].sort((a, b) => covers(a) - covers(b) || Math.abs((SLOTS[b][0] + SLOTS[b][1]) / 2 - mid) - Math.abs((SLOTS[a][0] + SLOTS[a][1]) / 2 - mid))[0];
+}
+
 /**
  * The camera from one place to another over `dur` frames, leaving at one
  * speed and arriving at another (per frame, in the camera's own units), so
@@ -116,7 +135,10 @@ function wordsNeed(text: OpeningText | undefined, type: "slam" | "track" | "rise
  * than cuts), the pull-back to the whole flyer, the flyer itself, and the hold.
  */
 function plan(recipe: OpeningRecipe, fps: number, holdSeconds = HOLD_SECONDS, reel = false) {
-  const d = directionOf(recipe);
+  const mood = directionOf(recipe);
+  // A reel's own treatment overrides the mood's cut: Your People glides, unhurried; Last Call punches, brisk.
+  const cut = recipe.treatment === "glide" ? "dissolve" : recipe.treatment === "punch" ? "punch" : mood.cut;
+  const d = { ...mood, cut, pace: mood.pace * (recipe.treatment === "glide" ? 1.1 : recipe.treatment === "punch" ? 0.85 : 1) } as const;
   const sec = (s: number) => Math.round(s * fps);
   const first = recipe.beats[0].text;
   const hook = recipe.hook !== false && first?.size === "big" && wordsIn(first) <= 4 ? first : null;
@@ -160,7 +182,14 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
   const p = plan(recipe, fps, story?.holdSeconds, reel);
   const { d } = p;
   const fr: Frame = { W, H, fw: width, fh: height };
-  const shots = p.stops.map((s, i) => ({ ...s, cams: drift(camOn(recipe.beats[i].box, fr), recipe.beats[i].move, fr) }));
+  const shots = p.stops.map((s, i) => {
+    const beat = recipe.beats[i];
+    const cams = drift(camOn(beat.box, fr), beat.move, fr, beat.box);
+    // Where the shot's focus lands on screen, halfway through, so its words stay off it.
+    const at = place(mix(cams[0], cams[1], 0.5), fr);
+    const focus: [number, number] | null = beat.focus ? [(at.top + beat.focus.y * at.height) / H, (at.top + (beat.focus.y + beat.focus.h) * at.height) / H] : null;
+    return { ...s, cams, text: s.text && { ...s.text, at: wordsAt(s.text.at, focus, reel) } };
+  });
   const poster = camOnPoster(fr);
   const punch = d.cut === "punch";
   // A punch-in lands on every shot after a cut (the first too, when the hook flies into it).
@@ -214,7 +243,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
         (s, i) =>
           s.text && (
             <Sequence key={i} from={s.from} durationInFrames={s.dur} name={`Words ${i + 1}`}>
-              <Words text={reel && s.text.at === "bottom" ? { ...s.text, at: "middle" } : s.text} fontClass={fontClass} caps={caps} accent={accent} type={d.type} left={d.align === "left"} />
+              <Words text={s.text} fontClass={fontClass} caps={caps} accent={accent} type={d.type} left={d.align === "left"} />
             </Sequence>
           ),
       )}
@@ -222,7 +251,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
         (s, i) =>
           punched(i) && (
             <Sequence key={`flash-${i}`} from={s.from} durationInFrames={4} name={`Flash ${i + 1}`}>
-              <Flash color={d.flash === "accent" ? accent : "#fff"} strength={d.flash === "accent" ? 0.75 : 0.5} />
+              <Flash color={d.flash === "accent" ? accent : "#fff"} strength={d.flash === "accent" ? 0.75 : d.flash ? 0.5 : 0.3} />
             </Sequence>
           ),
       )}

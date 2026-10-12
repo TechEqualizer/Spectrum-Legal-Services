@@ -438,7 +438,7 @@ export function cleanDraft(raw: Record<string, unknown>, px?: Px): FunnelDraft |
   const reels = REEL_ORDER.flatMap((role) => {
     const reel = byRole.get(role);
     // Only The Night opens on its hook; the others open straight on their first shot.
-    const cut = reel && parseCut(cuts.get(role), mood, role === "the_night");
+    const cut = reel && parseCut(cuts.get(role), mood, role);
     return reel ? [cut ? { ...reel, cut } : reel] : [];
   });
   if (!reels.length) return { problem: "Couldn't draft reels from this flyer. Try a clearer photo." };

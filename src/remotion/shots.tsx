@@ -12,14 +12,23 @@ export type Cam = { x: number; y: number; z: number };
 type Frame = { W: number; H: number; fw: number; fh: number };
 
 /**
+ * How far the camera may enlarge the flyer: about 2.4 composition pixels per
+ * flyer pixel at a 720-pixel short side. Past that, a 1600-pixel flyer goes
+ * soft, so a shot too small to fill the frame shows a little more around it
+ * instead.
+ */
+const MAX_ENLARGE = 2.4;
+
+/**
  * The camera on a box: the box covers the frame, so nothing outside it (the
  * flyer's own lettering, which Claude keeps the boxes clear of) comes into
- * view, and the frame is always filled.
+ * view, and the frame is always filled; never enlarged past the flyer's own
+ * detail.
  */
 export const camOn = (b: Box, { W, H, fw, fh }: Frame): Cam => ({
   x: b.x + b.w / 2,
   y: b.y + b.h / 2,
-  z: Math.log(Math.max(W / (b.w * fw), H / (b.h * fh), W / fw, H / fh)),
+  z: Math.log(Math.max(Math.min(Math.max(W / (b.w * fw), H / (b.h * fh)), (MAX_ENLARGE * Math.min(W, H)) / 720), W / fw, H / fh)),
 });
 
 /** The whole flyer, a little inside the frame. */
@@ -39,24 +48,29 @@ export function place(c: Cam, { W, H, fw, fh }: Frame) {
 
 /**
  * The camera's move while it rests on a shot: in, out, up or across. The
- * sideways moves ride a little closer in, so they stay inside the box.
+ * sideways moves ride a little closer in, so they stay inside the box; across
+ * a box wider (or taller) than the frame shows, a pan (or tilt) travels its
+ * whole width (or height), so a wide crowd is seen from one end to the other.
  */
-export function drift(base: Cam, move: OpeningMove, f: Frame): [Cam, Cam] {
+export function drift(base: Cam, move: OpeningMove, f: Frame, box?: Box): [Cam, Cam] {
   const s = Math.exp(base.z);
   const seenW = f.W / (f.fw * s);
   const seenH = f.H / (f.fh * s);
   const z = (k: number) => base.z + Math.log(k);
+  // How far the camera can travel inside the box, at the moves' slightly closer zoom.
+  const spanX = box ? Math.max(0.05 * seenW, (box.w - seenW / 1.08) / 2) : 0.05 * seenW;
+  const spanY = box ? Math.max(0.04 * seenH, (box.h - seenH / 1.08) / 2) : 0.04 * seenH;
   switch (move) {
     case "push":
       return [base, { ...base, z: z(1.14) }];
     case "pull":
       return [{ ...base, z: z(1.14) }, base];
     case "tilt-up":
-      return [{ ...base, y: base.y + 0.04 * seenH, z: z(1.08) }, { ...base, y: base.y - 0.04 * seenH, z: z(1.11) }];
+      return [{ ...base, y: base.y + spanY, z: z(1.08) }, { ...base, y: base.y - spanY, z: z(1.11) }];
     case "pan-left":
-      return [{ ...base, x: base.x + 0.05 * seenW, z: z(1.08) }, { ...base, x: base.x - 0.05 * seenW, z: z(1.11) }];
+      return [{ ...base, x: base.x + spanX, z: z(1.08) }, { ...base, x: base.x - spanX, z: z(1.11) }];
     case "pan-right":
-      return [{ ...base, x: base.x - 0.05 * seenW, z: z(1.08) }, { ...base, x: base.x + 0.05 * seenW, z: z(1.11) }];
+      return [{ ...base, x: base.x - spanX, z: z(1.08) }, { ...base, x: base.x + spanX, z: z(1.11) }];
   }
 }
 

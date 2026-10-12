@@ -53,8 +53,8 @@ const beat = (x: number, y: number, move: string, line?: string, size = "big") =
 
 test("the lint names every broken directing rule", () => {
   const night = parseCut({ beats: [beat(0.6, 0, "push", "You are all mine at night"), beat(0.6, 0.3, "push")] }, "glamour")!;
-  const last = parseCut({ beats: [beat(0.1, 0.5, "push", "Saturday, Oct 31"), beat(0.1, 0.1, "pull", "Limited tickets")] }, "glamour", false)!;
-  const people = parseCut({ beats: [beat(0.6, 0, "pan-left", "$31 GA"), beat(0.3, 0.6, "pull")] }, "glamour", false)!;
+  const last = parseCut({ beats: [beat(0.1, 0.5, "push", "Saturday, Oct 31"), beat(0.1, 0.1, "pull", "Limited tickets")] }, "glamour", "last_call")!;
+  const people = parseCut({ beats: [beat(0.6, 0, "pan-left", "$31 GA"), beat(0.3, 0.6, "pull")] }, "glamour", "your_people")!;
   const problems = lintRecipes({
     cuts: [{ role: "the_night", cut: night }, { role: "your_people", cut: people }, { role: "last_call", cut: last }],
     map: { subjects: [], lettering: [{ x: 0.6, y: 0.3, w: 0.4, h: 0.1 }] },
@@ -72,7 +72,7 @@ test("the lint names every broken directing rule", () => {
 
 test("a clean draft passes the lint", () => {
   const night = parseCut({ beats: [beat(0.6, 0, "push", "You, behind the mask"), beat(0.3, 0.55, "tilt-up", "Own the runway")] }, "glamour")!;
-  const last = parseCut({ beats: [beat(0, 0.2, "push", "Limited tickets"), beat(0.62, 0.62, "pull", "Saturday, Oct 31")] }, "glamour", false)!;
+  const last = parseCut({ beats: [beat(0, 0.2, "push", "Limited tickets"), beat(0.62, 0.62, "pull", "Saturday, Oct 31")] }, "glamour", "last_call")!;
   assert.deepEqual(lintRecipes({ cuts: [{ role: "the_night", cut: night }, { role: "last_call", cut: last }], map: { subjects: [], lettering: [{ x: 0, y: 0.95, w: 1, h: 0.05 }] }, facts }), []);
 });
 
