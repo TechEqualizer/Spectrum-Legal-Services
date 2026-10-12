@@ -68,21 +68,22 @@ export default function ReelsStep({
         {cut ? "One flyer in. An opening and three reels out, each cut from your flyer" : "Your flyer, made into the story fans watch"} to sell {nightName(draft)}, ending on Tickets.
       </p>
 
-      {drafting && !draft.reels ? (
-        <div role="status" className="mt-8 flex items-center gap-4 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5">
-          <span aria-hidden="true" className="start-spinner size-6 shrink-0 rounded-full border-2 border-[var(--sl-gold)]/30 border-t-[var(--sl-gold)]" />
-          <div>
-            <p className="font-semibold text-[var(--sl-text)]">Cutting your flyer into a story…</p>
-            <p className="text-sm text-[var(--sl-muted)]">From your flyer: who fans get to be that night, who they&apos;ll be with, and why to buy now.</p>
-          </div>
+      {/* Never a wait: the story plays from the flyer's basics at once, and gets better in place as Claude writes it. */}
+      {drafting && !cut ? (
+        <div role="status" className="mt-8 flex items-center gap-3 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] px-4 py-3">
+          <span aria-hidden="true" className="start-spinner size-5 shrink-0 rounded-full border-2 border-[var(--sl-gold)]/30 border-t-[var(--sl-gold)]" />
+          <p className="text-sm text-[var(--sl-text)]/85">
+            {draft.reels ? "Your reels are written. Now cutting your flyer into shots…" : "Writing your reels from the flyer: who fans get to be, who they'll be with, and why to buy now…"}
+          </p>
         </div>
       ) : (
-        <>
-          {!draft.reels && (
-            <p className="mt-6 text-sm text-[var(--sl-muted)]">
-              {draft.reelsFailed ? "We couldn't write these from your flyer just now, so they" : "These"} start from your flyer&apos;s basics. Make them yours under Change the words.
-            </p>
-          )}
+        !draft.reels && (
+          <p className="mt-6 text-sm text-[var(--sl-muted)]">
+            {draft.reelsFailed ? "We couldn't write these from your flyer just now, so they" : "These"} start from your flyer&apos;s basics. Make them yours under Change the words.
+          </p>
+        )
+      )}
+      <>
           <ol aria-label="Your story" className="mt-8 grid gap-2">
             {parts.map((x, i) => {
               const on = playing === x.part;
@@ -119,6 +120,8 @@ export default function ReelsStep({
               : "Until your videos come, each reel plays over your flyer. You add them after you claim your link."}
           </p>
 
+          {/* Words to change once they're written, not the basics they're about to replace. */}
+          {!(drafting && !draft.reels) && (
           <details className="group mt-6 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)]">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 font-semibold text-[var(--sl-text)] [&::-webkit-details-marker]:hidden">
               Change the words
@@ -143,8 +146,8 @@ export default function ReelsStep({
               ))}
             </div>
           </details>
-        </>
-      )}
+          )}
+      </>
 
       {/* Phones: the next step stays in reach at the bottom while they watch. */}
       <div className="fixed inset-x-0 bottom-0 z-20 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[var(--sl-line)] bg-[var(--sl-night)]/95 px-5 py-3 backdrop-blur lg:static lg:mt-10 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">

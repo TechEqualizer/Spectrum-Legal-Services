@@ -58,7 +58,8 @@ check('the preview counts no visits', reelEvents.length === 0, reelEvents.join('
 const list = await (await admin.request.get(B + '/api/admin/invites')).json();
 check('the read counted against the invite', list.invites.find((i) => i.note === 'Velvet Room')?.flyer_reads === 1);
 
-// Coming back: carries on.
+// Coming back: carries on. (After the whole draft, words then shots: a reload mid-draft keeps only the stages that came.)
+await p.waitForFunction(() => Object.keys(localStorage).some((k) => { try { return Boolean(JSON.parse(localStorage.getItem(k))?.reels?.opening); } catch { return false; } }), null, { timeout: 15000 }).catch(() => {});
 await p.reload(); await settle(p, 1500);
 check('a reload keeps the draft', await p.getByText('From your flyer', { exact: true }).isVisible() && (await p.getByRole('radio', { name: 'Venue' }).getAttribute('aria-checked')) === 'true');
 
@@ -78,6 +79,8 @@ check('drafted from the flyer', /Masks on, Detroit/.test(await part('Opening').i
 check('each says why it sells', /people like them/.test(await part('Your People').innerText()) && /reason to buy now/.test(await part('Last Call').innerText()));
 await p.screenshot({ path: 'start-watch-1279.png' });
 check('the words are folded away', !(await reel('Opening').getByLabel('Title').isVisible().catch(() => false)));
+// The words come first, then the shots: the phone starts over with them, and the opening plays.
+await p.getByText('One flyer in. An opening and three reels out', { exact: false }).waitFor({ timeout: 15000 }).catch(() => {});
 // The opening cut from the flyer plays first, with the flyer's own words; the title comes up as it settles.
 const playing = await phone.getByText('Masks on.', { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true, () => false);
 check('the phone: the opening plays, with the flyer\'s words', playing && !(await phone.getByText('Masks on, Detroit').first().isVisible().catch(() => false)));
@@ -136,6 +139,13 @@ await p.locator('p[role=alert]').waitFor({ timeout: 15000 }).catch(() => {});
 check("no date found: says what to try", (await p.locator('p[role=alert]').textContent())?.includes("couldn't find a date"));
 check('and keeps the last flyer', await p.getByText('Golden Hour: Halloween').first().isVisible());
 await fetch(CLAUDE + '/__mode', { method: 'POST', body: 'multi' });
+
+// The draft starts with the reading and streams in stages, never before the reading: the words alone, then the shots.
+await setInvite({ flyer_reads: 0 });
+const staged = await anon.request.post(B + '/api/start/flyer', { data: { invite: code, type: 'image/jpeg', data: png.toString('base64'), today: '2026-10-01' } });
+const lines = (await staged.text()).trim().split('\n').map((l) => JSON.parse(l));
+const shape = lines.map((l) => (l.read ? 'read' : l.draft ? (l.draft.opening ? 'shots' : 'words') : Object.keys(l).join('+'))).join(' > ');
+check('the draft streams in stages: the reading, the words, then the shots', lines[0]?.read && lines[1]?.draft && !lines[1].draft.opening && lines.at(-1)?.draft?.opening && lines.at(-1).draft.reels.some((r) => r.cut), shape);
 
 // The invite's limit.
 await setInvite({ flyer_reads: 5 });

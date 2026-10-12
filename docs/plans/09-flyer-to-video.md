@@ -196,6 +196,30 @@ characters, the limit is 3,000, the two halves 1,185 and 2,142), and the draft
 suite checks both answers are asked. Source: platform.claude.com/docs/en/build-with-claude/structured-outputs
 ("Schema complexity limits").
 
+## The wizard waited on everything (fixed)
+
+With drafts working again, step 2 still showed "Cutting your flyer into a
+story…" for a minute or more. From the production logs of one run: the flyer
+was read, then drafted (both answers back about 34 seconds after the upload),
+then the code's check found nine problems (cuts repeating the opening's
+shots, a "5 PM" the flyer doesn't print), and the fix took another 30 to 60
+seconds. Nothing showed until all of it was done.
+
+Now nothing waits on anything it doesn't need:
+- The draft starts with the reading, not after it (Claude reads the dates off
+  the flyer itself; the check still uses what the reading found).
+- It streams in stages: the reels' words as soon as they're written (the
+  reels play over the still flyer), then the opening and cuts (the phone
+  starts over with them), then the fixed cuts in place. A stage whose lines
+  state a fact the flyer doesn't is held back for the fix.
+- Step 2 shows the story at once, with a one-line status, not a spinner in
+  its place; Change the words opens once the words are written, and a later
+  stage brings only shots, so the organizer's changes stay.
+
+Truly instant would mean a cut made without Claude. Expected now (estimated
+from that one run, not yet measured): the words in about 20 seconds, the shots
+in about 30, the fix after that only if the check finds problems.
+
 ## Roadmap
 
 **Phase 1: the lean rebuild (1 to 2 weeks, free).** Gaps 1, 2, 3, 4, 5, 7,
