@@ -61,10 +61,11 @@ export default function BuildList({ draft, drafting, depth }: { draft: StartDraf
     ...(depth === "none" ? [] : [{ key: "depth", state: (depth === "done" ? "done" : "working") as State, title: "Your flyer, in 3D", detail: depth === "done" ? "Near things move more than far ones" : "Finding what's near and far…" }]),
   ];
   const left = lines.filter((l) => l.state === "working").length;
+  const basics = lines.some((l) => l.state === "fallback");
 
   return (
     <div className="mt-5 border-t border-[var(--sl-line)] pt-4">
-      <p className="text-sm font-semibold text-[var(--sl-text)]">{left ? "Building your link…" : "Your link is built."}</p>
+      <p className="text-sm font-semibold text-[var(--sl-text)]">{left ? "Building your link…" : basics ? "Your link is ready, from your flyer's basics." : "Your link is built."}</p>
       <ul aria-live="polite" className="mt-3 grid gap-3">
         {lines.map((l) => (
           <li key={l.key} className="flex items-start gap-3">

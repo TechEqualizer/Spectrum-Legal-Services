@@ -37,11 +37,8 @@ check('the step bar: 3 steps, on the first', (await p.getByRole('list', { name: 
 const phone = p.frameLocator('iframe[title="Your link, as fans will see it"]');
 await phone.locator('main').first().waitFor({ timeout: 10000 }).catch(() => {});
 check('the phone is live before the flyer: the link player', await phone.getByText('Your night').first().isVisible().catch(() => false));
-const next = p.getByRole('button', { name: /^(Continue|Watch your night)$/ });
-check('Continue waits for the flyer', await next.isDisabled() && await p.getByText('Add your flyer to continue.').isVisible());
-
-await p.getByRole('radio', { name: 'Venue' }).click();
-check('what they run: picked', (await p.getByRole('radio', { name: 'Venue' }).getAttribute('aria-checked')) === 'true');
+// One action: drop the flyer. No question to answer first, no Continue to press.
+check('one action: nothing to answer, nothing to press but the flyer', !(await p.getByRole('radio').count()) && !(await p.getByRole('button', { name: /^(Continue|Watch your night)$/ }).count()));
 
 await fetch(CLAUDE + '/__mode', { method: 'POST', body: 'multi' });
 await p.locator('input[type=file]').setInputFiles(flyer);
@@ -52,14 +49,14 @@ check('and the other dates', card.includes('And 1 more date from the flyer.'), c
 await p.waitForTimeout(1500);
 check('the phone: their night', await phone.getByText('Golden Hour: Halloween').first().isVisible().catch(() => false));
 check('the phone: their flyer behind it', (await phone.locator('img[src^="data:image/jpeg"]').count()) > 0);
-check('Continue, now: into watching the night', await next.isEnabled() && (await next.textContent()) === 'Watch your night');
-// Right after the scan, step 1 shows what the flyer is becoming, each line ticked as it lands, while the phone builds it.
+check('straight to the night after the scan: no button to press', await p.getByRole('heading', { name: 'Watch your night.' }).isVisible() && (await p.locator('[aria-current="step"]').textContent()) === 'Watch it');
+// Right after the scan, the night shows what the flyer is becoming, each line ticked as it lands, while the phone builds it.
 const built = p.getByText('Your link is built.');
 await built.waitFor({ timeout: 15000 }).catch(() => {});
 const ticks = await p.locator('li').filter({ has: p.locator('.start-tick') }).allTextContents();
-check('step 1: everything the flyer became, ticked off', await built.isVisible() && ['Your night, its dates and venue', 'Your colors and type', 'Three reels that sell your night', 'An opening and every reel, cut from your flyer'].every((t) => ticks.some((x) => x.includes(t))), ticks.join(' | '));
-check('step 1: the reels by name, the shots counted', ticks.some((x) => x.includes('Masks on · Bring your crew · Last call')) && ticks.some((x) => x.includes('The opening and 3 reels, shot by shot like a trailer')), ticks.join(' | '));
-check('step 1: the phone already plays the story written from the flyer', await phone.getByText('Masks on, Detroit').first().waitFor({ timeout: 15000 }).then(() => true, () => false));
+check('the night: everything the flyer became, ticked off', await built.isVisible() && ['Your night, its dates and venue', 'Your colors and type', 'Three reels that sell your night', 'An opening and every reel, cut from your flyer'].every((t) => ticks.some((x) => x.includes(t))), ticks.join(' | '));
+check('the night: the reels by name, the shots counted', ticks.some((x) => x.includes('Masks on · Bring your crew · Last call')) && ticks.some((x) => x.includes('The opening and 3 reels, shot by shot like a trailer')), ticks.join(' | '));
+check('the night: the phone plays the story written from the flyer', await phone.getByText('Masks on, Detroit').first().waitFor({ timeout: 15000 }).then(() => true, () => false));
 await p.screenshot({ path: 'start-flyer-1279.png' });
 check('the preview counts no visits', reelEvents.length === 0, reelEvents.join(' '));
 const list = await (await admin.request.get(B + '/api/admin/invites')).json();
@@ -68,10 +65,7 @@ check('the read counted against the invite', list.invites.find((i) => i.note ===
 // Coming back: carries on. (After the whole draft, words then shots: a reload mid-draft keeps only the stages that came.)
 await p.waitForFunction(() => Object.keys(localStorage).some((k) => { try { return Boolean(JSON.parse(localStorage.getItem(k))?.reels?.opening); } catch { return false; } }), null, { timeout: 15000 }).catch(() => {});
 await p.reload(); await settle(p, 1500);
-check('a reload keeps the draft', await p.getByText('From your flyer', { exact: true }).isVisible() && (await p.getByRole('radio', { name: 'Venue' }).getAttribute('aria-checked')) === 'true');
-
-await next.click();
-check('step 2 is next', await p.getByRole('heading', { name: 'Watch your night.' }).isVisible() && (await p.locator('[aria-current="step"]').textContent()) === 'Watch it');
+check('a reload keeps the draft, and the night', await p.getByText('From your flyer', { exact: true }).isVisible() && await p.getByRole('heading', { name: 'Watch your night.' }).isVisible());
 
 // Step 2: watch the story drafted from the flyer (in the same answer as the read): each part named with why
 // it sells, a tap plays it; the words fold away under Change the words.
@@ -119,13 +113,11 @@ check('still no visits', reelEvents.length === 0, reelEvents.join(' '));
 
 // Edits survive coming back.
 await p.reload(); await settle(p, 1500);
-await next.click();
 await openWords();
 check('a reload keeps the edits', (await reel('Opening').getByLabel('Title').inputValue()) === 'Masks on, Motor City');
 await p.getByRole('button', { name: 'Claim this link' }).click();
 check('step 3 is next', await p.getByRole('heading', { name: 'Claim your link.' }).isVisible() && (await p.locator('[aria-current="step"]').textContent()) === 'Your link');
 await p.getByRole('button', { name: 'Back to your reels' }).click();
-await p.getByRole('button', { name: 'Back to your flyer' }).click();
 
 // Reels that couldn't be drafted: they start from the flyer's basics.
 await fetch(CLAUDE + '/__mode', { method: 'POST', body: 'nodraft' });
@@ -133,10 +125,8 @@ await p.getByRole('button', { name: 'Use a different flyer' }).click();
 await p.locator('input[type=file]').setInputFiles(flyer);
 await p.getByText('From your flyer', { exact: true }).waitFor({ timeout: 15000 }).catch(() => {});
 await p.waitForTimeout(2000);
-await next.click();
 await openWords();
 check("no draft: says so, and starts from the flyer", await p.getByText("We couldn't write these from your flyer just now", { exact: false }).isVisible() && (await reel('Opening').getByLabel('Title').inputValue()) === 'Golden Hour: Halloween', await reel('Opening').getByLabel('Title').inputValue().catch(() => ''));
-await p.getByRole('button', { name: 'Back to your flyer' }).click();
 
 // A flyer with no date.
 await fetch(CLAUDE + '/__mode', { method: 'POST', body: 'none' });
@@ -176,8 +166,7 @@ await m.screenshot({ path: 'start-390.png', fullPage: true });
 const saved = await p.evaluate(() => Object.entries(localStorage).filter(([k]) => k.startsWith('showlnk-start-')));
 await m.evaluate((entries) => entries.forEach(([k, v]) => localStorage.setItem(k, v)), saved);
 await m.reload(); await settle(m, 1200);
-await m.getByRole('button', { name: 'Watch your night' }).click(); await m.waitForTimeout(800);
-check('phone: step 2 fits', await m.getByRole('heading', { name: 'Watch your night.' }).isVisible() && await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+check('phone: the night fits', await m.getByRole('heading', { name: 'Watch your night.' }).isVisible() && await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 const claimBar = await m.getByRole('button', { name: 'Claim this link' }).boundingBox();
 check('phone: Claim this link stays in reach at the bottom', Boolean(claimBar) && claimBar.y + claimBar.height <= 844 && claimBar.y > 700, JSON.stringify(claimBar));
 await m.screenshot({ path: 'start-reels-390.png', fullPage: true });

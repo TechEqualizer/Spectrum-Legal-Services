@@ -12,11 +12,7 @@ import { newClientEvent } from "@/lib/new-event";
 import type { Publication } from "@/lib/publication";
 import type { ImportedDate } from "@/lib/server/flyer-import";
 
-export const ROLES = ["Promoter", "Venue", "Artist or DJ", "Organizer"] as const;
-export type Role = (typeof ROLES)[number];
-
 export type StartDraft = {
-  role?: Role;
   /** The flyer as a small JPEG data URL (a PDF has none), for the phone's backdrop. */
   flyer?: string;
   /** Its depth map as a PNG data URL, made in this browser while the flyer is read (src/lib/depth-map.ts). */

@@ -8,7 +8,7 @@ import ReelsStep from "@/components/start/ReelsStep";
 import BuildList, { type DepthState } from "@/components/start/BuildList";
 import type { StartState } from "@/components/start/StartPreview";
 import type { FunnelDraft } from "@/lib/funnel-draft";
-import { draftLink, ROLES, type StartDraft } from "@/lib/start-draft";
+import { draftLink, type StartDraft } from "@/lib/start-draft";
 import type { ImportedDate } from "@/lib/server/flyer-import";
 import type { Look } from "@/lib/look";
 
@@ -119,7 +119,6 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   // Null until the browser has read the saved draft (and on the server).
   const saved = useMemo(() => parse(raw), [raw]);
   const draft: StartDraft = saved ?? {};
-  const loaded = saved !== null;
   const [step, setStep] = useState(0);
   const [reading, setReading] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -198,6 +197,8 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         setReadsLeft((n) => n - 1);
         if (!read.dates.length) return setError("We couldn't find a date on that flyer. Try a clearer photo, or the one with the date on it.");
         update({ flyer: picture, depth: undefined, dates: read.dates, look: read.look, reels: undefined, reelsFailed: undefined });
+        // Straight to the night: it builds itself from here.
+        setStep(1);
         // Once the depth map is there, the phone starts over with it (see Phone's `scene`).
         void depthMade?.then((url) => {
           if (mine !== attempt.current) return;
@@ -227,21 +228,61 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   };
 
   const found = draft.dates?.[0];
-  const canContinue = Boolean(found && draft.role);
+  // One action, then the reveal: the drop screen until the flyer is read, then the night builds itself (no
+  // question, no Continue), and the claim only when they ask for it.
+  const view: "drop" | "night" | "claim" = reading !== null || !found ? "drop" : step === 2 ? "claim" : "night";
+  const at = view === "drop" ? 0 : view === "night" ? 1 : 2;
+
+  // What the flyer said, and what it's becoming, at the top of the night (another flyer can replace it).
+  const facts = found && (
+    <div className="mt-8 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5 sm:p-6">
+      <p className="text-sm font-semibold text-[var(--sl-gold)]">From your flyer</p>
+      <p className="sl-display mt-2 text-3xl leading-none">{found.name || "Your night"}</p>
+      <p className="mt-3 text-[var(--sl-text)]/85">{[when(found), found.venue, found.price].filter(Boolean).join(" · ")}</p>
+      {(draft.dates?.length ?? 0) > 1 && (
+        <p className="mt-1 text-sm text-[var(--sl-muted)]">And {draft.dates!.length - 1} more {draft.dates!.length === 2 ? "date" : "dates"} from the flyer.</p>
+      )}
+      {/* Everything the flyer is becoming, ticked off as it lands, while the phone builds it. */}
+      <BuildList draft={draft} drafting={drafting} depth={draft.depth ? "done" : depthState} />
+      <p className="mt-4 text-sm text-[var(--sl-muted)]">
+        Anything off? You can change it all once your link is yours.{" "}
+        <button type="button" onClick={() => fileRef.current?.click()} className="min-h-11 font-semibold text-[var(--sl-gold)] underline underline-offset-4">
+          Use a different flyer
+        </button>
+      </p>
+      {error && (
+        <p role="alert" className="mt-2 text-sm font-semibold text-[#ff9b8a]">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 pb-24 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16 lg:pt-10">
       <div className="min-w-0">
         <ol aria-label="Steps" className="grid grid-cols-3 gap-2">
           {STEPS.map((label, i) => (
-            <li key={label} aria-current={i === step ? "step" : undefined}>
-              <span className={`block h-1.5 rounded-full ${i <= step ? "bg-[var(--sl-gold)]" : "bg-[var(--sl-line)]"}`} />
-              <span className={`mt-2 block text-xs font-semibold ${i === step ? "text-[var(--sl-text)]" : "text-[var(--sl-muted)]"}`}>{label}</span>
+            <li key={label} aria-current={i === at ? "step" : undefined}>
+              <span className={`block h-1.5 rounded-full ${i <= at ? "bg-[var(--sl-gold)]" : "bg-[var(--sl-line)]"}`} />
+              <span className={`mt-2 block text-xs font-semibold ${i === at ? "text-[var(--sl-text)]" : "text-[var(--sl-muted)]"}`}>{label}</span>
             </li>
           ))}
         </ol>
 
-        {step === 0 ? (
+        <input
+          ref={fileRef}
+          id={`${id}-file`}
+          type="file"
+          accept="image/*,application/pdf"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) read(file);
+          }}
+        />
+        {view === "drop" ? (
           <section aria-labelledby={`${id}-title`} className="mt-10">
             <p className="text-sm font-semibold text-[var(--sl-gold)]">Step 1 of 3</p>
             <h1 id={`${id}-title`} className="sl-display mt-2 text-[clamp(2.75rem,9vw,4.5rem)] leading-[0.92]">
@@ -252,41 +293,8 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
               <span className="hidden lg:inline">beside you</span>. No account yet.
             </p>
 
-            <fieldset className="mt-9">
-              <legend className="text-sm font-semibold text-[var(--sl-text)]">What do you run?</legend>
-              <div role="radiogroup" aria-label="What do you run?" className="mt-3 flex flex-wrap gap-2">
-                {ROLES.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    role="radio"
-                    aria-checked={draft.role === r}
-                    onClick={() => update({ role: r })}
-                    className={`min-h-11 rounded-full border px-4 text-sm font-semibold transition ${
-                      draft.role === r
-                        ? "border-[var(--sl-gold)] bg-[var(--sl-gold)] text-[var(--sl-ink)]"
-                        : "border-[var(--sl-line)] text-[var(--sl-text)] hover:border-[var(--sl-gold)]/70"
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
 
-            <div className="mt-8">
-              <input
-                ref={fileRef}
-                id={`${id}-file`}
-                type="file"
-                accept="image/*,application/pdf"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (file) read(file);
-                }}
-              />
+            <div className="mt-9">
               {reading !== null ? (
                 <div role="status" className="flex items-center gap-4 rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5">
                   <span aria-hidden="true" className="start-spinner size-6 shrink-0 rounded-full border-2 border-[var(--sl-gold)]/30 border-t-[var(--sl-gold)]" />
@@ -294,42 +302,6 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
                     <p className="font-semibold text-[var(--sl-text)]">Reading your flyer…</p>
                     <p className="text-sm text-[var(--sl-muted)]">The name, the date, the venue, and your colors.</p>
                   </div>
-                </div>
-              ) : found ? (
-                <div className="rounded-2xl border border-[var(--sl-line)] bg-[var(--sl-night-2)] p-5 sm:p-6">
-                  <p className="text-sm font-semibold text-[var(--sl-gold)]">From your flyer</p>
-                  <p className="sl-display mt-2 text-3xl leading-none">{found.name || "Your night"}</p>
-                  <dl className="mt-4 grid gap-1.5 text-[var(--sl-text)]/85">
-                    <div className="flex gap-2">
-                      <dt className="sr-only">When</dt>
-                      <dd>{when(found)}</dd>
-                    </div>
-                    {found.venue && (
-                      <div className="flex gap-2">
-                        <dt className="sr-only">Where</dt>
-                        <dd>{found.venue}</dd>
-                      </div>
-                    )}
-                    {found.price && (
-                      <div className="flex gap-2">
-                        <dt className="sr-only">Price</dt>
-                        <dd>{found.price}</dd>
-                      </div>
-                    )}
-                  </dl>
-                  {(draft.dates?.length ?? 0) > 1 && (
-                    <p className="mt-2 text-sm text-[var(--sl-muted)]">And {draft.dates!.length - 1} more {draft.dates!.length === 2 ? "date" : "dates"} from the flyer.</p>
-                  )}
-                  {/* Everything the flyer is becoming, ticked off as it lands, while the phone builds it. */}
-                  <BuildList draft={draft} drafting={drafting} depth={draft.depth ? "done" : depthState} />
-                  <p className="mt-4 text-sm text-[var(--sl-muted)]">Anything off? You can change it all once your link is yours.</p>
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    className="mt-3 min-h-11 text-sm font-semibold text-[var(--sl-gold)] underline underline-offset-4"
-                  >
-                    Use a different flyer
-                  </button>
                 </div>
               ) : (
                 <label
@@ -360,30 +332,17 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
               )}
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <button
-                type="button"
-                disabled={!canContinue}
-                onClick={() => setStep(1)}
-                className="inline-flex min-h-12 items-center rounded-full bg-[var(--sl-gold)] px-8 text-base font-bold text-[var(--sl-ink)] hover:bg-[var(--sl-gold-deep)] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {found ? "Watch your night" : "Continue"}
-              </button>
-              {!canContinue && loaded && (
-                <p className="text-sm text-[var(--sl-muted)]">{!found ? "Add your flyer to continue." : "Pick what you run to continue."}</p>
-              )}
-            </div>
           </section>
-        ) : step === 1 ? (
+        ) : view === "night" ? (
           <ReelsStep
             draft={draft}
             drafting={drafting}
+            facts={facts}
             onChange={(reels) => update({ reels })}
             onShow={(reel) => {
               show(reel);
               if (window.matchMedia("(max-width: 1023px)").matches) phoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
             }}
-            onBack={() => setStep(0)}
             onNext={() => setStep(2)}
           />
         ) : (
@@ -402,10 +361,10 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         )}
       </div>
 
-      {/* Step 2 is for watching: on a phone, the phone comes first. */}
-      <div ref={phoneRef} className={`mx-auto w-full max-w-[300px] lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${step === 1 ? "order-first" : ""}`}>
-        {/* The story shows in the phone as soon as it's written, from step 1: the organizer watches it being built. */}
-        <Phone draft={draft} reading={reading} core={step > 0 || Boolean(draft.reels)} replay={replay} />
+      {/* The night is for watching: on a phone, the phone comes first. */}
+      <div ref={phoneRef} className={`mx-auto w-full max-w-[300px] lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${view === "night" ? "order-first" : ""}`}>
+        {/* The story shows in the phone as soon as it's written: the organizer watches it being built. */}
+        <Phone draft={draft} reading={reading} core={view !== "drop" || Boolean(draft.reels)} replay={replay} />
         <p className="mt-4 text-center text-sm text-[var(--sl-muted)]">
           {found ? "Your link, as fans will see it. Tap around." : "Your link, live. It fills in from your flyer."}
         </p>
