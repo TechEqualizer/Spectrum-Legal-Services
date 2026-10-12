@@ -1,5 +1,5 @@
 import { AbsoluteFill, Easing, Sequence, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { DEFAULT_MOOD, OPENING_MOODS, type OpeningRecipe, type OpeningText } from "@/lib/opening";
+import { DEFAULT_MOOD, OPENING_MOODS, type Box, type OpeningRecipe, type OpeningText } from "@/lib/opening";
 import { Flyer, Grain, LightLeak, Sparks, camOn, camOnPoster, drift, mix, place, type Cam } from "@/remotion/shots";
 
 /**
@@ -60,8 +60,10 @@ const HOLD_SECONDS = 6;
 const INTO_HOLD = 20;
 const SNAP = 7;
 // How far depth moves the nearest things past the focus over a shot (a fraction of the flyer), and how much a push grows them.
-const DEPTH_SHIFT = 0.03;
-const DEPTH_DOLLY = 0.08;
+const DEPTH_SHIFT = 0.05;
+const DEPTH_DOLLY = 0.12;
+// On the whole flyer, a slow drift across, so the still picture keeps a little life.
+const DEPTH_DRIFT = 0.025;
 
 /** How this opening is directed (its mood), with recipes from before moods as glamour. */
 const directionOf = (recipe: OpeningRecipe) => OPENING_MOODS[recipe.mood ?? DEFAULT_MOOD];
@@ -257,25 +259,39 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
     if (f < p.poster.from) return { cam: hermite(shots[lastI].cams[1], speedOf(lastI), poster, still, f - p.reveal.from, p.reveal.dur), cut: false };
     return { cam: { ...poster, z: poster.z + Math.log(1 + 0.03 * Math.min(1, (f - p.poster.from) / p.poster.dur)) }, cut: false };
   };
-  /**
-   * How the depth moves at frame f: through each shot the near things travel
-   * with its move (a pan slides them across, a tilt up lifts them, a push
-   * grows them toward the lens), around the shot's focus, which holds still.
-   * Still between and after shots.
-   */
-  const depthAt = (f: number, i?: number): NonNullable<React.ComponentProps<typeof Flyer>["depth"]> | undefined => {
-    if (!depth || lite) return undefined;
-    const k = i ?? shots.findIndex((s) => f >= s.from && f < s.from + s.dur);
+  type DepthNow = NonNullable<React.ComponentProps<typeof Flyer>["depth"]>;
+  /** Shot k's depth, u of the way through it. */
+  const depthIn = (k: number, u: number): DepthNow => {
     const beat = recipe.beats[k];
-    if (!beat) return { src: depth, shift: [0, 0], dolly: 0, focus: [0.5, 0.5] };
-    const u = Math.min(1, Math.max(0, (f - shots[k].from) / shots[k].dur));
     const f0 = beat.focus ?? beat.box;
     const focus: [number, number] = [f0.x + f0.w / 2, f0.y + f0.h / 2];
     const swing = (2 * u - 1) * DEPTH_SHIFT;
     const shift: [number, number] =
       beat.move === "pan-left" ? [swing, 0] : beat.move === "pan-right" ? [-swing, 0] : beat.move === "tilt-up" ? [0, swing] : [0, 0];
     const dolly = beat.move === "push" ? DEPTH_DOLLY * u : beat.move === "pull" ? DEPTH_DOLLY * (1 - u) : 0;
-    return { src: depth, shift, dolly, focus };
+    return { src: depth!, shift, dolly, focus };
+  };
+  /**
+   * How the depth moves at frame f: through each shot the near things travel
+   * with its move (a pan slides them across, a tilt up lifts them, a push
+   * grows them toward the lens), around the shot's focus, which holds still.
+   * Between shots it stays as the last shot left it, settles during the
+   * pull-back, then drifts slowly across the whole flyer. Never a jump.
+   */
+  const depthAt = (f: number, i?: number): DepthNow | undefined => {
+    if (!depth || lite) return undefined;
+    const k = i ?? shots.findIndex((s) => f >= s.from && f < s.from + s.dur);
+    if (recipe.beats[k]) return depthIn(k, Math.min(1, Math.max(0, (f - shots[k].from) / shots[k].dur)));
+    const still: DepthNow = { src: depth, shift: [0, 0], dolly: 0, focus: [0.5, 0.5] };
+    const prev = shots.findLastIndex((s) => s.from + s.dur <= f);
+    const left = prev >= 0 ? depthIn(prev, 1) : still;
+    if (f < p.reveal.from) return left;
+    if (f < p.poster.from) {
+      const e = settle(Math.min(1, (f - p.reveal.from) / p.reveal.dur));
+      return { ...left, shift: [left.shift[0] * (1 - e), left.shift[1] * (1 - e)], dolly: left.dolly * (1 - e) };
+    }
+    const u = Math.min(1, (f - p.poster.from) / p.poster.dur);
+    return { ...still, shift: [DEPTH_DRIFT * (0.5 - 0.5 * Math.cos(Math.PI * u)), 0] };
   };
   const now = camAt(frame);
   const hand = sway(frame, d.shake);
@@ -323,7 +339,7 @@ export const OpeningScene: React.FC<OpeningSceneProps> = ({ src, width, height, 
       )}
       {!reel && (
         <Sequence from={p.holdStart} durationInFrames={p.total - p.holdStart} name="Hold">
-          <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} grade={d.grade} />
+          <Hold src={src} frame={fr} base={camOn(recipe.hold, fr)} box={recipe.hold} grade={d.grade} depth={lite ? undefined : depth} />
           {story && <StoryCard story={story} fontClass={fontClass} caps={caps} accent={accent} />}
         </Sequence>
       )}
@@ -601,16 +617,18 @@ const Words: React.FC<{ text: OpeningText; fontClass: string; caps: boolean; acc
 };
 
 /** The calm loop under the title: the hold box breathing, softened and darkened below so the link's words read. */
-const Hold: React.FC<{ src: string; frame: Frame; base: Cam; grade: string }> = ({ src, frame: fr, base, grade }) => {
+const Hold: React.FC<{ src: string; frame: Frame; base: Cam; box: Box; grade: string; depth?: string }> = ({ src, frame: fr, base, box, grade, depth }) => {
   const f = useCurrentFrame();
   const { durationInFrames: dur } = useVideoConfig();
   // One breath from the end of the fade to the end, so the loop's two ends meet.
   const t = (f - INTO_HOLD) / (dur - INTO_HOLD);
   const breathe = 1.02 + 0.05 * (0.5 - 0.5 * Math.cos(t * Math.PI * 2));
+  // With depth, one slow sway across in the same breath, so the loop meets itself there too.
+  const sway = depth ? { src: depth, shift: [DEPTH_DRIFT * Math.sin(t * Math.PI * 2), 0] as [number, number], dolly: 0, focus: [box.x + box.w / 2, box.y + box.h / 2] as [number, number] } : undefined;
   return (
     <AbsoluteFill style={{ opacity: interpolate(f, [0, INTO_HOLD], [0, 1], clamp) }}>
       {/* Softened and dimmed on the flyer itself (the Stories download draws filters there, not on a wrapper). */}
-      <Flyer src={src} frame={fr} cam={{ ...base, z: base.z + Math.log(breathe) }} grade={`${grade} brightness(0.72)`} blur={3.5} />
+      <Flyer src={src} frame={fr} cam={{ ...base, z: base.z + Math.log(breathe) }} grade={`${grade} brightness(0.72)`} blur={3.5} depth={sway} />
       <AbsoluteFill style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 35%, rgba(0,0,0,0.25) 62%, transparent 80%)" }} />
     </AbsoluteFill>
   );

@@ -19,7 +19,7 @@ export type StartDraft = {
   role?: Role;
   /** The flyer as a small JPEG data URL (a PDF has none), for the phone's backdrop. */
   flyer?: string;
-  /** Its depth map as a PNG data URL, made in this browser once the flyer is read (src/lib/depth-map.ts). */
+  /** Its depth map as a PNG data URL, made in this browser while the flyer is read (src/lib/depth-map.ts). */
   depth?: string;
   /** What the flyer said. */
   dates?: ImportedDate[];
