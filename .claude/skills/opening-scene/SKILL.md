@@ -181,10 +181,20 @@ In pixels, never fractions: Anthropic's vision docs say Claude places boxes
 well in absolute pixels and poorly in normalized ones. The server reads the
 flyer's size from its bytes (`src/lib/image-size.ts`) and tells Claude.
 Claude maps the flyer first (subjects, lettering), then gives every box and
-focus as `x1, y1, x2, y2` pixels. Code converts them (`boxFromPixels`),
+focus as a list of four pixels, `[x1, y1, x2, y2]`. Code converts them (`boxFromPixels`),
 checks every rule (`lintRecipes`) and sends anything broken back once to be
 fixed. Watch it with `scripts/review-opening.mjs`; the plan behind it is
 docs/plans/09-flyer-to-video.md.
+
+Keep the schemas small. The API compiles each structured-output schema into
+a grammar and refuses one that's too big ("The compiled grammar is too
+large"), whatever the documented limits say. One schema for the whole draft
+(words, map, opening and cuts, with every box an object) did that, and every
+draft failed in production while the mock passed. So the draft is two
+answers asked at once (`wordsSchema` and `directionSchema` in
+`funnel-draft.ts`), boxes are lists, and the e2e mock refuses any schema
+over its stand-in limit. Before adding to a schema, check it stays well
+under that limit.
 
 ## Where openings come from
 

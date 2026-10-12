@@ -22,12 +22,12 @@ type Px = { w: number; h: number };
  * than in fractions (platform.claude.com/docs/en/build-with-claude/vision-coordinates);
  * the code turns them into fractions (boxFromPixels).
  */
+// Four integers, [x1, y1, x2, y2], not an object with four keys: the box is in
+// seven places, and each object multiplies what the API has to compile.
 const box = (description: string, px: Px) => ({
-  type: "object",
-  additionalProperties: false,
-  required: ["x1", "y1", "x2", "y2"],
-  description: `${description}. In pixels on the ${px.w}x${px.h} flyer image: x1, y1 its top-left corner, x2, y2 its bottom-right corner (x from the left edge, y down from the top).`,
-  properties: { x1: { type: "integer" }, y1: { type: "integer" }, x2: { type: "integer" }, y2: { type: "integer" } },
+  type: "array",
+  items: { type: "integer" },
+  description: `${description}. Exactly four integers [x1, y1, x2, y2], in pixels on the ${px.w}x${px.h} flyer image: x1, y1 its top-left corner, x2, y2 its bottom-right corner (x from the left edge, y down from the top).`,
 });
 const focus = (px: Px) => box("The face, or the exact point of the subject this shot is about: a tight box around it", px);
 
@@ -85,8 +85,9 @@ const openingSchema = (px: Px) => ({
 const cutSchema = (px: Px) => ({
   type: "object",
   additionalProperties: false,
-  required: ["beats"],
+  required: ["role", "beats"],
   properties: {
+    role: { type: "string", enum: Object.keys(REEL_ROLES) },
     beats: {
       type: "array",
       description: "3 shots on the flyer's artwork (2 to 4), in the order they play",
@@ -116,16 +117,16 @@ const cutSchema = (px: Px) => ({
 });
 
 /**
- * The whole draft. With the flyer's picture (and its size), Claude maps it
- * first, then cuts the opening and each reel from it; from words or a PDF,
- * there's no picture to cut, so it writes only the words and prompts.
+ * The draft comes back in two answers, asked at once: the words (this) and,
+ * when there's a flyer picture to cut, the direction (directionSchema). One
+ * schema for both was more than the API will compile ("The compiled grammar
+ * is too large"), and every draft failed: each half is far smaller.
  */
-const schemaFor = (px: Px | null) => ({
+export const wordsSchema = {
   type: "object",
   additionalProperties: false,
-  required: [...(px ? ["map"] : []), "screen", ...(px ? ["opening"] : []), "styleLock", "avoid", "hero", "reels"],
+  required: ["screen", "styleLock", "avoid", "hero", "reels"],
   properties: {
-    ...(px ? { map: mapSchema(px) } : {}),
     screen: {
       type: "object",
       additionalProperties: false,
@@ -137,7 +138,6 @@ const schemaFor = (px: Px | null) => ({
         heading: str(`Small heading above the date circles, under ${SCREEN_LIMITS.heading} characters`),
       },
     },
-    ...(px ? { opening: openingSchema(px) } : {}),
     styleLock: str("One paragraph of shared visual style for every clip"),
     avoid: str("Comma-separated things every clip must avoid"),
     hero: {
@@ -152,7 +152,7 @@ const schemaFor = (px: Px | null) => ({
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["role", "title", "summary", "hook", "captions", "date", "source", "camera", "seconds", "prompt", ...(px ? ["cut"] : [])],
+        required: ["role", "title", "summary", "hook", "captions", "date", "source", "camera", "seconds", "prompt"],
         properties: {
           role: { type: "string", enum: Object.keys(REEL_ROLES) },
           title: str("Reel title, under 60 characters"),
@@ -164,10 +164,21 @@ const schemaFor = (px: Px | null) => ({
           camera: str("Camera move"),
           seconds: { type: "integer" },
           prompt: str("What happens on screen"),
-          ...(px ? { cut: cutSchema(px) } : {}),
         },
       },
     },
+  },
+};
+
+/** The draft's direction, from the flyer's picture: its map, then the opening and each reel's cut, every box in its pixels. */
+export const directionSchema = (px: Px) => ({
+  type: "object",
+  additionalProperties: false,
+  required: ["map", "opening", "cuts"],
+  properties: {
+    map: mapSchema(px),
+    opening: openingSchema(px),
+    cuts: { type: "array", description: "Each reel's cut, one per role: the_night, your_people, last_call", items: cutSchema(px) },
   },
 });
 
@@ -299,24 +310,46 @@ const fixTurn = (problems: string[]): Turn => ({
   content: `Your plan breaks these rules:\n- ${problems.join("\n- ")}\nFix every one, keep everything else that works, and return the whole plan again.`,
 });
 
+/** The words and the direction as one draft: each reel's cut joins its reel by role. */
+function merged(words: Record<string, unknown>, direction: Record<string, unknown>): Record<string, unknown> {
+  const cuts = Array.isArray(direction.cuts) ? (direction.cuts as Record<string, unknown>[]) : [];
+  const cutOf = (role: unknown) => {
+    const c = cuts.find((x) => x && typeof x === "object" && x.role === role);
+    return c ? { beats: c.beats } : undefined;
+  };
+  const reels = (Array.isArray(words.reels) ? words.reels : []).map((r) => (r && typeof r === "object" ? { ...r, cut: cutOf((r as { role?: unknown }).role) } : r));
+  return { ...words, map: direction.map, opening: direction.opening, reels };
+}
+
 export async function draftFunnel(input: FlyerInput, ctx: DraftContext): Promise<FunnelDraft | { problem: string }> {
   if (!process.env.ANTHROPIC_API_KEY) return { problem: missingKeyProblem() };
   // The flyer's own size, so Claude can place every shot in its pixels.
   const px = input.kind === "image" ? base64ImageSize(input.data) : null;
   const system = instructions(ctx, px);
   const failed = "Couldn't draft the funnel just now. Try again.";
-  const turns: Turn[] = [{ role: "user", content: [flyerBlock(input), { type: "text", text: "Plan the funnel for this event." }] }];
-  const first = await ask(system, turns, schemaFor(px), 16000, "funnel draft", failed);
-  if ("problem" in first) return { problem: first.problem === "refusal" ? "This flyer couldn't be used for a draft. Build the funnel by hand." : first.problem };
-  const draft = cleanDraft(first.raw, px ?? undefined);
-  if (!px || "problem" in draft) return draft;
+  const turn = (text: string): Turn[] => [{ role: "user", content: [flyerBlock(input), { type: "text", text }] }];
+  // Two answers at once (one schema for both is too big to compile): the words, and the shots on the flyer.
+  const wordsTurns = turn(
+    px ? "Plan the funnel for this event. Write only the words and prompts here: screen, hero, styleLock, avoid and the three reels. The map, the opening and the reels' cuts are asked for separately." : "Plan the funnel for this event.",
+  );
+  const directionTurns = turn("Cut this flyer: map it, then cut the opening, then one cut for each reel (the_night, your_people, last_call). Only these here; the words and prompts are asked for separately.");
+  const [words, direction] = await Promise.all([
+    ask(system, wordsTurns, wordsSchema, 16000, "funnel draft", failed),
+    px ? ask(system, directionTurns, directionSchema(px), 16000, "funnel direction", failed) : null,
+  ]);
+  if ("problem" in words) return { problem: words.problem === "refusal" ? "This flyer couldn't be used for a draft. Build the funnel by hand." : words.problem };
+  // Without the direction, the reels still come, over the still flyer.
+  if (!px || !direction || "problem" in direction) return cleanDraft(words.raw);
+  const first = merged(words.raw, direction.raw);
+  const draft = cleanDraft(first, px);
+  if ("problem" in draft) return draft;
   // Checked against the rules in code; anything broken goes back once to be fixed.
-  const problems = draftProblems(first.raw, draft, px, factsOf(ctx));
+  const problems = draftProblems(first, draft, px, factsOf(ctx));
   if (!problems.length) return draft;
   console.info("[funnel draft] fixing:", problems);
-  const second = await ask(system, [...turns, { role: "assistant", content: first.text }, fixTurn(problems)], schemaFor(px), 16000, "funnel draft fix", failed);
+  const second = await ask(system, [...directionTurns, { role: "assistant", content: direction.text }, fixTurn(problems)], directionSchema(px), 16000, "funnel direction fix", failed);
   if ("problem" in second) return draft;
-  const fixed = cleanDraft(second.raw, px);
+  const fixed = cleanDraft(merged(words.raw, second.raw), px);
   return "problem" in fixed ? draft : fixed;
 }
 

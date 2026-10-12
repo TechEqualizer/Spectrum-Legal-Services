@@ -177,10 +177,16 @@ export function parseCut(v: unknown, mood?: OpeningMood, role?: "the_night" | "y
   return parseOpening({ ...(mood ? { mood } : {}), beats, hold: WHOLE_FLYER, ...(hook ? {} : { hook: false }), ...(treatment ? { treatment } : {}) });
 }
 
-/** A box given in the flyer's pixels (x1, y1 the top left, x2, y2 the bottom right corner), as fractions of the flyer. */
+/**
+ * A box given in the flyer's pixels (x1, y1 the top left, x2, y2 the bottom
+ * right corner), as fractions of the flyer. Claude writes it as a list
+ * [x1, y1, x2, y2] (a far smaller schema to compile than an object); an
+ * object with those keys works too.
+ */
 export function boxFromPixels(v: unknown, size: { w: number; h: number }): Box | null {
-  if (!isObject(v)) return null;
-  const [x1, y1, x2, y2] = [num(v.x1), num(v.y1), num(v.x2), num(v.y2)];
+  const p = Array.isArray(v) ? (v.length === 4 ? { x1: v[0], y1: v[1], x2: v[2], y2: v[3] } : null) : isObject(v) ? v : null;
+  if (!p) return null;
+  const [x1, y1, x2, y2] = [num(p.x1), num(p.y1), num(p.x2), num(p.y2)];
   if (x1 === null || y1 === null || x2 === null || y2 === null) return null;
   const [l, r] = [Math.min(x1, x2), Math.max(x1, x2)].map((x) => clamp(x / size.w, 0, 1));
   const [t, b] = [Math.min(y1, y2), Math.max(y1, y2)].map((y) => clamp(y / size.h, 0, 1));
