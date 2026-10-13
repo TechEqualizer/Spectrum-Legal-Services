@@ -12,6 +12,8 @@ export type ImportedDate = {
   date: string;
   /** "19:00", or "" when the flyer doesn't say. */
   time: string;
+  /** Any other times the flyer prints for it (doors, the end, last entry), like "23:00"; left out when there are none. */
+  otherTimes?: string[];
   venue: string;
   price: string;
   /** https only, or "". */
@@ -44,11 +46,12 @@ const SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "date", "time", "venue", "price", "ticketUrl"],
+        required: ["name", "date", "time", "otherTimes", "venue", "price", "ticketUrl"],
         properties: {
           name: { type: "string" },
           date: { type: "string", description: "YYYY-MM-DD" },
           time: { ...nullableString, description: "24-hour HH:MM start time, or null if not given" },
+          otherTimes: { type: "array", items: { type: "string" }, description: "Other times printed for this date (doors, end, last entry), 24-hour HH:MM" },
           venue: nullableString,
           price: nullableString,
           ticketUrl: nullableString,
@@ -79,6 +82,7 @@ For each separate date the flyer advertises, give:
 - name: the event's name as the flyer shows it, short (under 80 characters). If the flyer names a special edition, put it after a colon, e.g. "Golden Hour: Halloween".
 - date: YYYY-MM-DD. When the flyer leaves out the year, use the next time that date comes after today.
 - time: when it starts, 24-hour HH:MM (doors time if that's all it gives). null if no time is shown.
+- otherTimes: every other time the flyer prints for that date, 24-hour HH:MM: doors, when it ends ("8PM - 11PM" ends at 23:00), last entry. An empty list if there are none.
 - venue: the venue name, plus the neighborhood or city if shown. null if not shown.
 - price: short, as the flyer says it, e.g. "From $25", "$20 / $30 at the door", "Free". null if not shown.
 - ticketUrl: a ticket link written out on the flyer. Add https:// if it's written without it. null if there's only a QR code or no link; don't guess one.
@@ -121,10 +125,12 @@ export function cleanDates(raw: unknown): ImportedDate[] {
     const date = clean(r.date, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) return [];
     const time = clean(r.time, 5);
+    const otherTimes = (Array.isArray(r.otherTimes) ? r.otherTimes : []).map((t) => clean(t, 5)).filter((t) => /^([01]\d|2[0-3]):[0-5]\d$/.test(t)).slice(0, 4);
     return [{
       name: clean(r.name, 80),
       date,
       time: /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : "",
+      ...(otherTimes.length ? { otherTimes } : {}),
       venue: clean(r.venue, 80),
       price: clean(r.price, 30),
       ticketUrl: ticketLink(r.ticketUrl),

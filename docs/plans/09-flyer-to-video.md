@@ -248,6 +248,39 @@ So, right after the scan:
   then the opening and cuts), not only from step 2.
 - Continue reads "Watch your night" once the flyer is read.
 
+## The night, never half-made (Oct 13, 2026)
+
+In production on Oct 13, a Masquerade flyer reached step 2 with no opening
+and no cuts. The phone showed the plain page, the flyer small over the
+title. The logs showed why:
+- The first cut came back, but the check in code flagged a line saying
+  "11PM", and a draft with a made-up fact was held back for the fix.
+- The flyer does say "8PM - 11PM". The reading kept only the start time,
+  so the end time looked invented. The other two production runs that day
+  were flagged the same way, for "5 PM".
+- The fix round (another 20 to 30 seconds) ran while the phone showed the
+  basics. On a phone, the phone was also taller than the screen.
+
+What changed:
+1. **The reading keeps every time on the flyer.** Doors, the end and last
+   entry are read as `otherTimes`, so a cut may say them.
+2. **No line with a made-up fact is ever shown.** The line comes off its
+   shot (`withoutUnbacked`) and the shot stays. The first cut is shown at
+   once, so the fix no longer holds anything up.
+3. **The fix keeps the opening.** By the time the fix comes back the
+   opening is already playing, so only the cuts change, in place. The fix
+   gets 30 seconds (`DRAFT_FIX_WAIT_MS`); after that the first cut stands.
+4. **The shots are asked for twice if they fail**, before settling for the
+   still flyer.
+5. **Never half-made.** Step 2's phone scans the flyer, with a bar that
+   moves between real milestones (the reels written, the opening cut, the
+   depth). It doesn't stop at the first cut: it also waits for the depth
+   map, for up to 5 seconds more. Then the night plays from the start.
+   "Claim this link" waits too ("Building your night…"). A slow wait that
+   shows the work beats a fast half-result (Buell & Norton, above).
+6. **The phone fits above the fold** on a phone: its width follows the
+   screen's height, so the whole phone sits above the Claim bar.
+
 ## Roadmap
 
 **Phase 1: the lean rebuild (1 to 2 weeks, free).** Gaps 1, 2, 3, 4, 5, 7,

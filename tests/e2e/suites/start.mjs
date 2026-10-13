@@ -46,6 +46,13 @@ await p.getByText('From your flyer', { exact: true }).waitFor({ timeout: 15000 }
 const card = await p.locator('section').first().innerText();
 check('what the flyer said, to check', card.toLowerCase().includes('golden hour: halloween') && card.includes('The Rooftop, Downtown') && card.includes('From $30'), card.slice(0, 300));
 check('and the other dates', card.includes('And 1 more date from the flyer.'), card);
+// Never half-made: the phone scans the flyer, with how far along it is, until the opening and cuts are in; it can't be claimed yet.
+const scanning = p.locator('[data-testid=building][data-on]');
+check('while it builds: the flyer scanned, with a bar, and Claim waits', await scanning.isVisible() && /\d+%/.test(await scanning.innerText()) && await p.getByRole('button', { name: 'Building your night…' }).isDisabled(), await scanning.innerText().catch(() => 'none'));
+await p.locator('.sl-phone').screenshot({ path: 'start-building-phone.png' }).catch(() => {});
+await scanning.waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
+await p.waitForTimeout(300);
+check('then the night, whole: the scan lifts and it can be claimed', !(await scanning.count()) && await p.getByRole('button', { name: 'Claim this link' }).isEnabled());
 await p.waitForTimeout(1500);
 check('the phone: their night', await phone.getByText('Golden Hour: Halloween').first().isVisible().catch(() => false));
 check('the phone: their flyer behind it', (await phone.locator('img[src^="data:image/jpeg"]').count()) > 0);
@@ -169,6 +176,15 @@ await m.reload(); await settle(m, 1200);
 check('phone: the night fits', await m.getByRole('heading', { name: 'Watch your night.' }).isVisible() && await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 const claimBar = await m.getByRole('button', { name: 'Claim this link' }).boundingBox();
 check('phone: Claim this link stays in reach at the bottom', Boolean(claimBar) && claimBar.y + claimBar.height <= 844 && claimBar.y > 700, JSON.stringify(claimBar));
+const phoneBox = await m.locator('.sl-phone').boundingBox();
+check('phone: the whole phone above the fold, over the Claim bar', Boolean(phoneBox) && phoneBox.y >= 0 && phoneBox.y + phoneBox.height <= claimBar.y, JSON.stringify(phoneBox));
+// A shorter screen (browser bars showing): the phone shrinks to fit, never under the bar.
+await m.setViewportSize({ width: 390, height: 680 }); await settle(m, 600);
+const shortBar = await m.getByRole('button', { name: 'Claim this link' }).boundingBox();
+const shortPhone = await m.locator('.sl-phone').boundingBox();
+check('phone: on a shorter screen it shrinks to stay above the fold', Boolean(shortPhone && shortBar) && shortPhone.y + shortPhone.height <= shortBar.y && shortPhone.width < 280, JSON.stringify({ shortPhone, shortBar }));
+await m.screenshot({ path: 'start-reels-390x680.png' });
+await m.setViewportSize({ width: 390, height: 844 });
 await m.screenshot({ path: 'start-reels-390.png', fullPage: true });
 
 check('no page errors', errs.length === 0, errs.join(' | '));

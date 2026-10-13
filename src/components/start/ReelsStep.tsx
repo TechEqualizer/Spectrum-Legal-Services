@@ -25,6 +25,7 @@ const SELLS: Record<"opening" | ReelRole, string> = {
 export default function ReelsStep({
   draft,
   drafting,
+  building = false,
   onChange,
   facts,
   onShow,
@@ -33,6 +34,8 @@ export default function ReelsStep({
   draft: StartDraft;
   /** The reels are still being written. */
   drafting: boolean;
+  /** The night isn't whole yet (the phone is scanning the flyer): it can't be claimed half-made. */
+  building?: boolean;
   onChange: (reels: FunnelDraft) => void;
   /** What the flyer said and what it's becoming, under the heading. */
   facts?: React.ReactNode;
@@ -146,9 +149,10 @@ export default function ReelsStep({
         <button
           type="button"
           onClick={onNext}
-          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-[var(--sl-gold)] px-8 text-base font-bold text-[var(--sl-ink)] hover:bg-[var(--sl-gold-deep)] lg:flex-none"
+          disabled={building}
+          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-[var(--sl-gold)] px-8 text-base font-bold text-[var(--sl-ink)] hover:bg-[var(--sl-gold-deep)] disabled:cursor-wait disabled:opacity-60 lg:flex-none"
         >
-          Claim this link
+          {building ? "Building your night…" : "Claim this link"}
         </button>
       </div>
     </section>

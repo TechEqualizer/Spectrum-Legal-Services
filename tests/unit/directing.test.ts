@@ -7,7 +7,8 @@ import { test } from "node:test";
 import { base64ImageSize, imageSize } from "@/lib/image-size";
 import { boxFromPixels, parseCut, parseOpening } from "@/lib/opening";
 import { lintRecipes, unbackedFacts, type Facts } from "@/lib/recipe-lint";
-import { cleanDraft, draftProblems } from "@/lib/server/funnel-draft";
+import { cleanDraft, draftProblems, withoutUnbacked } from "@/lib/server/funnel-draft";
+import { cleanDates } from "@/lib/server/flyer-import";
 
 test("a flyer's size comes from its own bytes: JPEG, PNG, GIF, WebP", () => {
   const jpg = readFileSync("tests/e2e/fixtures/flyer-masquerade.jpg");
@@ -95,3 +96,22 @@ test("a draft written in pixels comes back in fractions, and its problems are na
   assert.ok(problems.some((p) => /"A line far too long for any shot" is longer than 26 characters/.test(p)), problems.join("\n"));
   assert.ok(problems.some((p) => /the_night cut, shot 1 repeats the opening, shot 1/.test(p)));
 });
+
+test("the flyer's other times (doors, the end) are facts a line may state", () => {
+  const [d] = cleanDates([{ name: "Masquerade", date: "2026-10-31", time: "20:00", otherTimes: ["23:00", "7pm", "19:30"], venue: null, price: null, ticketUrl: null }]);
+  assert.deepEqual(d.otherTimes, ["23:00", "19:30"]);
+  assert.deepEqual(cleanDates([{ name: "x", date: "2026-10-31", time: null, otherTimes: [], venue: null, price: null, ticketUrl: null }])[0].otherTimes, undefined);
+  assert.deepEqual(unbackedFacts("8PM - 11PM", { ...facts, times: [...facts.times, "23:00"] }), []);
+  assert.deepEqual(unbackedFacts("8PM - 11PM", facts), ["11PM"]);
+});
+
+test("a line stating a fact the flyer doesn't is taken off its shot; the shot stays", () => {
+  const cut = parseCut({ beats: [beat(0.6, 0, "push", "$31 GA"), beat(0.1, 0.5, "pull", "From $30")] }, "glamour", "last_call")!;
+  const draft = { screen: { title: "", tagline: "", watchLabel: "", heading: "" }, heroPrompt: "", reels: [{ role: "last_call", cut } as never] };
+  const safe = withoutUnbacked(draft, facts);
+  const beats = (safe.reels[0] as unknown as { cut: typeof cut }).cut.beats;
+  assert.equal(beats.length, 2);
+  assert.equal(beats[0].text, undefined);
+  assert.deepEqual(beats[1].text?.lines, ["From $30"]);
+});
+

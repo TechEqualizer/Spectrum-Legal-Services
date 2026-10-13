@@ -52,6 +52,8 @@ check('draft request: the three core drivers', /the_night/.test(req.body.system)
 check('draft request: each reel cut from the flyer, facts only from it', /each reel's cut/.test(req.body.system) && /Never invent quotes, reviews, numbers/.test(req.body.system) && Boolean(req.body.output_config.format.schema.properties.cuts));
 check('draft request: Claude is told the flyer\'s pixel size, and maps it before cutting', /flyer image is 360x640 pixels/.test(req.body.system) && Boolean(req.body.output_config.format.schema.properties.map));
 check('the draft is checked in code and its problems go back once to be fixed', req.body.messages.length === 3 && req.body.messages[1].role === 'assistant' && /Your plan breaks these rules/.test(JSON.stringify(req.body.messages[2])) && /\$31/.test(JSON.stringify(req.body.messages[2])), JSON.stringify(req.body.messages[2] ?? '').slice(0, 300));
+check('the fix keeps the opening, already playing, and changes only the cuts', /Keep the map and the opening exactly as they are: change only the cuts/.test(JSON.stringify(req.body.messages[2])));
+check('a line stating a fact the flyer doesn\'t never reaches the draft ($31 GA comes off its shot)', !(await sheet.getByText('$31 GA', { exact: true }).count()));
 check('draft request: price for true urgency', /From \$30/.test(req.body.system), req.body.system.slice(0, 400));
 const items = sheet.locator('section ol > li');
 check('three core reels, one per role', await items.count() === 3, String(await items.count()));
