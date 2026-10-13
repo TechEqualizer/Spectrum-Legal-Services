@@ -11,7 +11,22 @@ const errs = [];
 
 const m = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, permissions: ['clipboard-read', 'clipboard-write'] });
 await m.addInitScript(() => localStorage.setItem('admin_business', 'masquerade'));
+// A phone's share sheet, recorded: each call's files, and a refusal when asked for one (a tap too long ago).
+await m.addInitScript(() => {
+  window.__shared = []; window.__refuse = 0;
+  navigator.canShare = () => true;
+  navigator.share = (data) => {
+    window.__shared.push(data.files.map((f) => [f.name, f.type, f.size]));
+    if (window.__refuse > 0) { window.__refuse--; return Promise.reject(new DOMException('No tap', 'NotAllowedError')); }
+    return Promise.resolve();
+  };
+});
 const p = await m.newPage(); p.on('pageerror', (e) => errs.push(e.message));
+// Big Love's link, published with an opening on its flyer: what the story video is made from.
+const opening = { mood: 'glamour', beats: [{ box: { x: 0.2, y: 0.1, w: 0.6, h: 0.4 }, move: 'pull', seconds: 2, text: { lines: ['Masks on.'], at: 'bottom', size: 'big' } }, { box: { x: 0.1, y: 0.5, w: 0.8, h: 0.4 }, move: 'tilt-up', seconds: 1.7 }], hold: { x: 0.2, y: 0.3, w: 0.6, h: 0.4 } };
+const reels = [{ id: 'mr-masks-on', title: 'Masks on. Secrets revealed.', summary: 'x', practiceArea: 'The night', cta: 'funnel' }];
+const published = await m.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade', publication: { version: 1, reels, funnel: { order: reels.map((r) => r.id), topics: {}, paths: {}, primaryCta: 'tickets' }, backdrop: { kind: 'image', src: '/clients/masquerade/flyer.jpg', fit: 'poster', opening } } } });
+check('published with an opening', published.ok(), String(published.status()));
 await p.goto(B + '/admin/home'); await settle(p, 1200);
 
 // The pill: floating clear of the edges, rounded, four labeled places, Tonight current.
@@ -53,7 +68,8 @@ await plus.tap(); await settle(p, 300);
 await menu.getByRole('button', { name: /A link for one place/ }).tap();
 await p.waitForURL(/\/admin\/links#place$/); await settle(p, 1200);
 const builder = await p.locator('#place').boundingBox();
-check('A link for one place: the link builder, in view', builder && builder.y < 300, JSON.stringify(builder));
+// In view: scrolled to it, or as far as the page goes (its top, and room below it, on screen).
+check('A link for one place: the link builder, in view', builder && builder.y >= 0 && builder.y < 844 - 300, JSON.stringify(builder));
 check('the Share page sits under Results', (await tabs.filter({ hasText: 'Results' }).getAttribute('aria-current')) === 'page');
 
 // Add a video: the new reel's editor, open at once.
@@ -76,6 +92,40 @@ await plus.tap(); await settle(p, 300);
 await menu.getByRole('button', { name: /Post to your story/ }).tap(); await settle(p, 600);
 const story = p.getByTestId('post-story');
 check('Post to your story: its sheet, making the video or saying what it needs', await story.isVisible() && /Post to your story/.test(await story.innerText()), (await story.innerText().catch(() => '')).slice(0, 160));
+const input = await story.locator('[data-story]').getAttribute('data-story');
+await story.getByRole('button', { name: 'Close' }).tap(); await settle(p, 300);
+
+// Made once, it stays on this phone: the next post is one tap from the menu.
+// (This test browser can't encode H.264, so a made video is put where the app keeps it.)
+const keep = (input) => p.evaluate(async (input) => {
+  const db = await new Promise((res, rej) => { const r = indexedDB.open('showlnk-stories', 1); r.onupgradeneeded = () => r.result.createObjectStore('videos'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  await new Promise((res, rej) => { const tx = db.transaction('videos', 'readwrite'); tx.objectStore('videos').put({ input, video: new Blob([new Uint8Array(2048)], { type: 'video/mp4' }) }, 'biglove-story.mp4'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+  db.close();
+}, input);
+const storyItem = () => menu.getByRole('button', { name: /Post to your story/ });
+await keep('{"an":"older cut"}');
+await plus.tap(); await settle(p, 400);
+check('a video made for another cut is not offered', /Your opening as a video/.test(await storyItem().innerText()), await storyItem().innerText());
+await p.keyboard.press('Escape'); await settle(p, 200);
+await keep(input);
+await p.evaluate(() => navigator.clipboard.writeText(''));
+await plus.tap(); await settle(p, 400);
+check('the menu says it is ready to post', /Ready: one tap/.test(await storyItem().innerText()), await storyItem().innerText());
+await storyItem().tap(); await settle(p, 500);
+const shared = await p.evaluate(() => window.__shared);
+check('one tap: the share sheet opens with the video', JSON.stringify(shared) === '[[["biglove-story.mp4","video/mp4",2048]]]', JSON.stringify(shared));
+check('and the link is copied for the Link sticker', /\/f\/biglove$/.test(await p.evaluate(() => navigator.clipboard.readText())));
+check('no sheet in between, and the menu closes', !(await story.isVisible()) && !(await menu.isVisible().catch(() => false)));
+
+// The phone refuses (the tap was too long ago): the sheet, ready, with Share to tap again.
+await p.evaluate(() => { window.__refuse = 1; });
+await plus.tap(); await settle(p, 400);
+await storyItem().tap(); await settle(p, 600);
+check('refused: the sheet opens with the video ready', await story.isVisible() && await story.getByRole('button', { name: 'Share video' }).isVisible());
+check('it says how to post it, sticker included', /Link sticker/.test(await story.getByRole('list', { name: 'How to post it' }).innerText().catch(() => '')));
+await p.screenshot({ path: 'plus-story-ready-390.png' });
+await story.getByRole('button', { name: 'Share video' }).tap(); await settle(p, 400);
+check('Share again: the share sheet opens', (await p.evaluate(() => window.__shared.length)) === 3 && /link is copied/.test(await story.getByRole('status').innerText()));
 await story.getByRole('button', { name: 'Close' }).tap(); await settle(p, 300);
 
 // Nothing hides under the pill: the end of a long page clears it.

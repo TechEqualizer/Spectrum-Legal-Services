@@ -70,27 +70,3 @@ export async function renderStory(input: StoryInput, onProgress: (p: number) => 
   });
   return result.getBlob();
 }
-
-/**
- * Hands the video over: the share sheet where there is one (a phone: post it
- * to Instagram, or Save Video), else a download.
- */
-export async function shareOrSave(video: Blob, name: string): Promise<"shared" | "saved" | "canceled"> {
-  const file = new File([video], name, { type: "video/mp4" });
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file] });
-      return "shared";
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return "canceled";
-      // Some browsers can share files but refuse this one: fall back to a download.
-    }
-  }
-  const url = URL.createObjectURL(file);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  return "saved";
-}

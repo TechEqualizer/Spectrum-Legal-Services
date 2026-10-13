@@ -29,6 +29,7 @@ import { thumbnailOf } from "@/lib/media";
 import { upcomingEvents } from "@/lib/events";
 import { useLinkOrigin } from "@/admin/link-origin";
 import type { StoryInput } from "@/lib/story-export";
+import { canShareVideo, keepStory, keptStory, postStory } from "@/lib/story-share";
 import { shrink } from "@/lib/flyer-file";
 import { DEFAULT_MOOD, OPENING_MOOD_IDS, OPENING_MOODS, type OpeningRecipe } from "@/lib/opening";
 
@@ -566,21 +567,25 @@ function OpeningCard({
 }
 
 /**
- * The opening as a video for Stories and TikTok, made on this device. Making
- * it is one tap; handing it over is a second (a phone only opens its share
- * sheet straight after a tap, and the video takes a little while).
+ * The opening as a video for Stories and TikTok, made on this device and
+ * kept on it, so posting it again is one tap. Making it is one tap; handing
+ * it over is a second (a phone only opens its share sheet straight after a
+ * tap, and the video takes a little while). Handing it over also copies
+ * the link for Instagram's Link sticker.
  */
 export function StoryDownload({ input, name, disabled, autoStart = false }: { input: StoryInput; name: string; disabled: boolean; autoStart?: boolean }) {
-  const [state, setState] = useState<{ step: "idle" } | { step: "making"; progress: number } | { step: "ready"; video: Blob } | { step: "problem"; message: string }>({ step: "idle" });
+  type State = { step: "checking" } | { step: "idle" } | { step: "making"; progress: number } | { step: "ready"; video: Blob; said?: string } | { step: "problem"; message: string };
+  const [state, setState] = useState<State>({ step: "checking" });
   const stop = useRef<AbortController | null>(null);
   // Anything that changes the video (another cut, a mood, the look) makes the made one stale.
   const key = JSON.stringify(input);
   const [madeFor, setMadeFor] = useState(key);
   if (madeFor !== key) {
     setMadeFor(key);
-    if (state.step === "ready") setState({ step: "idle" });
+    if (state.step !== "making") setState({ step: "checking" });
   }
-  const canShare = typeof navigator !== "undefined" && Boolean(navigator.canShare?.({ files: [new File([], name, { type: "video/mp4" })] }));
+  const canShare = canShareVideo(name);
+  const link = `https://${input.link}`;
 
   const make = async () => {
     const controller = new AbortController();
@@ -590,27 +595,45 @@ export function StoryDownload({ input, name, disabled, autoStart = false }: { in
       const { renderStory } = await import("@/lib/story-export");
       const video = await renderStory(input, (progress) => setState({ step: "making", progress }), controller.signal);
       setState({ step: "ready", video });
+      void keepStory(name, input, video);
     } catch (e) {
       if (controller.signal.aborted) return setState({ step: "idle" });
       setState({ step: "problem", message: e instanceof Error && e.message ? e.message : "Couldn't make the video. Try again." });
     }
   };
-  const hand = async (video: Blob) => {
-    const { shareOrSave } = await import("@/lib/story-export");
-    await shareOrSave(video, name);
-  };
-  // Opened to post it (the + menu): making starts at once, so handing it over is the only other tap.
+  // Straight from the tap: nothing awaited before the share sheet opens.
+  const hand = (video: Blob) =>
+    postStory(video, name, link).then((result) =>
+      setState({
+        step: "ready",
+        video,
+        said: result === "saved" ? "Saved to your downloads. Your link is copied too." : result === "blocked" ? "Your phone needs a fresh tap: tap Share again." : result === "shared" ? "Your link is copied: paste it into a Link sticker." : undefined,
+      }),
+    );
+
+  // One made earlier on this device for exactly this is ready at once; otherwise, opened to post it (the + menu), making starts at once.
   const started = useRef(false);
   useEffect(() => {
-    if (!autoStart || started.current || disabled) return;
-    started.current = true;
-    void make();
-    // Once, when it opens.
+    if (state.step !== "checking") return;
+    let live = true;
+    void keptStory(name, input).then((video) => {
+      if (!live) return;
+      if (video) return setState({ step: "ready", video });
+      setState({ step: "idle" });
+      if (autoStart && !started.current && !disabled) {
+        started.current = true;
+        void make();
+      }
+    });
+    return () => {
+      live = false;
+    };
+    // When it opens, and when what it's made from changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoStart, disabled]);
+  }, [key, state.step]);
 
   return (
-    <div className="p-4">
+    <div className="p-4" data-story={key}>
       <p className="text-[15px] font-semibold text-deep-navy">For Stories and TikTok</p>
       <p className="mt-1 text-xs text-gray-500">Your opening as a video, ending on your title, date and link. Add music when you post it.</p>
       {state.step === "making" ? (
@@ -626,15 +649,36 @@ export function StoryDownload({ input, name, disabled, autoStart = false }: { in
           </div>
         </div>
       ) : state.step === "ready" ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button type="button" onClick={() => hand(state.video)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
-              {canShare ? <path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 002 2h10a2 2 0 002-2v-5" /> : <path d="M12 3v12M7 10l5 5 5-5M5 19h14" />}
-            </svg>
-            {canShare ? "Share video" : "Save video"}
-          </button>
-          <p role="status" className="text-xs text-gray-600">Ready: {(state.video.size / 1_000_000).toFixed(1)} MB.</p>
+        <div className="mt-3">
+          <ol className="space-y-1.5 text-sm text-gray-700" aria-label="How to post it">
+            {(canShare
+              ? ["Tap Share, then Instagram and Story.", "Add music from Instagram's library.", "Add a Link sticker and paste: your link is copied."]
+              : ["Save it, then send it to your phone.", "Post it to your story with music.", "Add a Link sticker and paste: your link is copied."]
+            ).map((line, i) => (
+              <li key={line} className="flex gap-2.5">
+                <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center rounded-full bg-soft-gray text-[11px] font-bold text-deep-navy">
+                  {i + 1}
+                </span>
+                {line}
+              </li>
+            ))}
+          </ol>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button type="button" onClick={() => hand(state.video)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-deep-navy px-4 text-sm font-bold text-white hover:bg-royal-blue">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                {canShare ? <path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 002 2h10a2 2 0 002-2v-5" /> : <path d="M12 3v12M7 10l5 5 5-5M5 19h14" />}
+              </svg>
+              {canShare ? "Share video" : "Save video"}
+            </button>
+            <p role="status" className="text-xs text-gray-600">
+              {state.said ?? `Ready: ${(state.video.size / 1_000_000).toFixed(1)} MB.`}
+            </p>
+          </div>
         </div>
+      ) : state.step === "checking" ? (
+        <p role="status" className="mt-3 text-xs text-gray-500">
+          Getting your video…
+        </p>
       ) : (
         <>
           <button
