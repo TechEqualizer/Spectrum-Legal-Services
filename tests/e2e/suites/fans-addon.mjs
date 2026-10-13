@@ -74,12 +74,11 @@ check('with it again: fans can follow', await until(canFollow));
 const rival = await b.newContext();
 await rival.request.post(B + '/api/admin/login', { data: { email: 'rival@example.com', password: 'rival-pass-1' } });
 check("another business's admin can't add or remove it", (await rival.request.post(B + '/api/admin/billing/fans', { data: { slug: 'masquerade', on: false } })).status() === 403);
+// The plan is cached for a second and refreshed behind the first read after, so wait for the change, not a set time.
 await setPlan({ status: 'comped' });
-await p.waitForTimeout(1200);
-check('comped: included, nothing to buy', (await p.request.post(B + '/api/admin/billing/fans', { data: { slug: 'masquerade', on: true } })).status() === 409);
-await openPlan();
+check('comped: included, nothing to buy', await until(async () => (await p.request.post(B + '/api/admin/billing/fans', { data: { slug: 'masquerade', on: true } })).status() === 409));
 const comped = card.getByRole('group', { name: 'Fans add-on' });
-check('comped: the add-on shows as included, with nothing to buy', await until(async () => /Fans add-on · Included/.test(await comped.innerText())) && !(await comped.getByRole('button').count()));
+check('comped: the add-on shows as included, with nothing to buy', await until(async () => { await openPlan(); return /Fans add-on · Included/.test(await comped.innerText({ timeout: 3000 })); }) && !(await comped.getByRole('button').count()));
 
 check('no errors', !errs.length, errs.join(' | '));
 // Big Love as the other suites expect it: comped, live.
