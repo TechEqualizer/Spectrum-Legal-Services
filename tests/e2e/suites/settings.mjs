@@ -118,7 +118,7 @@ await strangerCtx.close();
 const phone = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const m = await phone.newPage(); m.on('pageerror', (e) => errs.push(e.message));
 await m.goto(B + '/admin/events'); await settle(m, 1000);
-await m.locator('summary[aria-label^="Account"]').click();
+await m.locator('summary[aria-label^="Account"]:visible').click();
 await m.getByRole('link', { name: 'Settings' }).click(); await m.waitForURL(/\/admin\/settings$/); await settle(m, 800);
 check('phone: Settings from the account menu', (await m.getByRole('heading', { level: 1 }).textContent()).trim() === 'Settings' && await m.locator('details[open]').count() === 0);
 check('phone: no sideways scroll', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
