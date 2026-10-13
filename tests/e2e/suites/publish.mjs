@@ -137,7 +137,7 @@ const down = await p.request.delete(B + '/api/admin/publish?slug=masquerade');
 check('test publication taken down', down.ok());
 // 12. Sign out
 await p.getByRole('group').first().evaluate(() => {}).catch(() => {});
-await p.locator('nav details summary').click();
+await p.locator('nav details summary:visible').click();
 await p.getByRole('button', { name: 'Sign out' }).click();
 await p.waitForURL(/\/admin\/login/);
 await p.goto(B + '/admin');
