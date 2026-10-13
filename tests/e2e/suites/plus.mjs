@@ -24,7 +24,8 @@ await m.addInitScript(() => {
 const p = await m.newPage(); p.on('pageerror', (e) => errs.push(e.message));
 // Big Love's link, published with an opening on its flyer: what the story video is made from.
 const opening = { mood: 'glamour', beats: [{ box: { x: 0.2, y: 0.1, w: 0.6, h: 0.4 }, move: 'pull', seconds: 2, text: { lines: ['Masks on.'], at: 'bottom', size: 'big' } }, { box: { x: 0.1, y: 0.5, w: 0.8, h: 0.4 }, move: 'tilt-up', seconds: 1.7 }], hold: { x: 0.2, y: 0.3, w: 0.6, h: 0.4 } };
-const published = await m.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade', publication: { version: 1, backdrop: { kind: 'image', src: '/clients/masquerade/flyer.jpg', fit: 'poster', opening } } } });
+const reels = [{ id: 'mr-masks-on', title: 'Masks on. Secrets revealed.', summary: 'x', practiceArea: 'The night', cta: 'funnel' }];
+const published = await m.request.post(B + '/api/admin/publish', { data: { slug: 'masquerade', publication: { version: 1, reels, funnel: { order: reels.map((r) => r.id), topics: {}, paths: {}, primaryCta: 'tickets' }, backdrop: { kind: 'image', src: '/clients/masquerade/flyer.jpg', fit: 'poster', opening } } } });
 check('published with an opening', published.ok(), String(published.status()));
 await p.goto(B + '/admin/home'); await settle(p, 1200);
 
@@ -67,7 +68,8 @@ await plus.tap(); await settle(p, 300);
 await menu.getByRole('button', { name: /A link for one place/ }).tap();
 await p.waitForURL(/\/admin\/links#place$/); await settle(p, 1200);
 const builder = await p.locator('#place').boundingBox();
-check('A link for one place: the link builder, in view', builder && builder.y < 300, JSON.stringify(builder));
+// In view: scrolled to it, or as far as the page goes (its top, and room below it, on screen).
+check('A link for one place: the link builder, in view', builder && builder.y >= 0 && builder.y < 844 - 300, JSON.stringify(builder));
 check('the Share page sits under Results', (await tabs.filter({ hasText: 'Results' }).getAttribute('aria-current')) === 'page');
 
 // Add a video: the new reel's editor, open at once.

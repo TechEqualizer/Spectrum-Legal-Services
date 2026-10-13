@@ -73,10 +73,39 @@ the page's last row) clears the pill and the phone's safe area.
 - How often organizers post.
 - Whether the Fans add-on sells more once it sits in People.
 
+## PR 2: Post to your story in one tap
+
+**What limits it (researched Oct 13, 2026):** a page may open the phone's
+share sheet only straight after a tap ("transient activation"), and the
+share uses it up. Chrome on Android tolerates a short wait in between;
+Safari refuses the share if anything is awaited first, and the fix
+developers report is to have the file ready before the tap. Making the
+video takes up to a minute, so the first post is always two taps.
+
+Sources: [Web Share API spec (W3C)](https://w3c.github.io/web-share/),
+[WebKit bug 197779: share() after an async fetch](https://bugs.webkit.org/show_bug.cgi?id=197779),
+[The User Activation API (WebKit)](https://webkit.org/blog/13862/the-user-activation-api/),
+[Transient activation on iPhone (DEV)](https://dev.to/tusharshahi/transient-activation-why-our-apps-copy-button-did-not-work-on-iphone-4ba0).
+Instagram's Link sticker takes a pasted URL and is open to every account
+([Bitly](https://bitly.com/blog/add-link-instagram-story/)); TikTok has no
+story link, so the steps name Instagram.
+
+**What it does:**
+
+- Once made, the video stays on the organizer's device (IndexedDB, one per
+  file name, replaced when the opening, look or date changes). The + menu
+  reads it when it opens, says "Ready: one tap", and Post to your story
+  opens the share sheet straight from the tap: two taps from anywhere in
+  the admin.
+- Every hand-over copies the link, so the Link sticker is a paste.
+- The share step loads with the page (it used to load after the tap). If
+  the phone still refuses, the sheet opens with the video ready and Share
+  to tap again.
+- The ready sheet says how to post it: Instagram and Story, music from
+  Instagram's library, a Link sticker.
+
 ## Next
 
-- **PR 2**: refine Post to your story (share sheet straight away where the
-  phone allows it).
 - **PR 3**: Settings as grouped lists (profile header, "Plan · Not live ›"),
   chips (Leads | Fans; 7 · 30 · 90 days), and edit / ⋯ on each reel's
   thumbnail.

@@ -298,7 +298,9 @@ function PostStory({ event, link, onClose }: { event: AdminEvent; link: string; 
         </button>
       </div>
       {input ? (
-        <StoryDownload input={input} name={storyName(event)} disabled={false} autoStart />
+        <div className="px-1 pb-1">
+          <StoryDownload input={input} name={storyName(event)} disabled={false} autoStart />
+        </div>
       ) : (
         <div className="px-5 pb-5 pt-2">
           <p className="text-sm text-gray-700">Your story video is your opening, cut from your flyer. Make your opening first, then post it from here.</p>
