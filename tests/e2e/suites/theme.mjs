@@ -97,9 +97,9 @@ for (const [w, h, mobile] of [[390, 844, true], [1440, 900, false]]) {
     check(`${w}px ${path}: every word reads in dark`, bad.length === 0, bad.slice(0, 6).join(' | '));
     await q.screenshot({ path: `theme-dark-${w}${path.replace(/[/?=]/g, '_')}.png`, fullPage: w === 390 });
   }
-  // The + menu, opened over the page.
+  // The + menu, opened over the page (a phone's; a computer lists the same in its sidebar, read above).
   await q.goto(B + '/admin/home'); await settle(q, 1200);
-  await q.getByRole(mobile ? 'button' : 'button', { name: 'Create' }).first().click(); await settle(q, 400);
+  if (mobile) { await q.getByRole('button', { name: 'Create' }).click(); await settle(q, 400); }
   const menuBad = await lowContrast(q);
   check(`${w}px the + menu: every word reads in dark`, menuBad.length === 0, menuBad.slice(0, 6).join(' | '));
   await q.screenshot({ path: `theme-dark-${w}-plus.png` });

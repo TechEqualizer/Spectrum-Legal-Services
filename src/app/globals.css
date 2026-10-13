@@ -222,11 +222,17 @@
     --color-teal-900: light-dark(var(--lt-teal-900), #b6ece9);
     --color-green-700: light-dark(var(--lt-green-700), #86e5ae);
   }
-  /* What stays as it is in both looks: the dark bars (the sidebar, the
-     phone's top bar and tab pill) and words on photos. */
+  /* What stays as it is in both looks: the phone's dark bars (its top bar
+     and tab pill) and what shows what fans see. */
   .admin-theme .keep-light,
   .admin-theme ::backdrop {
     color-scheme: light;
+  }
+  /* The phone's bars only: on a computer the sidebar wears the chosen look. */
+  @media (max-width: 63.999rem) {
+    .admin-theme .keep-light-phone {
+      color-scheme: light;
+    }
   }
   /* Menus and sheets opened from those bars wear the chosen look again. */
   .admin-theme .theme-follow {

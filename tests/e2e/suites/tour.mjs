@@ -110,7 +110,7 @@ async function walk(p, label) {
   check('desktop: not again after Done', (await p.locator('[data-testid=tour]').count()) === 0);
 
   // Again from the account menu; Back works; Escape skips.
-  await p.locator('[data-tour=account]').first().click();
+  await p.locator('[data-tour=account]:visible').click();
   await p.getByRole('button', { name: 'Take the tour' }).click();
   await at(p, 'Welcome to Showlnk');
   await tourCard(p).getByRole('button', { name: 'Start the tour' }).click();
