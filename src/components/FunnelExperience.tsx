@@ -22,7 +22,7 @@ import { getSourceTag, trackReelEvent } from "@/lib/reel-tracking";
 
 const HOUR = 60 * 60 * 1000;
 const PRIMARY =
-  "cine-cta flex min-h-14 items-center justify-center whitespace-nowrap rounded-full bg-teal-accent text-[17px] font-semibold text-on-accent shadow-lg shadow-black/40 transition hover:brightness-110 max-[380px]:text-base";
+  "cine-cta flex min-h-14 items-center justify-center rounded-full bg-teal-accent text-[17px] font-semibold text-on-accent shadow-lg shadow-black/40 transition hover:brightness-110 max-[380px]:text-base";
 const GLASS =
   "flex min-h-14 items-center justify-center whitespace-nowrap rounded-full border border-white/25 bg-white/10 font-semibold text-white backdrop-blur-md transition hover:bg-white/20";
 
@@ -175,7 +175,7 @@ export default function FunnelExperience({
   const afterActions = (
     <>
       <div className="flex gap-2.5">
-        <button type="button" onClick={() => startAt(recapReel)} className={`${PRIMARY} flex-1 gap-2.5 px-4`} {...fx}>
+        <button type="button" onClick={() => startAt(recapReel)} className={`${PRIMARY} flex-1 gap-2.5 whitespace-nowrap px-4`} {...fx}>
           <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
           Watch the recap
         </button>
@@ -257,6 +257,7 @@ export default function FunnelExperience({
         </ul>
         </>
       )}
+      {/* One row: a long label wraps onto two lines inside its own button (same height) rather than being cut off. */}
       <div className="mt-4 flex gap-2.5">
         <button
           type="button"
@@ -265,7 +266,7 @@ export default function FunnelExperience({
           className={
             ticketsFirst
               ? `${GLASS} order-2 gap-2 px-5 max-[380px]:px-4`
-              : `${PRIMARY} flex-1 gap-2.5 px-4`
+              : `${PRIMARY} min-w-0 flex-1 gap-2.5 px-4 text-center leading-tight`
           }
         >
           <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
@@ -280,7 +281,7 @@ export default function FunnelExperience({
             onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
             {...fx}
             aria-label={`${brand.copy.ticketsPrimary ?? "Get tickets"}: ${onSale.name}, ${formatEventDate(onSale)}, ${eventTime(onSale)}${onSale.price ? `, ${onSale.price}` : ""}`}
-            className={ticketsFirst ? `${PRIMARY} order-1 flex-1 px-4` : `${GLASS} px-5 max-[380px]:px-4`}
+            className={ticketsFirst ? `${PRIMARY} order-1 min-w-0 flex-1 px-4 text-center leading-tight` : `${GLASS} shrink-0 px-5 max-[380px]:px-4`}
           >
             {/* With several dates, the button says which one it sells. */}
             {single

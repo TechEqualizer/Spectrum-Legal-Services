@@ -113,7 +113,8 @@ function Hero({ funnel, revealed, eyebrow, actions, paused = false, onSwipeUp }:
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6">
         <div className="flex items-center justify-between gap-4">
-          <div className="shrink-0">
+          {/* Full width while it fits (the byline gives way first); a name too long for the screen wraps rather than running off it. */}
+          <div className="min-w-0 shrink-[0.001]">
             <BrandLogo brand={brand} size="sm" eager />
           </div>
           {brand.byline && (

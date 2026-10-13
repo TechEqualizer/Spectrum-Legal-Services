@@ -54,15 +54,15 @@ await scanning.waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
 await p.waitForTimeout(300);
 check('then the night, whole: the scan lifts and it can be claimed', !(await scanning.count()) && await p.getByRole('button', { name: 'Claim this link' }).isEnabled());
 await p.waitForTimeout(1500);
-check('the phone: their night', await phone.getByText('Golden Hour: Halloween').first().isVisible().catch(() => false));
+check('the phone: their night, under the name their link will have', await phone.getByText('Golden Hour', { exact: true }).first().isVisible().catch(() => false));
 check('the phone: their flyer behind it', (await phone.locator('img[src^="data:image/jpeg"]').count()) > 0);
 check('straight to the night after the scan: no button to press', await p.getByRole('heading', { name: 'Watch your night.' }).isVisible() && (await p.locator('[aria-current="step"]').textContent()) === 'Watch it');
 // Right after the scan, the night shows what the flyer is becoming, each line ticked as it lands, while the phone builds it.
 const built = p.getByText('Your link is built.');
 await built.waitFor({ timeout: 15000 }).catch(() => {});
 const ticks = await p.locator('li').filter({ has: p.locator('.start-tick') }).allTextContents();
-check('the night: everything the flyer became, ticked off', await built.isVisible() && ['Your night, its dates and venue', 'Your colors and type', 'Three reels that sell your night', 'An opening and every reel, cut from your flyer'].every((t) => ticks.some((x) => x.includes(t))), ticks.join(' | '));
-check('the night: the reels by name, the shots counted', ticks.some((x) => x.includes('Masks on · Bring your crew · Last call')) && ticks.some((x) => x.includes('The opening and 3 reels, shot by shot like a trailer')), ticks.join(' | '));
+check('the night: what the flyer became, as what it does for them, ticked off', await built.isVisible() && ['Your night, ready to share', "Your flyer's look on every screen", 'Three reels that sell tickets', 'A trailer that stops the scroll'].every((t) => ticks.some((x) => x.includes(t))), ticks.join(' | '));
+check('the night: one line each, no feature talk', !ticks.some((x) => /shot by shot|Read from your flyer|Near things move/.test(x)), ticks.join(' | '));
 check('the night: the phone plays the story written from the flyer', await phone.getByText('Masks on, Detroit').first().waitFor({ timeout: 15000 }).then(() => true, () => false));
 await p.screenshot({ path: 'start-flyer-1279.png' });
 check('the preview counts no visits', reelEvents.length === 0, reelEvents.join(' '));
@@ -75,18 +75,15 @@ await p.reload(); await settle(p, 1500);
 check('a reload keeps the draft, and the night', await p.getByText('From your flyer', { exact: true }).isVisible() && await p.getByRole('heading', { name: 'Watch your night.' }).isVisible());
 
 // Step 2: watch the story drafted from the flyer (in the same answer as the read): each part named with why
-// it sells, a tap plays it; the words fold away under Change the words.
+// it sells, a tap plays it. Nothing to edit here: that's in the admin, once the link is theirs.
 const story = p.getByRole('list', { name: 'Your story' });
 const part = (label) => p.getByRole('button', { name: `Play ${label} in the phone` });
-const words = p.locator('details').filter({ hasText: 'Change the words' });
-const openWords = async () => { if (!(await words.getAttribute('open').catch(() => null) !== null)) await words.locator('summary').click(); };
-const reel = (label) => words.locator('fieldset').filter({ hasText: label });
 await part('The Night').filter({ hasText: 'Masks on' }).waitFor({ timeout: 15000 }).catch(() => {});
 check('the story, in order', (await story.locator('li span.uppercase').allTextContents()).join('|') === 'Opening|The Night|Your People|Last Call', (await story.locator('li span.uppercase').allTextContents()).join('|'));
 check('drafted from the flyer', /Masks on, Detroit/.test(await part('Opening').innerText()) && /Masks on/.test(await part('The Night').innerText()));
 check('each says why it sells', /people like them/.test(await part('Your People').innerText()) && /reason to buy now/.test(await part('Last Call').innerText()));
 await p.screenshot({ path: 'start-watch-1279.png' });
-check('the words are folded away', !(await reel('Opening').getByLabel('Title').isVisible().catch(() => false)));
+check('nothing to edit: watching only, then Claim', !(await p.getByText('Change the words').count()) && !(await p.getByRole('textbox').count()) && !(await p.getByText(/Anything off\?/).count()));
 // The words come first, then the shots: the phone starts over with them, and the opening plays.
 await p.getByText('One flyer in. An opening and three reels out', { exact: false }).waitFor({ timeout: 15000 }).catch(() => {});
 // The opening cut from the flyer plays first, with the flyer's own words; the title comes up as it settles.
@@ -97,15 +94,10 @@ await phone.getByText('Masks on, Detroit').first().waitFor({ timeout: 15000 }).c
 check('the phone: then the drafted opening\'s title', await phone.getByText('Masks on, Detroit').first().isVisible().catch(() => false));
 check('the drafting read counted once', (await (await admin.request.get(B + '/api/admin/invites')).json()).invites.find((i) => i.note === 'Velvet Room')?.flyer_reads === 1);
 
-// Words change under Change the words, and the phone keeps up.
-await openWords();
-await reel('Opening').getByLabel('Title').fill('Masks on, Motor City');
-await p.waitForTimeout(500);
-check('an edit shows in the phone', await phone.getByText('Masks on, Motor City').first().isVisible().catch(() => false));
-await reel('The Night').getByLabel('Title').fill('You, in gold');
+// A tap on a part plays it in the phone.
 await part('The Night').click();
 await p.waitForTimeout(1200);
-check('Play: the reel, in the phone', await phone.getByText('You, in gold', { exact: true }).first().isVisible().catch(() => false));
+check('Play: the reel, in the phone', await phone.getByText('Masks on', { exact: true }).first().isVisible().catch(() => false));
 check('Play: marks the part playing', (await part('The Night').getAttribute('aria-pressed')) === 'true' && (await part('Opening').getAttribute('aria-pressed')) === 'false');
 // Only a flyer, and every reel is cut from it: The Night plays its own shots and words, then moves on to Your People, cut its own way.
 check('the reels are sold as cut from the flyer', await p.getByText('One flyer in. An opening and three reels out', { exact: false }).isVisible());
@@ -118,10 +110,9 @@ check('no trial card', !(await p.getByText(/free for 14 days|Already on your lin
 check('the phone: no Follow, presale or locked reel', !(await phone.getByText('Follow', { exact: true }).count()) && !(await phone.getByText(/Presale for fans|Follow to watch/).count()));
 check('still no visits', reelEvents.length === 0, reelEvents.join(' '));
 
-// Edits survive coming back.
+// The night survives coming back.
 await p.reload(); await settle(p, 1500);
-await openWords();
-check('a reload keeps the edits', (await reel('Opening').getByLabel('Title').inputValue()) === 'Masks on, Motor City');
+check('a reload keeps the night', /Masks on, Detroit/.test(await part('Opening').innerText().catch(() => '')));
 await p.getByRole('button', { name: 'Claim this link' }).click();
 check('step 3 is next', await p.getByRole('heading', { name: 'Claim your link.' }).isVisible() && (await p.locator('[aria-current="step"]').textContent()) === 'Your link');
 await p.getByRole('button', { name: 'Back to your reels' }).click();
@@ -132,8 +123,7 @@ await p.getByRole('button', { name: 'Use a different flyer' }).click();
 await p.locator('input[type=file]').setInputFiles(flyer);
 await p.getByText('From your flyer', { exact: true }).waitFor({ timeout: 15000 }).catch(() => {});
 await p.waitForTimeout(2000);
-await openWords();
-check("no draft: says so, and starts from the flyer", await p.getByText("We couldn't write these from your flyer just now", { exact: false }).isVisible() && (await reel('Opening').getByLabel('Title').inputValue()) === 'Golden Hour: Halloween', await reel('Opening').getByLabel('Title').inputValue().catch(() => ''));
+check("no draft: says so, and starts from the flyer", await p.getByText("Your reels start from your flyer's basics.").isVisible() && /Golden Hour: Halloween/.test(await part('Opening').innerText().catch(() => '')), await part('Opening').innerText().catch(() => ''));
 
 // A flyer with no date.
 await fetch(CLAUDE + '/__mode', { method: 'POST', body: 'none' });
@@ -178,6 +168,12 @@ const claimBar = await m.getByRole('button', { name: 'Claim this link' }).boundi
 check('phone: Claim this link stays in reach at the bottom', Boolean(claimBar) && claimBar.y + claimBar.height <= 844 && claimBar.y > 700, JSON.stringify(claimBar));
 const phoneBox = await m.locator('.sl-phone').boundingBox();
 check('phone: the whole phone above the fold, over the Claim bar', Boolean(phoneBox) && phoneBox.y >= 0 && phoneBox.y + phoneBox.height <= claimBar.y, JSON.stringify(phoneBox));
+// Nothing in the link is cut off: every button's words fit it, the name on top wraps rather than running off.
+const preview = m.frames().find((f) => f.url().includes('/start/preview'));
+const clipped = preview ? await preview.evaluate(() => [...document.querySelectorAll('button, a, h1, [role=img]')]
+  .filter((el) => el.getBoundingClientRect().width > 0 && el.scrollWidth > el.clientWidth + 1)
+  .map((el) => (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 40))) : ['no preview'];
+check('phone: nothing in the link cut off (buttons, the name on top)', clipped.length === 0, clipped.join(' | '));
 // A shorter screen (browser bars showing): the phone shrinks to fit, never under the bar.
 await m.setViewportSize({ width: 390, height: 680 }); await settle(m, 600);
 const shortBar = await m.getByRole('button', { name: 'Claim this link' }).boundingBox();
