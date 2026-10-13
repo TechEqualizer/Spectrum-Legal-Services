@@ -34,7 +34,7 @@ const tabs = p.getByRole('navigation', { name: 'Leads and fans' });
 check('Leads has a Leads | Fans switch', await tabs.getByRole('link', { name: 'Leads' }).getAttribute('aria-current') === 'page' && await tabs.getByRole('link', { name: 'Fans' }).isVisible());
 await tabs.getByRole('link', { name: 'Fans' }).click(); await p.waitForURL('**/admin/leads/fans'); await settle(p, 800);
 check('the Fans page', (await p.getByRole('heading', { level: 1 }).textContent()) === 'Fans');
-check('the nav keeps Leads current', (await p.locator('nav [aria-current="page"]').first().textContent())?.includes('Leads'));
+check('the nav keeps People current', (await p.locator('nav [aria-current="page"]').first().textContent())?.includes('People'));
 check('it names the organizer', await p.getByText(/People following Big Love Productions/).isVisible());
 const list = p.getByRole('list').filter({ hasText: 'first@example.com' });
 const rows = await list.getByRole('listitem').allTextContents();
