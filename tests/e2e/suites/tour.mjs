@@ -40,11 +40,19 @@ async function at(p, title) {
     return d && d.querySelector('h2')?.textContent === t && getComputedStyle(d).opacity === '1';
   }, title, { timeout: 8000 }).catch(() => {});
   await settle(p, 600);
-  // Smooth scrolling into view: wait until the light stops moving.
+  // Smooth scrolling into view: wait until the light and the page stop moving. Frame by frame:
+  // headless Chrome draws only when asked, so a long smooth scroll stalls if nothing asks.
   await p.waitForFunction(() => new Promise((done) => {
-    const at = () => JSON.stringify(document.querySelector('[data-testid=tour-light]')?.getBoundingClientRect() ?? null);
-    const a = at(); setTimeout(() => done(at() === a), 150);
-  }), null, { timeout: 4000, polling: 50 }).catch(() => {});
+    const at = () => JSON.stringify([document.querySelector('[data-testid=tour-light]')?.getBoundingClientRect() ?? null, scrollY]);
+    let last = at(), still = 0;
+    const frame = () => requestAnimationFrame(() => {
+      const now = at();
+      still = now === last ? still + 1 : 0;
+      last = now;
+      if (still >= 10) done(true); else frame();
+    });
+    frame();
+  }), null, { timeout: 6000 }).catch(() => {});
   return p.evaluate(() => {
     const d = document.querySelector('[data-testid=tour] [role=dialog]');
     const light = document.querySelector('[data-testid=tour-light]');
