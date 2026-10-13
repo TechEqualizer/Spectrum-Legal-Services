@@ -16,7 +16,7 @@ check('bio link shows the only upcoming event', (await visitor.locator('h1').inn
 
 // 2. Events page
 await p.goto(B + '/admin/events'); await settle(p, 1200);
-check('Home, then Events', (await p.locator('nav ul a').allTextContents()).slice(0, 2).join(',') === 'Home,Events' && await p.locator('nav ul a', { hasText: 'Paths' }).count() === 0);
+check('Events sits under Tonight', (await p.locator('nav ul a').allTextContents()).join(',') === 'Tonight,Link,People,Results' && (await p.locator('nav ul a', { hasText: 'Tonight' }).getAttribute('aria-current')) === 'page');
 check('page title matches the tab', (await p.getByRole('heading', { level: 1 }).textContent()).trim() === 'Events');
 const org = p.getByRole('region', { name: 'Big Love Productions' });
 check('event listed under its organizer, upcoming', await org.getByRole('button', { name: 'Open Masquerade on the Runway' }).isVisible() && await org.getByText('Upcoming').isVisible());

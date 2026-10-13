@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { useLinkOrigin } from "@/admin/link-origin";
 import { selectAdminBusiness, useAdminEvents, useMaybeAdminBusiness, type AdminEvent } from "@/admin/AdminBusiness";
@@ -42,7 +42,15 @@ export default function Events() {
   const session = useAdminSession();
   const origin = useLinkOrigin();
   const [now] = useState(() => Date.now());
-  const [sheet, setSheet] = useState<{ mode: NewEventMode; source?: AdminEvent } | null>(null);
+  // From the + menu's New night (?new=1): its sheet, open at once.
+  const asked = useSearchParams().get("new") === "1";
+  const [sheet, setSheet] = useState<{ mode: NewEventMode; source?: AdminEvent } | null>(() => (asked ? { mode: "fresh" } : null));
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("new")) return;
+    url.searchParams.delete("new");
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
   const [addingClient, setAddingClient] = useState(false);
   // Full admins (Showlnk) add clients and hand them off.
   const fullAccess = session.slugs.includes("*");

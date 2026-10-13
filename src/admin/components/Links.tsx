@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLinkOrigin } from "@/admin/link-origin";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
 import { openGoLive } from "@/admin/go-live";
@@ -30,6 +30,10 @@ export default function Links() {
   const event = useAdminEvents().find((e) => e.funnel.slug === funnel.slug);
   const organizer = event?.organizer;
   const labelOf = useSourceLabel(event ? [event] : []);
+  // From the + menu's A link for one place (#place): straight to the builder (the page draws after the address changes).
+  useEffect(() => {
+    if (window.location.hash === "#place") document.getElementById("place")?.scrollIntoView({ block: "start" });
+  }, []);
   // Not live yet: these links open Coming soon for everyone else, so say so before they post one.
   const plan = usePlan(funnel.slug);
   const notLive = Boolean(plan && !hasCore(plan) && plan.status !== "past_due");
@@ -119,7 +123,7 @@ export default function Links() {
         </section>
       )}
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="builder-title" data-tour="share-builder">
+      <section id="place" className="scroll-mt-6 rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="builder-title" data-tour="share-builder">
         <h2 id="builder-title" className="mb-4 text-base font-bold text-deep-navy">{organizer ? "A link for this event" : "Build a link"}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div>

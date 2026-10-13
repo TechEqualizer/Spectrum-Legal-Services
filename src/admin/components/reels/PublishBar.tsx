@@ -21,7 +21,7 @@ export default function PublishBar({
   onPublish: () => void;
 }) {
   return (
-    <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 lg:bottom-4" role="region" aria-label="Publish">
+    <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 lg:bottom-4" role="region" aria-label="Publish">
       <div className="flex items-center gap-2 rounded-2xl bg-deep-navy py-2.5 pl-4 pr-2.5 sm:gap-4 text-white shadow-2xl ring-1 ring-white/10 sm:px-5">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{publishing || "Unpublished edits"}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import DatesCard from "@/admin/components/DatesCard";
 import HeroMediaCard from "@/admin/components/HeroMediaCard";
@@ -91,7 +92,15 @@ export default function ReelsEditor() {
   // Results for the last 30 days, keyed by reel.
   const { results } = useResults(30);
   const stats = new Map((results?.reels ?? []).map((t) => [t.reel.id, t]));
-  const [editing, setEditing] = useState<EditorReel | null>(null);
+  // From the + menu's Add a video (?add=1): the new reel's editor, open at once.
+  const asked = useSearchParams().get("add") === "1";
+  const [editing, setEditing] = useState<EditorReel | null>(() => (asked ? { ...blankReel, practiceArea: builtFunnel.brand.services[0] } : null));
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("add")) return;
+    url.searchParams.delete("add");
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
   // Where a new reel goes in the order, when it was added from a + on the path strip.
   const [insertAt, setInsertAt] = useState<number | null>(null);
   // Plays the funnel as edited, from one of its reels.
@@ -296,7 +305,7 @@ export default function ReelsEditor() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Reels</h1>
+          <h1 className="text-2xl font-black uppercase tracking-tight text-deep-navy">Your link</h1>
           <p className="text-sm text-gray-600">Three reels sell the night: The Night makes them want it, Your People shows it&apos;s for them, Last Call gives the reason to buy now. Each one plays the next.</p>
         </div>
         <div className="flex flex-wrap gap-2">

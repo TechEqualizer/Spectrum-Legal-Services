@@ -13,7 +13,7 @@ const toggle = nav.getByRole('button', { name: /sidebar$/ });
 // Which event is shown: a picker with more than one event, otherwise its name (phones show the organizer above the picker, so either may match).
 const businessOf = (page) => page.locator('#admin-business').or(page.getByRole('navigation', { name: 'Admin' }).getByText('Big Love Productions', { exact: true })).locator('visible=true').first();
 check('starts open', await width() === 240 && (await toggle.getAttribute('aria-label')) === 'Collapse sidebar' && (await toggle.getAttribute('aria-expanded')) === 'true', String(await width()));
-check('open: labels and business picker shown', await nav.getByRole('link', { name: 'Leads' }).getByText('Leads').isVisible() && await businessOf(p).isVisible());
+check('open: labels and business picker shown', await nav.getByRole('link', { name: 'People' }).getByText('People').isVisible() && await businessOf(p).isVisible());
 const column = p.locator('main').locator('xpath=..');
 const mainBefore = (await column.boundingBox()).width;
 
@@ -21,8 +21,8 @@ await toggle.click(); await animationsDone(p, 1000);
 check('collapses to an icon rail', await width() === 72, String(await width()));
 check('toggle now expands', (await toggle.getAttribute('aria-label')) === 'Expand sidebar' && (await toggle.getAttribute('aria-expanded')) === 'false');
 check('main area gets the room', (await column.boundingBox()).width > mainBefore + 150);
-const leads = nav.getByRole('link', { name: 'Leads' });
-check('icons keep their names (screen readers, tooltips)', await leads.count() === 1 && (await leads.getAttribute('title')) === 'Leads' && (await leads.getByText('Leads').boundingBox()).width <= 1);
+const leads = nav.getByRole('link', { name: 'People' });
+check('icons keep their names (screen readers, tooltips)', await leads.count() === 1 && (await leads.getAttribute('title')) === 'People' && (await leads.getByText('People').boundingBox()).width <= 1);
 check('current page still marked', (await nav.locator('[aria-current="page"]').getAttribute('title')) === 'Results');
 check('business picker tucked away', !(await businessOf(p).isVisible()));
 const links = await nav.getByRole('link').evaluateAll(els => els.filter(e => e.offsetParent).map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }));
@@ -45,12 +45,12 @@ check('expanded is remembered', await p.evaluate(() => localStorage.getItem('adm
 check('no errors', !errs.length, errs.join(' | '));
 await ctx.close();
 
-// Phones: the bottom tab bar, no collapse button, even if it was folded on desktop.
+// Phones: the floating tab bar, no collapse button, even if it was folded on desktop.
 const m = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const mp = await m.newPage();
 await mp.goto(B + '/admin/overview'); await mp.evaluate(() => localStorage.setItem('admin_nav_collapsed', '1')); await mp.reload(); await settle(mp, 800);
 const tabs = mp.locator('nav ul a');
-check('phone: 6 tabs with labels', await tabs.count() === 6 && await tabs.first().getByText('Home').isVisible());
+check('phone: 4 places with labels', await tabs.count() === 4 && JSON.stringify(await tabs.allTextContents()) === '["Tonight","Link","People","Results"]', JSON.stringify(await tabs.allTextContents()));
 check('phone: no collapse button', !(await mp.getByRole('button', { name: /sidebar$/ }).isVisible()));
 check('phone: business picker shown', await businessOf(mp).isVisible());
 // The account menu closes on a tap outside and when a tab is chosen.
@@ -60,7 +60,7 @@ check('phone: account menu opens', await phoneMenu.evaluate((d) => d.open));
 await mp.locator('main').tap({ position: { x: 20, y: 300 } }); await settle(mp, 300);
 check('phone: tap outside closes it', !(await phoneMenu.evaluate((d) => d.open)));
 await mp.locator('summary[aria-label^="Account"]').first().tap(); await settle(mp, 300);
-await tabs.filter({ hasText: 'Events' }).tap(); await mp.waitForURL(/\/admin\/events$/); await settle(mp, 500);
+await tabs.filter({ hasText: 'People' }).tap(); await mp.waitForURL(/\/admin\/leads$/); await settle(mp, 500);
 check('phone: choosing a tab closes it', await mp.locator('details[open]:has(summary[aria-label^="Account"])').count() === 0);
 await m.close();
 
@@ -78,7 +78,7 @@ await account.click(); await dp.keyboard.press('Escape'); await settle(dp, 200);
 check('desktop: Escape closes it, focus back on its button', !(await isOpen()) && await account.evaluate((el) => el === document.activeElement));
 await account.click(); await settle(dp, 200);
 // (The menu covers the links just below it, so pick one further down.)
-await dp.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Share' }).click(); await dp.waitForURL(/\/admin\/links$/); await settle(dp, 500);
+await dp.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Results' }).click(); await dp.waitForURL(/\/admin\/overview$/); await settle(dp, 500);
 check('desktop: another page closes it', !(await isOpen()));
 await account.click(); await settle(dp, 200);
 await dp.getByRole('button', { name: 'Change password' }).click(); await settle(dp, 300);

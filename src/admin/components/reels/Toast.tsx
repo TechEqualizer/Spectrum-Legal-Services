@@ -17,7 +17,7 @@ export default function Toast({
       role="status"
       className={`fixed inset-x-0 z-50 mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-full bg-deep-navy py-2.5 pl-5 text-sm font-semibold text-white shadow-lg ring-1 ring-white/15 transition-opacity ${toast?.undo ? "pr-2" : "pointer-events-none pr-5"} ${
         // Above the tab bar, and above the publish bar when it shows.
-        raised ? "bottom-[calc(9.5rem+env(safe-area-inset-bottom))] lg:bottom-28" : "bottom-24 lg:bottom-8"
+        raised ? "bottom-[calc(10.75rem+env(safe-area-inset-bottom))] lg:bottom-28" : "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-8"
       } ${toast ? "opacity-100" : "opacity-0"}`}
     >
       {toast && (

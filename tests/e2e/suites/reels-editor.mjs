@@ -16,8 +16,8 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   const rows = p.locator('section[aria-labelledby="order-title"] ol > li');
   const titles = async()=> (await rows.locator('p.font-bold').allTextContents());
   const rowText = async i => (await rows.nth(i).textContent());
-  check(w+': Reels is admin home', await p.getByRole('heading',{level:1}).textContent()==='Reels');
-  check(w+': nav marks Reels current', await p.locator('nav [aria-current="page"]').textContent()==='Reels');
+  check(w+': the link is admin home', await p.getByRole('heading',{level:1}).textContent()==='Your link');
+  check(w+': nav marks Link current', await p.locator('nav [aria-current="page"]').textContent()==='Link');
   check(w+': one story: no funnels to pick or add', await p.locator('[aria-pressed]').filter({hasText:'reel'}).count()===0 && await p.getByRole('button',{name:'New funnel'}).count()===0 && await p.getByText('Default',{exact:true}).count()===0);
   check(w+': 5 reels in live funnel', await rows.count()===5);
   const r0 = await rowText(0);
