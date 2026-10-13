@@ -14,6 +14,7 @@ import { sceneMediaOf } from "@/lib/media";
 import type { OpeningRecipe } from "@/lib/opening";
 import { hasCore } from "@/lib/plans";
 import type { StoryInput } from "@/lib/story-export";
+import { keptStory, postStory } from "@/lib/story-share";
 
 type Item = { key: string; label: string; detail: string; icon: string; run: () => void };
 
@@ -38,6 +39,9 @@ export default function PlusMenu({ variant, collapsed = false }: { variant: "pho
   const [open, setOpen] = useState(false);
   const [story, setStory] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The story video made earlier on this device for the link as it is now, read when the menu opens so one tap posts it.
+  const [kept, setKept] = useState<Blob | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
   const [pos, setPos] = useState<React.CSSProperties>({});
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -52,6 +56,12 @@ export default function PlusMenu({ variant, collapsed = false }: { variant: "pho
   // Placed by the button: above it on a phone, beside it in the sidebar (which scrolls, so the menu can't live inside it).
   const toggle = () => {
     const r = button.current?.getBoundingClientRect();
+    if (!open && event) {
+      const input = storyOf(event, `${origin}/f/${event.organizer.slug}`);
+      setKept(null);
+      setSaid(null);
+      if (input) void keptStory(storyName(event), input).then(setKept);
+    }
     if (!open && r) {
       setPos(
         variant === "phone"
@@ -95,11 +105,27 @@ export default function PlusMenu({ variant, collapsed = false }: { variant: "pho
     {
       key: "story",
       label: "Post to your story",
-      detail: "Your opening as a video, ready to share",
+      detail: said ?? (kept ? "Ready: one tap, and your link is copied for the sticker" : "Your opening as a video, ready to share"),
       icon: "M12 3a9 9 0 109 9M12 3a9 9 0 019 9M12 3v4M21 12h-4M10 9l5 3-5 3V9z",
       run: () => {
-        setOpen(false);
-        setStory(true);
+        if (!kept) {
+          setOpen(false);
+          setStory(true);
+          return;
+        }
+        // Straight from the tap: the share sheet opens with nothing awaited first.
+        void postStory(kept, storyName(event), link).then((result) => {
+          if (result === "blocked") {
+            // The phone wants a fresh tap: the sheet has the video ready and a Share button.
+            setOpen(false);
+            setStory(true);
+          } else if (result === "saved") {
+            setSaid("Saved to your downloads. Your link is copied too.");
+            setTimeout(() => setOpen(false), 2400);
+          } else {
+            setOpen(false);
+          }
+        });
       },
     },
     {
@@ -203,7 +229,9 @@ export default function PlusMenu({ variant, collapsed = false }: { variant: "pho
                     <span className="block text-[15px] font-semibold text-deep-navy" aria-live={item.key === "copy" ? "polite" : undefined}>
                       {item.label}
                     </span>
-                    <span className="block text-xs text-gray-600">{item.detail}</span>
+                    <span className="block text-xs text-gray-600" aria-live={item.key === "story" ? "polite" : undefined}>
+                      {item.detail}
+                    </span>
                   </span>
                 </button>
               </li>
@@ -215,6 +243,8 @@ export default function PlusMenu({ variant, collapsed = false }: { variant: "pho
     </>
   );
 }
+
+const storyName = (event: AdminEvent) => `${event.organizer.slug}-story.mp4`;
 
 /** What the Stories video needs, from the link as fans see it now (its published opening, look and next date). */
 function storyOf(event: AdminEvent, link: string): StoryInput | null {
@@ -238,9 +268,10 @@ function storyOf(event: AdminEvent, link: string): StoryInput | null {
 }
 
 /**
- * Post to your story, in two taps: the + menu's item starts the video (the
- * opening fans see, ending on the title, date and link), and Share hands it
- * to the phone's share sheet (Instagram, TikTok) or saves it.
+ * Post to your story: the + menu's item makes the video (the opening fans
+ * see, ending on the title, date and link), and Share hands it to the
+ * phone's share sheet (Instagram, TikTok) or saves it. Once made, the video
+ * stays on this device, and the menu item posts it in one tap.
  */
 function PostStory({ event, link, onClose }: { event: AdminEvent; link: string; onClose: () => void }) {
   const id = useId();
@@ -267,7 +298,7 @@ function PostStory({ event, link, onClose }: { event: AdminEvent; link: string; 
         </button>
       </div>
       {input ? (
-        <StoryDownload input={input} name={`${event.organizer.slug}-story.mp4`} disabled={false} autoStart />
+        <StoryDownload input={input} name={storyName(event)} disabled={false} autoStart />
       ) : (
         <div className="px-5 pb-5 pt-2">
           <p className="text-sm text-gray-700">Your story video is your opening, cut from your flyer. Make your opening first, then post it from here.</p>
