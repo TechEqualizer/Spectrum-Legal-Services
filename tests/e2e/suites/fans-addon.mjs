@@ -78,7 +78,14 @@ check("another business's admin can't add or remove it", (await rival.request.po
 await setPlan({ status: 'comped' });
 check('comped: included, nothing to buy', await until(async () => (await p.request.post(B + '/api/admin/billing/fans', { data: { slug: 'masquerade', on: true } })).status() === 409));
 const comped = card.getByRole('group', { name: 'Fans add-on' });
-check('comped: the add-on shows as included, with nothing to buy', await until(async () => { await openPlan(); return /Fans add-on · Included/.test(await comped.innerText({ timeout: 3000 })); }) && !(await comped.getByRole('button').count()));
+// What the card and the plan said on the last look, so a failure says why.
+let seen = '';
+const included = await until(async () => {
+  await openPlan();
+  seen = `${(await planNow().catch(() => null))?.status} | ${(await card.innerText({ timeout: 3000 }).catch(() => '')).replace(/\s+/g, ' ').slice(0, 240)}`;
+  return /Fans add-on · Included/.test(seen);
+}, 30000);
+check('comped: the add-on shows as included, with nothing to buy', included && !(await comped.getByRole('button').count()), seen);
 
 check('no errors', !errs.length, errs.join(' | '));
 // Big Love as the other suites expect it: comped, live.

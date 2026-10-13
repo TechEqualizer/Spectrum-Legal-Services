@@ -65,7 +65,16 @@ export async function POST(request: Request) {
         { brand: "the organizer", today, dates: [], photos: false },
         {
           known: reading.then((r) =>
-            "problem" in r ? [] : r.dates.map((d) => ({ date: d.date, name: d.name, ...(d.time ? { time: d.time } : {}), ...(d.venue ? { venue: d.venue } : {}), ...(d.price ? { price: d.price } : {}) })),
+            "problem" in r
+              ? []
+              : r.dates.map((d) => ({
+                  date: d.date,
+                  name: d.name,
+                  ...(d.time ? { time: d.time } : {}),
+                  ...(d.otherTimes ? { otherTimes: d.otherTimes } : {}),
+                  ...(d.venue ? { venue: d.venue } : {}),
+                  ...(d.price ? { price: d.price } : {}),
+                })),
           ),
           onDraft: (draft) => void afterRead.then(() => send({ draft })),
         },

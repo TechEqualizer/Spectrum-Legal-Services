@@ -12,7 +12,7 @@ import { flyerBlock, missingKeyProblem, type FlyerInput } from "@/lib/server/fly
 import { REEL_ORDER, REEL_ROLES, type DraftReel, type FunnelDraft, type ReelRole } from "@/lib/funnel-draft";
 import { base64ImageSize } from "@/lib/image-size";
 import { OPENING_MOODS, OPENING_MOOD_IDS, OPENING_MOVES, boxFromPixels, parseCut, parseOpening, type OpeningMood, type OpeningRecipe } from "@/lib/opening";
-import { lintRecipes, type Facts, type FlyerMap } from "@/lib/recipe-lint";
+import { lintRecipes, unbackedFacts, type Facts, type FlyerMap } from "@/lib/recipe-lint";
 import { SCREEN_LIMITS } from "@/lib/publication";
 
 const str = (description: string) => ({ type: "string", description });
@@ -231,7 +231,7 @@ export type DraftContext = {
   brand: string;
   today: string;
   /** Known dates, with the time, venue, price and how many are left when known (Last Call's true facts, and what its lines are checked against). */
-  dates: { date: string; time?: string; name: string; venue?: string; price?: string; status?: "on_sale" | "few_left" | "sold_out" }[];
+  dates: { date: string; time?: string; otherTimes?: string[]; name: string; venue?: string; price?: string; status?: "on_sale" | "few_left" | "sold_out" }[];
   photos: boolean;
 };
 
@@ -286,7 +286,7 @@ async function ask(system: string, messages: Turn[], schema: { [key: string]: un
 /** The facts a cut's lines may state: the known dates' days, times, prices and how many are left. */
 const factsOf = (ctx: DraftContext): Facts => ({
   dates: ctx.dates.map((d) => d.date),
-  times: ctx.dates.flatMap((d) => (d.time ? [d.time] : [])),
+  times: ctx.dates.flatMap((d) => [...(d.time ? [d.time] : []), ...(d.otherTimes ?? [])]),
   prices: ctx.dates.flatMap((d) => (d.price ? [d.price] : [])),
   statuses: ctx.dates.flatMap((d) => (d.status ? [d.status] : [])),
 });
@@ -304,11 +304,25 @@ export function draftProblems(raw: Record<string, unknown>, draft: FunnelDraft, 
   ];
 }
 
-/** The answer to a draft that broke the rules: what to fix, and to send it all again. */
-const fixTurn = (problems: string[]): Turn => ({
+/** The answer to a draft that broke the rules: what to fix, and to send it all again (keeping the opening, when it's already showing and sound). */
+const fixTurn = (problems: string[], keepOpening = false): Turn => ({
   role: "user",
-  content: `Your plan breaks these rules:\n- ${problems.join("\n- ")}\nFix every one, keep everything else that works, and return the whole plan again.`,
+  content: `Your plan breaks these rules:\n- ${problems.join("\n- ")}\nFix every one, keep everything else that works, and return the whole plan again.${
+    keepOpening ? " Keep the map and the opening exactly as they are: change only the cuts." : ""
+  }`,
 });
+
+/** How long the fix may take before the draft as it stands is kept: the organizer is waiting to see it. */
+const FIX_WAIT_MS = Number(process.env.DRAFT_FIX_WAIT_MS ?? 30000);
+
+/** A draft with every line that states a fact the flyer doesn't taken off its shot (the shot stays, wordless). */
+export function withoutUnbacked(draft: FunnelDraft, facts: Facts): FunnelDraft {
+  const clear = (r: OpeningRecipe): OpeningRecipe => ({
+    ...r,
+    beats: r.beats.map((b) => (b.text && b.text.lines.some((l) => unbackedFacts(l, facts).length) ? { ...b, text: undefined } : b)),
+  });
+  return { ...draft, ...(draft.opening ? { opening: clear(draft.opening) } : {}), reels: draft.reels.map((r) => (r.cut ? { ...r, cut: clear(r.cut) } : r)) };
+}
 
 /** The words and the direction as one draft: each reel's cut joins its reel by role. */
 function merged(words: Record<string, unknown>, direction: Record<string, unknown>): Record<string, unknown> {
@@ -345,6 +359,8 @@ export async function draftFunnel(input: FlyerInput, ctx: DraftContext, { onDraf
   );
   const directionTurns = turn("Cut this flyer: map it, then cut the opening, then one cut for each reel (the_night, your_people, last_call). Only these here; the words and prompts are asked for separately.");
   let directed = false;
+  // The shots are the experience: if they fail, ask once more before settling for the still flyer.
+  const direct = () => ask(system, directionTurns, directionSchema(px!), 16000, "funnel direction", failed);
   const [words, direction] = await Promise.all([
     ask(system, wordsTurns, wordsSchema, 16000, "funnel draft", failed).then((w) => {
       // The words usually come first: shown at once, the reels over the still flyer.
@@ -354,7 +370,7 @@ export async function draftFunnel(input: FlyerInput, ctx: DraftContext, { onDraf
       }
       return w;
     }),
-    px ? ask(system, directionTurns, directionSchema(px), 16000, "funnel direction", failed).finally(() => (directed = true)) : null,
+    px ? direct().then((d) => ("problem" in d && d.problem !== "refusal" ? direct() : d)).finally(() => (directed = true)) : null,
   ]);
   if ("problem" in words) return { problem: words.problem === "refusal" ? "This flyer couldn't be used for a draft. Build the funnel by hand." : words.problem };
   // Without the direction, the reels still come, over the still flyer.
@@ -367,12 +383,20 @@ export async function draftFunnel(input: FlyerInput, ctx: DraftContext, { onDraf
   const problems = draftProblems(first, draft, px, facts);
   if (!problems.length) return draft;
   console.info("[funnel draft] fixing:", problems);
-  // Shown while it's fixed, unless a line states a fact the flyer doesn't: that waits for the fix.
-  if (onDraft && draftProblems(first, draft, px).length === problems.length) onDraft(draft);
-  const second = await ask(system, [...directionTurns, { role: "assistant", content: direction.text }, fixTurn(problems)], directionSchema(px), 16000, "funnel direction fix", failed);
-  if ("problem" in second) return draft;
-  const fixed = cleanDraft(merged(words.raw, second.raw), px);
-  return "problem" in fixed ? draft : fixed;
+  // Shown while the cuts are fixed, with any line stating a fact the flyer doesn't taken off.
+  const safe = withoutUnbacked(draft, facts);
+  onDraft?.(safe);
+  // The opening is playing by now: it stays as it is unless it breaks a rule itself, and only the cuts are fixed.
+  const keepOpening = !problems.some((p) => p.startsWith("the opening"));
+  const fixing = ask(system, [...directionTurns, { role: "assistant", content: direction.text }, fixTurn(problems, keepOpening)], directionSchema(px), 16000, "funnel direction fix", failed);
+  const second = await Promise.race([fixing, new Promise<{ problem: string }>((r) => setTimeout(() => r({ problem: "slow" }), FIX_WAIT_MS))]);
+  if ("problem" in second) {
+    if (second.problem === "slow") console.info("[funnel draft] fix too slow; keeping the first cut");
+    return safe;
+  }
+  const fixedRaw = keepOpening ? { ...second.raw, map: direction.raw.map, opening: direction.raw.opening } : second.raw;
+  const fixed = cleanDraft(merged(words.raw, fixedRaw), px);
+  return "problem" in fixed ? safe : withoutUnbacked(fixed, facts);
 }
 
 /**

@@ -132,6 +132,10 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   const [replay, setReplay] = useState<{ n: number; reelId?: string }>({ n: 0 });
   const show = (reel?: string) => setReplay((r) => ({ n: r.n + 1, reelId: reel }));
   const attempt = useRef(0);
+  // Which flyer this is (the depth map's wait below is per flyer).
+  const [run, setRun] = useState(0);
+  // The flyer whose depth map was waited on long enough: the night is shown without it.
+  const [waited, setWaited] = useState(-1);
   const fileRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
 
@@ -153,6 +157,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
     // Small screens: bring the phone into view, where the night appears.
     if (window.matchMedia("(max-width: 1023px)").matches) phoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     const mine = ++attempt.current;
+    setRun(mine);
     setDrafting(false);
     setDepthState(picture ? "making" : "none");
     // Its depth map, made alongside the reading (the model takes a while), for the phone's parallax.
@@ -232,6 +237,16 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   // question, no Continue), and the claim only when they ask for it.
   const view: "drop" | "night" | "claim" = reading !== null || !found ? "drop" : step === 2 ? "claim" : "night";
   const at = view === "drop" ? 0 : view === "night" ? 1 : 2;
+  // The night is shown whole, never half-made: the phone scans the flyer until the opening and the cuts are in (or
+  // the draft is done without them), and its depth map with them (for a few seconds at most: it starts the phone over).
+  const built = Boolean(draft.reels?.opening) || !drafting;
+  const depthNow: DepthState = draft.depth ? "done" : depthState;
+  useEffect(() => {
+    if (!built || depthNow !== "making") return;
+    const t = setTimeout(() => setWaited(run), 5000);
+    return () => clearTimeout(t);
+  }, [built, depthNow, run]);
+  const building = view === "night" && !(built && (depthNow !== "making" || waited === run));
 
   // What the flyer said, and what it's becoming, at the top of the night (another flyer can replace it).
   const facts = found && (
@@ -243,7 +258,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         <p className="mt-1 text-sm text-[var(--sl-muted)]">And {draft.dates!.length - 1} more {draft.dates!.length === 2 ? "date" : "dates"} from the flyer.</p>
       )}
       {/* Everything the flyer is becoming, ticked off as it lands, while the phone builds it. */}
-      <BuildList draft={draft} drafting={drafting} depth={draft.depth ? "done" : depthState} />
+      <BuildList draft={draft} drafting={drafting} depth={depthNow} />
       <p className="mt-4 text-sm text-[var(--sl-muted)]">
         Anything off? You can change it all once your link is yours.{" "}
         <button type="button" onClick={() => fileRef.current?.click()} className="min-h-11 font-semibold text-[var(--sl-gold)] underline underline-offset-4">
@@ -337,6 +352,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
           <ReelsStep
             draft={draft}
             drafting={drafting}
+            building={building}
             facts={facts}
             onChange={(reels) => update({ reels })}
             onShow={(reel) => {
@@ -361,10 +377,13 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
         )}
       </div>
 
-      {/* The night is for watching: on a phone, the phone comes first. */}
-      <div ref={phoneRef} className={`mx-auto w-full max-w-[300px] lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${view === "night" ? "order-first" : ""}`}>
-        {/* The story shows in the phone as soon as it's written: the organizer watches it being built. */}
-        <Phone draft={draft} reading={reading} core={view !== "drop" || Boolean(draft.reels)} replay={replay} />
+      {/* The night is for watching: on a phone, the phone comes first, whole above the fold (the Claim bar below it). */}
+      <div
+        ref={phoneRef}
+        className={`mx-auto w-full lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${view === "night" ? "order-first max-w-[min(300px,calc(47.9svh-6.6rem))]" : "max-w-[300px]"}`}
+      >
+        {/* The night builds behind a scan of the flyer, then plays from the start, whole. */}
+        <Phone draft={draft} reading={reading} building={building} depth={depthNow} core={view !== "drop" || Boolean(draft.reels)} replay={replay} />
         <p className="mt-4 text-center text-sm text-[var(--sl-muted)]">
           {found ? "Your link, as fans will see it. Tap around." : "Your link, live. It fills in from your flyer."}
         </p>
@@ -377,11 +396,16 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
 function Phone({
   draft,
   reading,
+  building,
+  depth,
   core,
   replay,
 }: {
   draft: StartDraft;
   reading: string | null;
+  /** The night is being made: the flyer, scanned, with how far along it is. */
+  building: boolean;
+  depth: DepthState;
   /** Past step 1: the drafted reels and Core's features. */
   core: boolean;
   /** Bumped to start the phone over, at a reel when given. */
@@ -409,7 +433,7 @@ function Phone({
 
   // A new flyer, its depth map, look, set of reels, their shots (the opening and cuts arrive after the words) or step
   // starts the link over, so the change is seen; typed words, and the shots polished, change in place.
-  const scene = [draft.flyer?.length, Boolean(draft.depth), JSON.stringify(draft.look), JSON.stringify(draft.dates), core && Boolean(draft.reels), Boolean(draft.reels?.opening), core].join("|");
+  const scene = [draft.flyer?.length, Boolean(draft.depth), JSON.stringify(draft.look), JSON.stringify(draft.dates), core && Boolean(draft.reels), Boolean(draft.reels?.opening), core, building].join("|");
   const shown = useRef({ scene: "", n: 0 });
 
   useEffect(() => {
@@ -451,9 +475,66 @@ function Phone({
               <div className="start-scan absolute inset-x-0 h-24" />
             </div>
           )}
+          {reading === null && <Building key={draft.flyer?.length ?? 0} on={building} flyer={draft.flyer} draft={draft} depth={depth} />}
         </div>
       </div>
     </div>
   );
 }
 
+/** How far along the night is, by what's in: read, the words, the shots, the depth. */
+function stageOf(draft: StartDraft, depth: DepthState): { at: number; doing: string } {
+  if (!draft.reels) return { at: 22, doing: "Writing your three reels" };
+  if (!draft.reels.opening) return { at: 50, doing: "Cutting your opening, shot by shot" };
+  if (depth === "making") return { at: 86, doing: "Giving your flyer depth" };
+  return { at: 100, doing: "Your night is ready" };
+}
+
+/**
+ * Over the phone while the night is made: the flyer, scanned, and a bar that
+ * keeps moving between the real milestones (it eases toward the next one
+ * without reaching it), so the wait reads as work being done. Fades away for
+ * the reveal.
+ */
+function Building({ on, flyer, draft, depth }: { on: boolean; flyer?: string; draft: StartDraft; depth: DepthState }) {
+  const { at, doing } = stageOf(draft, depth);
+  const [shown, setShown] = useState(8);
+  useEffect(() => {
+    if (!on) return;
+    const t = setInterval(() => {
+      setShown((p) => {
+        const goal = at >= 100 ? 100 : Math.min(at + 14, 96);
+        // Quick to catch up with a milestone just reached, then a slow creep toward the next.
+        const rate = p < at ? 0.18 : 0.025;
+        return Math.min(goal, p + Math.max(0.05, (goal - p) * rate));
+      });
+    }, 120);
+    return () => clearInterval(t);
+  }, [on, at]);
+  const pct = Math.round(on ? shown : 100);
+  return (
+    <div
+      aria-hidden="true"
+      data-testid="building"
+      data-on={on || undefined}
+      className={`absolute inset-0 overflow-hidden bg-[#0b0710] transition-opacity duration-700 ease-out ${on ? "opacity-100" : "pointer-events-none opacity-0"}`}
+    >
+      {flyer ? (
+        // eslint-disable-next-line @next/next/no-img-element -- the flyer, as a data URL
+        <img src={flyer} alt="" className="absolute inset-0 h-full w-full object-contain opacity-80" />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgb(232_190_90/0.18),transparent_60%)]" />
+      )}
+      {on && <div className="start-scan absolute inset-x-0 h-24" />}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-5 pb-6 pt-16">
+        <div className="flex items-baseline justify-between gap-3 text-[13px] font-semibold text-white">
+          <span>{doing}…</span>
+          <span className="tabular-nums text-[var(--sl-gold)]">{pct}%</span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15">
+          <div className="h-full rounded-full bg-[var(--sl-gold)] transition-[width] duration-150 ease-out" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
