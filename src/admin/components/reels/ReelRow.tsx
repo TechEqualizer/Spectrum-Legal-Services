@@ -131,7 +131,7 @@ function Thumb({ reel }: { reel: EditorReel }) {
   const poster = thumbnailOf(reel.media);
   const show = poster && broken !== poster;
   return (
-    <div className="relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-deep-navy to-royal-blue">
+    <div className="keep-light relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-deep-navy to-royal-blue">
       {show ? (
         // eslint-disable-next-line @next/next/no-img-element -- any link the admin pastes
         <img src={poster} alt="" className="h-full w-full object-cover" onError={() => setBroken(poster)} />

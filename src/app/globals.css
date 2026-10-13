@@ -141,6 +141,108 @@
   .plus-menu { animation: none; }
 }
 
+/* The admin's look: light, dark (the Velvet Rope night), or the device's
+   own setting (docs/plans/11-admin-themes.md). Every admin color is a
+   variable, so the look swaps the palette under the components instead of
+   each component knowing about it. .admin-brand (around the frame) keeps
+   each color's light value, from the event's own theme where it has one;
+   .admin-theme chooses light or dark for each with light-dark(), which
+   follows color-scheme. A browser without light-dark() stays light. */
+.admin-brand {
+  --lt-deep-navy: var(--deep-navy);
+  --lt-royal-blue: var(--royal-blue);
+  --lt-soft-gray: var(--soft-gray);
+  --lt-charcoal: var(--charcoal);
+  --lt-accent-ink: var(--accent-ink, var(--teal-accent));
+  --lt-white: var(--color-white);
+  --lt-gray-50: var(--color-gray-50);
+  --lt-gray-100: var(--color-gray-100);
+  --lt-gray-200: var(--color-gray-200);
+  --lt-gray-300: var(--color-gray-300);
+  --lt-gray-400: var(--color-gray-400);
+  --lt-gray-500: var(--color-gray-500);
+  --lt-gray-600: var(--color-gray-600);
+  --lt-gray-700: var(--color-gray-700);
+  --lt-gray-800: var(--color-gray-800);
+  --lt-gray-900: var(--color-gray-900);
+  --lt-red-50: var(--color-red-50);
+  --lt-red-200: var(--color-red-200);
+  --lt-red-400: var(--color-red-400);
+  --lt-red-500: var(--color-red-500);
+  --lt-red-700: var(--color-red-700);
+  --lt-red-800: var(--color-red-800);
+  --lt-amber-50: var(--color-amber-50);
+  --lt-amber-100: var(--color-amber-100);
+  --lt-amber-200: var(--color-amber-200);
+  --lt-amber-800: var(--color-amber-800);
+  --lt-amber-900: var(--color-amber-900);
+  --lt-teal-700: var(--color-teal-700);
+  --lt-teal-800: var(--color-teal-800);
+  --lt-teal-900: var(--color-teal-900);
+  --lt-green-700: var(--color-green-700);
+}
+.admin-theme[data-theme="light"] { --admin-scheme: light; }
+.admin-theme[data-theme="dark"] { --admin-scheme: dark; }
+.admin-theme[data-theme="auto"] { --admin-scheme: light dark; }
+@supports (color: light-dark(#000, #fff)) {
+  /* Night surfaces from the brand's Velvet Rope palette: a dark plum page,
+     raised cards a step lighter, warm cream words; status colors lifted so
+     they read on the dark. */
+  .admin-theme {
+    color-scheme: var(--admin-scheme);
+    --deep-navy: light-dark(var(--lt-deep-navy), #f4eee4);
+    --royal-blue: light-dark(var(--lt-royal-blue), #ffffff);
+    --soft-gray: light-dark(var(--lt-soft-gray), #0b0812);
+    --charcoal: light-dark(var(--lt-charcoal), #e8e1ec);
+    --accent-ink: light-dark(var(--lt-accent-ink), var(--sky-accent));
+    --color-white: light-dark(var(--lt-white), #17111f);
+    --color-gray-50: light-dark(var(--lt-gray-50), #1b1524);
+    --color-gray-100: light-dark(var(--lt-gray-100), #241c2e);
+    --color-gray-200: light-dark(var(--lt-gray-200), #31283c);
+    --color-gray-300: light-dark(var(--lt-gray-300), #443a51);
+    --color-gray-400: light-dark(var(--lt-gray-400), #776c88);
+    --color-gray-500: light-dark(var(--lt-gray-500), #a196ae);
+    --color-gray-600: light-dark(var(--lt-gray-600), #bdb2c8);
+    --color-gray-700: light-dark(var(--lt-gray-700), #d6cdde);
+    --color-gray-800: light-dark(var(--lt-gray-800), #e7dfed);
+    --color-gray-900: light-dark(var(--lt-gray-900), #f4eee4);
+    --color-red-50: light-dark(var(--lt-red-50), #2e1318);
+    --color-red-200: light-dark(var(--lt-red-200), #6a2a32);
+    --color-red-400: light-dark(var(--lt-red-400), #ff9a9a);
+    --color-red-500: light-dark(var(--lt-red-500), #ff8a8a);
+    --color-red-700: light-dark(var(--lt-red-700), #ffa3a3);
+    --color-red-800: light-dark(var(--lt-red-800), #ffbcbc);
+    --color-amber-50: light-dark(var(--lt-amber-50), #2a2010);
+    --color-amber-100: light-dark(var(--lt-amber-100), #372a13);
+    --color-amber-200: light-dark(var(--lt-amber-200), #5c471b);
+    --color-amber-800: light-dark(var(--lt-amber-800), #f3d27e);
+    --color-amber-900: light-dark(var(--lt-amber-900), #f8e1a4);
+    --color-teal-700: light-dark(var(--lt-teal-700), #74d6d2);
+    --color-teal-800: light-dark(var(--lt-teal-800), #94e1dd);
+    --color-teal-900: light-dark(var(--lt-teal-900), #b6ece9);
+    --color-green-700: light-dark(var(--lt-green-700), #86e5ae);
+  }
+  /* What stays as it is in both looks: the dark bars (the sidebar, the
+     phone's top bar and tab pill) and words on photos. */
+  .admin-theme .keep-light,
+  .admin-theme ::backdrop {
+    color-scheme: light;
+  }
+  /* Menus and sheets opened from those bars wear the chosen look again. */
+  .admin-theme .theme-follow {
+    color-scheme: var(--admin-scheme);
+  }
+  /* The page behind the frame, where a phone scrolls past the end. */
+  html:has(.admin-theme[data-theme="dark"]) {
+    background: #0b0812;
+  }
+  @media (prefers-color-scheme: dark) {
+    html:has(.admin-theme[data-theme="auto"]) {
+      background: #0b0812;
+    }
+  }
+}
+
 /* Cinematic opening scene (CinematicHero). Every color comes from the
    funnel's theme, so each brand gets its own light. Built so a browser that
    skips animations (battery saver, forced dark mode, older phones) still

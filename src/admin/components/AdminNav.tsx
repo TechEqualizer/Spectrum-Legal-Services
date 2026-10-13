@@ -74,7 +74,7 @@ export default function AdminNav() {
   return (
     <nav
       // Exactly the window's height, however short: its lower part scrolls on its own, never the page.
-      className={`bg-deep-navy text-white lg:sticky lg:top-0 lg:z-40 lg:flex lg:h-dvh lg:flex-shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 motion-reduce:transition-none ${folded("lg:w-[4.5rem]", "lg:w-60")}`}
+      className={`keep-light bg-deep-navy text-white lg:sticky lg:top-0 lg:z-40 lg:flex lg:h-dvh lg:flex-shrink-0 lg:flex-col lg:transition-[width] lg:duration-200 motion-reduce:transition-none ${folded("lg:w-[4.5rem]", "lg:w-60")}`}
       aria-label="Admin"
     >
       {/* Phones: one compact bar, the event on the left (tap to switch), Core and the account on the right.
@@ -257,7 +257,7 @@ function Account({ collapsed = false }: { collapsed?: boolean }) {
         </summary>
         {/* Above the page (the nav sits on top, lg:z-40). Folded, it opens beside the photo instead of over the content below. */}
         <div
-          className={`absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:right-auto ${collapsed ? "lg:left-full lg:top-0 lg:ml-3 lg:mt-0" : "lg:left-0"}`}
+          className={`theme-follow absolute right-0 z-50 mt-2 w-60 rounded-xl bg-white p-1.5 text-charcoal shadow-xl ring-1 ring-black/10 lg:right-auto ${collapsed ? "lg:left-full lg:top-0 lg:ml-3 lg:mt-0" : "lg:left-0"}`}
         >
           <p className="truncate px-3 pt-2 text-sm font-semibold text-deep-navy">{name ?? email}</p>
           {name && <p className="truncate px-3 text-xs text-gray-600">{email}</p>}

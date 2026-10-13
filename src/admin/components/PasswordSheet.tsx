@@ -45,7 +45,7 @@ export default function PasswordSheet({ firstTime = false, onClose }: { firstTim
       aria-labelledby={`${id}-title`}
       onCancel={(e) => firstTime && !done && e.preventDefault()}
       onClose={onClose}
-      className="m-auto w-[min(26rem,calc(100vw-2rem))] rounded-2xl bg-white p-0 text-charcoal shadow-2xl backdrop:bg-deep-navy/70"
+      className="theme-follow m-auto w-[min(26rem,calc(100vw-2rem))] rounded-2xl bg-white p-0 text-charcoal shadow-2xl backdrop:bg-deep-navy/70"
     >
       {done ? (
         <div className="p-6 text-center">

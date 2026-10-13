@@ -14,6 +14,8 @@ import PasswordSheet from "@/admin/components/PasswordSheet";
 import Avatar from "@/admin/components/ui/Avatar";
 import { CheckIcon } from "@/admin/components/ui/icons";
 import { runsOrganizer, useAdminSession } from "@/admin/session";
+import { canTheme, setAdminTheme, useChosenTheme } from "@/admin/theme";
+import type { AdminTheme } from "@/admin/theme-cookie";
 import { squareJpeg } from "@/admin/square-photo";
 
 /**
@@ -175,6 +177,11 @@ export default function Settings() {
         </div>
       </section>
 
+      <section aria-labelledby={`${id}-look`}>
+        <h2 id={`${id}-look`} className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-gray-600">Appearance</h2>
+        <Appearance />
+      </section>
+
       <section aria-labelledby={`${id}-account`}>
         <h2 id={`${id}-account`} className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-gray-600">Account</h2>
         <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
@@ -240,6 +247,51 @@ export default function Settings() {
       {fullAccess && <Waitlist />}
 
       {changing && <PasswordSheet onClose={() => setChanging(false)} />}
+    </div>
+  );
+}
+
+const LOOKS: { value: AdminTheme; label: string; page: string; card: string }[] = [
+  { value: "auto", label: "Match device", page: "linear-gradient(135deg, #f2f4f7 50%, #0b0812 50%)", card: "linear-gradient(135deg, #fff 50%, #17111f 50%)" },
+  { value: "light", label: "Light", page: "#f2f4f7", card: "#fff" },
+  { value: "dark", label: "Dark", page: "#0b0812", card: "#17111f" },
+];
+
+/** Light, dark (for checking in at a dark venue), or whatever this phone or computer is set to. */
+function Appearance() {
+  const chosen = useChosenTheme();
+  const id = useId();
+  if (!canTheme()) {
+    return <p className="rounded-xl border border-gray-200 bg-white px-4 py-4 text-sm text-gray-600 sm:px-5">This browser shows the light look. Update it to choose Dark.</p>;
+  }
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white px-4 py-4 sm:px-5">
+      <div role="radiogroup" aria-labelledby={`${id}-label`} className="grid grid-cols-3 gap-2 sm:gap-3">
+        <span id={`${id}-label`} className="sr-only">Appearance</span>
+        {LOOKS.map((look) => (
+          <button
+            key={look.value}
+            type="button"
+            role="radio"
+            aria-checked={chosen === look.value}
+            onClick={() => setAdminTheme(look.value)}
+            className="group flex min-h-11 flex-col items-center gap-2 rounded-xl p-1.5 text-sm font-semibold text-deep-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-accent"
+          >
+            <span
+              aria-hidden="true"
+              className={`relative flex h-16 w-full max-w-28 items-end overflow-hidden rounded-lg p-2 ring-offset-2 ring-offset-white transition ${chosen === look.value ? "ring-2 ring-deep-navy" : "ring-1 ring-gray-300 group-hover:ring-gray-400"}`}
+              style={{ background: look.page }}
+            >
+              <span className="h-7 w-full rounded-md shadow-sm" style={{ background: look.card }} />
+            </span>
+            <span className="flex items-center gap-1">
+              {chosen === look.value && <CheckIcon className="h-4 w-4" />}
+              {look.label}
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-gray-600">Dark is easier on the eyes at a dark venue. Match device follows this phone or computer&apos;s own setting.</p>
     </div>
   );
 }
