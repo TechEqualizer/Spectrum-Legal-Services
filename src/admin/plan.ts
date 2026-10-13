@@ -7,32 +7,40 @@ import { hasFans, type Plan } from "@/lib/plans";
 // fans-only switch, presales): asked once per event per page load and
 // shared. Settings → Plan loads its own, with billing.
 
-const known = new Map<string, Promise<Plan | null>>();
+/** The plan, and whether payments are switched on here (without them there's no Go live button). */
+export type PlanInfo = { plan: Plan; billing: boolean };
 
-function load(eventSlug: string): Promise<Plan | null> {
+const known = new Map<string, Promise<PlanInfo | null>>();
+
+function load(eventSlug: string): Promise<PlanInfo | null> {
   let p = known.get(eventSlug);
   if (!p) {
     p = fetch(`/api/admin/plan?slug=${encodeURIComponent(eventSlug)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { plan?: Plan } | null) => d?.plan ?? null)
+      .then((d: { plan?: Plan; billing?: boolean } | null) => (d?.plan ? { plan: d.plan, billing: Boolean(d.billing) } : null))
       .catch(() => null);
     known.set(eventSlug, p);
   }
   return p;
 }
 
-/** This event's organizer's plan, once known (undefined while loading or if it couldn't be read). */
-export function usePlan(eventSlug: string | undefined): Plan | undefined {
-  const [state, setState] = useState<{ slug: string; plan: Plan | undefined }>({ slug: "", plan: undefined });
+/** This event's organizer's plan and billing: undefined while loading, null if it couldn't be read. */
+export function usePlanInfo(eventSlug: string | undefined): PlanInfo | null | undefined {
+  const [state, setState] = useState<{ slug: string; info: PlanInfo | null | undefined }>({ slug: "", info: undefined });
   useEffect(() => {
     if (!eventSlug) return;
     let live = true;
-    load(eventSlug).then((plan) => live && setState({ slug: eventSlug, plan: plan ?? undefined }));
+    load(eventSlug).then((info) => live && setState({ slug: eventSlug, info }));
     return () => {
       live = false;
     };
   }, [eventSlug]);
-  return state.slug === eventSlug ? state.plan : undefined;
+  return state.slug === eventSlug ? state.info : undefined;
+}
+
+/** This event's organizer's plan, once known (undefined while loading or if it couldn't be read). */
+export function usePlan(eventSlug: string | undefined): Plan | undefined {
+  return usePlanInfo(eventSlug)?.plan;
 }
 
 /**

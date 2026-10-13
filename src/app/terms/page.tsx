@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage, { ContactLines } from "@/components/showlnk/LegalPage";
 import { CONTENT_RULE } from "@/lib/content-rule";
-import { CORE_PRICE, GRACE_DAYS } from "@/lib/plans";
+import { CORE_PRICE, FANS_PRICE, GRACE_DAYS, REFUND_DAYS } from "@/lib/plans";
 
 // The terms organizers agree to, including the content rule for reels.
 
@@ -80,8 +80,9 @@ export default function TermsPage() {
       <p>
         Building is free: you can make your link, its opening and reels, and preview it yourself, without a card. Your link
         goes public on <strong>Core</strong>, for ${CORE_PRICE.month} a month or ${CORE_PRICE.year} a year, plus any tax: your
-        links, reels, results, leads, the Eventbrite connection, unlimited fans, reels only your followers can watch, presales
-        for followers and the fan calendar. Until you go live, and if Core ends, visitors to your link see a &ldquo;Coming
+        links, reels, results, leads and the Eventbrite connection. The <strong>Fans add-on</strong>, for ${FANS_PRICE.month} a
+        month or ${FANS_PRICE.year} a year on top of Core, adds Follow, reels only your followers can watch, presales for
+        followers and the fan calendar. Until you go live, and if Core ends, visitors to your link see a &ldquo;Coming
         soon&rdquo; page; nothing you made is deleted, and going live again puts it back. Nothing is charged without you
         choosing a plan.
       </p>
@@ -89,7 +90,8 @@ export default function TermsPage() {
         Payments are handled by Stripe; Showlnk never sees your card number. Core renews automatically each month or year until
         you cancel, which you can do at any time in Settings → Plan. Cancelling stops the next renewal, and Core stays on until
         the end of the period you&apos;ve paid for. If a payment fails, Core stays on for {GRACE_DAYS} days while the card is
-        retried.
+        retried. If you change your mind within {REFUND_DAYS} days of first going live, ask us and we&apos;ll refund that first
+        payment in full.
       </p>
       <p>
         Moving to Free never deletes your links, results, leads or fans. We&apos;ll email you at least 30 days before a price

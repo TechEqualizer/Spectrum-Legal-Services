@@ -6,6 +6,8 @@ export const CORE_PRICE = { month: 29, year: 290 } as const;
 /** The fans add-on, on top of Core (same cadence as the organizer's Core). */
 export const FANS_PRICE = { month: 15, year: 150 } as const;
 export const TRIAL_DAYS = 14;
+/** Days after first paying in which Showlnk refunds that payment in full, on request (by hand, in Stripe). */
+export const REFUND_DAYS = 7;
 /** Days Core stays on while Stripe retries a declined card. */
 export const GRACE_DAYS = 7;
 

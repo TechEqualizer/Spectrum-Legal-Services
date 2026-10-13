@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useLinkOrigin } from "@/admin/link-origin";
 import { useAdminBusiness, useAdminEvents } from "@/admin/AdminBusiness";
+import { openGoLive } from "@/admin/go-live";
+import { usePlan } from "@/admin/plan";
 import { useResults } from "@/admin/results";
+import { hasCore } from "@/lib/plans";
 import SalesHint from "@/admin/components/SalesHint";
 import CopyButton from "@/admin/components/ui/CopyButton";
 import { saveSourceName, savedSourceName, useSourceLabel } from "@/admin/source-names";
@@ -27,6 +30,9 @@ export default function Links() {
   const event = useAdminEvents().find((e) => e.funnel.slug === funnel.slug);
   const organizer = event?.organizer;
   const labelOf = useSourceLabel(event ? [event] : []);
+  // Not live yet: these links open Coming soon for everyone else, so say so before they post one.
+  const plan = usePlan(funnel.slug);
+  const notLive = Boolean(plan && !hasCore(plan) && plan.status !== "past_due");
   const [preset, setPreset] = useState<string>(SOURCE_PRESETS[0].tag);
   const [custom, setCustom] = useState("");
   const [start, setStart] = useState("");
@@ -82,6 +88,17 @@ export default function Links() {
           {organizer ? "Your bio link, and a tagged link for each other place you share" : "Your link. Give each place you share it its own tag"}, so you can see which one brings {wonLabel}.
         </p>
       </div>
+
+      {notLive && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e8be5a] bg-amber-50/50 px-4 py-3">
+          <p className="min-w-0 flex-1 text-sm text-deep-navy">
+            <span className="font-semibold">Your link is private.</span> Anyone you share it with sees Coming soon until you go live.
+          </p>
+          <button type="button" onClick={() => openGoLive()} className="min-h-11 rounded-lg bg-[#e8be5a] px-4 text-sm font-bold text-[#1a1208] hover:brightness-105">
+            Go live
+          </button>
+        </div>
+      )}
 
       {organizer && (
         <section className="rounded-xl border border-gray-200 bg-white p-5" aria-labelledby="bio-title" data-tour="share-bio">

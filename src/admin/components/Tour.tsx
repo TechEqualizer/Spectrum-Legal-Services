@@ -1,8 +1,12 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { endTour, goToStep, startTour, TOUR_STEPS, tourSeen, useTourStep } from "@/admin/tour";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useMaybeAdminBusiness } from "@/admin/AdminBusiness";
+import { openGoLive } from "@/admin/go-live";
+import { usePlan } from "@/admin/plan";
+import { endTour, goToStep, startTour, tourSeen, useTour } from "@/admin/tour";
+import { hasCore } from "@/lib/plans";
 
 type Box = { top: number; left: number; width: number; height: number };
 
@@ -49,8 +53,10 @@ function place(r: Box | null, card: { width: number; height: number }) {
 /**
  * The guided tour: dims the admin, lights up one real element at a time and
  * explains it in a small card with Back, Next and Skip, moving between pages
- * as it goes. Starts by itself the first time a client lands on Home, and
- * again from the account menu ("Take the tour") or a link with ?tour=1.
+ * as it goes. Right after the sign-up wizard, the welcome tour starts by
+ * itself and ends on Go live (unless they're live already), back on their
+ * welcome. The how-to starts by itself the first time a client lands on
+ * Home, and again from the account menu ("Take the tour") or ?tour=1.
  */
 /** Whether this is the first look at the welcome for this new link (a reload doesn't start the tour again). */
 function firstWelcome(event: string | null): boolean {
@@ -64,7 +70,8 @@ function firstWelcome(event: string | null): boolean {
 }
 
 export default function Tour({ canStart }: { canStart: boolean }) {
-  const n = useTourStep();
+  const tour = useTour();
+  const n = tour?.n ?? null;
   const pathname = usePathname();
   const router = useRouter();
   const id = useId();
@@ -73,11 +80,17 @@ export default function Tour({ canStart }: { canStart: boolean }) {
   const [cardSize, setCardSize] = useState({ width: 352, height: 200 });
   const card = useRef<HTMLDivElement>(null);
   const next = useRef<HTMLButtonElement>(null);
-  const step = n === null ? null : TOUR_STEPS[n];
+  const steps = tour?.steps ?? [];
+  const step = n === null ? null : steps[n];
+  const welcome = tour?.name === "welcome";
+  // Where the welcome tour came from (their welcome card), to go back to when it ends.
+  const home = useRef("/admin/home");
+  // Not live yet: the welcome tour's last step is Go live.
+  const plan = usePlan(useMaybeAdminBusiness()?.funnel.slug);
+  const sell = welcome && Boolean(plan) && !hasCore(plan!) && plan!.status !== "past_due";
 
-  // Right after claiming a link in the sign-up wizard (?welcome=), on a first
-  // visit to Home, or from a link with ?tour=1: start. The welcome card waits
-  // underneath, with their link and what to do next.
+  // Right after claiming a link in the sign-up wizard (?welcome=): the welcome
+  // tour. On a first visit to Home, or from a link with ?tour=1: the how-to.
   useEffect(() => {
     if (!canStart) return;
     const url = new URL(window.location.href);
@@ -85,7 +98,10 @@ export default function Tour({ canStart }: { canStart: boolean }) {
       url.searchParams.delete("tour");
       window.history.replaceState(window.history.state, "", url);
       startTour();
-    } else if (pathname === "/admin/home" && (firstWelcome(url.searchParams.get("welcome")) || !tourSeen())) {
+    } else if (pathname === "/admin/home" && firstWelcome(url.searchParams.get("welcome"))) {
+      home.current = url.pathname + url.search;
+      startTour("welcome");
+    } else if (pathname === "/admin/home" && !tourSeen()) {
       startTour();
     }
     // Once per page load.
@@ -159,17 +175,28 @@ export default function Tour({ canStart }: { canStart: boolean }) {
     if (ready) next.current?.focus({ preventScroll: true });
   }, [ready, n]);
 
+  // Over: the welcome tour goes back to their welcome card, and its last step opens Go live there.
+  const finish = useCallback(
+    (goLive: boolean) => {
+      endTour();
+      if (!welcome) return;
+      if (window.location.pathname !== "/admin/home") router.push(home.current);
+      if (goLive) openGoLive();
+    },
+    [welcome, router]
+  );
+
   // Escape skips; arrows move; Tab stays in the card.
   useEffect(() => {
     if (n === null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        endTour();
+        finish(false);
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        if (n < TOUR_STEPS.length - 1) goToStep(n + 1);
-        else endTour();
+        if (n < steps.length - 1) goToStep(n + 1);
+        else finish(sell);
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         if (n > 0) goToStep(n - 1);
@@ -182,11 +209,11 @@ export default function Tour({ canStart }: { canStart: boolean }) {
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [n]);
+  }, [n, steps.length, sell, finish]);
 
   if (n === null || !step) return null;
 
-  const last = n === TOUR_STEPS.length - 1;
+  const last = n === steps.length - 1;
   const lit = ready && box;
   const pos = ready ? place(lit ? box : null, cardSize) : null;
 
@@ -220,22 +247,23 @@ export default function Tour({ canStart }: { canStart: boolean }) {
         {/* New each step (and once it's placed), so each card fades in. */}
         <div key={`${n}-${pos ? "on" : "off"}`} className="animate-tour-in">
           <p className="text-xs font-bold uppercase tracking-wider text-gray-600">
-            {n === 0 ? "Quick tour" : `Step ${n} of ${TOUR_STEPS.length - 1}`}
+            {n === 0 ? "Quick tour" : `Step ${n} of ${steps.length - 1}`}
           </p>
           <h2 id={`${id}-title`} className="mt-1 text-lg font-bold leading-snug text-deep-navy">
             {step.title}
+            {step.tag && <span className="ml-2 inline-block translate-y-[-2px] rounded-full bg-[#e8be5a]/30 px-2 py-0.5 align-middle text-xs font-semibold text-[#5c4410]">{step.tag}</span>}
           </h2>
           <p id={`${id}-body`} className="mt-1.5 text-sm leading-relaxed text-gray-700">
             {step.body}
           </p>
           <div className="mt-4 flex items-center gap-1" aria-hidden="true">
-            {TOUR_STEPS.slice(1).map((_, i) => (
+            {steps.slice(1).map((_, i) => (
               <span key={i} className={`h-1.5 rounded-full transition-all motion-reduce:transition-none ${i + 1 === n ? "w-4 bg-deep-navy" : i + 1 < n ? "w-1.5 bg-deep-navy/50" : "w-1.5 bg-gray-300"}`} />
             ))}
           </div>
           <div className="mt-4 flex items-center gap-2">
             {!last && (
-              <button type="button" onClick={endTour} className="mr-auto min-h-11 rounded-lg px-2 text-sm font-semibold text-gray-600 hover:text-deep-navy">
+              <button type="button" onClick={() => finish(false)} className="mr-auto min-h-11 rounded-lg px-2 text-sm font-semibold text-gray-600 hover:text-deep-navy">
                 {n === 0 ? "Not now" : "Skip tour"}
               </button>
             )}
@@ -252,10 +280,10 @@ export default function Tour({ canStart }: { canStart: boolean }) {
             <button
               ref={next}
               type="button"
-              onClick={() => (last ? endTour() : goToStep(n + 1))}
-              className="min-h-11 rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue"
+              onClick={() => (last ? finish(sell) : goToStep(n + 1))}
+              className={`min-h-11 rounded-lg px-5 text-sm font-bold ${last && sell ? "bg-[#e8be5a] text-[#1a1208] hover:brightness-105" : "bg-deep-navy text-white hover:bg-royal-blue"}`}
             >
-              {n === 0 ? "Start the tour" : last ? "Done" : "Next"}
+              {n === 0 ? "Start the tour" : last ? (sell ? "Go live" : "Done") : "Next"}
             </button>
           </div>
         </div>

@@ -81,14 +81,46 @@ check('lands on Home, signed in', /\/admin\/home\?welcome=golden-hour-halloween$
 check('welcomed by name', await p.getByRole('heading', { name: 'Welcome to Showlnk, Golden Hour' }).isVisible());
 const welcome = p.getByRole('region', { name: 'Your link is ready' });
 check('your link is ready', await welcome.isVisible() && await welcome.getByRole('link', { name: 'localhost:3002/f/golden-hour' }).isVisible());
-check('what to do next', await welcome.getByRole('button', { name: 'Open your reels' }).isVisible() && await welcome.getByRole('button', { name: 'Take the tour again' }).isVisible());
-// The guided tour starts by itself, over the welcome; skipping it leaves the welcome in place.
+check('what to do next', await welcome.getByRole('button', { name: 'Open your reels' }).isVisible() && await welcome.getByRole('button', { name: 'Take the tour' }).isVisible() && await welcome.getByRole('button', { name: 'Go live' }).isVisible());
+// The welcome tour starts by itself, over the welcome: five stops on what the link does for their night,
+// the last the Fans add-on, then Go live, back on the welcome (docs/plans/03-billing.md, "The tour sells, then asks").
 const tour = p.locator('[data-testid=tour]');
-check('the tour starts by itself', await tour.isVisible() && await tour.getByText('Welcome to Showlnk').isVisible());
-await p.keyboard.press('Escape'); await settle(p, 400);
-check('skipping it leaves the welcome', (await tour.count()) === 0 && await welcome.isVisible() && /\/admin\/home\?welcome=/.test(p.url()));
+const tourCard = tour.getByRole('dialog');
+check('the welcome tour starts by itself', await tour.isVisible() && await tour.getByText("Here's what your night just got").isVisible());
+await tourCard.getByRole('button', { name: 'Start the tour' }).click();
+const stops = [];
+for (let i = 0; i < 6; i++) {
+  await settle(p, 700);
+  stops.push(await tourCard.getByRole('heading').innerText());
+  if (i === 4) break;
+  await tourCard.getByRole('button', { name: 'Next' }).click();
+}
+check('five stops, each what it does for them', JSON.stringify(stops.map((t) => t.replace(/\s*Add-on$/, ''))) === JSON.stringify(['Your flyer is now a trailer', 'One link, every night', 'Know which post sold tickets', "See who's coming", 'Turn viewers into your own list']), JSON.stringify(stops));
+check('the last, the Fans add-on, marked as one', /Add-on$/.test(stops[4]) && /\/admin\/leads/.test(p.url()));
+await p.screenshot({ path: 'claim-tour-fans-1279.png' });
+await tourCard.getByRole('button', { name: 'Go live' }).click();
+const sheet = p.locator('[data-testid=go-live]');
+await sheet.waitFor({ timeout: 8000 }).catch(() => {});
+await settle(p, 1200);
+check('it ends on Go live, back on their welcome', await sheet.isVisible() && (await tour.count()) === 0 && /\/admin\/home\?welcome=golden-hour-halloween$/.test(p.url()), p.url());
+const said = (await sheet.innerText()).replace(/\s+/g, ' ');
+check('Go live: their night, and what the public sees now', /Put .+ in front of fans\./.test(said) && said.includes('Right now anyone who opens your link sees Coming soon.'), said);
+const plans = sheet.getByRole('radio');
+check('two plans side by side, Core chosen, the add-on never ticked for them', (await sheet.getByRole('group', { name: 'Plan' }).getByRole('radio').count()) === 2 && await sheet.getByRole('radio', { name: /^Core \$/ }).isChecked() && !(await sheet.getByRole('radio', { name: /^Core \+ Fans/ }).isChecked()), await plans.count());
+check('yearly first, two months free', (await sheet.getByRole('radio', { name: 'Yearly · 2 months free' }).getAttribute('aria-checked')) === 'true' && await sheet.getByRole('button', { name: 'Go live · $290 today' }).isVisible());
+await sheet.getByRole('radio', { name: /^Core \+ Fans/ }).check();
+check('with the Fans add-on: $440 a year', await sheet.getByRole('button', { name: 'Go live · $440 today' }).isVisible());
+await sheet.getByRole('radio', { name: 'Monthly' }).click();
+check('monthly: $44', await sheet.getByRole('button', { name: 'Go live · $44 today' }).isVisible());
+check('what is charged, and the refund promise', said.includes('Full refund in your first 7 days: just ask.') && said.includes('Charged today'));
+await p.screenshot({ path: 'claim-go-live-1279.png' });
+await sheet.getByRole('button', { name: 'Keep building privately' }).click(); await settle(p, 400);
+check('keep building privately: closes it, the welcome stays', !(await sheet.isVisible().catch(() => false)) && await welcome.isVisible());
 await p.reload(); await settle(p, 1500);
-check('a reload doesn\'t start it again', (await tour.count()) === 0 && await welcome.isVisible());
+check('a reload doesn\'t start the tour again', (await tour.count()) === 0 && await welcome.isVisible() && !(await sheet.count()));
+await welcome.getByRole('button', { name: 'Go live' }).click(); await settle(p, 600);
+check('the welcome\'s Go live opens the same sheet', await sheet.isVisible());
+await p.keyboard.press('Escape'); await settle(p, 300);
 const four = (await p.getByText('The four things').locator('..').locator('..').innerText().catch(() => '')).replace(/\s+/g, ' ');
 check('Home: the opening scene from the flyer, and each reel its flyer cut', /Opening scene .*Ready/.test(four) && (four.match(/Flyer cut/g) ?? []).length === 3 && !/Needs video/.test(four) && /all set/.test(four), four);
 await p.screenshot({ path: 'claim-home-1279.png', fullPage: true });

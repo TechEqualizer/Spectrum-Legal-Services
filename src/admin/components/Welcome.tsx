@@ -1,18 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useLinkOrigin } from "@/admin/link-origin";
 import type { AdminEvent } from "@/admin/AdminBusiness";
 import CopyButton from "@/admin/components/ui/CopyButton";
-import { START_CORE_HREF, usePlan } from "@/admin/plan";
+import { openGoLive } from "@/admin/go-live";
+import { usePlan } from "@/admin/plan";
 import { startTour } from "@/admin/tour";
 import { CORE_PRICE, hasCore } from "@/lib/plans";
 
 /**
  * Home, right after an organizer claims their link in the sign-up wizard
  * (/admin/home?welcome=<event>): their link, private until they go live (it
- * opens their own preview), and what to do next. The tour starts over it
- * first; it's here when the tour ends.
+ * opens their own preview), and what to do next. The welcome tour starts
+ * over it first, comes back to it when it ends and opens Go live over it.
  */
 export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent; onOpen: (slug: string) => void; onClose: () => void }) {
   const origin = useLinkOrigin();
@@ -39,14 +39,14 @@ export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent;
           title: "Go live",
           text: `Fans see Coming soon until you do. $${CORE_PRICE.month} a month or $${CORE_PRICE.year} a year.`,
           action: (
-            <Link href={START_CORE_HREF} className="inline-flex min-h-11 items-center rounded-lg bg-[#e8be5a] px-4 text-sm font-bold text-[#1a1208] hover:brightness-105">
+            <button type="button" onClick={() => openGoLive()} className="inline-flex min-h-11 items-center rounded-lg bg-[#e8be5a] px-4 text-sm font-bold text-[#1a1208] hover:brightness-105">
               Go live
-            </Link>
+            </button>
           ),
         },
     {
       title: "Find your way around",
-      text: "A minute's tour of Home, your reels, your links and your fans, any time.",
+      text: "A walk through Home, your reels, your links and your fans, any time.",
       action: (
         <button
           type="button"
@@ -56,7 +56,7 @@ export default function Welcome({ event, onOpen, onClose }: { event: AdminEvent;
           }}
           className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-deep-navy hover:border-deep-navy"
         >
-          Take the tour again
+          Take the tour
         </button>
       ),
     },

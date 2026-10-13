@@ -3,10 +3,12 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * The guided tour of the admin: a short walk through the places a client
- * uses, each step lighting up the real thing on the page. Steps point at
- * elements by their data-tour name; a step whose element isn't on screen
- * (a phone layout without it) shows its card in the middle instead.
+ * The guided tours of the admin, each step lighting up the real thing on the
+ * page. Steps point at elements by their data-tour name; a step whose element
+ * isn't on screen (a phone layout without it) shows its card in the middle
+ * instead. Two tours: the welcome, right after the sign-up wizard, which
+ * shows what the link does for their night and ends on Go live; and the
+ * how-to, from the account menu, a walk through the places a client uses.
  */
 export type TourStep = {
   /** The page the step is on. */
@@ -15,8 +17,55 @@ export type TourStep = {
   target?: string;
   title: string;
   body: string;
+  /** A small tag beside the title, like "Add-on" for what the Fans add-on does. */
+  tag?: string;
 };
 
+/**
+ * The welcome tour (docs/plans/03-billing.md, "The tour sells, then asks"):
+ * five stops on their own night, each what it does for them rather than
+ * where a button is, ending on Go live while the value is fresh.
+ */
+export const WELCOME_STEPS: TourStep[] = [
+  {
+    path: "/admin/home",
+    title: "Here's what your night just got",
+    body: "Five stops, one minute: what your link does for you once it's live.",
+  },
+  {
+    path: "/admin",
+    target: "reels-order",
+    title: "Your flyer is now a trailer",
+    body: "The opening and three reels play full screen, right where fans already scroll, with Tickets one tap away.",
+  },
+  {
+    path: "/admin/links",
+    target: "share-bio",
+    title: "One link, every night",
+    body: "Put it in your bio once. It always opens your next night, so you never change it again.",
+  },
+  {
+    path: "/admin/links",
+    target: "share-builder",
+    title: "Know which post sold tickets",
+    body: "A link for each story, promoter and flyer QR code. Results shows which one sold, so you post more of what works.",
+  },
+  {
+    path: "/admin/overview",
+    target: "nav-results",
+    title: "See who's coming",
+    body: "Who watched, who watched to the end and who tapped Tickets, for every reel. Put your best one first.",
+  },
+  {
+    path: "/admin/leads",
+    target: "people-tabs",
+    title: "Turn viewers into your own list",
+    tag: "Add-on",
+    body: "Everyone watching can follow you. They hear about your next night first, with presales and reels only they can see.",
+  },
+];
+
+/** The how-to tour: where everything is. */
 export const TOUR_STEPS: TourStep[] = [
   {
     path: "/admin/home",
@@ -106,34 +155,40 @@ export const TOUR_STEPS: TourStep[] = [
 // Seen once on this device: it doesn't start by itself again.
 const SEEN_KEY = "admin_tour";
 
-let step: number | null = null;
+export type TourName = "welcome" | "howto";
+type State = { name: TourName; steps: TourStep[]; n: number };
+
+let state: State | null = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
-export function useTourStep() {
+/** The tour that's on and its step, or null. */
+export function useTour(): State | null {
   return useSyncExternalStore(
     (onChange) => {
       listeners.add(onChange);
       return () => listeners.delete(onChange);
     },
-    () => step,
+    () => state,
     () => null
   );
 }
 
-export function startTour() {
-  step = 0;
+/** The how-to tour unless told otherwise (the welcome starts after the sign-up wizard). */
+export function startTour(name: TourName = "howto") {
+  state = { name, steps: name === "welcome" ? WELCOME_STEPS : TOUR_STEPS, n: 0 };
   emit();
 }
 
 export function goToStep(n: number) {
-  step = Math.max(0, Math.min(TOUR_STEPS.length - 1, n));
+  if (!state) return;
+  state = { ...state, n: Math.max(0, Math.min(state.steps.length - 1, n)) };
   emit();
 }
 
 /** Skipped or finished: remembered, so it won't start by itself again. */
 export function endTour() {
-  step = null;
+  state = null;
   try {
     localStorage.setItem(SEEN_KEY, "done");
   } catch {}

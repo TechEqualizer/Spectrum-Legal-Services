@@ -2,13 +2,15 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { CheckIcon } from "@/admin/components/ui/icons";
+import { openGoLive } from "@/admin/go-live";
 
 /**
  * Publishing, with the care it deserves: it rewrites the link in their bio
  * and on printed QR codes. First what's about to change and Publish now;
  * then the link, updated, with View live, Copy link and Share, so the next
  * thing they do is post it. When the link isn't live yet (not paid), it says
- * the edits are saved to it and only they can see them.
+ * the edits are saved to it and only they can see them, opens their private
+ * preview, and offers Go live.
  */
 export default function PublishSheet({
   step,
@@ -96,14 +98,14 @@ export default function PublishSheet({
           </span>
           <h2 id={`${id}-title`} className="mt-3 text-xl font-bold text-deep-navy">{live ? "Your link is updated" : "Saved to your link"}</h2>
           <p className="mt-1 text-sm text-gray-600">
-            {live ? "Post it, or share it where your fans are." : "Only you can see it until you go live. Go live from Settings, then share it."}
+            {live ? "Post it, or share it where your fans are." : "Only you can see it for now. Go live and everyone who opens it sees this."}
           </p>
           <p className="mt-4 break-all rounded-xl bg-white px-4 py-3 text-sm font-semibold text-deep-navy">{shown}</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <button type="button" onClick={copy} className="min-h-11 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray">
               <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
             </button>
-            <a href={link} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray">
+            <a href={live ? link : link.replace(/^\/f\//, "/admin/link/")} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-deep-navy hover:bg-soft-gray">
               View {live ? "live" : "your link"}
             </a>
             {canShare && live && (
@@ -116,9 +118,27 @@ export default function PublishSheet({
               </button>
             )}
           </div>
-          <button type="button" onClick={() => ref.current?.close()} className="mt-4 min-h-11 w-full rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue">
-            Done
-          </button>
+          {live ? (
+            <button type="button" onClick={() => ref.current?.close()} className="mt-4 min-h-11 w-full rounded-lg bg-deep-navy px-5 text-sm font-bold text-white hover:bg-royal-blue">
+              Done
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  ref.current?.close();
+                  openGoLive();
+                }}
+                className="mt-4 min-h-11 w-full rounded-lg bg-[#e8be5a] px-5 text-sm font-bold text-[#1a1208] hover:brightness-105"
+              >
+                Go live
+              </button>
+              <button type="button" onClick={() => ref.current?.close()} className="mt-1 min-h-11 w-full rounded-lg px-5 text-sm font-semibold text-gray-600 hover:bg-white hover:text-deep-navy">
+                Not yet
+              </button>
+            </>
+          )}
         </div>
       )}
     </dialog>
