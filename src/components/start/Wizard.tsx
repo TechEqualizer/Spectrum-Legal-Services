@@ -259,8 +259,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
       )}
       {/* Everything the flyer is becoming, ticked off as it lands, while the phone builds it. */}
       <BuildList draft={draft} drafting={drafting} depth={depthNow} />
-      <p className="mt-4 text-sm text-[var(--sl-muted)]">
-        Anything off? You can change it all once your link is yours.{" "}
+      <p className="mt-2 text-sm text-[var(--sl-muted)]">
         <button type="button" onClick={() => fileRef.current?.click()} className="min-h-11 font-semibold text-[var(--sl-gold)] underline underline-offset-4">
           Use a different flyer
         </button>
@@ -274,7 +273,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
   );
 
   return (
-    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 pb-24 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16 lg:pt-10">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 pb-24 pt-3 sm:px-8 sm:pt-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16 lg:pt-10">
       <div className="min-w-0">
         <ol aria-label="Steps" className="grid grid-cols-3 gap-2">
           {STEPS.map((label, i) => (
@@ -354,7 +353,6 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
             drafting={drafting}
             building={building}
             facts={facts}
-            onChange={(reels) => update({ reels })}
             onShow={(reel) => {
               show(reel);
               if (window.matchMedia("(max-width: 1023px)").matches) phoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -380,7 +378,7 @@ export default function Wizard({ invite, readsLeft: initialReads }: { invite: st
       {/* The night is for watching: on a phone, the phone comes first, whole above the fold (the Claim bar below it). */}
       <div
         ref={phoneRef}
-        className={`mx-auto w-full lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${view === "night" ? "order-first max-w-[min(300px,calc(47.9svh-6.6rem))]" : "max-w-[300px]"}`}
+        className={`mx-auto w-full lg:sticky lg:top-8 lg:order-none lg:max-w-none lg:self-start ${view === "night" ? "order-first max-w-[min(300px,calc(47.9svh-5.1rem))]" : "max-w-[300px]"}`}
       >
         {/* The night builds behind a scan of the flyer, then plays from the start, whole. */}
         <Phone draft={draft} reading={reading} building={building} depth={depthNow} core={view !== "drop" || Boolean(draft.reels)} replay={replay} />

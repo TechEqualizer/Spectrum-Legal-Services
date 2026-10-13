@@ -1,6 +1,5 @@
 "use client";
 
-import { REEL_ROLES } from "@/lib/funnel-draft";
 import type { StartDraft } from "@/lib/start-draft";
 
 /** Where the flyer's depth map is: being made, made, or not made on this device (then the line isn't shown). */
@@ -18,47 +17,30 @@ type State = "done" | "working" | "fallback";
  */
 export default function BuildList({ draft, drafting, depth }: { draft: StartDraft; drafting: boolean; depth: DepthState }) {
   const reels = draft.reels?.reels ?? [];
-  const cuts = reels.filter((r) => r.cut).length;
   const swatches = draft.look?.palette?.slice(0, 5) ?? [];
-  const opening = Boolean(draft.reels?.opening);
-  const shot = [opening && "The opening", cuts && `${cuts} ${cuts === 1 ? "reel" : "reels"}`].filter(Boolean).join(" and ");
+  const shot = Boolean(draft.reels?.opening) || reels.some((r) => r.cut);
+  // What each piece does for their night, in a line; the flyer's colors are the only detail (they show it's theirs).
   const lines: { key: string; state: State; title: string; detail?: React.ReactNode }[] = [
-    { key: "night", state: "done", title: "Your night, its dates and venue", detail: "Read from your flyer" },
+    { key: "night", state: "done", title: "Your night, ready to share" },
     ...(draft.look
       ? [
           {
             key: "look",
             state: "done" as State,
-            title: "Your colors and type",
+            title: "Your flyer's look on every screen",
             detail: swatches.length ? (
               <span className="flex gap-1.5" aria-label="Your flyer's colors">
                 {swatches.map((c) => (
                   <span key={c} className="size-3.5 rounded-full border border-white/15" style={{ backgroundColor: c }} />
                 ))}
               </span>
-            ) : (
-              "Taken from your flyer"
-            ),
+            ) : undefined,
           },
         ]
       : []),
-    {
-      key: "reels",
-      state: reels.length ? "done" : drafting ? "working" : "fallback",
-      title: "Three reels that sell your night",
-      detail: reels.length
-        ? reels.map((r) => r.title).join(" · ")
-        : drafting
-          ? `Writing ${Object.values(REEL_ROLES).join(", ")}…`
-          : "They start from your flyer's basics",
-    },
-    {
-      key: "shots",
-      state: shot ? "done" : drafting ? "working" : "fallback",
-      title: "An opening and every reel, cut from your flyer",
-      detail: shot ? `${shot}, shot by shot like a trailer` : drafting ? "Choosing the shots on your flyer…" : "They play over your flyer",
-    },
-    ...(depth === "none" ? [] : [{ key: "depth", state: (depth === "done" ? "done" : "working") as State, title: "Your flyer, in 3D", detail: depth === "done" ? "Near things move more than far ones" : "Finding what's near and far…" }]),
+    { key: "reels", state: reels.length ? "done" : drafting ? "working" : "fallback", title: "Three reels that sell tickets" },
+    { key: "shots", state: shot ? "done" : drafting ? "working" : "fallback", title: "A trailer that stops the scroll" },
+    ...(depth === "none" ? [] : [{ key: "depth", state: (depth === "done" ? "done" : "working") as State, title: "Depth that pulls fans in" }]),
   ];
   const left = lines.filter((l) => l.state === "working").length;
   const basics = lines.some((l) => l.state === "fallback");

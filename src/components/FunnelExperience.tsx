@@ -257,15 +257,16 @@ export default function FunnelExperience({
         </ul>
         </>
       )}
-      <div className="mt-4 flex gap-2.5">
+      {/* Side by side when both fit; a long label puts Tickets on its own row rather than cutting either off. */}
+      <div className="mt-4 flex flex-wrap gap-2.5">
         <button
           type="button"
           onClick={() => startAt(peekReel)}
           {...fx}
           className={
             ticketsFirst
-              ? `${GLASS} order-2 gap-2 px-5 max-[380px]:px-4`
-              : `${PRIMARY} flex-1 gap-2.5 px-4`
+              ? `${GLASS} order-2 grow gap-2 px-5 max-[380px]:px-4`
+              : `${PRIMARY} grow gap-2.5 px-4`
           }
         >
           <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l14 8-14 8V4z" /></svg>
@@ -280,7 +281,7 @@ export default function FunnelExperience({
             onClick={() => trackReelEvent(funnel, reelFor(onSale.id), "cta_clicked")}
             {...fx}
             aria-label={`${brand.copy.ticketsPrimary ?? "Get tickets"}: ${onSale.name}, ${formatEventDate(onSale)}, ${eventTime(onSale)}${onSale.price ? `, ${onSale.price}` : ""}`}
-            className={ticketsFirst ? `${PRIMARY} order-1 flex-1 px-4` : `${GLASS} px-5 max-[380px]:px-4`}
+            className={ticketsFirst ? `${PRIMARY} order-1 grow px-4` : `${GLASS} grow px-5 max-[380px]:px-4`}
           >
             {/* With several dates, the button says which one it sells. */}
             {single

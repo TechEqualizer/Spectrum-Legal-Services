@@ -114,7 +114,8 @@ export type LinkOptions = {
 /** The link the draft makes so far: the funnel, and what's "published" on it. */
 export function draftLink(d: StartDraft, { core = false, timeZone = browserZone() }: LinkOptions = {}): { funnel: Funnel; publication: Publication } {
   const name = nightName(d);
-  const funnel = newClientEvent(name, { slug: "your-night", name });
+  // Under the name the claim will suggest for them (the part before a colon), not the whole night's title.
+  const funnel = newClientEvent(suggestedName(d) || name, { slug: "your-night", name });
   const events = d.dates?.length ? draftEvents(d.dates, timeZone) : undefined;
   const flyer = d.flyer ? { kind: "image" as const, src: d.flyer, fit: "poster" as const, ...(d.depth ? { depth: d.depth } : {}) } : undefined;
 

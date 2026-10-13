@@ -33,9 +33,9 @@ export default async function StartPage({ searchParams }: Props) {
 
   return (
     <div className={`sl ${show.variable} font-sans`}>
-      <header className="mx-auto flex max-w-6xl items-center px-5 py-5 sm:px-8">
+      <header className="mx-auto flex max-w-6xl items-center px-5 py-3 sm:px-8 sm:py-5">
         <Link href="/" aria-label="Showlnk home" className="flex min-h-11 items-center">
-          <ShowlnkLogo eager />
+          <ShowlnkLogo eager className="h-6 w-auto sm:h-8" />
         </Link>
       </header>
       <main id="main-content">

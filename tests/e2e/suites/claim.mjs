@@ -30,8 +30,7 @@ await p.locator('input[type=file]').setInputFiles(flyer);
 await p.getByText('From your flyer', { exact: true }).waitFor({ timeout: 15000 }).catch(() => {});
 await p.waitForTimeout(1500);
 await p.getByRole('button', { name: 'Play The Night in the phone' }).waitFor({ timeout: 10000 }).catch(() => {});
-await p.locator('details summary').filter({ hasText: 'Change the words' }).click();
-await p.getByLabel('Title').first().fill('Masks on, Motor City');
+check('step 2 is for watching: nothing to edit before the claim', !(await p.getByText('Change the words').count()) && !(await p.getByRole('textbox').count()));
 await p.getByRole('button', { name: 'Claim this link' }).click();
 
 // Step 3.
@@ -129,7 +128,7 @@ await p.screenshot({ path: 'claim-home-1279.png', fullPage: true });
 const event = await (await fetch(`${DB}/rest/v1/event_funnels?slug=eq.golden-hour-halloween`)).json();
 check('the night, under their organizer', event[0]?.organizer_slug === 'golden-hour' && event[0]?.data?.brand?.name === 'Golden Hour');
 const pub = (await (await fetch(`${DB}/rest/v1/funnel_publications?slug=eq.golden-hour-halloween`)).json())[0]?.data;
-check('published with their reels', JSON.stringify(pub?.reels?.map((r) => r.role)) === '["the_night","your_people","last_call"]' && pub?.screen?.title === 'Masks on, Motor City', JSON.stringify(pub?.screen));
+check('published with their reels', JSON.stringify(pub?.reels?.map((r) => r.role)) === '["the_night","your_people","last_call"]' && pub?.screen?.title === 'Masks on, Detroit', JSON.stringify(pub?.screen));
 check('in their flyer\'s colors', Boolean(pub?.look?.colors), JSON.stringify(pub?.look));
 check('not the preview extras', !pub?.reels?.some((r) => r.visibility === 'fans') && !pub?.events?.some((e) => e.presale) && !String(JSON.stringify(pub)).includes('data:image'));
 // Their flyer, kept: stored in the event's folder, the opening scene, behind each reel, and the look's flyer.
@@ -154,15 +153,15 @@ check('the dates as rows', dates.length === 2, JSON.stringify(dates));
 // Their link: Coming soon for the public until they go live (docs/plans/03-billing.md).
 const fan = await (await b.newContext()).newPage();
 await fan.goto(B + '/f/golden-hour-halloween'); await settle(fan, 1000);
-check('not live yet: the public sees Coming soon', await fan.getByText('Coming soon', { exact: true }).isVisible() && await fan.getByRole('heading', { level: 1, name: 'Golden Hour' }).isVisible() && !(await fan.getByText('Masks on, Motor City').count()));
+check('not live yet: the public sees Coming soon', await fan.getByText('Coming soon', { exact: true }).isVisible() && await fan.getByRole('heading', { level: 1, name: 'Golden Hour' }).isVisible() && !(await fan.getByText('Masks on, Detroit').count()));
 // Live (as if paid): the night itself.
 await goLive('golden-hour');
 await until(async () => { await fan.goto(B + '/f/golden-hour-halloween'); await settle(fan, 1500); return !(await fan.getByText('Coming soon', { exact: true }).count()); });
 // The opening plays first; a tap skips it, and the title comes up.
 check('the link opens on the flyer\'s opening', await fan.getByText('Masks on.', { exact: true }).first().waitFor({ timeout: 8000 }).then(() => true, () => false));
 await fan.mouse.click(200, 300);
-await fan.getByText('Masks on, Motor City').first().waitFor({ timeout: 5000 }).catch(() => {});
-check('the night is live, in their words (a tap skips the opening)', await fan.getByText('Masks on, Motor City').first().isVisible().catch(() => false));
+await fan.getByText('Masks on, Detroit').first().waitFor({ timeout: 5000 }).catch(() => {});
+check('the night is live, in their words (a tap skips the opening)', await fan.getByText('Masks on, Detroit').first().isVisible().catch(() => false));
 // They signed up themselves: Follow is on for them, and Core's presale and fans-only parts once live.
 await fan.getByRole('button', { name: /Sneak peek inside|Step inside/ }).first().click().catch(() => {});
 const followShown = fan.getByText('Follow', { exact: true }).locator('visible=true').first();

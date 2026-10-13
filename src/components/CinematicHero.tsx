@@ -113,7 +113,8 @@ function Hero({ funnel, revealed, eyebrow, actions, paused = false, onSwipeUp }:
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6">
         <div className="flex items-center justify-between gap-4">
-          <div className="shrink-0">
+          {/* A long name wraps rather than running off the screen. */}
+          <div className="min-w-0">
             <BrandLogo brand={brand} size="sm" eager />
           </div>
           {brand.byline && (
