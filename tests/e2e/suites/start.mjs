@@ -92,6 +92,16 @@ check('the phone: the opening plays, with the flyer\'s words', playing && !(awai
 check('the phone: a shot too small to stay sharp was widened, an unknown move dropped', !(await phone.getByText('Dropped', { exact: true }).count()));
 await phone.getByText('Masks on, Detroit').first().waitFor({ timeout: 15000 }).catch(() => {});
 check('the phone: then the drafted opening\'s title', await phone.getByText('Masks on, Detroit').first().isVisible().catch(() => false));
+// Tickets in the phone never leaves the wizard: it says where it goes on the live link instead.
+let opened = 0;
+const countPages = () => { opened++; };
+p.context().on('page', countPages);
+const before = p.url();
+await phone.getByRole('link', { name: /tickets/i }).first().click({ timeout: 8000 }).catch(() => {});
+await p.waitForTimeout(800);
+const note = await phone.getByTestId('preview-note').innerText().catch(() => '');
+check('Tickets in the phone: stays in the wizard, and says where it goes live', opened === 0 && p.url() === before && /On your live link, this opens/.test(note), `${opened} pages, note "${note}"`);
+p.context().off('page', countPages);
 check('the drafting read counted once', (await (await admin.request.get(B + '/api/admin/invites')).json()).invites.find((i) => i.note === 'Velvet Room')?.flyer_reads === 1);
 
 // A tap on a part plays it in the phone.

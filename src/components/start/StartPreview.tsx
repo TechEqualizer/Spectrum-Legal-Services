@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FunnelExperience from "@/components/FunnelExperience";
 import { FollowProvider, type FollowTarget } from "@/components/follow/follow";
 import type { Funnel } from "@/data/funnel-types";
@@ -24,10 +24,33 @@ type State = Omit<StartState, "type"> & { key: number };
 /**
  * The phone beside the sign-up wizard: the real funnel player, showing the
  * link the organizer's draft makes. Only the wizard on this site drives it,
- * and nothing in it is a visit or sends anything (preview mode).
+ * and nothing in it is a visit or sends anything (preview mode). No link in
+ * it leaves the wizard: a tap on Tickets (or any link) says where it goes on
+ * the live link instead.
  */
 export default function StartPreview() {
   const [state, setState] = useState<State | null>(null);
+  const [note, setNote] = useState("");
+  const hide = useRef(0);
+
+  // Links stay in the phone: say where they'd go, a moment, instead of leaving the wizard for them.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.getAttribute("href")?.startsWith("#")) return;
+      e.preventDefault();
+      const url = new URL(a.href, window.location.href);
+      const where = url.origin === window.location.origin || !/^https?:$/.test(url.protocol) ? "" : url.hostname.replace(/^www\./, "");
+      setNote(where ? `On your live link, this opens ${where}.` : "This works on your live link.");
+      window.clearTimeout(hide.current);
+      hide.current = window.setTimeout(() => setNote(""), 2600);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      window.clearTimeout(hide.current);
+    };
+  }, []);
 
   useEffect(() => {
     setPreviewMode(true);
@@ -52,6 +75,13 @@ export default function StartPreview() {
   return (
     <FollowProvider value={state.follow}>
       <FunnelExperience key={state.key} funnel={state.funnel} publication={state.publication} startReelId={state.startReelId} />
+      <div role="status" aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-6 z-[200] flex justify-center px-6">
+        {note && (
+          <p data-testid="preview-note" className="max-w-full rounded-full bg-black/85 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-lg ring-1 ring-white/15 backdrop-blur">
+            {note}
+          </p>
+        )}
+      </div>
     </FollowProvider>
   );
 }
