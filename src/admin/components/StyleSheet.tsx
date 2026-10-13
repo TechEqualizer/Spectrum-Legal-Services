@@ -570,7 +570,7 @@ function OpeningCard({
  * it is one tap; handing it over is a second (a phone only opens its share
  * sheet straight after a tap, and the video takes a little while).
  */
-function StoryDownload({ input, name, disabled }: { input: StoryInput; name: string; disabled: boolean }) {
+export function StoryDownload({ input, name, disabled, autoStart = false }: { input: StoryInput; name: string; disabled: boolean; autoStart?: boolean }) {
   const [state, setState] = useState<{ step: "idle" } | { step: "making"; progress: number } | { step: "ready"; video: Blob } | { step: "problem"; message: string }>({ step: "idle" });
   const stop = useRef<AbortController | null>(null);
   // Anything that changes the video (another cut, a mood, the look) makes the made one stale.
@@ -599,6 +599,15 @@ function StoryDownload({ input, name, disabled }: { input: StoryInput; name: str
     const { shareOrSave } = await import("@/lib/story-export");
     await shareOrSave(video, name);
   };
+  // Opened to post it (the + menu): making starts at once, so handing it over is the only other tap.
+  const started = useRef(false);
+  useEffect(() => {
+    if (!autoStart || started.current || disabled) return;
+    started.current = true;
+    void make();
+    // Once, when it opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, disabled]);
 
   return (
     <div className="p-4">

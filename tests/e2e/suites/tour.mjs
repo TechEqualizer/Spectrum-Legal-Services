@@ -10,7 +10,7 @@ const errs = [];
 const STEPS = [
   ['/admin/home', 'Welcome to Showlnk', null],
   ['/admin/home', 'Home: your night at a glance', 'home-next'],
-  ['/admin', 'Reels: what visitors see', 'nav-reels'],
+  ['/admin', 'Link: what fans see', 'nav-reels'],
   ['/admin', 'Your reels, in order', 'reels-order'],
   ['/admin', 'Add a reel', 'add-reel'],
   ['/admin', 'Publish your edits', 'publish'],
@@ -18,7 +18,7 @@ const STEPS = [
   ['/admin/links', 'Your bio link', 'share-bio'],
   ['/admin/links', 'A link for every place you post', 'share-builder'],
   ['/admin/overview', 'Results', 'nav-results'],
-  ['/admin/leads', 'Leads', 'nav-leads'],
+  ['/admin/leads', 'People', 'nav-leads'],
   ['/admin/leads', 'Fans', 'people-tabs'],
   ['/admin/settings', 'Eventbrite', 'eventbrite'],
   ['/admin/settings', "You're all set", 'account'],

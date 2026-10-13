@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { selectAdminBusiness, useAdminBusinesses, useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
 import CoreNudge, { CoreNudgeChip } from "@/admin/components/CoreNudge";
+import PlusMenu from "@/admin/components/PlusMenu";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
 import { startTour } from "@/admin/tour";
@@ -13,15 +14,16 @@ import { closeMenu, useDismiss } from "@/admin/components/ui/use-dismiss";
 import BrandLogo from "@/components/BrandLogo";
 import ShowlnkLogo from "@/components/showlnk/ShowlnkLogo";
 
-// Five places at most, most used first, in a business owner's words
-// (see .claude/skills/simple-navigation).
+// Four places, in an organizer's words (docs/plans/10-mobile-shell.md; see
+// .claude/skills/simple-navigation): how the next night is doing, what fans
+// see, who's coming back, what's selling. What they do (post, copy their
+// link, add a video, a new night) is the + beside them. Each place also
+// holds the pages under it.
 const links = [
-  { href: "/admin/home", label: "Home", icon: "M3 11l9-8 9 8M5 9.5V20a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V9.5" },
-  { href: "/admin/events", label: "Events", icon: "M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2zM8 13h3v3H8z" },
-  { href: "/admin", label: "Reels", icon: "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zM10 9l5 3-5 3V9z" },
-  { href: "/admin/leads", label: "Leads", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
-  { href: "/admin/overview", label: "Results", icon: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" },
-  { href: "/admin/links", label: "Share", icon: "M10 14a4 4 0 005.66 0l3-3a4 4 0 00-5.66-5.66l-1 1M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 005.66 5.66l1-1" },
+  { href: "/admin/home", label: "Tonight", tour: "nav-home", also: ["/admin/events"], icon: "M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z" },
+  { href: "/admin", label: "Link", tour: "nav-reels", also: [], icon: "M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zM10.5 9.5l4 2.5-4 2.5v-5z" },
+  { href: "/admin/leads", label: "People", tour: "nav-leads", also: [], icon: "M16 20v-1.5a4 4 0 00-4-4H6a4 4 0 00-4 4V20M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM22 20v-1.5a4 4 0 00-3-3.85M16 4.15a3.5 3.5 0 010 6.7" },
+  { href: "/admin/overview", label: "Results", tour: "nav-results", also: ["/admin/links"], icon: "M4 20V11M10 20V5M16 20v-8M22 20H2" },
 ];
 
 // Desktop only: the sidebar can fold down to its icons, for more room (the
@@ -143,27 +145,31 @@ export default function AdminNav() {
       <div
         className={`contents lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:overscroll-contain ${folded("lg:[scrollbar-width:none]", "lg:[scrollbar-color:rgb(255_255_255/0.25)_transparent] lg:[scrollbar-width:thin]")}`}
       >
-      {/* Phones: a bottom tab bar, every place visible and in thumb reach. Desktop: the sidebar. */}
+      {/* Desktop: Create, above the places. */}
+      <div className={`hidden px-3 pb-3 lg:block ${folded("lg:px-2")}`}>
+        <PlusMenu variant="sidebar" collapsed={collapsed} />
+      </div>
+      {/* Phones: a floating pill in thumb reach, the content scrolling under it, the + beside it. Desktop: the sidebar. */}
       <ul
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-white/10 bg-deep-navy pb-[env(safe-area-inset-bottom)] lg:static lg:flex lg:flex-col lg:gap-1 lg:border-0 lg:px-3 lg:pb-0"
+        className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 right-[5.25rem] z-40 grid h-[3.75rem] grid-cols-4 items-center rounded-full bg-deep-navy/90 px-1 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.75)] ring-1 ring-white/10 backdrop-blur-xl lg:static lg:flex lg:h-auto lg:flex-col lg:gap-1 lg:rounded-none lg:bg-transparent lg:px-3 lg:shadow-none lg:ring-0 lg:backdrop-blur-none"
         role="list"
       >
         {links.map((link) => {
           const active =
             link.href === "/admin"
               ? pathname === "/admin"
-              : pathname.startsWith(link.href);
+              : pathname.startsWith(link.href) || link.also.some((p) => pathname.startsWith(p));
           return (
             <li key={link.href}>
               <Link
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                data-tour={`nav-${link.label.toLowerCase()}`}
+                data-tour={link.tour}
                 title={collapsed ? link.label : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 px-0.5 py-1.5 text-[11px] font-semibold leading-tight transition-colors lg:min-h-11 lg:py-0 lg:flex-row lg:gap-3 lg:rounded-md lg:px-3 lg:text-sm ${folded("lg:justify-center", "lg:justify-start")} ${
+                className={`mx-0.5 flex h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-full px-0.5 text-[11px] font-semibold leading-tight transition-colors lg:mx-0 lg:h-auto lg:min-h-11 lg:flex-row lg:gap-3 lg:rounded-md lg:px-3 lg:text-sm ${folded("lg:justify-center", "lg:justify-start")} ${
                   active
-                    ? "text-white lg:bg-white/10"
-                    : "text-gray-400 hover:text-white lg:hover:bg-white/5"
+                    ? "bg-white/15 text-white lg:bg-white/10"
+                    : "text-white/65 hover:text-white lg:text-gray-400 lg:hover:bg-white/5"
                 }`}
               >
                 <svg
@@ -184,6 +190,10 @@ export default function AdminNav() {
           );
         })}
       </ul>
+      {/* Phones: the + beside the pill. */}
+      <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] right-3 z-40 lg:hidden">
+        <PlusMenu variant="phone" />
+      </div>
       <div className="hidden space-y-1 px-3 pb-5 lg:mt-auto lg:block low:pb-3 low:pt-3">
         {/* Core: the trial's days left and Keep Core, or Get Core on Free. */}
         <CoreNudge collapsed={collapsed} />

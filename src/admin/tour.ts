@@ -81,7 +81,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     path: "/admin",
     target: "nav-reels",
-    title: "Reels: what visitors see",
+    title: "Link: what fans see",
     body: "Everything on your link is edited here: the opening scene, your dates and your reels.",
   },
   {
@@ -124,13 +124,13 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/admin/overview",
     target: "nav-results",
     title: "Results",
-    body: "Views, how many watched to the end, ticket clicks and tickets sold, for each reel. Move your best reel up front.",
+    body: "Views, how many watched to the end, ticket clicks and tickets sold, for each reel and each place you post. Move your best reel up front.",
   },
   {
     path: "/admin/leads",
     target: "nav-leads",
-    title: "Leads",
-    body: "People who left their number for updates. Tap a number to call or text them before the night.",
+    title: "People",
+    body: "Everyone who left their number for updates, and your fans. Tap a number to call or text them before the night.",
   },
   {
     path: "/admin/leads",

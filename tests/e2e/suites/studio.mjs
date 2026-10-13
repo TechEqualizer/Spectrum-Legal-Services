@@ -90,7 +90,7 @@ await p.request.delete(B + '/api/admin/publish?slug=events');
 const m = await b.newContext({ timezoneId: 'America/Detroit',  storageState: S + '/auth.json', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const mp = await m.newPage();
 await mp.goto(B + '/admin'); await settle(mp, 500); await pickEvent(mp, 'masquerade'); await settle(mp, 1500);
-check('phone admin: old layout', await mp.getByRole('heading', { name: 'Reels', exact: true }).isVisible() && await mp.getByRole('tablist', { name: 'Studio' }).count() === 0 && await mp.locator('iframe').count() === 0);
+check('phone admin: old layout', await mp.getByRole('heading', { name: 'Your link', exact: true }).isVisible() && await mp.getByRole('tablist', { name: 'Studio' }).count() === 0 && await mp.locator('iframe').count() === 0);
 check('phone admin: Design row shown', await mp.getByRole('button', { name: /^Design/ }).isVisible());
 await mp.getByRole('button', { name: /^Design/ }).click(); await settle(mp, 500);
 check('phone admin: Design sheet has every option', await mp.getByRole('radiogroup', { name: 'Button effect' }).isVisible() && await mp.getByRole('radiogroup', { name: 'Title typeface' }).isVisible());

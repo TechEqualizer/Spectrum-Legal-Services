@@ -127,6 +127,20 @@
   .animate-tour-in { animation: none; }
 }
 
+/* The admin's + menu, rising from its button. */
+@keyframes plus-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+}
+.plus-menu {
+  animation: plus-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .plus-menu { animation: none; }
+}
+
 /* Cinematic opening scene (CinematicHero). Every color comes from the
    funnel's theme, so each brand gets its own light. Built so a browser that
    skips animations (battery saver, forced dark mode, older phones) still

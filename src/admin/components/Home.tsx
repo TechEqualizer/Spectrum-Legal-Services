@@ -60,6 +60,13 @@ export default function Home() {
             </p>
           )}
         </div>
+        {/* Every night, and a new one: Events lives under Tonight. */}
+        {events.length > 0 && (
+          <Link href="/admin/events" className="inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-sm font-semibold text-deep-navy underline-offset-4 hover:underline">
+            All your nights
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+          </Link>
+        )}
       </div>
 
       {welcome && <Welcome event={welcome} onOpen={open} onClose={() => router.replace("/admin/home")} />}

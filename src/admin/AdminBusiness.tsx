@@ -127,7 +127,7 @@ export function AdminFrame({
         <main
           key={business?.funnel.id ?? "none"}
           id="main-content"
-          className={`mx-auto max-w-6xl px-4 pb-24 pt-6 md:px-8 md:pt-8 lg:pb-8 ${studio ? "xl:max-w-none xl:px-6 xl:pb-0 xl:pt-4" : ""}`}
+          className={`mx-auto max-w-6xl px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8 lg:pb-8 ${studio ? "xl:max-w-none xl:px-6 xl:pb-0 xl:pt-4" : ""}`}
         >
           {!inBrowser ? <div className="min-h-[60vh]" aria-busy="true" /> : !business && needsEvent ? <NoEvents /> : children}
         </main>

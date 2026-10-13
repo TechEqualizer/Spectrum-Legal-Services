@@ -38,7 +38,7 @@ await p.getByRole('status').filter({ hasText: 'Loading your numbers' }).waitFor(
 await settle(p, 1000);
 const nav = p.getByRole('navigation', { name: 'Admin' });
 const navLinks = await nav.locator('ul a').allTextContents();
-check('Home first in the sidebar, and current', navLinks[0]?.includes('Home') && (await nav.getByRole('link', { name: 'Home' }).getAttribute('aria-current')) === 'page', navLinks.join(' | '));
+check('Tonight first in the sidebar, and current', navLinks[0]?.includes('Tonight') && (await nav.getByRole('link', { name: 'Tonight' }).getAttribute('aria-current')) === 'page', navLinks.join(' | '));
 check('welcome', /^Welcome back/.test(await p.getByRole('heading', { level: 1 }).textContent()));
 const text = await p.locator('main').innerText();
 check('views across events', /Reel views\s*2/.test(text), text.slice(0, 300));
