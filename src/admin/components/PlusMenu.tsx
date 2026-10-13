@@ -210,7 +210,7 @@ export default function PlusMenu({ variant, collapsed = false }: { variant: "pho
           role="group"
           aria-label="Create"
           style={pos}
-          className={`plus-menu fixed z-[60] w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl bg-white p-1.5 text-charcoal shadow-[0_24px_60px_-20px_rgb(14_26_43/0.55)] ring-1 ring-black/10 ${variant === "phone" ? "origin-bottom-right" : "origin-top-left"}`}
+          className={`plus-menu theme-follow fixed z-[60] w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl bg-white p-1.5 text-charcoal shadow-[0_24px_60px_-20px_rgb(14_26_43/0.55)] ring-1 ring-black/10 ${variant === "phone" ? "origin-bottom-right" : "origin-top-left"}`}
         >
           <ul role="list">
             {items.map((item) => (
@@ -285,7 +285,7 @@ function PostStory({ event, link, onClose }: { event: AdminEvent; link: string; 
       onClose={onClose}
       aria-labelledby={`${id}-title`}
       data-testid="post-story"
-      className="m-auto w-[min(26rem,calc(100vw-1rem))] rounded-3xl bg-white p-0 text-charcoal shadow-2xl backdrop:bg-deep-navy/70"
+      className="theme-follow m-auto w-[min(26rem,calc(100vw-1rem))] rounded-3xl bg-white p-0 text-charcoal shadow-2xl backdrop:bg-deep-navy/70"
     >
       <div className="flex items-start justify-between gap-3 px-5 pt-5">
         <h2 id={`${id}-title`} className="text-xl font-black tracking-tight text-deep-navy">

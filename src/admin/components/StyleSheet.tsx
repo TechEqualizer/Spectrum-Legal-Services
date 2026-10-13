@@ -334,7 +334,7 @@ export default function StyleSheet({
                   aria-checked={effect.style === style}
                   aria-label={`${BUTTON_EFFECTS[style].label} effect`}
                   onClick={() => commit({ effect: { ...effect, style } })}
-                  className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl bg-deep-navy px-2 py-3 transition ${effect.style === style ? "ring-[3px] ring-deep-navy ring-offset-2 ring-offset-soft-gray" : "ring-1 ring-black/10"}`}
+                  className={`flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl bg-deep-navy px-2 py-3 transition ${effect.style === style ? "ring-[3px] ring-charcoal ring-offset-2 ring-offset-soft-gray" : "ring-1 ring-black/10"}`}
                   style={{ ...shown, "--on-accent": onAccent(shown), "--fx-color": effectColor(shown) } as React.CSSProperties}
                 >
                   {/* The effect itself, running on a small button in these colors. */}
@@ -346,7 +346,7 @@ export default function StyleSheet({
                   >
                     Tickets
                   </span>
-                  <span className="text-xs font-semibold text-white">{BUTTON_EFFECTS[style].label}</span>
+                  <span className="keep-light text-xs font-semibold text-white">{BUTTON_EFFECTS[style].label}</span>
                 </button>
               ))}
             </div>
@@ -768,7 +768,7 @@ export function StylePreview({
       aria-label="Preview of your opening screen"
       role="img"
       style={theme}
-      className="relative aspect-[9/16] w-40 overflow-hidden rounded-[1.4rem] bg-deep-navy shadow-xl ring-4 ring-black/80 transition-colors duration-300 sm:w-60"
+      className="keep-light relative aspect-[9/16] w-40 overflow-hidden rounded-[1.4rem] bg-deep-navy shadow-xl ring-4 ring-black/80 transition-colors duration-300 sm:w-60"
     >
       {media?.kind === "image" && media.fit === "poster" && media.opening ? (
         // The opening itself, playing (a new cut or mood plays from the start).

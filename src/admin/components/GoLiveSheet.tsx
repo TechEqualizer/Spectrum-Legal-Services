@@ -291,7 +291,7 @@ function Phone({ funnel }: { funnel: Funnel }) {
   return (
     <div
       aria-hidden="true"
-      className="relative aspect-[9/16] w-full overflow-hidden rounded-[1.1rem] bg-deep-navy shadow-[0_18px_40px_-16px_rgb(14_26_43/0.65)] ring-1 ring-black/10 md:rounded-[1.6rem]"
+      className="keep-light relative aspect-[9/16] w-full overflow-hidden rounded-[1.1rem] bg-deep-navy shadow-[0_18px_40px_-16px_rgb(14_26_43/0.65)] ring-1 ring-black/10 md:rounded-[1.6rem]"
       style={{ background: `radial-gradient(120% 80% at 50% 20%, ${funnel.brand.theme?.["--teal-accent"] ?? "#28719A"}, ${funnel.brand.theme?.["--deep-navy"] ?? "#0E1A2B"})` }}
     >
       {opening && media?.kind === "image" ? (

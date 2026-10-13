@@ -209,7 +209,7 @@ function NextUp({ events, onOpen }: { events: AdminEvent[]; onOpen: (slug: strin
   return (
     <section aria-labelledby={id} data-tour="home-next" className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
       <div className="flex flex-wrap items-start gap-4">
-        <span className="relative h-24 w-[4.5rem] flex-shrink-0 overflow-hidden rounded-lg bg-deep-navy" aria-hidden="true">
+        <span className="keep-light relative h-24 w-[4.5rem] flex-shrink-0 overflow-hidden rounded-lg bg-deep-navy" aria-hidden="true">
           <EventPoster scene={scene} reels={e.live.reels} />
         </span>
         <div className="min-w-0 flex-1">
@@ -335,7 +335,7 @@ function TopReels({ results, onOpen }: { results: EventResults[]; onOpen: (slug:
                   aria-label={`${i + 1}. ${t.reel.title}, ${t.event.live.cover.hero?.title ?? t.event.funnel.brand.name}: ${formatNumber(t.views)} views, ${formatPercent(rate(t.booked, t.views))} to tickets. Open in Reels.`}
                   className="block w-full rounded-lg text-left hover:opacity-90"
                 >
-                  <span className="relative block aspect-[9/14] overflow-hidden rounded-lg bg-deep-navy" aria-hidden="true">
+                  <span className="keep-light relative block aspect-[9/14] overflow-hidden rounded-lg bg-deep-navy" aria-hidden="true">
                     {poster && (
                       // eslint-disable-next-line @next/next/no-img-element -- the reel's own poster
                       <img src={poster} alt="" className="h-full w-full object-cover" />

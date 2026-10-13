@@ -220,7 +220,7 @@ function EventRow({
   return (
     <li className="flex items-center gap-3 px-3 py-3 sm:px-4">
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-teal-accent" aria-label={`Open ${title}`}>
-        <span className="relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md bg-deep-navy" style={funnel.brand.theme as React.CSSProperties}>
+        <span className="keep-light relative h-16 w-12 flex-shrink-0 overflow-hidden rounded-md bg-deep-navy" style={funnel.brand.theme as React.CSSProperties}>
           {poster ? (
             // eslint-disable-next-line @next/next/no-img-element -- organizer media from anywhere
             <img src={poster} alt="" className="h-full w-full object-cover object-top" />

@@ -528,7 +528,7 @@ export function PathStrip({
                 className={`group flex w-[5.5rem] flex-col items-center gap-1 rounded-xl p-1.5 text-center transition ${on ? "bg-white shadow-sm ring-2 ring-deep-navy" : "hover:bg-white/70"} ${stop.unreachable ? "opacity-50" : ""}`}
               >
                 <span
-                  className={`relative flex h-12 w-9 items-center justify-center overflow-hidden rounded-md text-[11px] font-bold ${
+                  className={`keep-light relative flex h-12 w-9 items-center justify-center overflow-hidden rounded-md text-[11px] font-bold ${
                     stop.kind === "reel" ? "bg-deep-navy text-white" : stop.kind === "end" ? "bg-teal-accent text-on-accent" : "bg-gradient-to-b from-royal-blue to-deep-navy text-white"
                   } ${stop.unreachable ? "outline-dashed outline-1 outline-gray-400" : ""}`}
                   aria-hidden="true"

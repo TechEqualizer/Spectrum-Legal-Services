@@ -104,7 +104,7 @@ export default function MediaPicker({ value, onChange }: MediaPickerProps) {
 
       <div className="flex gap-4">
         {/* Preview, in the reel's 9:16 shape */}
-        <div className="relative aspect-[9/16] w-24 flex-shrink-0 overflow-hidden rounded-md bg-deep-navy" aria-hidden="true">
+        <div className="keep-light relative aspect-[9/16] w-24 flex-shrink-0 overflow-hidden rounded-md bg-deep-navy" aria-hidden="true">
           {isPrivate ? (
             <div className="flex h-full w-full items-center justify-center text-white/80">
               <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">

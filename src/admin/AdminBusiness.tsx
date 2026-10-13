@@ -8,6 +8,8 @@ import GoLiveSheet from "@/admin/components/GoLiveSheet";
 import Tour from "@/admin/components/Tour";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
+import { AdminThemeContext, useAdminTheme } from "@/admin/theme";
+import type { AdminTheme } from "@/admin/theme-cookie";
 import type { Funnel, FunnelTheme } from "@/data/funnel-types";
 import { accentInk } from "@/lib/look";
 
@@ -101,11 +103,15 @@ const WITHOUT_EVENT = ["/admin/home", "/admin/events", "/admin/settings"];
  */
 export function AdminFrame({
   nav,
+  theme: rendered,
   children,
 }: {
   nav: React.ReactNode;
+  /** The look the server rendered, from the cookie Settings sets. */
+  theme: AdminTheme;
   children: React.ReactNode;
 }) {
+  const theme = useAdminTheme(rendered);
   const business = useMaybeAdminBusiness();
   const session = useAdminSession();
   const pathname = usePathname();
@@ -117,24 +123,26 @@ export function AdminFrame({
   const studio = pathname === "/admin" && Boolean(business);
   const needsEvent = !WITHOUT_EVENT.some((p) => pathname.startsWith(p));
   return (
-    <div
-      className="min-h-screen bg-soft-gray text-charcoal lg:flex"
-      style={themeWithInk(business?.funnel.brand.theme)}
-    >
-      {nav}
-      {/* Clip sideways: one long word or link must never slide the whole admin on a phone. */}
-      <div className="min-w-0 flex-1 overflow-x-clip">
-        <main
-          key={business?.funnel.id ?? "none"}
-          id="main-content"
-          className={`mx-auto max-w-6xl px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8 lg:pb-8 ${studio ? "xl:max-w-none xl:px-6 xl:pb-0 xl:pt-4" : ""}`}
-        >
-          {!inBrowser ? <div className="min-h-[60vh]" aria-busy="true" /> : !business && needsEvent ? <NoEvents /> : children}
-        </main>
-        {session.mustChangePassword && <PasswordSheet firstTime />}
-        {inBrowser && <Tour canStart={Boolean(business) && !session.mustChangePassword} />}
-        {inBrowser && <GoLiveSheet />}
-      </div>
+    // The event's colors (as the light look) around the frame, which wears the chosen look.
+    <div className="admin-brand contents" style={themeWithInk(business?.funnel.brand.theme)}>
+      <AdminThemeContext.Provider value={theme}>
+        <div className="admin-theme min-h-screen bg-soft-gray text-charcoal lg:flex" data-theme={theme}>
+          {nav}
+          {/* Clip sideways: one long word or link must never slide the whole admin on a phone. */}
+          <div className="min-w-0 flex-1 overflow-x-clip">
+            <main
+              key={business?.funnel.id ?? "none"}
+              id="main-content"
+              className={`mx-auto max-w-6xl px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8 lg:pb-8 ${studio ? "xl:max-w-none xl:px-6 xl:pb-0 xl:pt-4" : ""}`}
+            >
+              {!inBrowser ? <div className="min-h-[60vh]" aria-busy="true" /> : !business && needsEvent ? <NoEvents /> : children}
+            </main>
+            {session.mustChangePassword && <PasswordSheet firstTime />}
+            {inBrowser && <Tour canStart={Boolean(business) && !session.mustChangePassword} />}
+            {inBrowser && <GoLiveSheet />}
+          </div>
+        </div>
+      </AdminThemeContext.Provider>
     </div>
   );
 }

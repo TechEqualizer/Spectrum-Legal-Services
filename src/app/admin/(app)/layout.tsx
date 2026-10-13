@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminBusinessesProvider, AdminFrame } from "@/admin/AdminBusiness";
 import AdminNav from "@/admin/components/AdminNav";
 import { AdminSessionProvider } from "@/admin/session";
+import { parseTheme, THEME_COOKIE } from "@/admin/theme-cookie";
 import { canPublish, getAdmin } from "@/lib/server/admin-auth";
 import { listEventFunnels, listOrganizers } from "@/lib/server/funnels";
 import { versionsOf } from "@/lib/server/publications";
@@ -13,6 +15,8 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   if (!admin) redirect("/admin/login");
   // Organizers' events this admin may edit (the demos are built in), as built and as visitors see them.
   const [rows, organizers] = await Promise.all([listEventFunnels(), listOrganizers()]);
+  // The look chosen in Settings on this device, rendered at once (no flash of the other one).
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   const names = new Map(organizers.map((o) => [o.slug, o.name]));
   const events = await Promise.all(
     rows
@@ -28,7 +32,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
       session={{ email: admin.email, ...admin.profile, slugs: admin.slugs, organizers: admin.organizers, mustChangePassword: admin.mustChangePassword }}
     >
       <AdminBusinessesProvider events={events}>
-        <AdminFrame nav={<AdminNav />}>{children}</AdminFrame>
+        <AdminFrame nav={<AdminNav />} theme={theme}>{children}</AdminFrame>
       </AdminBusinessesProvider>
     </AdminSessionProvider>
   );

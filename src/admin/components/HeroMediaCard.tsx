@@ -335,7 +335,7 @@ export function ScenePreview({
     <div
       aria-hidden="true"
       style={look ? (themeOf(look) as React.CSSProperties) : undefined}
-      className={`relative aspect-[9/16] flex-shrink-0 overflow-hidden rounded-xl bg-deep-navy ${small ? "w-14" : "w-36 md:w-48"}`}
+      className={`keep-light relative aspect-[9/16] flex-shrink-0 overflow-hidden rounded-xl bg-deep-navy ${small ? "w-14" : "w-36 md:w-48"}`}
     >
       {media?.kind === "image" && media.fit === "blur" ? (
         // eslint-disable-next-line @next/next/no-img-element -- the uploaded flyer, as color only
