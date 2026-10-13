@@ -68,8 +68,12 @@ reaches WCAG AA contrast in dark.
 
 1. **Desktop shell, after Ideogram:** a sidebar that follows the look
    (light with a hairline in light), icon and label rows with a soft pill on
-   the current page, Create on top, the account at the bottom; collapsed to
-   icons with tooltips. Pages lose the header bar and open on a calm
+   the current page, the account at the bottom; collapsed to icons with
+   tooltips. Desktop doesn't borrow the phone's floating pieces (the owner's
+   call): no gold Create button or pop-up menu; a small "Create" label
+   heads its own group of rows (Post to your story, Copy your link, A link
+   for one place, Add a video, New night), as Ideogram lists Image and
+   Video under Create. Pages lose the header bar and open on a calm
    sentence-case title.
 2. **Phone page tops:** no black bar; a big title with the photo as a round
    button; sheets rise from the bottom.
