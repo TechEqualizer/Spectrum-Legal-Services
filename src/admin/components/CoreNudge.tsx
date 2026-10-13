@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAdminEvents, useMaybeAdminBusiness } from "@/admin/AdminBusiness";
+import { openGoLive } from "@/admin/go-live";
 import { ADD_FANS_HREF, START_CORE_HREF, useFansSnooze, usePlan } from "@/admin/plan";
 import { CORE_PRICE, FANS_PRICE, hasCore, TRIAL_DAYS, wantsFans, type Plan } from "@/lib/plans";
 
@@ -19,6 +20,8 @@ type Nudge = {
   used?: number;
   /** An offer, not something they must do: it has Not now, and no chip on phones. */
   offer?: boolean;
+  /** Opens the Go live sheet where they are, rather than going to href. */
+  goLive?: boolean;
 };
 
 /**
@@ -49,7 +52,15 @@ export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null
     return { eyebrow: "Core", title: "Card declined", text: "Update it to keep your link live.", action: "Update card", href: START_CORE_HREF, urgent: true };
   }
   if (!core && plan.status !== "comped") {
-    return { eyebrow: "Your link is private", title: "Go live", text: `Fans see Coming soon until you do. Core is $${CORE_PRICE.month} a month.`, action: "Go live", href: START_CORE_HREF, urgent: false };
+    return {
+      eyebrow: "Your link is private",
+      title: "Go live",
+      text: `Fans see Coming soon until you do. $${CORE_PRICE.month} a month or $${CORE_PRICE.year} a year.`,
+      action: "Go live",
+      href: START_CORE_HREF,
+      urgent: false,
+      goLive: plan.status !== "past_due",
+    };
   }
   if (wantsFans(plan, now)) {
     const per = plan.interval ?? "month";
@@ -65,6 +76,15 @@ export function nudgeFor(plan: Plan | undefined, now = Date.now()): Nudge | null
   }
   return null;
 }
+
+/** Go live opens its sheet right here (the link to Settings → Plan is the fallback). */
+const goLiveHere = (nudge: Nudge) =>
+  nudge.goLive
+    ? (e: React.MouseEvent) => {
+        e.preventDefault();
+        openGoLive();
+      }
+    : undefined;
 
 /** The selected event's organizer's nudge, unless it's an offer they put off; and Not now. */
 function useNudge(): [Nudge | null, () => void] {
@@ -83,6 +103,7 @@ export default function CoreNudge({ collapsed }: { collapsed: boolean }) {
     return (
       <Link
         href={nudge.href}
+        onClick={goLiveHere(nudge)}
         title={`${nudge.eyebrow}: ${nudge.title}. ${nudge.action}`}
         aria-label={`${nudge.eyebrow}: ${nudge.title}. ${nudge.action}`}
         className="relative mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-md bg-[#e8be5a] text-xs font-black text-deep-navy hover:brightness-110"
@@ -104,6 +125,7 @@ export default function CoreNudge({ collapsed }: { collapsed: boolean }) {
       <p className={`mt-2 text-xs leading-snug low:hidden ${nudge.urgent ? "text-deep-navy/85" : "text-white/80"}`}>{nudge.text}</p>
       <Link
         href={nudge.href}
+        onClick={goLiveHere(nudge)}
         className={`mt-3 flex min-h-11 items-center justify-center rounded-lg text-sm font-bold ${nudge.urgent ? "bg-deep-navy text-white hover:bg-royal-blue" : "bg-[#e8be5a] text-deep-navy hover:brightness-110"}`}
       >
         {nudge.action}
@@ -124,6 +146,7 @@ export function CoreNudgeChip() {
   return (
     <Link
       href={nudge.href}
+      onClick={goLiveHere(nudge)}
       aria-label={`${nudge.eyebrow}: ${nudge.title}. ${nudge.action}`}
       className="group inline-flex min-h-11 items-center px-0.5"
     >

@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { setPreviewMode } from "@/lib/reel-tracking";
-import { START_CORE_HREF } from "@/admin/plan";
+import { goLiveHref } from "@/admin/go-live";
 
 /**
  * Over the organizer's own link before it's live (/admin/link/<slug>): only
- * they can see it, and Go live. Their own taps aren't counted as visits.
+ * they can see it, and Go live (its sheet, in the admin). Their own taps aren't counted as visits.
  * Rendered before the link, so tracking is off before the link starts.
  */
-export default function PrivateLinkBar() {
+export default function PrivateLinkBar({ organizer }: { organizer: string }) {
   useEffect(() => setPreviewMode(true), []);
   return (
     // Phones: the top right, clear of the logo. Wider screens: the top left, beside the link's column.
@@ -19,7 +19,7 @@ export default function PrivateLinkBar() {
         {/* Phones: short, so it covers as little of the link as it can. */}
         <span className="md:hidden">Private</span>
         <span className="hidden truncate md:inline">Only you can see this</span>
-        <Link href={START_CORE_HREF} className="flex min-h-9 flex-shrink-0 items-center rounded-full bg-[#e8be5a] px-4 text-[13px] font-bold text-[#1a1208] hover:brightness-110">
+        <Link href={goLiveHref(organizer)} className="flex min-h-9 flex-shrink-0 items-center rounded-full bg-[#e8be5a] px-4 text-[13px] font-bold text-[#1a1208] hover:brightness-110">
           Go live
         </Link>
       </div>

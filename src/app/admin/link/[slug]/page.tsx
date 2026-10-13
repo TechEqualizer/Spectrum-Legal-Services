@@ -23,7 +23,7 @@ export default async function PrivateLinkPage({ params }: { params: Promise<{ sl
   if (await linkIsLive(organizer)) redirect(`/f/${slug}`);
   return (
     <>
-      <PrivateLinkBar />
+      <PrivateLinkBar organizer={organizer ?? slug} />
       {target.kind === "choose" ? (
         <OrganizerEvents organizer={target.organizer} events={target.events} />
       ) : (

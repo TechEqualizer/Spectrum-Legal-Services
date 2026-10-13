@@ -360,10 +360,89 @@ Sources: [Gated feature upsell templates (Chameleon)](https://www.chameleon.io/t
 These are vendors' and third parties' accounts. Their figures are
 unverified.
 
+## The tour sells, then asks (Oct 13, 2026)
+
+Going live was easy to miss. The tour that started after the sign-up wizard
+was 14 steps of where buttons are. It never mentioned going live or the
+price, and it ended on Settings with "You're all set". The welcome card, the
+one screen with Go live and its price, was gone by then, because the tour
+had moved to other pages. Every Go live was a link to the fourth section of
+Settings. The Fans add-on was an unticked box there. Before paying, the
+tour told organizers to put a link in their bio that showed Coming soon.
+
+### What works elsewhere
+
+- **Squarespace** builds for free and charges to publish: the site stays
+  private until you pay, with Upgrade in the editor
+  ([Style Factory](https://stylefactoryproductions.com/squarespace-free-trial)).
+  This is our model, and the ask belongs right where the work is.
+- **Tours:** completion falls below 50% after five steps, and three-step
+  tours finish about 66% of the time
+  ([Chameleon](https://www.chameleon.io/blog/product-tours-still-work)).
+- **When to ask:** in RevenueCat's 2026 data (mostly mobile apps), about a
+  third of purchases happen on day 0 and over 60% within a week
+  ([RevenueCat](https://www.revenuecat.com/blog/growth/subscription-app-trends-benchmarks-2026.md)).
+  The first session, while what they made is fresh, is the moment.
+- **Linktree** pitches Pro during onboarding, before anything is made, and
+  teardowns name that as its weak spot
+  ([Supademo](https://supademo.com/user-flow-examples/linktree)).
+- **Blinkist** spelled out what happens when on its paywall (full access
+  today, a reminder, then the charge). The fear of being charged without
+  noticing is what stops people, and the change is reported to have lifted
+  conversion by 23%
+  ([Growth.Design](https://growth.design/case-studies/trial-paywall-challenge),
+  secondhand).
+- **Add-ons at checkout:** order bumps are said to be taken 20 to 40% of the
+  time ([dsebastien.net](https://concepts.dsebastien.net/concept/order-bump/),
+  unsourced). In the EU a charge from a box ticked in advance can be
+  claimed back, so the add-on is never chosen for them
+  ([Consumer Rights Directive, Art. 22](https://www.legislation.gov.uk/eudr/2011/83/article/22/data.htm)).
+
+### What we built
+
+1. **The welcome tour** starts by itself after the wizard (`WELCOME_STEPS`
+   in `src/admin/tour.ts`). It has five stops on their own night, each
+   about what it does for them:
+   - their flyer, now a trailer (the reels);
+   - one link for every night (the bio link);
+   - which post sold tickets (a link for each place they post);
+   - who's coming (Results);
+   - their own list (Fans, tagged Add-on).
+
+   Its last button is Go live. It goes back to their welcome and opens Go
+   live there. Already live or comped: Done. The 14-step how-to stays, as
+   "Take the tour" in the account menu.
+2. **One Go live sheet** (`GoLiveSheet.tsx`) opens from every Go live: the
+   end of the tour, the sidebar card, the phone chip, the welcome card, the
+   Publish sheet, the Share page and the private preview's bar
+   (`?golive=<organizer>`). It shows:
+   - their opening, playing in a phone;
+   - "Right now anyone who opens your link sees Coming soon", and a count
+     down to their next date;
+   - two plans side by side, Core and Core + Fans ("For nights you run
+     again"). Core is chosen; the add-on is a plan they pick, never
+     ticked for them;
+   - yearly first ("2 months free", with the monthly price beside it);
+   - one button straight to Stripe ("Go live · $290 today"), what's charged
+     and when, a full refund in the first 7 days on request, and "Keep
+     building privately".
+3. **Honest before paying:** the Share page says the link is private, with
+   Go live, before they post it. After publishing, the Publish sheet opens
+   their private preview (not Coming soon) and offers Go live.
+4. **Terms:** the Fans add-on is named in its own right, and the 7-day
+   refund is promised there too. Refunds are done by hand in Stripe.
+
+Next: a "You're live" moment after paying, with a one-tap Fans add-on for
+those who chose Core only (the card is on file). Then the claim cut to
+email and terms with a sign-in link, and an email for organizers who claim
+but don't go live.
+
 ## Measures
 
 - Organizers on Core, trial to paid, churn per month.
 - Days from New client to Start Core.
+- Welcome tours finished, Go live sheets opened (and from where), the share
+  who pick Core + Fans, and refunds asked for.
 
 ## Deliberately not in this plan
 

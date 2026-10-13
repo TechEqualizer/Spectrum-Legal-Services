@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
 import { eventBusiness, type AdminBusiness } from "@/admin/business";
+import GoLiveSheet from "@/admin/components/GoLiveSheet";
 import Tour from "@/admin/components/Tour";
 import PasswordSheet from "@/admin/components/PasswordSheet";
 import { useAdminSession } from "@/admin/session";
@@ -132,6 +133,7 @@ export function AdminFrame({
         </main>
         {session.mustChangePassword && <PasswordSheet firstTime />}
         {inBrowser && <Tour canStart={Boolean(business) && !session.mustChangePassword} />}
+        {inBrowser && <GoLiveSheet />}
       </div>
     </div>
   );
