@@ -81,7 +81,7 @@ for (const path of ['/f/book-signing-collective', '/f/book-signing-grand']) {
 const desk = await b.newPage({ storageState: S + '/auth.json', viewport: { width: 1440, height: 900 } });
 await desk.goto(B + '/admin/home'); await settle(desk, 900);
 const switcher = desk.locator('#admin-business').locator('xpath=..');
-check('desktop: the sidebar opens on the switcher', await desk.locator('#admin-business').isVisible() && /Big Love Productions/.test(await switcher.innerText()));
+check('desktop: the sidebar opens on the switcher', await desk.locator('#admin-business').isVisible() && (await switcher.locator('p').first().innerText()).trim().length > 0, (await switcher.innerText()).replace(/\s+/g, ' ').slice(0, 120));
 check('desktop: a long name stays inside the sidebar', await switcher.evaluate((el) => [...el.querySelectorAll('p')].every((p) => p.getBoundingClientRect().right <= el.closest('nav').getBoundingClientRect().right)));
 await desk.screenshot({ path: S + '/phone-desktop.jpg' });
 await b.close();

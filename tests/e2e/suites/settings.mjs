@@ -22,11 +22,11 @@ await nameField.fill('Devante W');
 await p.getByRole('button', { name: 'Save' }).click(); await settle(p, 1200);
 check('name saved', await p.getByRole('button', { name: /Saved/ }).isVisible() || (await nameField.inputValue()) === 'Devante W');
 check('sidebar shows the name', (await p.locator('nav').innerText()).includes('Devante W'));
-check('account menu named', await p.locator('summary[aria-label="Account: Devante W"]').count() === 1);
+check('account menu named', await p.locator('summary[aria-label="Account: Devante W"]:visible').count() === 1);
 
 // Photo: a big photo goes up as a small square and shows in the sidebar.
 await p.getByLabel('Choose a photo', { exact: true }).setInputFiles(PHOTO); await settle(p, 2000);
-const navImg = p.locator('nav summary img');
+const navImg = p.locator('nav summary img:visible');
 const src = await navImg.getAttribute('src').catch(() => null);
 check('photo in the sidebar', Boolean(src && src.includes('/storage/v1/object/public/avatars/user-tester/')), String(src));
 const size = await navImg.evaluate((i) => [i.naturalWidth, i.naturalHeight]).catch(() => [0, 0]);
