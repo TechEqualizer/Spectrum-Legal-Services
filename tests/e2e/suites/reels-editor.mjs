@@ -36,7 +36,7 @@ for (const [w,h] of [[390,844],[1279,900]]) {
   await p.getByRole('button',{name:`Move ${before[0]} down`}).click();
   const after = await titles();
   check(w+': move down', after[0]===before[1] && after[1]===before[0]);
-  check(w+': move announced', (await p.locator('[aria-live="polite"]').first().textContent()).includes('position 2'));
+  check(w+': move announced', (await p.locator('main [aria-live="polite"]').first().textContent()).includes('position 2'));
   await p.getByRole('button',{name:`Move ${before[0]} up`}).click();
   check(w+': move back up', (await titles())[0]===before[0]);
   if (!mobile) {

@@ -77,11 +77,12 @@ for (const path of ['/f/book-signing-collective', '/f/book-signing-grand']) {
   await p.screenshot({ path: S + `/phone-public-${path.split('/').pop()}.jpg` });
 }
 
-// Desktop keeps its sidebar: the event's logo, Admin and the switcher.
+// Desktop keeps its sidebar, headed by the organizer and event as a switcher (docs/plans/11-admin-themes.md).
 const desk = await b.newPage({ storageState: S + '/auth.json', viewport: { width: 1440, height: 900 } });
 await desk.goto(B + '/admin/home'); await settle(desk, 900);
-check('desktop: sidebar head unchanged', await desk.getByRole('link', { name: 'Back to the site' }).isVisible() && await desk.locator('#admin-business').isVisible() && await desk.locator('nav').getByText('Admin', { exact: true }).isVisible());
-check('desktop: a long name stays inside the sidebar', await desk.locator('nav[aria-label="Admin"] a[aria-label="Back to the site"]').evaluate((a) => a.getBoundingClientRect().right <= a.closest('nav').getBoundingClientRect().right));
+const switcher = desk.locator('#admin-business').locator('xpath=..');
+check('desktop: the sidebar opens on the switcher', await desk.locator('#admin-business').isVisible() && (await switcher.locator('p').first().innerText()).trim().length > 0, (await switcher.innerText()).replace(/\s+/g, ' ').slice(0, 120));
+check('desktop: a long name stays inside the sidebar', await switcher.evaluate((el) => [...el.querySelectorAll('p')].every((p) => p.getBoundingClientRect().right <= el.closest('nav').getBoundingClientRect().right)));
 await desk.screenshot({ path: S + '/phone-desktop.jpg' });
 await b.close();
 console.log(res.join('\n')); console.log('console:', errs.length ? errs : 'none');

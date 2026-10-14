@@ -113,7 +113,7 @@ export default function CoreNudge({ collapsed }: { collapsed: boolean }) {
     );
   }
   return (
-    <section aria-label={nudge.eyebrow} className={`mb-3 rounded-xl p-3.5 ${nudge.urgent ? "bg-[#e8be5a] text-deep-navy" : "bg-white/10 text-white"}`}>
+    <section aria-label={nudge.eyebrow} className={`keep-light mb-3 rounded-xl p-3.5 ${nudge.urgent ? "bg-[#e8be5a] text-deep-navy" : "bg-deep-navy text-white"}`}>
       <p className={`text-[11px] font-bold uppercase tracking-wider ${nudge.urgent ? "text-deep-navy/70" : "text-[#e8be5a]"}`}>{nudge.eyebrow}</p>
       <p className="mt-0.5 text-base font-black">{nudge.title}</p>
       {nudge.used !== undefined && (

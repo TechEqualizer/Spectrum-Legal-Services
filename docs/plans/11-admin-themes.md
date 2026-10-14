@@ -64,17 +64,25 @@ look; the bars stay dark; and every visible word on every admin page, the
 + menu and the new reel and new night sheets, at 390 and 1440 wide,
 reaches WCAG AA contrast in dark.
 
+## PR 2: the desktop shell, after Ideogram
+
+- **The sidebar wears the chosen look** (white with a hairline edge in
+  light, a raised night panel in dark); only the phone's top bar and tab
+  pill stay dark (`keep-light-phone`).
+- **Head:** the fold button, then the organizer and event as Ideogram's
+  account switcher (their photo or initial, the name, the event; a tap
+  opens the picker when there are several).
+- **Places, then Create:** icon and label rows with a soft grey pill on the
+  current page; under a small "Create" label, the phone's + actions as the
+  same rows (Post to your story, Copy your link, A link for one place, Add
+  a video, New night). No floating button on a computer.
+- **Foot:** Core's card (a dark card, like Ideogram's Upgrade), Settings,
+  and the account, outside the scrolling part so its menu isn't clipped.
+- **Folded:** icons only, each named in a small dark tooltip.
+
 ## Next, in both looks
 
-1. **Desktop shell, after Ideogram:** a sidebar that follows the look
-   (light with a hairline in light), icon and label rows with a soft pill on
-   the current page, the account at the bottom; collapsed to icons with
-   tooltips. Desktop doesn't borrow the phone's floating pieces (the owner's
-   call): no gold Create button or pop-up menu; a small "Create" label
-   heads its own group of rows (Post to your story, Copy your link, A link
-   for one place, Add a video, New night), as Ideogram lists Image and
-   Video under Create. Pages lose the header bar and open on a calm
-   sentence-case title.
+1. **Page titles:** calm sentence-case titles instead of the black capitals.
 2. **Phone page tops:** no black bar; a big title with the photo as a round
    button; sheets rise from the bottom.
 3. **Link page:** reels as tall thumbnails with ⋯ actions.

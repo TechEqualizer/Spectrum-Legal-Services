@@ -142,19 +142,32 @@ const pillTop = (await pill.boundingBox()).y;
 check('the end of a page scrolls clear of the pill', lastBottom <= pillTop, `${Math.round(lastBottom)} vs ${Math.round(pillTop)}`);
 await m.close();
 
-// Desktop: Create at the top of the sidebar, its menu beside it.
-const d = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 1440, height: 900 } });
+// Desktop: no floating + (that's the phone's); the sidebar lists the same actions under Create.
+const d = await b.newContext({ storageState: S + '/auth.json', viewport: { width: 1440, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
 await d.addInitScript(() => localStorage.setItem('admin_business', 'masquerade'));
 const dp = await d.newPage(); dp.on('pageerror', (e) => errs.push(e.message));
 await dp.goto(B + '/admin/home'); await settle(dp, 1000);
-const create = dp.getByRole('navigation', { name: 'Admin' }).getByRole('button', { name: 'Create' });
-const shown = await create.isVisible();
-await create.click(); await settle(dp, 300);
-const dMenu = dp.getByRole('group', { name: 'Create' });
-const dBox = await dMenu.boundingBox();
-check('desktop: Create in the sidebar, its menu beside it', shown && dBox && dBox.x >= 240, JSON.stringify(dBox));
+const side = dp.getByRole('navigation', { name: 'Admin' });
+check('desktop: no floating + button', (await dp.getByRole('button', { name: 'Create', exact: true }).filter({ visible: true }).count()) === 0);
+const group = side.getByRole('region', { name: 'Create' });
+const rows = (await group.getByRole('button').allInnerTexts()).map((t) => t.trim());
+check('desktop: Create lists the actions as sidebar rows', JSON.stringify(rows) === '["Post to your story","Copy your link","A link for one place","Add a video","New night"]', JSON.stringify(rows));
+const placeBox = await side.locator('ul a').first().boundingBox(), rowBox = await group.getByRole('button').first().boundingBox();
+check('desktop: rows line up with the places', placeBox && rowBox && Math.abs(placeBox.x - rowBox.x) < 1 && Math.abs(placeBox.width - rowBox.width) < 1 && rowBox.height >= 44, JSON.stringify({ placeBox, rowBox }));
+await group.getByRole('button', { name: 'Copy your link' }).click(); await settle(dp, 300);
+check('desktop: Copy your link copies it, and says so', /\/f\/biglove$/.test(await dp.evaluate(() => navigator.clipboard.readText())) && await group.getByText('Link copied').isVisible());
 await dp.screenshot({ path: 'plus-menu-1440.png' });
-check('desktop: the same four places', JSON.stringify(await dp.getByRole('navigation', { name: 'Admin' }).locator('ul a').allTextContents()) === '["Tonight","Link","People","Results"]');
+check('desktop: the same four places', JSON.stringify(await side.locator('ul a').allTextContents()) === '["Tonight","Link","People","Results"]');
+await group.getByRole('button', { name: 'Add a video' }).click();
+await dp.waitForURL(/\/admin$/); await settle(dp, 1500);
+check('desktop: Add a video opens the new reel', await dp.locator('dialog[open]').count() === 1);
+await dp.keyboard.press('Escape'); await settle(dp, 300);
+// Folded to icons: each row names itself in a tooltip.
+await side.getByRole('button', { name: 'Collapse sidebar' }).click(); await settle(dp, 400);
+await group.getByRole('button', { name: 'Post to your story' }).hover(); await settle(dp, 200);
+check('desktop folded: icons, with a tooltip naming each', (await dp.getByRole('tooltip').innerText().catch(() => '')) === 'Post to your story');
+await dp.screenshot({ path: 'plus-folded-1440.png' });
+await side.getByRole('button', { name: 'Expand sidebar' }).click(); await settle(dp, 300);
 await d.close();
 
 check('no errors', !errs.length, errs.join(' | '));
